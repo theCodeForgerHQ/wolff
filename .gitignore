@@ -1,0 +1,86 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+dist
+build
+out
+.turbo
+
+# Testing
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Environment
+.env
+.env.local
+.env.vercel
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database
+*.db
+*.sqlite
+
+# Generated
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# Docker
+docker-compose.override.yml
+
+# Uploads (local development)
+uploads/*
+!uploads/.gitkeep
+
+# OS files
+Thumbs.db
+*.Zone.Identifier
+*:Zone.Identifier
+.vercel
+.env*.local
+
+# Playwright auth state
+apps/web/e2e/.auth/
+
+# Claude Code (AI tool config, may contain credentials)
+.claude/
+
+# Playwright MCP screenshots
+.playwright-mcp/
+
+# Build debug output
+build_output.txt
+
+# PDF files
+*.pdf
+
+# Internal project docs (not for version control)
+PM_QUESTIONS.md
+STUBBED_FEATURES.md
+API_SPECIFICATION.md
