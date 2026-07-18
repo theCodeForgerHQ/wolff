@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSavedLineItems, type SavedLineItemData } from '@/lib/saved-items/actions';
 import {
@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { DownloadUnavailable } from '@/components/pdf/download-unavailable';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -331,10 +332,8 @@ export function NewInvoiceForm({
   const [previewTab, setPreviewTab] = useState<PreviewTab>('payment');
   const [showPreviewDetails, setShowPreviewDetails] = useState(true);
   const [templateName, setTemplateName] = useState<TemplateName>('wolff');
-  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // Refs
-  const pdfRef = useRef<HTMLDivElement>(null);
 
   // Pre-fill from quote conversion
   useEffect(() => {
@@ -505,34 +504,6 @@ export function NewInvoiceForm({
       setLoading(false);
     }
   };
-
-  // ─── PDF Download Handler ─────────────────────────────
-  const handleDownloadPdf = useCallback(async () => {
-    if (!pdfRef.current) return;
-    setPdfGenerating(true);
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: 595,
-        height: 842,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      pdf.addImage(imgData, 'PNG', 0, 0, 595, 842);
-      pdf.save(`Invoice-${invoiceNumber}.pdf`);
-    } catch (err) {
-      console.error('PDF generation failed:', err);
-      toast.error('Failed to generate PDF. Please try again.');
-    } finally {
-      setPdfGenerating(false);
-    }
-  }, [invoiceNumber]);
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col">
@@ -1732,27 +1703,19 @@ export function NewInvoiceForm({
 
                   {/* ─── Download Button ─── */}
                   <div className="px-6 pb-6 pt-2">
-                    <button
-                      onClick={handleDownloadPdf}
-                      disabled={pdfGenerating}
-                      className={cn(
-                        'flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors',
-                        tpl.buttonColor,
-                        pdfGenerating && 'cursor-not-allowed opacity-70'
-                      )}
-                    >
-                      {pdfGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4" />
-                          Download Invoice
-                        </>
-                      )}
-                    </button>
+                    <DownloadUnavailable className="block w-full">
+                      <button
+                        disabled
+                        className={cn(
+                          'flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium',
+                          tpl.buttonColor,
+                          'cursor-not-allowed opacity-50'
+                        )}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Invoice
+                      </button>
+                    </DownloadUnavailable>
                   </div>
 
                   {/* ─── Footer ─── */}
@@ -1789,21 +1752,15 @@ export function NewInvoiceForm({
                     className="border-border/40 relative flex-shrink-0 rounded-sm border bg-white shadow-2xl"
                   >
                     {/* Download floating button */}
-                    <button
-                      onClick={handleDownloadPdf}
-                      disabled={pdfGenerating}
-                      className={cn(
-                        'bg-muted/80 hover:bg-muted absolute right-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full transition-colors',
-                        pdfGenerating && 'cursor-not-allowed opacity-70'
-                      )}
-                      title="Download PDF"
-                    >
-                      {pdfGenerating ? (
-                        <Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
-                      ) : (
+                    <DownloadUnavailable className="absolute right-2.5 top-2.5 z-20">
+                      <button
+                        disabled
+                        aria-label="Download PDF (available after saving)"
+                        className="bg-muted/80 flex h-7 w-7 cursor-not-allowed items-center justify-center rounded-full opacity-50"
+                      >
                         <Download className="text-muted-foreground h-3.5 w-3.5" />
-                      )}
-                    </button>
+                      </button>
+                    </DownloadUnavailable>
 
                     {/* A4 Page Content */}
                     <div
@@ -2157,248 +2114,6 @@ export function NewInvoiceForm({
                 </div>
               </div>
             )}
-
-            {/* ═══ HIDDEN A4 RENDER DIV (for PDF capture) ═══ */}
-            <div
-              ref={pdfRef}
-              className="fixed"
-              style={{
-                left: '-9999px',
-                top: 0,
-                width: '595px',
-                height: '842px',
-                background: '#ffffff',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                color: '#111111',
-                zIndex: -1,
-              }}
-            >
-              {/* Top accent bar */}
-              {tpl.topBorder && (
-                <div style={{ width: '100%', height: '4px', background: tpl.topBorder }} />
-              )}
-
-              {/* Header */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '32px 40px 24px',
-                }}
-              >
-                <div>
-                  <p style={{ fontSize: '18px', fontWeight: 700 }}>{businessName}</p>
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                    hello@company.com
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p
-                    style={{
-                      fontSize: '22px',
-                      fontWeight: 700,
-                      color: tpl.accent,
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    INVOICE
-                  </p>
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                    #{invoiceNumber}
-                  </p>
-                  <p style={{ fontSize: '11px', color: '#666' }}>
-                    Date: {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'Not set'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Bill To */}
-              <div style={{ padding: '0 40px 24px' }}>
-                <p
-                  style={{
-                    fontSize: '9px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    fontWeight: 600,
-                    color: '#999',
-                    marginBottom: '4px',
-                  }}
-                >
-                  Bill To
-                </p>
-                <p style={{ fontSize: '13px', fontWeight: 500 }}>
-                  {selectedClient?.name || 'Customer Name'}
-                </p>
-                {selectedClient?.company && (
-                  <p style={{ fontSize: '11px', color: '#666' }}>{selectedClient.company}</p>
-                )}
-              </div>
-
-              {/* Items Table */}
-              <div style={{ padding: '0 40px' }}>
-                <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                      <th
-                        style={{
-                          textAlign: 'left',
-                          padding: '8px 0',
-                          fontWeight: 600,
-                          color: '#333',
-                        }}
-                      >
-                        Description
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'center',
-                          padding: '8px 0',
-                          fontWeight: 600,
-                          color: '#333',
-                        }}
-                      >
-                        Qty
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '8px 0',
-                          fontWeight: 600,
-                          color: '#333',
-                        }}
-                      >
-                        Rate
-                      </th>
-                      <th
-                        style={{
-                          textAlign: 'right',
-                          padding: '8px 0',
-                          fontWeight: 600,
-                          color: '#333',
-                        }}
-                      >
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineItems.length > 0 ? (
-                      lineItems.map((item) => (
-                        <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '8px 0' }}>
-                            <p style={{ fontWeight: 500 }}>{item.name || 'Untitled'}</p>
-                            {item.description && (
-                              <p style={{ color: '#888', marginTop: '2px' }}>{item.description}</p>
-                            )}
-                          </td>
-                          <td style={{ textAlign: 'center', padding: '8px 0', color: '#333' }}>
-                            {item.quantity}
-                          </td>
-                          <td style={{ textAlign: 'right', padding: '8px 0', color: '#333' }}>
-                            {formatMoney(item.rate, selectedCurrency)}
-                          </td>
-                          <td style={{ textAlign: 'right', padding: '8px 0', fontWeight: 500 }}>
-                            {formatMoney(item.quantity * item.rate, selectedCurrency)}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          style={{ padding: '24px 0', textAlign: 'center', color: '#999' }}
-                        >
-                          No items added
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div style={{ padding: '16px 40px', marginTop: 'auto' }}>
-                <div style={{ marginLeft: 'auto', width: '200px' }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '4px 0',
-                      fontSize: '11px',
-                      color: '#666',
-                    }}
-                  >
-                    <span>Subtotal</span>
-                    <span>{formatMoney(subtotal, selectedCurrency)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '4px 0',
-                        fontSize: '11px',
-                        color: '#22c55e',
-                      }}
-                    >
-                      <span>Discount</span>
-                      <span>-{formatMoney(discountAmount, selectedCurrency)}</span>
-                    </div>
-                  )}
-                  {taxAmount > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '4px 0',
-                        fontSize: '11px',
-                        color: '#666',
-                      }}
-                    >
-                      <span>Tax ({parsedTaxPercent}%)</span>
-                      <span>{formatMoney(taxAmount, selectedCurrency)}</span>
-                    </div>
-                  )}
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '4px 0',
-                      fontSize: '11px',
-                      borderTop: '1px solid #e5e7eb',
-                      color: '#333',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span>Total</span>
-                    <span>{formatMoney(total, selectedCurrency)}</span>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'baseline',
-                      padding: '8px',
-                      marginTop: '4px',
-                      borderRadius: '4px',
-                      background: `${tpl.accent}15`,
-                    }}
-                  >
-                    <span style={{ fontSize: '11px', fontWeight: 700 }}>Balance Due</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: tpl.accent }}>
-                      {formatMoney(total, selectedCurrency)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {notes && (
-                <div style={{ padding: '0 40px 16px' }}>
-                  <p style={{ fontSize: '10px', color: '#999' }}>{notes}</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
