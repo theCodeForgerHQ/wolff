@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSavedLineItems, type SavedLineItemData } from '@/lib/saved-items/actions';
 import {
@@ -33,14 +33,11 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { downloadServerPdf } from '@/lib/pdf/client-download';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -53,11 +50,7 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Switch } from '@/components/ui/switch';
 import {
   Command,
@@ -72,7 +65,6 @@ import { toast } from 'sonner';
 import { updateInvoice, sendInvoice, getInvoiceTemplates } from '@/lib/invoices/actions';
 import type { InvoiceTemplateLineItem } from '@/lib/invoices/actions';
 import type { InvoiceDocument } from '@/lib/invoices/types';
-
 
 // ─── Types ───────────────────────────────────────────────
 interface LineItem {
@@ -220,12 +212,12 @@ function SectionHeader({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="mb-4 flex items-center justify-between">
       <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
       {action && (
         <button
           onClick={onAction}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
         >
           {actionLabel}
           <ChevronDown className="h-3.5 w-3.5" />
@@ -264,10 +256,12 @@ function formatMoney(amount: number, currency: string): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 // ─── Main Component ──────────────────────────────────────
@@ -288,7 +282,9 @@ export function EditInvoiceForm({
   // Form State — pre-filled from invoice
   const [invoiceNumber] = useState(invoice.invoiceNumber);
   const [dueDate, setDueDate] = useState<Date | undefined>(
-    invoice.dueDate ? new Date(invoice.dueDate + 'T00:00:00') : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    invoice.dueDate
+      ? new Date(invoice.dueDate + 'T00:00:00')
+      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
   );
   const [selectedClientId, setSelectedClientId] = useState<string>(invoice.clientId);
   const [lineItems, setLineItems] = useState<LineItem[]>(
@@ -300,9 +296,7 @@ export function EditInvoiceForm({
       rate: item.rate,
     }))
   );
-  const [taxRate, setTaxRate] = useState(
-    existingTaxRate ? `${existingTaxRate}%` : '0% - Default'
-  );
+  const [taxRate, setTaxRate] = useState(existingTaxRate ? `${existingTaxRate}%` : '0% - Default');
   const [customTaxRate, setCustomTaxRate] = useState('');
   const [notes, setNotes] = useState(invoice.notes || 'Thank you for your business!');
 
@@ -352,7 +346,6 @@ export function EditInvoiceForm({
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // Refs
-  const pdfRef = useRef<HTMLDivElement>(null);
 
   // Derived State
   const selectedClient = useMemo(
@@ -363,10 +356,11 @@ export function EditInvoiceForm({
   const tpl = (INVOICE_TEMPLATES[templateName] ?? INVOICE_TEMPLATES.clean) as InvoiceTemplate;
 
   // Bug #178: Round each line item to avoid floating-point precision errors
-  const subtotal = Math.round(lineItems.reduce(
-    (acc, item) => acc + Math.round(item.quantity * item.rate * 100) / 100,
-    0
-  ) * 100) / 100;
+  const subtotal =
+    Math.round(
+      lineItems.reduce((acc, item) => acc + Math.round(item.quantity * item.rate * 100) / 100, 0) *
+        100
+    ) / 100;
 
   // Parse tax rate from the select value
   const parsedTaxPercent = useMemo(() => {
@@ -377,7 +371,8 @@ export function EditInvoiceForm({
     return match?.[1] ? parseFloat(match[1]) : 0;
   }, [taxRate, customTaxRate]);
 
-  const discountAmount = Math.round((discountType === 'percent' ? subtotal * (discount / 100) : discount) * 100) / 100;
+  const discountAmount =
+    Math.round((discountType === 'percent' ? subtotal * (discount / 100) : discount) * 100) / 100;
   const discountedSubtotal = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
   const taxAmount = Math.round(discountedSubtotal * (parsedTaxPercent / 100) * 100) / 100;
   const total = Math.max(0, Math.round((discountedSubtotal + taxAmount) * 100) / 100);
@@ -386,12 +381,18 @@ export function EditInvoiceForm({
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedLineItemData[]>([]);
 
-  const [invoiceTemplates, setInvoiceTemplates] = useState<{ id: string; name: string; lineItems: InvoiceTemplateLineItem[] }[]>([]);
+  const [invoiceTemplates, setInvoiceTemplates] = useState<
+    { id: string; name: string; lineItems: InvoiceTemplateLineItem[] }[]
+  >([]);
   useEffect(() => {
-    getSavedLineItems().then(setSavedItems).catch(() => {});
-    getInvoiceTemplates().then(({ data }) => {
-      setInvoiceTemplates(data.map((t) => ({ id: t.id, name: t.name, lineItems: t.lineItems })));
-    }).catch(() => {});
+    getSavedLineItems()
+      .then(setSavedItems)
+      .catch(() => {});
+    getInvoiceTemplates()
+      .then(({ data }) => {
+        setInvoiceTemplates(data.map((t) => ({ id: t.id, name: t.name, lineItems: t.lineItems })));
+      })
+      .catch(() => {});
   }, []);
 
   const addLineItem = () => {
@@ -407,21 +408,12 @@ export function EditInvoiceForm({
     ]);
   };
 
-
   const removeLineItem = (id: string) => {
     setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
-  const updateLineItem = (
-    id: string,
-    field: keyof LineItem,
-    value: string | number
-  ) => {
-    setLineItems(
-      lineItems.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
+    setLineItems(lineItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   };
 
   const handleSubmit = async (isDraft: boolean) => {
@@ -439,7 +431,9 @@ export function EditInvoiceForm({
       const result = await updateInvoice(invoice.id, {
         title: 'Invoice',
         currency: selectedCurrency,
-        dueDate: dueDate ? dueDate.toISOString().split('T')[0]! : new Date().toISOString().split('T')[0]!,
+        dueDate: dueDate
+          ? dueDate.toISOString().split('T')[0]!
+          : new Date().toISOString().split('T')[0]!,
         lineItems: lineItems
           .filter((item) => item.name.trim())
           .map((item) => ({
@@ -449,7 +443,8 @@ export function EditInvoiceForm({
             rate: item.rate,
             taxRate: parsedTaxPercent || undefined,
           })),
-        discountType: discountAmount > 0 ? (discountType === 'percent' ? 'percentage' : 'fixed') : null,
+        discountType:
+          discountAmount > 0 ? (discountType === 'percent' ? 'percentage' : 'fixed') : null,
         discountValue: discountAmount > 0 ? discount : null,
         notes: notes || undefined,
       });
@@ -459,7 +454,10 @@ export function EditInvoiceForm({
         if (!isDraft) {
           const sendResult = await sendInvoice(invoice.id);
           if (!sendResult.success) {
-            toast.error(sendResult.error || 'Invoice updated but email could not be sent. You can resend from the invoices list.');
+            toast.error(
+              sendResult.error ||
+                'Invoice updated but email could not be sent. You can resend from the invoices list.'
+            );
             router.push('/invoices');
             return;
           }
@@ -472,62 +470,45 @@ export function EditInvoiceForm({
         toast.error(result.error);
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to update invoice';
+      const message = error instanceof Error ? error.message : 'Failed to update invoice';
       toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── PDF Download Handler ─────────────────────────────
+  // ─── PDF Download Handler (server-side rendering) ─────
   const handleDownloadPdf = useCallback(async () => {
-    if (!pdfRef.current) return;
     setPdfGenerating(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: 595,
-        height: 842,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      pdf.addImage(imgData, 'PNG', 0, 0, 595, 842);
-      pdf.save(`Invoice-${invoiceNumber}.pdf`);
+      await downloadServerPdf('invoice', invoice.id, `Invoice-${invoiceNumber}.pdf`);
     } catch (err) {
-      console.error('PDF generation failed:', err);
+      console.error('PDF download failed:', err);
       toast.error('Failed to generate PDF. Please try again.');
     } finally {
       setPdfGenerating(false);
     }
-  }, [invoiceNumber]);
+  }, [invoice.id, invoiceNumber]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
-
+    <div className="flex h-[calc(100vh-64px)] flex-col">
       {/* ─── Main Content ────────────────────────────── */}
       <div className="flex-1 overflow-hidden">
-        <div className="grid lg:grid-cols-[1fr,420px] xl:grid-cols-[1fr,480px] h-full">
+        <div className="grid h-full lg:grid-cols-[1fr,420px] xl:grid-cols-[1fr,480px]">
           {/* ═══════════════════════════════════════════ */}
           {/* LEFT PANEL — Editor                        */}
           {/* ═══════════════════════════════════════════ */}
-          <div className="overflow-y-auto no-scrollbar border-r bg-background">
-            <div className="max-w-[640px] mx-auto py-10 px-8 space-y-0">
+          <div className="no-scrollbar bg-background overflow-y-auto border-r">
+            <div className="mx-auto max-w-[640px] space-y-0 px-8 py-10">
               {/* ─── Invoice Details Section ─────────── */}
               <div className="pb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold tracking-tight font-display">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="font-display text-xl font-semibold tracking-tight">
                     Edit Invoice
                   </h3>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                      <button className="text-muted-foreground hover:text-primary flex items-center gap-1 text-sm transition-colors">
                         Options
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
@@ -535,11 +516,11 @@ export function EditInvoiceForm({
                     <PopoverContent align="end" className="w-56 p-1">
                       <div
                         role="menuitem"
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors cursor-pointer"
+                        className="hover:bg-muted flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowBillAsCompany(!showBillAsCompany)}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <Building2 className="text-muted-foreground h-4 w-4" />
                           <span>Bill as Company</span>
                         </div>
                         <Switch
@@ -549,53 +530,53 @@ export function EditInvoiceForm({
                         />
                       </div>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowIssueDate(!showIssueDate)}
                       >
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <CalendarIcon className="text-muted-foreground h-4 w-4" />
                         <span>Edit Issue Date</span>
-                        {showIssueDate && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showIssueDate && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowPoNumber(!showPoNumber)}
                       >
-                        <Hash className="h-4 w-4 text-muted-foreground" />
+                        <Hash className="text-muted-foreground h-4 w-4" />
                         <span>Add PO Number</span>
-                        {showPoNumber && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showPoNumber && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowCustomField(!showCustomField)}
                       >
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                        <Pencil className="text-muted-foreground h-4 w-4" />
                         <span>Add Custom Field</span>
-                        {showCustomField && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showCustomField && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
-                      <div className="h-px bg-border/50 my-1" />
+                      <div className="bg-border/50 my-1 h-px" />
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowDescription(!showDescription)}
                       >
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <FileText className="text-muted-foreground h-4 w-4" />
                         <span>Add Description</span>
-                        {showDescription && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showDescription && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowAttachments(!showAttachments)}
                       >
-                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        <Paperclip className="text-muted-foreground h-4 w-4" />
                         <span>Add Attachments</span>
-                        {showAttachments && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showAttachments && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowEvent(!showEvent)}
                       >
-                        <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+                        <CalendarPlus className="text-muted-foreground h-4 w-4" />
                         <span>Add Event</span>
-                        {showEvent && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showEvent && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                     </PopoverContent>
                   </Popover>
@@ -604,9 +585,9 @@ export function EditInvoiceForm({
                 {/* Client Selector / Display */}
                 <div className="mb-5">
                   {selectedClient ? (
-                    <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 bg-muted/20">
+                    <div className="border-border/60 bg-muted/20 flex items-center justify-between rounded-lg border px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
                           {selectedClient.name
                             .split(' ')
                             .map((n) => n[0])
@@ -615,19 +596,15 @@ export function EditInvoiceForm({
                             .slice(0, 2)}
                         </div>
                         <div>
-                          <p className="font-medium text-sm">
-                            {selectedClient.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {selectedClient.email}
-                          </p>
+                          <p className="text-sm font-medium">{selectedClient.name}</p>
+                          <p className="text-muted-foreground text-xs">{selectedClient.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="text-muted-foreground h-8 w-8"
                           onClick={() => setSelectedClientId('')}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -635,7 +612,7 @@ export function EditInvoiceForm({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="text-muted-foreground h-8 w-8"
                           onClick={() => setSelectedClientId('')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -644,13 +621,8 @@ export function EditInvoiceForm({
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Customer
-                      </Label>
-                      <Select
-                        value={selectedClientId}
-                        onValueChange={setSelectedClientId}
-                      >
+                      <Label className="text-muted-foreground text-xs">Customer</Label>
+                      <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
@@ -682,7 +654,7 @@ export function EditInvoiceForm({
                 {/* Bill as Company — shown when toggled */}
                 {showBillAsCompany && (
                   <div className="mb-4 space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Company Name</Label>
+                    <Label className="text-muted-foreground text-xs">Company Name</Label>
                     <Input
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
@@ -693,26 +665,27 @@ export function EditInvoiceForm({
                 )}
 
                 {/* Issue Date / Due Date / Invoice Number / Tax Rate — Compact Row */}
-                <div className={cn('grid gap-4', showIssueDate ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3')}>
+                <div
+                  className={cn(
+                    'grid gap-4',
+                    showIssueDate ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'
+                  )}
+                >
                   {showIssueDate && (
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Issue Date
-                      </Label>
+                      <Label className="text-muted-foreground text-xs">Issue Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
-                              'w-full justify-start text-left font-normal h-11 text-sm bg-card shadow-none',
+                              'bg-card h-11 w-full justify-start text-left text-sm font-normal shadow-none',
                               !issueDate && 'text-muted-foreground'
                             )}
                           >
-                            <CalendarIcon className="mr-1 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                            <CalendarIcon className="text-muted-foreground mr-1 h-3.5 w-3.5 flex-shrink-0" />
                             <span className="truncate">
-                              {issueDate
-                                ? format(issueDate, 'MMM dd, yyyy')
-                                : 'Pick date'}
+                              {issueDate ? format(issueDate, 'MMM dd, yyyy') : 'Pick date'}
                             </span>
                           </Button>
                         </PopoverTrigger>
@@ -728,23 +701,19 @@ export function EditInvoiceForm({
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      Due Date
-                    </Label>
+                    <Label className="text-muted-foreground text-xs">Due Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            'w-full justify-start text-left font-normal h-11 text-sm bg-card shadow-none',
+                            'bg-card h-11 w-full justify-start text-left text-sm font-normal shadow-none',
                             !dueDate && 'text-muted-foreground'
                           )}
                         >
-                          <CalendarIcon className="mr-1 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          <CalendarIcon className="text-muted-foreground mr-1 h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">
-                            {dueDate
-                              ? format(dueDate, 'MMM dd, yyyy')
-                              : 'Pick date'}
+                            {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'Pick date'}
                           </span>
                         </Button>
                       </PopoverTrigger>
@@ -759,30 +728,23 @@ export function EditInvoiceForm({
                     </Popover>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      Invoice Number
-                    </Label>
-                    <Input
-                      value={invoiceNumber}
-                      disabled
-                      className="h-11"
-                    />
+                    <Label className="text-muted-foreground text-xs">Invoice Number</Label>
+                    <Input value={invoiceNumber} disabled className="h-11" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      Tax rate
-                    </Label>
-                    <Select value={taxRate} onValueChange={(v) => {
-                      setTaxRate(v);
-                      if (v !== 'custom') setCustomTaxRate('');
-                    }}>
+                    <Label className="text-muted-foreground text-xs">Tax rate</Label>
+                    <Select
+                      value={taxRate}
+                      onValueChange={(v) => {
+                        setTaxRate(v);
+                        if (v !== 'custom') setCustomTaxRate('');
+                      }}
+                    >
                       <SelectTrigger className="h-11">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0% - Default">
-                          0% - Default
-                        </SelectItem>
+                        <SelectItem value="0% - Default">0% - Default</SelectItem>
                         {taxRates
                           .filter((t) => t.isActive)
                           .map((tr) => (
@@ -806,7 +768,7 @@ export function EditInvoiceForm({
                 {/* Custom Tax Rate Input */}
                 {taxRate === 'custom' && (
                   <div className="mt-3 space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Custom Tax Rate (%)</Label>
+                    <Label className="text-muted-foreground text-xs">Custom Tax Rate (%)</Label>
                     <Input
                       type="number"
                       min="0"
@@ -822,7 +784,7 @@ export function EditInvoiceForm({
 
                 {/* Currency Selector */}
                 <div className="mt-3 space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Currency</Label>
+                  <Label className="text-muted-foreground text-xs">Currency</Label>
                   <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
                     <SelectTrigger className="h-10 max-w-[200px]">
                       <SelectValue />
@@ -845,7 +807,7 @@ export function EditInvoiceForm({
                 {/* PO Number — shown when toggled */}
                 {showPoNumber && (
                   <div className="mt-3 space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Purchase Order #</Label>
+                    <Label className="text-muted-foreground text-xs">Purchase Order #</Label>
                     <Input
                       value={poNumber}
                       onChange={(e) => setPoNumber(e.target.value)}
@@ -859,7 +821,7 @@ export function EditInvoiceForm({
                 {showCustomField && (
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Field Label</Label>
+                      <Label className="text-muted-foreground text-xs">Field Label</Label>
                       <Input
                         value={customFieldLabel}
                         onChange={(e) => setCustomFieldLabel(e.target.value)}
@@ -868,7 +830,7 @@ export function EditInvoiceForm({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Field Value</Label>
+                      <Label className="text-muted-foreground text-xs">Field Value</Label>
                       <Input
                         value={customFieldValue}
                         onChange={(e) => setCustomFieldValue(e.target.value)}
@@ -881,115 +843,122 @@ export function EditInvoiceForm({
               </div>
 
               {/* ─── Add Enhancements — Dropdown ─────── */}
-                {/* Enhancement fields — shown when toggled */}
-                {(showDescription || showAttachments || showEvent) && (
-                  <div className="mt-8 space-y-6">
-                    {showDescription && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Description</Label>
-                          <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => { setShowDescription(false); setDescription(''); }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <Textarea
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          className="resize-none min-h-[80px]"
-                          placeholder="Describe this project or service..."
+              {/* Enhancement fields — shown when toggled */}
+              {(showDescription || showAttachments || showEvent) && (
+                <div className="mt-8 space-y-6">
+                  {showDescription && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-muted-foreground text-xs">Description</Label>
+                        <button
+                          className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                          onClick={() => {
+                            setShowDescription(false);
+                            setDescription('');
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <Textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="min-h-[80px] resize-none"
+                        placeholder="Describe this project or service..."
+                      />
+                    </div>
+                  )}
+                  {showAttachments && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-muted-foreground text-xs">Attachments</Label>
+                        <button
+                          className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                          onClick={() => setShowAttachments(false)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="text-muted-foreground hover:border-primary/30 bg-muted/10 cursor-pointer rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition-colors">
+                        <Paperclip className="mx-auto mb-2 h-5 w-5 opacity-50" />
+                        <p>Click to upload or drag files here</p>
+                        <p className="mt-1 text-xs">PDF, Images up to 10MB</p>
+                      </div>
+                    </div>
+                  )}
+                  {showEvent && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-muted-foreground text-xs">Event Details</Label>
+                        <button
+                          className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                          onClick={() => {
+                            setShowEvent(false);
+                            setEventName('');
+                            setEventDate(undefined);
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          value={eventName}
+                          onChange={(e) => setEventName(e.target.value)}
+                          className="h-10"
+                          placeholder="Event name"
                         />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'h-10 w-full justify-start text-left text-sm font-normal',
+                                !eventDate && 'text-muted-foreground'
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                              {eventDate ? format(eventDate, 'MMM do, yyyy') : 'Event date'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={eventDate}
+                              onSelect={setEventDate}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    )}
-                    {showAttachments && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Attachments</Label>
-                          <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => setShowAttachments(false)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div className="border-2 border-dashed rounded-lg px-4 py-6 text-center text-muted-foreground text-sm hover:border-primary/30 transition-colors cursor-pointer bg-muted/10">
-                          <Paperclip className="h-5 w-5 mx-auto mb-2 opacity-50" />
-                          <p>Click to upload or drag files here</p>
-                          <p className="text-xs mt-1">PDF, Images up to 10MB</p>
-                        </div>
-                      </div>
-                    )}
-                    {showEvent && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Event Details</Label>
-                          <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => { setShowEvent(false); setEventName(''); setEventDate(undefined); }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Input
-                            value={eventName}
-                            onChange={(e) => setEventName(e.target.value)}
-                            className="h-10"
-                            placeholder="Event name"
-                          />
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  'w-full justify-start text-left font-normal h-10 text-sm',
-                                  !eventDate && 'text-muted-foreground'
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                {eventDate ? format(eventDate, 'MMM do, yyyy') : 'Event date'}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={eventDate}
-                                onSelect={setEventDate}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Separator className="bg-border/60" />
 
               {/* ─── Items Section ────────────────────── */}
               <div className="py-8">
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-xl font-semibold tracking-tight font-display">
-                    Items
-                  </h3>
+                <div className="mb-5 flex items-center justify-between">
+                  <h3 className="font-display text-xl font-semibold tracking-tight">Items</h3>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                      <button className="text-muted-foreground hover:text-primary flex items-center gap-1 text-sm transition-colors">
                         Templates
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-64 p-1">
-                      <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Load a template</p>
+                      <p className="text-muted-foreground px-2 py-1.5 text-xs font-medium">
+                        Load a template
+                      </p>
                       {invoiceTemplates.length === 0 ? (
                         <div className="py-4 text-center">
-                          <p className="text-xs text-muted-foreground">No templates yet</p>
+                          <p className="text-muted-foreground text-xs">No templates yet</p>
                           <button
                             onClick={() => router.push('/templates/invoices')}
-                            className="text-xs text-primary hover:text-primary/80 mt-1"
+                            className="text-primary hover:text-primary/80 mt-1 text-xs"
                           >
                             Create templates →
                           </button>
@@ -1009,9 +978,9 @@ export function EditInvoiceForm({
                                 }))
                               );
                             }}
-                            className="w-full flex items-center gap-2.5 px-2 py-2 text-sm rounded-md hover:bg-muted transition-colors text-left"
+                            className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors"
                           >
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <FileText className="text-muted-foreground h-4 w-4" />
                             <span className="font-medium">{template.name}</span>
                           </button>
                         ))
@@ -1022,14 +991,14 @@ export function EditInvoiceForm({
 
                 {/* Items Table Header */}
                 {lineItems.length > 0 && (
-                  <div className="grid grid-cols-[1fr,80px,60px,32px] gap-3 mb-3 px-3">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  <div className="mb-3 grid grid-cols-[1fr,80px,60px,32px] gap-3 px-3">
+                    <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-widest">
                       Items
                     </span>
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                    <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-widest">
                       Rate
                     </span>
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
+                    <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-widest">
                       Qty
                     </span>
                     <span />
@@ -1037,23 +1006,21 @@ export function EditInvoiceForm({
                 )}
 
                 {/* Line Items */}
-                <div className="space-y-0 mb-5">
+                <div className="mb-5 space-y-0">
                   {lineItems.map((item, index) => (
                     <div
                       key={item.id}
                       className={cn(
-                        'group px-3 py-3 transition-colors hover:bg-muted/30',
-                        index !== lineItems.length - 1 && 'border-b border-border/40'
+                        'hover:bg-muted/30 group px-3 py-3 transition-colors',
+                        index !== lineItems.length - 1 && 'border-border/40 border-b'
                       )}
                     >
-                      <div className="grid grid-cols-[1fr,80px,60px,32px] gap-3 items-center">
+                      <div className="grid grid-cols-[1fr,80px,60px,32px] items-center gap-3">
                         <Input
                           placeholder="Item name"
                           value={item.name}
-                          onChange={(e) =>
-                            updateLineItem(item.id, 'name', e.target.value)
-                          }
-                          className="h-9 border-0 shadow-none px-0 text-sm font-medium focus-visible:ring-0 !bg-transparent"
+                          onChange={(e) => updateLineItem(item.id, 'name', e.target.value)}
+                          className="h-9 border-0 !bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-0"
                         />
                         <Input
                           type="number"
@@ -1061,11 +1028,7 @@ export function EditInvoiceForm({
                           step="0.01"
                           value={item.rate || ''}
                           onChange={(e) =>
-                            updateLineItem(
-                              item.id,
-                              'rate',
-                              parseFloat(e.target.value) || 0
-                            )
+                            updateLineItem(item.id, 'rate', parseFloat(e.target.value) || 0)
                           }
                           className="h-9 text-sm"
                           placeholder="0"
@@ -1088,7 +1051,7 @@ export function EditInvoiceForm({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                          className="text-muted-foreground hover:text-destructive h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={() => removeLineItem(item.id)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1097,10 +1060,8 @@ export function EditInvoiceForm({
                       <Input
                         placeholder="Add a description..."
                         value={item.description}
-                        onChange={(e) =>
-                          updateLineItem(item.id, 'description', e.target.value)
-                        }
-                        className="h-7 text-xs text-muted-foreground border-0 shadow-none px-0 mt-0.5 focus-visible:ring-0 !bg-transparent"
+                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                        className="text-muted-foreground mt-0.5 h-7 border-0 !bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                       />
                     </div>
                   ))}
@@ -1111,7 +1072,7 @@ export function EditInvoiceForm({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full h-11 border-dashed border-2 text-sm font-medium text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary-50/50 transition-all"
+                      className="text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary-50/50 h-11 w-full border-2 border-dashed text-sm font-medium transition-all"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Items
@@ -1135,7 +1096,7 @@ export function EditInvoiceForm({
                             }}
                             className="py-2.5"
                           >
-                            <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <Plus className="text-muted-foreground mr-2 h-4 w-4" />
                             <span className="font-medium">Blank Item</span>
                           </CommandItem>
                         </CommandGroup>
@@ -1143,10 +1104,13 @@ export function EditInvoiceForm({
                         <CommandGroup heading="Saved Items">
                           {savedItems.length === 0 ? (
                             <div className="py-4 text-center">
-                              <p className="text-xs text-muted-foreground">No saved items yet</p>
+                              <p className="text-muted-foreground text-xs">No saved items yet</p>
                               <button
-                                onClick={() => { setAddItemOpen(false); router.push('/templates/invoice-items'); }}
-                                className="text-xs text-primary hover:text-primary/80 mt-1"
+                                onClick={() => {
+                                  setAddItemOpen(false);
+                                  router.push('/templates/invoice-items');
+                                }}
+                                className="text-primary hover:text-primary/80 mt-1 text-xs"
                               >
                                 Create saved items →
                               </button>
@@ -1157,23 +1121,30 @@ export function EditInvoiceForm({
                                 key={saved.id}
                                 value={saved.name}
                                 onSelect={() => {
-                                  setLineItems([...lineItems, {
-                                    id: Math.random().toString(36).substr(2, 9),
-                                    name: saved.name,
-                                    description: saved.description || '',
-                                    quantity: 1,
-                                    rate: saved.price,
-                                  }]);
+                                  setLineItems([
+                                    ...lineItems,
+                                    {
+                                      id: Math.random().toString(36).substr(2, 9),
+                                      name: saved.name,
+                                      description: saved.description || '',
+                                      quantity: 1,
+                                      rate: saved.price,
+                                    },
+                                  ]);
                                   setAddItemOpen(false);
                                 }}
                                 className="py-2.5"
                               >
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{saved.name}</p>
-                                  {saved.description && <p className="text-xs text-muted-foreground truncate">{saved.description}</p>}
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">{saved.name}</p>
+                                  {saved.description && (
+                                    <p className="text-muted-foreground truncate text-xs">
+                                      {saved.description}
+                                    </p>
+                                  )}
                                 </div>
                                 {saved.price > 0 && (
-                                  <span className="ml-3 shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
+                                  <span className="text-muted-foreground ml-3 shrink-0 text-xs font-medium tabular-nums">
                                     {formatMoney(saved.price, selectedCurrency)}
                                   </span>
                                 )}
@@ -1193,45 +1164,51 @@ export function EditInvoiceForm({
               <div className="py-8">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-semibold tracking-tight font-display">
+                    <h3 className="font-display text-xl font-semibold tracking-tight">
                       Payment Settings
                     </h3>
-                    <p className="text-[13px] text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-[13px]">
                       Payment methods are setup in your settings page.
                     </p>
                   </div>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                      <button className="text-muted-foreground hover:text-primary flex items-center gap-1 text-sm transition-colors">
                         Options
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-56 p-1">
-                      <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment settings</p>
+                      <p className="text-muted-foreground px-3 py-1.5 text-xs font-medium uppercase tracking-wider">
+                        Payment settings
+                      </p>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowDeposit(!showDeposit)}
                       >
-                        <Banknote className="h-4 w-4 text-muted-foreground" />
+                        <Banknote className="text-muted-foreground h-4 w-4" />
                         <span>Deposit/Payments</span>
-                        {showDeposit && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showDeposit && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowDiscount(!showDiscount)}
                       >
-                        <span className="h-4 w-4 text-muted-foreground flex items-center justify-center font-bold text-xs">%</span>
+                        <span className="text-muted-foreground flex h-4 w-4 items-center justify-center text-xs font-bold">
+                          %
+                        </span>
                         <span>Discount</span>
-                        {showDiscount && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        {showDiscount && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <div
                         role="menuitem"
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors cursor-pointer"
+                        className="hover:bg-muted flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setAllowTipping(!allowTipping)}
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="h-4 w-4 text-muted-foreground flex items-center justify-center text-xs">&#128176;</span>
+                          <span className="text-muted-foreground flex h-4 w-4 items-center justify-center text-xs">
+                            &#128176;
+                          </span>
                           <span>Tipping</span>
                         </div>
                         <Switch
@@ -1241,38 +1218,40 @@ export function EditInvoiceForm({
                         />
                       </div>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowRecurring(!showRecurring)}
                       >
-                        <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                        <RotateCcw className="text-muted-foreground h-4 w-4" />
                         <span>Recurring Invoice</span>
-                        <HelpCircle className="h-3 w-3 text-muted-foreground/50" />
-                        {showRecurring && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
+                        {showRecurring && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setShowCustomLinks(!showCustomLinks)}
                       >
-                        <Link2 className="h-4 w-4 text-muted-foreground" />
+                        <Link2 className="text-muted-foreground h-4 w-4" />
                         <span>Custom Links</span>
-                        <HelpCircle className="h-3 w-3 text-muted-foreground/50" />
-                        {showCustomLinks && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
+                        {showCustomLinks && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm transition-colors"
                         onClick={() => setPdfPaymentLink(!pdfPaymentLink)}
                       >
                         <div className="flex items-center gap-2.5">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <FileText className="text-muted-foreground h-4 w-4" />
                           <span>PDF Payment Link</span>
-                          <HelpCircle className="h-3 w-3 text-muted-foreground/50" />
+                          <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
                         </div>
-                        {pdfPaymentLink && <Check className="h-3.5 w-3.5 text-primary" />}
+                        {pdfPaymentLink && <Check className="text-primary h-3.5 w-3.5" />}
                       </button>
                       <Separator className="my-1" />
-                      <p className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment methods</p>
-                      <button className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-md hover:bg-muted transition-colors">
-                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-muted-foreground px-3 py-1.5 text-xs font-medium uppercase tracking-wider">
+                        Payment methods
+                      </p>
+                      <button className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm transition-colors">
+                        <Plus className="text-muted-foreground h-4 w-4" />
                         <span>Add Payment Options</span>
                       </button>
                     </PopoverContent>
@@ -1281,14 +1260,17 @@ export function EditInvoiceForm({
 
                 {/* Payment settings fields — shown when toggled */}
                 {(showDeposit || showDiscount || showRecurring || showCustomLinks) && (
-                  <div className="mt-4 pt-3 border-t border-dashed space-y-3">
+                  <div className="mt-4 space-y-3 border-t border-dashed pt-3">
                     {showDiscount && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Discount</Label>
+                          <Label className="text-muted-foreground text-xs">Discount</Label>
                           <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => { setShowDiscount(false); setDiscount(0); }}
+                            className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                            onClick={() => {
+                              setShowDiscount(false);
+                              setDiscount(0);
+                            }}
                           >
                             Remove
                           </button>
@@ -1302,8 +1284,11 @@ export function EditInvoiceForm({
                             className="h-10"
                             placeholder="0.00"
                           />
-                          <Select value={discountType} onValueChange={(v) => setDiscountType(v as 'flat' | 'percent')}>
-                            <SelectTrigger className="w-[100px] h-10">
+                          <Select
+                            value={discountType}
+                            onValueChange={(v) => setDiscountType(v as 'flat' | 'percent')}
+                          >
+                            <SelectTrigger className="h-10 w-[100px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1317,10 +1302,13 @@ export function EditInvoiceForm({
                     {showDeposit && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Deposit Required</Label>
+                          <Label className="text-muted-foreground text-xs">Deposit Required</Label>
                           <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => { setShowDeposit(false); setDepositAmount(0); }}
+                            className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                            onClick={() => {
+                              setShowDeposit(false);
+                              setDepositAmount(0);
+                            }}
                           >
                             Remove
                           </button>
@@ -1338,9 +1326,11 @@ export function EditInvoiceForm({
                     {showRecurring && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Recurring Schedule</Label>
+                          <Label className="text-muted-foreground text-xs">
+                            Recurring Schedule
+                          </Label>
                           <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                            className="text-muted-foreground hover:text-destructive text-xs transition-colors"
                             onClick={() => setShowRecurring(false)}
                           >
                             Remove
@@ -1363,10 +1353,14 @@ export function EditInvoiceForm({
                     {showCustomLinks && (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs text-muted-foreground">Custom Link</Label>
+                          <Label className="text-muted-foreground text-xs">Custom Link</Label>
                           <button
-                            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            onClick={() => { setShowCustomLinks(false); setCustomLinkUrl(''); setCustomLinkLabel(''); }}
+                            className="text-muted-foreground hover:text-destructive text-xs transition-colors"
+                            onClick={() => {
+                              setShowCustomLinks(false);
+                              setCustomLinkUrl('');
+                              setCustomLinkLabel('');
+                            }}
                           >
                             Remove
                           </button>
@@ -1395,31 +1389,29 @@ export function EditInvoiceForm({
 
               {/* ─── Memo Section ─────────────────────── */}
               <div className="py-8">
-                <h3 className="text-xl font-semibold tracking-tight font-display mb-5">
-                  Memo
-                </h3>
+                <h3 className="font-display mb-5 text-xl font-semibold tracking-tight">Memo</h3>
                 <div className="space-y-2">
-                  <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Memo</Label>
+                  <Label className="text-muted-foreground text-[11px] font-semibold uppercase tracking-widest">
+                    Memo
+                  </Label>
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="resize-none min-h-[80px] text-sm"
+                    className="min-h-[80px] resize-none text-sm"
                     placeholder="Thank you for your business!"
                   />
                 </div>
               </div>
 
               {/* ─── Bottom Action Bar ────────────────── */}
-              <div className="flex items-center gap-3 pt-4 pb-8 border-t">
+              <div className="flex items-center gap-3 border-t pb-8 pt-4">
                 <Button
                   onClick={() => handleSubmit(false)}
                   disabled={loading}
                   size="lg"
-                  className="bg-red-500 hover:bg-red-600 text-white px-8"
+                  className="bg-red-500 px-8 text-white hover:bg-red-600"
                 >
-                  {loading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save & Send
                 </Button>
                 <Button
@@ -1437,30 +1429,24 @@ export function EditInvoiceForm({
           {/* ═══════════════════════════════════════════ */}
           {/* RIGHT PANEL — Live Preview                 */}
           {/* ═══════════════════════════════════════════ */}
-          <div className="overflow-y-auto no-scrollbar bg-muted/30 flex flex-col">
+          <div className="no-scrollbar bg-muted/30 flex flex-col overflow-y-auto">
             {/* Preview Tabs */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pt-4 pb-3">
-              <Tabs
-                value={previewTab}
-                onValueChange={(v) => setPreviewTab(v as PreviewTab)}
-              >
-                <TabsList className="w-full grid grid-cols-3 h-10">
+            <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 border-b px-4 pb-3 pt-4 backdrop-blur">
+              <Tabs value={previewTab} onValueChange={(v) => setPreviewTab(v as PreviewTab)}>
+                <TabsList className="grid h-10 w-full grid-cols-3">
                   <TabsTrigger
                     value="payment"
-                    className="text-xs data-[state=active]:text-foreground"
+                    className="data-[state=active]:text-foreground text-xs"
                   >
                     Payment Page
                   </TabsTrigger>
                   <TabsTrigger
                     value="email"
-                    className="text-xs data-[state=active]:text-foreground"
+                    className="data-[state=active]:text-foreground text-xs"
                   >
                     Email Preview
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="pdf"
-                    className="text-xs data-[state=active]:text-foreground"
-                  >
+                  <TabsTrigger value="pdf" className="data-[state=active]:text-foreground text-xs">
                     Invoice PDF
                   </TabsTrigger>
                 </TabsList>
@@ -1469,598 +1455,654 @@ export function EditInvoiceForm({
 
             {/* ═══ PAYMENT PAGE TAB ═══════════════════ */}
             {previewTab === 'payment' && (
-            <div className="p-4 flex-1">
-              <div className={cn(
-                'bg-card border shadow-sm overflow-hidden transition-all duration-300 relative',
-                tpl.cardClass,
-                tpl.style === 'glassmorphism' && 'backdrop-blur-xl bg-white/70 border-white/40',
-              )}
-              style={tpl.bgTint ? { background: tpl.bgTint } : undefined}
-              >
-                {/* ─── Subtle top-left wave decoration ─── */}
-                <svg className="absolute top-0 left-0 pointer-events-none" viewBox="0 0 200 120" fill="none" style={{ width: '45%', height: '100px' }}>
-                  <path d="M0 0 L0 80 Q60 72 120 40 Q160 18 200 0 Z" fill={tpl.accent} opacity="0.05" />
-                  <path d="M0 0 L0 50 Q40 44 80 24 Q110 10 140 0 Z" fill={tpl.accent} opacity="0.03" />
-                </svg>
-
-                {/* ─── Theme Picker ─── */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      className="absolute top-3 right-3 h-7 w-7 rounded-full bg-muted/60 hover:bg-muted transition-colors flex items-center justify-center z-20"
-                      title="Change template"
-                    >
-                      <Palette className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-3" align="end" side="bottom">
-                    <p className="text-xs font-medium text-muted-foreground mb-2.5">Invoice Style</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {Object.entries(INVOICE_TEMPLATES).map(([key, t]) => (
-                        <button
-                          key={key}
-                          onClick={() => setTemplateName(key as TemplateName)}
-                          className={cn(
-                            'flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all hover:bg-muted',
-                            templateName === key && 'ring-2 ring-primary ring-offset-1 bg-muted'
-                          )}
-                        >
-                          <div className="w-full h-10 rounded-md overflow-hidden relative border border-border/50 bg-white flex flex-col items-center justify-center gap-0.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `${t.accent}20`, border: `1.5px solid ${t.accent}` }} />
-                            <div className="h-0.5 w-5 rounded-full bg-muted-foreground/15" />
-                            <div className="h-0.5 w-3 rounded-full" style={{ background: t.accent, opacity: 0.5 }} />
-                          </div>
-                          <span className="text-[10px] leading-tight text-muted-foreground">{t.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* ─── Top accent bar (accent-bar style) ─── */}
-                {tpl.style === 'accent-bar' && tpl.topBorder && (
-                  <div className="w-full h-1" style={{ background: tpl.topBorder }} />
-                )}
-
-                {/* ─── Header Area (centered for all styles) ─── */}
-                <div className="px-6 pt-8 pb-5 text-center">
-                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-3"
-                    style={{ backgroundColor: tpl.accentLight }}>
-                    <Check className="h-5 w-5" style={{ color: tpl.accent }} />
-                  </div>
-                  <h3 className="text-base font-semibold tracking-tight">{businessName}</h3>
-                  <p className={cn('font-bold tracking-tight mt-1', tpl.amountSize)} style={{ color: tpl.accent }}>
-                    {formatMoney(total, selectedCurrency)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Invoice #{invoiceNumber} &middot; Due {dueDate ? format(dueDate, 'MMM dd, yyyy') : '...'}
-                  </p>
-                </div>
-
-                <Separator className={tpl.separatorClass} />
-
-                {/* ─── Client + Invoice Details (Collapsible) ── */}
-                <div className="px-6 py-4">
-                  <Collapsible
-                    open={showPreviewDetails}
-                    onOpenChange={setShowPreviewDetails}
+              <div className="flex-1 p-4">
+                <div
+                  className={cn(
+                    'bg-card relative overflow-hidden border shadow-sm transition-all duration-300',
+                    tpl.cardClass,
+                    tpl.style === 'glassmorphism' && 'border-white/40 bg-white/70 backdrop-blur-xl'
+                  )}
+                  style={tpl.bgTint ? { background: tpl.bgTint } : undefined}
+                >
+                  {/* ─── Subtle top-left wave decoration ─── */}
+                  <svg
+                    className="pointer-events-none absolute left-0 top-0"
+                    viewBox="0 0 200 120"
+                    fill="none"
+                    style={{ width: '45%', height: '100px' }}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-semibold text-sm">
-                          {selectedClient?.name || 'Select a customer'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedClient?.company || ''}
-                        </p>
-                      </div>
-                      <CollapsibleTrigger asChild>
-                        <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
-                          {showPreviewDetails ? 'Hide' : 'Details'}
-                          <ChevronUp
-                            className={cn(
-                              'h-3 w-3 transition-transform',
-                              !showPreviewDetails && 'rotate-180'
-                            )}
-                          />
-                        </button>
-                      </CollapsibleTrigger>
-                    </div>
+                    <path
+                      d="M0 0 L0 80 Q60 72 120 40 Q160 18 200 0 Z"
+                      fill={tpl.accent}
+                      opacity="0.05"
+                    />
+                    <path
+                      d="M0 0 L0 50 Q40 44 80 24 Q110 10 140 0 Z"
+                      fill={tpl.accent}
+                      opacity="0.03"
+                    />
+                  </svg>
 
-                    <CollapsibleContent>
-                      <Separator className={cn('mb-4', tpl.separatorClass)} />
-                      <div className="space-y-2">
-                        {lineItems.length > 0 &&
-                          lineItems.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between py-2 text-sm"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">
-                                  {item.name || 'Untitled Item'}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {item.quantity} &times; {formatMoney(item.rate, selectedCurrency)}
-                                  {item.description && <span className="ml-1.5 text-muted-foreground/70">&middot; {item.description}</span>}
-                                </p>
+                  {/* ─── Theme Picker ─── */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="bg-muted/60 hover:bg-muted absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full transition-colors"
+                        title="Change template"
+                      >
+                        <Palette className="text-muted-foreground h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-3" align="end" side="bottom">
+                      <p className="text-muted-foreground mb-2.5 text-xs font-medium">
+                        Invoice Style
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {Object.entries(INVOICE_TEMPLATES).map(([key, t]) => (
+                          <button
+                            key={key}
+                            onClick={() => setTemplateName(key as TemplateName)}
+                            className={cn(
+                              'hover:bg-muted flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all',
+                              templateName === key && 'ring-primary bg-muted ring-2 ring-offset-1'
+                            )}
+                          >
+                            <div className="border-border/50 relative flex h-10 w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md border bg-white">
+                              <div
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{
+                                  backgroundColor: `${t.accent}20`,
+                                  border: `1.5px solid ${t.accent}`,
+                                }}
+                              />
+                              <div className="bg-muted-foreground/15 h-0.5 w-5 rounded-full" />
+                              <div
+                                className="h-0.5 w-3 rounded-full"
+                                style={{ background: t.accent, opacity: 0.5 }}
+                              />
+                            </div>
+                            <span className="text-muted-foreground text-[10px] leading-tight">
+                              {t.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* ─── Top accent bar (accent-bar style) ─── */}
+                  {tpl.style === 'accent-bar' && tpl.topBorder && (
+                    <div className="h-1 w-full" style={{ background: tpl.topBorder }} />
+                  )}
+
+                  {/* ─── Header Area (centered for all styles) ─── */}
+                  <div className="px-6 pb-5 pt-8 text-center">
+                    <div
+                      className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full"
+                      style={{ backgroundColor: tpl.accentLight }}
+                    >
+                      <Check className="h-5 w-5" style={{ color: tpl.accent }} />
+                    </div>
+                    <h3 className="text-base font-semibold tracking-tight">{businessName}</h3>
+                    <p
+                      className={cn('mt-1 font-bold tracking-tight', tpl.amountSize)}
+                      style={{ color: tpl.accent }}
+                    >
+                      {formatMoney(total, selectedCurrency)}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Invoice #{invoiceNumber} &middot; Due{' '}
+                      {dueDate ? format(dueDate, 'MMM dd, yyyy') : '...'}
+                    </p>
+                  </div>
+
+                  <Separator className={tpl.separatorClass} />
+
+                  {/* ─── Client + Invoice Details (Collapsible) ── */}
+                  <div className="px-6 py-4">
+                    <Collapsible open={showPreviewDetails} onOpenChange={setShowPreviewDetails}>
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {selectedClient?.name || 'Select a customer'}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {selectedClient?.company || ''}
+                          </p>
+                        </div>
+                        <CollapsibleTrigger asChild>
+                          <button className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors">
+                            {showPreviewDetails ? 'Hide' : 'Details'}
+                            <ChevronUp
+                              className={cn(
+                                'h-3 w-3 transition-transform',
+                                !showPreviewDetails && 'rotate-180'
+                              )}
+                            />
+                          </button>
+                        </CollapsibleTrigger>
+                      </div>
+
+                      <CollapsibleContent>
+                        <Separator className={cn('mb-4', tpl.separatorClass)} />
+                        <div className="space-y-2">
+                          {lineItems.length > 0 &&
+                            lineItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between py-2 text-sm"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">
+                                    {item.name || 'Untitled Item'}
+                                  </p>
+                                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                    {item.quantity} &times;{' '}
+                                    {formatMoney(item.rate, selectedCurrency)}
+                                    {item.description && (
+                                      <span className="text-muted-foreground/70 ml-1.5">
+                                        &middot; {item.description}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                                <span className="ml-4 text-sm font-medium tabular-nums">
+                                  {formatMoney(item.quantity * item.rate, selectedCurrency)}
+                                </span>
                               </div>
-                              <span className="ml-4 font-medium tabular-nums text-sm">
-                                {formatMoney(item.quantity * item.rate, selectedCurrency)}
+                            ))}
+
+                          {lineItems.length === 0 && (
+                            <p className="text-muted-foreground text-sm italic">
+                              No items added yet
+                            </p>
+                          )}
+
+                          <Separator className={cn('my-4', tpl.separatorClass)} />
+
+                          {discountAmount > 0 && (
+                            <div className="mb-3 space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span className="tabular-nums">
+                                  {formatMoney(subtotal, selectedCurrency)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Discount</span>
+                                <span className="tabular-nums text-green-600">
+                                  -{formatMoney(discountAmount, selectedCurrency)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {taxAmount > 0 && (
+                            <div className="mb-3 flex justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                Tax ({parsedTaxPercent}%)
+                              </span>
+                              <span className="tabular-nums">
+                                {formatMoney(taxAmount, selectedCurrency)}
                               </span>
                             </div>
-                          ))}
-
-                        {lineItems.length === 0 && (
-                          <p className="text-sm text-muted-foreground italic">
-                            No items added yet
-                          </p>
-                        )}
-
-                        <Separator className={cn('my-4', tpl.separatorClass)} />
-
-                        {discountAmount > 0 && (
-                          <div className="space-y-2 mb-3">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Subtotal</span>
-                              <span className="tabular-nums">{formatMoney(subtotal, selectedCurrency)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Discount</span>
-                              <span className="tabular-nums text-green-600">-{formatMoney(discountAmount, selectedCurrency)}</span>
-                            </div>
+                          )}
+                          <div
+                            className={cn(
+                              '-mx-3 flex items-baseline justify-between rounded-lg border-l-2 px-3 py-3',
+                              tpl.accentBg
+                            )}
+                            style={{ borderLeftColor: tpl.accent }}
+                          >
+                            <span className="text-sm font-semibold">Total Due</span>
+                            <span
+                              className="text-lg font-bold tabular-nums"
+                              style={{ color: tpl.accent }}
+                            >
+                              {formatMoney(total, selectedCurrency)}
+                            </span>
                           </div>
-                        )}
-                        {taxAmount > 0 && (
-                          <div className="flex justify-between text-sm mb-3">
-                            <span className="text-muted-foreground">Tax ({parsedTaxPercent}%)</span>
-                            <span className="tabular-nums">{formatMoney(taxAmount, selectedCurrency)}</span>
-                          </div>
-                        )}
-                        <div className={cn('flex justify-between items-baseline rounded-lg px-3 py-3 -mx-3 border-l-2', tpl.accentBg)}
-                          style={{ borderLeftColor: tpl.accent }}>
-                          <span className="font-semibold text-sm">Total Due</span>
-                          <span className="text-lg font-bold tabular-nums" style={{ color: tpl.accent }}>
-                            {formatMoney(total, selectedCurrency)}
-                          </span>
                         </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+
+                  {/* ─── Memo ─── */}
+                  {notes && (
+                    <>
+                      <Separator className={tpl.separatorClass} />
+                      <div className="px-6 py-5">
+                        <p className="text-muted-foreground text-sm">{notes}</p>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
+                    </>
+                  )}
 
-                {/* ─── Memo ─── */}
-                {notes && (
-                  <>
-                    <Separator className={tpl.separatorClass} />
-                    <div className="px-6 py-5">
-                      <p className="text-sm text-muted-foreground">{notes}</p>
+                  {/* ─── Download Button ─── */}
+                  <div className="px-6 pb-6 pt-2">
+                    <button
+                      onClick={handleDownloadPdf}
+                      disabled={pdfGenerating}
+                      className={cn(
+                        'flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors',
+                        tpl.buttonColor,
+                        pdfGenerating && 'cursor-not-allowed opacity-70'
+                      )}
+                    >
+                      {pdfGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" />
+                          Download Invoice
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* ─── Footer ─── */}
+                  <div className="px-6 pb-5">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="bg-border/40 h-px flex-1" />
+                      <p className="text-muted-foreground/50 whitespace-nowrap text-[10px]">
+                        Powered by Wolff
+                      </p>
+                      <div className="bg-border/40 h-px flex-1" />
                     </div>
-                  </>
-                )}
-
-                {/* ─── Download Button ─── */}
-                <div className="px-6 pb-6 pt-2">
-                  <button
-                    onClick={handleDownloadPdf}
-                    disabled={pdfGenerating}
-                    className={cn(
-                      'w-full h-12 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors',
-                      tpl.buttonColor,
-                      pdfGenerating && 'opacity-70 cursor-not-allowed'
-                    )}
-                  >
-                    {pdfGenerating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        Download Invoice
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* ─── Footer ─── */}
-                <div className="px-6 pb-5">
-                  <div className="flex items-center gap-2 justify-center">
-                    <div className="h-px flex-1 bg-border/40" />
-                    <p className="text-[10px] text-muted-foreground/50 whitespace-nowrap">
-                      Powered by Wolff
-                    </p>
-                    <div className="h-px flex-1 bg-border/40" />
                   </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* ═══ INVOICE PDF TAB ═════════════════════ */}
             {previewTab === 'pdf' && (
-            <div className="p-4 flex-1 flex flex-col items-center">
-              {/* Info line */}
-              <p className="text-xs text-muted-foreground mb-3 w-full">
-                A4 Preview &middot; {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-              </p>
+              <div className="flex flex-1 flex-col items-center p-4">
+                {/* Info line */}
+                <p className="text-muted-foreground mb-3 w-full text-xs">
+                  A4 Preview &middot; {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                </p>
 
-              {/* A4 Scaled Preview */}
-              <div className="w-full overflow-hidden flex-1 flex items-start justify-center">
-                <div
-                  style={{
-                    width: '595px',
-                    height: '842px',
-                    transform: 'scale(var(--pdf-scale, 0.68))',
-                    transformOrigin: 'top center',
-                  }}
-                  className="bg-white shadow-2xl rounded-sm border border-border/40 flex-shrink-0 relative"
-                >
-                  {/* Download floating button */}
-                  <button
-                    onClick={handleDownloadPdf}
-                    disabled={pdfGenerating}
-                    className={cn(
-                      'absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-muted/80 hover:bg-muted transition-colors flex items-center justify-center z-20',
-                      pdfGenerating && 'opacity-70 cursor-not-allowed'
-                    )}
-                    title="Download PDF"
+                {/* A4 Scaled Preview */}
+                <div className="flex w-full flex-1 items-start justify-center overflow-hidden">
+                  <div
+                    style={{
+                      width: '595px',
+                      height: '842px',
+                      transform: 'scale(var(--pdf-scale, 0.68))',
+                      transformOrigin: 'top center',
+                    }}
+                    className="border-border/40 relative flex-shrink-0 rounded-sm border bg-white shadow-2xl"
                   >
-                    {pdfGenerating ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                  </button>
+                    {/* Download floating button */}
+                    <button
+                      onClick={handleDownloadPdf}
+                      disabled={pdfGenerating}
+                      className={cn(
+                        'bg-muted/80 hover:bg-muted absolute right-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full transition-colors',
+                        pdfGenerating && 'cursor-not-allowed opacity-70'
+                      )}
+                      title="Download PDF"
+                    >
+                      {pdfGenerating ? (
+                        <Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="text-muted-foreground h-3.5 w-3.5" />
+                      )}
+                    </button>
 
-                  {/* A4 Page Content */}
-                  <div className="w-full h-full flex flex-col text-black" style={{ fontFamily: 'system-ui, sans-serif' }}>
-                    {/* Top accent bar */}
-                    {tpl.topBorder && (
-                      <div className="w-full" style={{ height: '4px', background: tpl.topBorder }} />
-                    )}
+                    {/* A4 Page Content */}
+                    <div
+                      className="flex h-full w-full flex-col text-black"
+                      style={{ fontFamily: 'system-ui, sans-serif' }}
+                    >
+                      {/* Top accent bar */}
+                      {tpl.topBorder && (
+                        <div
+                          className="w-full"
+                          style={{ height: '4px', background: tpl.topBorder }}
+                        />
+                      )}
 
-                    {/* Header */}
-                    <div className="flex items-start justify-between px-10 pt-8 pb-6">
-                      <div>
-                        <h2 className="text-xl font-bold" style={{ color: '#111' }}>{businessName}</h2>
-                        <p className="text-xs mt-1" style={{ color: '#666' }}>hello@company.com</p>
+                      {/* Header */}
+                      <div className="flex items-start justify-between px-10 pb-6 pt-8">
+                        <div>
+                          <h2 className="text-xl font-bold" style={{ color: '#111' }}>
+                            {businessName}
+                          </h2>
+                          <p className="mt-1 text-xs" style={{ color: '#666' }}>
+                            hello@company.com
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <h1
+                            className="text-2xl font-bold tracking-tight"
+                            style={{ color: tpl.accent }}
+                          >
+                            INVOICE
+                          </h1>
+                          <p className="mt-1 text-xs" style={{ color: '#666' }}>
+                            #{invoiceNumber}
+                          </p>
+                          <p className="text-xs" style={{ color: '#666' }}>
+                            Date: {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'Not set'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <h1 className="text-2xl font-bold tracking-tight" style={{ color: tpl.accent }}>INVOICE</h1>
-                        <p className="text-xs mt-1" style={{ color: '#666' }}>#{invoiceNumber}</p>
-                        <p className="text-xs" style={{ color: '#666' }}>
-                          Date: {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'Not set'}
+
+                      {/* Bill To */}
+                      <div className="px-10 pb-6">
+                        <p
+                          className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
+                          style={{ color: '#999' }}
+                        >
+                          Bill To
                         </p>
+                        <p className="text-sm font-medium" style={{ color: '#111' }}>
+                          {selectedClient?.name || 'Customer Name'}
+                        </p>
+                        {selectedClient?.company && (
+                          <p className="text-xs" style={{ color: '#666' }}>
+                            {selectedClient.company}
+                          </p>
+                        )}
                       </div>
-                    </div>
 
-                    {/* Bill To */}
-                    <div className="px-10 pb-6">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold mb-1" style={{ color: '#999' }}>Bill To</p>
-                      <p className="text-sm font-medium" style={{ color: '#111' }}>
-                        {selectedClient?.name || 'Customer Name'}
-                      </p>
-                      {selectedClient?.company && (
-                        <p className="text-xs" style={{ color: '#666' }}>{selectedClient.company}</p>
+                      {/* Line Items Table */}
+                      <div className="flex-1 px-10">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                              <th
+                                className="py-2 text-left font-semibold"
+                                style={{ color: '#333', width: '50%' }}
+                              >
+                                Description
+                              </th>
+                              <th
+                                className="py-2 text-center font-semibold"
+                                style={{ color: '#333' }}
+                              >
+                                Qty
+                              </th>
+                              <th
+                                className="py-2 text-right font-semibold"
+                                style={{ color: '#333' }}
+                              >
+                                Rate
+                              </th>
+                              <th
+                                className="py-2 text-right font-semibold"
+                                style={{ color: '#333' }}
+                              >
+                                Amount
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lineItems.length > 0 ? (
+                              lineItems.map((item) => (
+                                <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                  <td className="py-2">
+                                    <p className="font-medium" style={{ color: '#111' }}>
+                                      {item.name || 'Untitled'}
+                                    </p>
+                                    {item.description && (
+                                      <p style={{ color: '#888' }}>{item.description}</p>
+                                    )}
+                                  </td>
+                                  <td className="py-2 text-center" style={{ color: '#333' }}>
+                                    {item.quantity}
+                                  </td>
+                                  <td
+                                    className="py-2 text-right tabular-nums"
+                                    style={{ color: '#333' }}
+                                  >
+                                    {formatMoney(item.rate, selectedCurrency)}
+                                  </td>
+                                  <td
+                                    className="py-2 text-right font-medium tabular-nums"
+                                    style={{ color: '#111' }}
+                                  >
+                                    {formatMoney(item.quantity * item.rate, selectedCurrency)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="py-6 text-center"
+                                  style={{ color: '#999' }}
+                                >
+                                  No items added
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Totals */}
+                      <div className="px-10 pb-8">
+                        <div className="ml-auto" style={{ width: '200px' }}>
+                          <div
+                            className="flex justify-between py-1 text-xs"
+                            style={{ color: '#666' }}
+                          >
+                            <span>Subtotal</span>
+                            <span className="tabular-nums">
+                              {formatMoney(subtotal, selectedCurrency)}
+                            </span>
+                          </div>
+                          {discountAmount > 0 && (
+                            <div
+                              className="flex justify-between py-1 text-xs"
+                              style={{ color: '#22c55e' }}
+                            >
+                              <span>Discount</span>
+                              <span className="tabular-nums">
+                                -{formatMoney(discountAmount, selectedCurrency)}
+                              </span>
+                            </div>
+                          )}
+                          {taxAmount > 0 && (
+                            <div
+                              className="flex justify-between py-1 text-xs"
+                              style={{ color: '#666' }}
+                            >
+                              <span>Tax ({parsedTaxPercent}%)</span>
+                              <span className="tabular-nums">
+                                {formatMoney(taxAmount, selectedCurrency)}
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            className="flex justify-between py-1 text-xs"
+                            style={{ borderTop: '1px solid #e5e7eb', color: '#333' }}
+                          >
+                            <span className="font-medium">Total</span>
+                            <span className="font-medium tabular-nums">
+                              {formatMoney(total, selectedCurrency)}
+                            </span>
+                          </div>
+                          <div
+                            className="-mx-2 mt-1 flex justify-between rounded px-2 py-2"
+                            style={{
+                              background: tpl.accentBg.replace('bg-', '').includes('50')
+                                ? `${tpl.accent}10`
+                                : '#f5f5f5',
+                            }}
+                          >
+                            <span className="text-xs font-bold" style={{ color: '#111' }}>
+                              Balance Due
+                            </span>
+                            <span
+                              className="text-sm font-bold tabular-nums"
+                              style={{ color: tpl.accent }}
+                            >
+                              {formatMoney(total, selectedCurrency)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      {notes && (
+                        <div className="px-10 pb-4">
+                          <p className="text-[10px]" style={{ color: '#999' }}>
+                            {notes}
+                          </p>
+                        </div>
                       )}
                     </div>
-
-                    {/* Line Items Table */}
-                    <div className="px-10 flex-1">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                            <th className="text-left py-2 font-semibold" style={{ color: '#333', width: '50%' }}>Description</th>
-                            <th className="text-center py-2 font-semibold" style={{ color: '#333' }}>Qty</th>
-                            <th className="text-right py-2 font-semibold" style={{ color: '#333' }}>Rate</th>
-                            <th className="text-right py-2 font-semibold" style={{ color: '#333' }}>Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lineItems.length > 0 ? lineItems.map((item) => (
-                            <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                              <td className="py-2">
-                                <p className="font-medium" style={{ color: '#111' }}>{item.name || 'Untitled'}</p>
-                                {item.description && <p style={{ color: '#888' }}>{item.description}</p>}
-                              </td>
-                              <td className="py-2 text-center" style={{ color: '#333' }}>{item.quantity}</td>
-                              <td className="py-2 text-right tabular-nums" style={{ color: '#333' }}>{formatMoney(item.rate, selectedCurrency)}</td>
-                              <td className="py-2 text-right tabular-nums font-medium" style={{ color: '#111' }}>{formatMoney(item.quantity * item.rate, selectedCurrency)}</td>
-                            </tr>
-                          )) : (
-                            <tr>
-                              <td colSpan={4} className="py-6 text-center" style={{ color: '#999' }}>
-                                No items added
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Totals */}
-                    <div className="px-10 pb-8">
-                      <div className="ml-auto" style={{ width: '200px' }}>
-                        <div className="flex justify-between py-1 text-xs" style={{ color: '#666' }}>
-                          <span>Subtotal</span>
-                          <span className="tabular-nums">{formatMoney(subtotal, selectedCurrency)}</span>
-                        </div>
-                        {discountAmount > 0 && (
-                          <div className="flex justify-between py-1 text-xs" style={{ color: '#22c55e' }}>
-                            <span>Discount</span>
-                            <span className="tabular-nums">-{formatMoney(discountAmount, selectedCurrency)}</span>
-                          </div>
-                        )}
-                        {taxAmount > 0 && (
-                          <div className="flex justify-between py-1 text-xs" style={{ color: '#666' }}>
-                            <span>Tax ({parsedTaxPercent}%)</span>
-                            <span className="tabular-nums">{formatMoney(taxAmount, selectedCurrency)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between py-1 text-xs" style={{ borderTop: '1px solid #e5e7eb', color: '#333' }}>
-                          <span className="font-medium">Total</span>
-                          <span className="tabular-nums font-medium">{formatMoney(total, selectedCurrency)}</span>
-                        </div>
-                        <div className="flex justify-between py-2 mt-1 rounded px-2 -mx-2"
-                          style={{ background: tpl.accentBg.replace('bg-', '').includes('50') ? `${tpl.accent}10` : '#f5f5f5' }}
-                        >
-                          <span className="text-xs font-bold" style={{ color: '#111' }}>Balance Due</span>
-                          <span className="text-sm font-bold tabular-nums" style={{ color: tpl.accent }}>{formatMoney(total, selectedCurrency)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    {notes && (
-                      <div className="px-10 pb-4">
-                        <p className="text-[10px]" style={{ color: '#999' }}>{notes}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* ═══ EMAIL PREVIEW TAB ═══════════════════ */}
             {previewTab === 'email' && (
-            <div className="p-4 flex-1">
-              <div className={cn('bg-card border shadow-sm overflow-hidden transition-all duration-300 relative', tpl.cardClass)}>
-
-                {/* ─── Top accent ─── */}
-                {tpl.topBorder && (
-                  <div className="w-full h-1" style={{ background: tpl.topBorder }} />
-                )}
-
-                {/* ─── Email Header ─── */}
-                <div className="px-6 pb-4 pt-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold tracking-tight">{businessName}</h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{businessName}</p>
-                      <p className="font-bold text-lg mt-0.5" style={{ color: tpl.accent }}>Invoice</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Due {dueDate ? format(dueDate, 'MMM dd, yyyy') : '...'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ─── CTA Buttons (like Bloom) ─── */}
-                <div className="px-6 pb-4 flex gap-3">
-                  <button
-                    className={cn('flex-1 h-11 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors', tpl.buttonColor)}
-                  >
-                    Pay this Invoice
-                  </button>
-                  <button
-                    className="flex-1 h-11 rounded-lg font-medium text-sm flex items-center justify-center gap-2 border border-border hover:bg-muted transition-colors"
-                  >
-                    Download PDF
-                  </button>
-                </div>
-
-                <Separator className={tpl.separatorClass} />
-
-                {/* ─── Invoice Summary ─── */}
-                <div className="px-6 py-4 space-y-3">
-                  <p className="text-sm font-medium">Invoice #{invoiceNumber}</p>
-
-                  {/* Line Items */}
-                  {lineItems.length > 0 && (
-                    <div className="space-y-1">
-                      {lineItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between py-1.5 text-sm">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{item.name || 'Untitled Item'}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {item.quantity} &times; {formatMoney(item.rate, selectedCurrency)}
-                              {item.description && <span className="ml-1.5 text-muted-foreground/70">&middot; {item.description}</span>}
-                            </p>
-                          </div>
-                          <span className="ml-4 font-medium tabular-nums text-sm">{formatMoney(item.quantity * item.rate, selectedCurrency)}</span>
-                        </div>
-                      ))}
-                      <Separator className={tpl.separatorClass} />
-                    </div>
+              <div className="flex-1 p-4">
+                <div
+                  className={cn(
+                    'bg-card relative overflow-hidden border shadow-sm transition-all duration-300',
+                    tpl.cardClass
+                  )}
+                >
+                  {/* ─── Top accent ─── */}
+                  {tpl.topBorder && (
+                    <div className="h-1 w-full" style={{ background: tpl.topBorder }} />
                   )}
 
-                  <div className="space-y-2">
-                    {discountAmount > 0 && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Subtotal</span>
-                          <span className="tabular-nums">{formatMoney(subtotal, selectedCurrency)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Discount</span>
-                          <span className="tabular-nums text-green-600">-{formatMoney(discountAmount, selectedCurrency)}</span>
-                        </div>
+                  {/* ─── Email Header ─── */}
+                  <div className="px-6 pb-4 pt-6">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold tracking-tight">{businessName}</h3>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-muted-foreground text-xs">{businessName}</p>
+                        <p className="mt-0.5 text-lg font-bold" style={{ color: tpl.accent }}>
+                          Invoice
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Due {dueDate ? format(dueDate, 'MMM dd, yyyy') : '...'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ─── CTA Buttons (like Bloom) ─── */}
+                  <div className="flex gap-3 px-6 pb-4">
+                    <button
+                      className={cn(
+                        'flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors',
+                        tpl.buttonColor
+                      )}
+                    >
+                      Pay this Invoice
+                    </button>
+                    <button className="border-border hover:bg-muted flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-colors">
+                      Download PDF
+                    </button>
+                  </div>
+
+                  <Separator className={tpl.separatorClass} />
+
+                  {/* ─── Invoice Summary ─── */}
+                  <div className="space-y-3 px-6 py-4">
+                    <p className="text-sm font-medium">Invoice #{invoiceNumber}</p>
+
+                    {/* Line Items */}
+                    {lineItems.length > 0 && (
+                      <div className="space-y-1">
+                        {lineItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between py-1.5 text-sm"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
+                                {item.name || 'Untitled Item'}
+                              </p>
+                              <p className="text-muted-foreground truncate text-xs">
+                                {item.quantity} &times; {formatMoney(item.rate, selectedCurrency)}
+                                {item.description && (
+                                  <span className="text-muted-foreground/70 ml-1.5">
+                                    &middot; {item.description}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <span className="ml-4 text-sm font-medium tabular-nums">
+                              {formatMoney(item.quantity * item.rate, selectedCurrency)}
+                            </span>
+                          </div>
+                        ))}
                         <Separator className={tpl.separatorClass} />
-                      </>
-                    )}
-                    {taxAmount > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tax ({parsedTaxPercent}%)</span>
-                        <span className="tabular-nums">{formatMoney(taxAmount, selectedCurrency)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm font-semibold">
-                      <span>Total Due</span>
-                      <span className="tabular-nums" style={{ color: tpl.accent }}>{formatMoney(total, selectedCurrency)}</span>
+
+                    <div className="space-y-2">
+                      {discountAmount > 0 && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span className="tabular-nums">
+                              {formatMoney(subtotal, selectedCurrency)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Discount</span>
+                            <span className="tabular-nums text-green-600">
+                              -{formatMoney(discountAmount, selectedCurrency)}
+                            </span>
+                          </div>
+                          <Separator className={tpl.separatorClass} />
+                        </>
+                      )}
+                      {taxAmount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax ({parsedTaxPercent}%)</span>
+                          <span className="tabular-nums">
+                            {formatMoney(taxAmount, selectedCurrency)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm font-semibold">
+                        <span>Total Due</span>
+                        <span className="tabular-nums" style={{ color: tpl.accent }}>
+                          {formatMoney(total, selectedCurrency)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* ─── Memo ─── */}
-                {notes && (
-                  <>
-                    <Separator className={tpl.separatorClass} />
-                    <div className="px-6 py-4">
-                      <p className="text-sm italic text-muted-foreground">{notes}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Contact us at <span className="underline">hello@company.com</span>
-                      </p>
-                    </div>
-                  </>
-                )}
+                  {/* ─── Memo ─── */}
+                  {notes && (
+                    <>
+                      <Separator className={tpl.separatorClass} />
+                      <div className="px-6 py-4">
+                        <p className="text-muted-foreground text-sm italic">{notes}</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Contact us at <span className="underline">hello@company.com</span>
+                        </p>
+                      </div>
+                    </>
+                  )}
 
-                {/* ─── Legal Footer ─── */}
-                <div className="px-6 py-4 bg-muted/30 border-t">
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    This email and any attachments are intended solely for the use of the individual
-                    or entity to whom they are addressed. If you have received this message in error,
-                    please notify {businessName} immediately.
-                  </p>
+                  {/* ─── Legal Footer ─── */}
+                  <div className="bg-muted/30 border-t px-6 py-4">
+                    <p className="text-muted-foreground text-[10px] leading-relaxed">
+                      This email and any attachments are intended solely for the use of the
+                      individual or entity to whom they are addressed. If you have received this
+                      message in error, please notify {businessName} immediately.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
             )}
-
-            {/* ═══ HIDDEN A4 RENDER DIV (for PDF capture) ═══ */}
-            <div
-              ref={pdfRef}
-              className="fixed"
-              style={{
-                left: '-9999px',
-                top: 0,
-                width: '595px',
-                height: '842px',
-                background: '#ffffff',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                color: '#111111',
-                zIndex: -1,
-              }}
-            >
-              {/* Top accent bar */}
-              {tpl.topBorder && (
-                <div style={{ width: '100%', height: '4px', background: tpl.topBorder }} />
-              )}
-
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '32px 40px 24px' }}>
-                <div>
-                  <p style={{ fontSize: '18px', fontWeight: 700 }}>{businessName}</p>
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>hello@company.com</p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 700, color: tpl.accent, letterSpacing: '0.05em' }}>INVOICE</p>
-                  <p style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>#{invoiceNumber}</p>
-                  <p style={{ fontSize: '11px', color: '#666' }}>
-                    Date: {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'Not set'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Bill To */}
-              <div style={{ padding: '0 40px 24px' }}>
-                <p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, color: '#999', marginBottom: '4px' }}>Bill To</p>
-                <p style={{ fontSize: '13px', fontWeight: 500 }}>
-                  {selectedClient?.name || 'Customer Name'}
-                </p>
-                {selectedClient?.company && (
-                  <p style={{ fontSize: '11px', color: '#666' }}>{selectedClient.company}</p>
-                )}
-              </div>
-
-              {/* Items Table */}
-              <div style={{ padding: '0 40px' }}>
-                <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ textAlign: 'left', padding: '8px 0', fontWeight: 600, color: '#333' }}>Description</th>
-                      <th style={{ textAlign: 'center', padding: '8px 0', fontWeight: 600, color: '#333' }}>Qty</th>
-                      <th style={{ textAlign: 'right', padding: '8px 0', fontWeight: 600, color: '#333' }}>Rate</th>
-                      <th style={{ textAlign: 'right', padding: '8px 0', fontWeight: 600, color: '#333' }}>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lineItems.length > 0 ? lineItems.map((item) => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '8px 0' }}>
-                          <p style={{ fontWeight: 500 }}>{item.name || 'Untitled'}</p>
-                          {item.description && <p style={{ color: '#888', marginTop: '2px' }}>{item.description}</p>}
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '8px 0', color: '#333' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', padding: '8px 0', color: '#333' }}>{formatMoney(item.rate, selectedCurrency)}</td>
-                        <td style={{ textAlign: 'right', padding: '8px 0', fontWeight: 500 }}>{formatMoney(item.quantity * item.rate, selectedCurrency)}</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} style={{ padding: '24px 0', textAlign: 'center', color: '#999' }}>
-                          No items added
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div style={{ padding: '16px 40px', marginTop: 'auto' }}>
-                <div style={{ marginLeft: 'auto', width: '200px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '11px', color: '#666' }}>
-                    <span>Subtotal</span>
-                    <span>{formatMoney(subtotal, selectedCurrency)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '11px', color: '#22c55e' }}>
-                      <span>Discount</span>
-                      <span>-{formatMoney(discountAmount, selectedCurrency)}</span>
-                    </div>
-                  )}
-                  {taxAmount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '11px', color: '#666' }}>
-                      <span>Tax ({parsedTaxPercent}%)</span>
-                      <span>{formatMoney(taxAmount, selectedCurrency)}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '11px', borderTop: '1px solid #e5e7eb', color: '#333', fontWeight: 500 }}>
-                    <span>Total</span>
-                    <span>{formatMoney(total, selectedCurrency)}</span>
-                  </div>
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                    padding: '8px', marginTop: '4px', borderRadius: '4px',
-                    background: `${tpl.accent}15`,
-                  }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700 }}>Balance Due</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: tpl.accent }}>{formatMoney(total, selectedCurrency)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {notes && (
-                <div style={{ padding: '0 40px 16px' }}>
-                  <p style={{ fontSize: '10px', color: '#999' }}>{notes}</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>

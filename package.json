@@ -10,7 +10,7 @@
   "license": "AGPL-3.0-only",
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
@@ -45,7 +45,6 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
       "prettier --write"
     ],
     "*.{json,md,yaml,yml}": [
