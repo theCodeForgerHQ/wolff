@@ -6,6 +6,11 @@ import pino from 'pino';
  * - Development: 'debug' level (everything)
  *
  * PII fields (email, ip) are automatically redacted in production.
+ *
+ * Logs go to stdout through pino's default synchronous destination. Don't add
+ * a `transport`: transports run in a worker thread that pino resolves from its
+ * own directory at runtime, which fails once Next bundles the module
+ * ("Cannot find module .next/server/vendor-chunks/lib/worker.js").
  */
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -18,12 +23,6 @@ export const logger = pino({
         censor: '[REDACTED]',
       }
     : undefined,
-  transport: isProduction
-    ? undefined
-    : {
-        target: 'pino/file',
-        options: { destination: 1 }, // stdout
-      },
 });
 
 /**
