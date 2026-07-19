@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:0.8.2-pg17 # Postgres 17 + pgvector
     container_name: wolff-postgres
     restart: unless-stopped
     environment:
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wolff_dev_only}
       POSTGRES_DB: ${POSTGRES_DB:-wolff}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres17_data:/var/lib/postgresql/data
     ports:
       # Bug #158: Bind to localhost only to prevent network exposure
       - '127.0.0.1:5432:5432'
@@ -35,7 +35,7 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1 # Dev-only: allow plaintext auth
 
 volumes:
-  postgres_data:
+  postgres17_data:
 
 networks:
   default:

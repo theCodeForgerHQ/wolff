@@ -15,7 +15,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      AUTH_TRUST_HOST: "true"
+      AUTH_TRUST_HOST: 'true'
     ports:
       - '3000:3000'
     depends_on:
@@ -41,7 +41,7 @@ services:
 
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:0.8.2-pg17 # Postgres 17 + pgvector
     container_name: wolff-postgres
     restart: unless-stopped
     environment:
@@ -49,7 +49,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-wolff}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres17_data:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-wolff}']
@@ -93,7 +93,7 @@ services:
       - 'traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH}'
 
 volumes:
-  postgres_data:
+  postgres17_data:
   traefik_letsencrypt:
 
 networks:

@@ -25,14 +25,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-wolff}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wolff}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      AUTH_TRUST_HOST: "true"
+      AUTH_TRUST_HOST: 'true'
     ports:
       - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      test:
+        ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -45,7 +46,7 @@ services:
 
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:0.8.2-pg17 # Postgres 17 + pgvector
     container_name: wolff-postgres
     restart: unless-stopped
     environment:
@@ -53,7 +54,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-wolff}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres17_data:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-wolff}']
       interval: 10s
@@ -66,7 +67,7 @@ services:
           cpus: '0.5'
 
 volumes:
-  postgres_data:
+  postgres17_data:
 
 networks:
   default:
