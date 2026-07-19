@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { DEMO_CONFIG } from '@/lib/demo/constants';
-import { loginSchema, type LoginInput } from '@/lib/validations/auth';
+import { loginSchema, type LoginFormInput, type LoginInput } from '@/lib/validations/auth';
 
 // Bug #448: Use shared login schema from lib/validations/auth.ts
 type LoginFormData = LoginInput;
@@ -33,7 +33,7 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
+  } = useForm<LoginFormInput, unknown, LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 

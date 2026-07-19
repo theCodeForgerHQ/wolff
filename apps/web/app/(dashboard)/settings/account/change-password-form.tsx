@@ -41,7 +41,8 @@ const setPasswordSchema = z
     path: ['confirmPassword'],
   });
 
-type PasswordFormData = z.infer<typeof changePasswordSchema>;
+// The looser of the two schemas: currentPassword is only required when changing.
+type PasswordFormData = z.infer<typeof setPasswordSchema>;
 
 interface ChangePasswordFormProps {
   hasExistingPassword: boolean;

@@ -20,10 +20,10 @@ import { passwordSchema } from '@/lib/validations/auth';
 const registerSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Please enter a valid email address'),
+    email: z.email('Please enter a valid email address'),
     password: passwordSchema,
     confirmPassword: z.string(),
-    termsAccepted: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms and conditions' }) }),
+    termsAccepted: z.literal(true, { error: 'You must accept the terms and conditions' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -43,7 +43,7 @@ export function RegisterForm() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<RegisterFormData>({
+  } = useForm<z.input<typeof registerSchema>, unknown, RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 

@@ -17,7 +17,11 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { createClientSchema, type CreateClientInput } from '@/lib/validations/client';
+import {
+  createClientSchema,
+  type CreateClientFormInput,
+  type CreateClientInput,
+} from '@/lib/validations/client';
 import { cn } from '@/lib/utils';
 
 interface ClientFormProps {
@@ -33,7 +37,7 @@ export function ClientForm({
   isLoading = false,
   submitLabel = 'Save Client',
 }: ClientFormProps) {
-  const form = useForm<CreateClientInput>({
+  const form = useForm<CreateClientFormInput, unknown, CreateClientInput>({
     resolver: zodResolver(createClientSchema),
     defaultValues: {
       type: 'individual',

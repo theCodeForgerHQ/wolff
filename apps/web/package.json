@@ -24,7 +24,7 @@
     "@dnd-kit/core": "^6.3.0",
     "@dnd-kit/sortable": "^9.0.0",
     "@dnd-kit/utilities": "^3.2.0",
-    "@hookform/resolvers": "^3.9.0",
+    "@hookform/resolvers": "^5.9.1",
     "@wolff/database": "workspace:*",
     "@wolff/types": "workspace:*",
     "@wolff/ui": "workspace:*",
@@ -103,7 +103,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.0",
-    "zod": "^3.24.0",
+    "zod": "^4.6.5",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

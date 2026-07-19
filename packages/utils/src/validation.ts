@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Email validation schema
  */
-export const emailSchema = z.string().email('Invalid email address').min(1, 'Email is required');
+export const emailSchema = z.email('Invalid email address').min(1, 'Email is required');
 
 /**
  * Password validation schema with requirements
@@ -30,7 +30,7 @@ export const phoneSchema = z
 /**
  * URL validation
  */
-export const urlSchema = z.string().url('Invalid URL').optional().or(z.literal(''));
+export const urlSchema = z.url('Invalid URL').optional().or(z.literal(''));
 
 /**
  * Slug validation (URL-safe string)
@@ -74,7 +74,8 @@ export const percentageSchema = z
 /**
  * UUID validation
  */
-export const uuidSchema = z.string().uuid('Invalid UUID format');
+// z.guid() keeps Zod 3's uuid() behaviour; z.uuid() would also check version bits.
+export const uuidSchema = z.guid('Invalid UUID format');
 
 /**
  * Address schema

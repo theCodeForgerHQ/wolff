@@ -41,7 +41,7 @@ export const lineItemSchema = z.object({
 export const quoteBlockSchema = z.object({
   id: z.string(),
   type: quoteBlockTypeSchema,
-  content: z.record(z.unknown()).optional(),
+  content: z.record(z.string(), z.unknown()).optional(),
   order: z.number().int().min(0),
 });
 
@@ -59,9 +59,9 @@ export const quoteDocumentSettingsSchema = z.object({
   // Validate depositValue based on depositType
   if (data.depositType === 'percentage' && data.depositValue !== undefined && data.depositValue > 100) {
     ctx.addIssue({
-      code: z.ZodIssueCode.too_big,
+      code: 'too_big',
       maximum: 100,
-      type: 'number',
+      origin: 'number',
       inclusive: true,
       message: 'Deposit percentage cannot exceed 100%',
       path: ['depositValue'],

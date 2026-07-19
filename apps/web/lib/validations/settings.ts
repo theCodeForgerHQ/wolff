@@ -23,8 +23,8 @@ export const businessSettingsSchema = z.object({
 
 // Branding settings schema
 export const brandingSettingsSchema = z.object({
-  logo: z.string().url().optional().nullable(),
-  favicon: z.string().url().optional().nullable(),
+  logo: z.url().optional().nullable(),
+  favicon: z.url().optional().nullable(),
   primaryColor: hexColorSchema.default('#3B82F6'),
   secondaryColor: hexColorSchema.default('#8B5CF6'),
   accentColor: hexColorSchema.default('#F59E0B'),

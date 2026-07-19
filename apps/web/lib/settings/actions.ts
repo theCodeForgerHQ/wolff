@@ -803,7 +803,7 @@ export async function inviteMember(
   role: WorkspaceMemberRole = 'member'
 ): Promise<{ success: boolean; error?: string }> {
   // Validate and normalize email upfront
-  const emailResult = z.string().email().safeParse(email);
+  const emailResult = z.email().safeParse(email);
   if (!emailResult.success) {
     return { success: false, error: 'Invalid email address' };
   }

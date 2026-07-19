@@ -45,20 +45,20 @@ const SOCIAL_PLATFORMS = [
 const brandingSchema = z.object({
   accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   businessName: z.string().min(1, 'Business name is required').max(200),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
-  website: z.string().url().optional().or(z.literal('')),
+  website: z.url().optional().or(z.literal('')),
   street: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   postalCode: z.string().optional(),
   country: z.string().optional(),
-  socialWebsite: z.string().url().optional().or(z.literal('')),
-  socialTwitter: z.string().url().optional().or(z.literal('')),
-  socialLinkedin: z.string().url().optional().or(z.literal('')),
-  socialInstagram: z.string().url().optional().or(z.literal('')),
-  socialFacebook: z.string().url().optional().or(z.literal('')),
-  socialYoutube: z.string().url().optional().or(z.literal('')),
+  socialWebsite: z.url().optional().or(z.literal('')),
+  socialTwitter: z.url().optional().or(z.literal('')),
+  socialLinkedin: z.url().optional().or(z.literal('')),
+  socialInstagram: z.url().optional().or(z.literal('')),
+  socialFacebook: z.url().optional().or(z.literal('')),
+  socialYoutube: z.url().optional().or(z.literal('')),
 });
 
 type BrandingFormValues = z.infer<typeof brandingSchema>;
