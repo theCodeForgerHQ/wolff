@@ -13,6 +13,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff
+  SHADOW_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_shadow
+  NEXTAUTH_SECRET: ci-test-secret
+  NEXTAUTH_URL: http://localhost:3000
+
 jobs:
   lint:
     name: Lint
@@ -44,6 +50,28 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.2-pg17
+        env:
+          POSTGRES_USER: wolff
+          POSTGRES_PASSWORD: wolff
+          POSTGRES_DB: wolff
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      stripe-mock:
+        image: stripe/stripe-mock:v0.205.0
+        ports:
+          - 12111:12111
+    env:
+      # Enable the suites that need a real database and stripe-mock.
+      TEST_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff
+      STRIPE_MOCK_URL: http://localhost:12111
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -53,19 +81,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - run: pnpm db:migrate:deploy
       - run: pnpm test
 
-  build:
-    name: Build
+  migrations:
+    name: Migrations
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test]
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:0.8.2-pg17
         env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
+          POSTGRES_USER: wolff
+          POSTGRES_PASSWORD: wolff
+          POSTGRES_DB: wolff
         ports:
           - 5432:5432
         options: >-
@@ -73,10 +101,27 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      DATABASE_URL: postgresql://test:test@localhost:5432/test
-      NEXTAUTH_SECRET: ci-test-secret
-      NEXTAUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create the shadow database
+        run: psql "$DATABASE_URL" -c 'CREATE DATABASE wolff_shadow'
+      - name: Apply every migration to a fresh database
+        run: pnpm db:migrate:deploy
+      - name: Migrations must match schema.prisma (empty diff)
+        run: pnpm db:migrate:check
+      - name: Seed the migrated database
+        run: pnpm db:seed
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test, migrations]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -87,3 +132,72 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm build
+
+  e2e:
+    name: E2E (flows + visual)
+    runs-on: ubuntu-latest
+    needs: [build]
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.2-pg17
+        env:
+          POSTGRES_USER: wolff
+          POSTGRES_PASSWORD: wolff
+          POSTGRES_DB: wolff
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      stripe-mock:
+        image: stripe/stripe-mock:v0.205.0
+        ports:
+          - 12111:12111
+    env:
+      E2E_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_e2e
+      VISUAL_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_visual
+      STRIPE_MOCK_URL: http://localhost:12111
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - name: Migrate and seed one database per suite
+        run: |
+          for url in "$E2E_DATABASE_URL" "$VISUAL_DATABASE_URL"; do
+            psql "$DATABASE_URL" -c "CREATE DATABASE ${url##*/}"
+            DATABASE_URL="$url" pnpm db:migrate:deploy
+            DATABASE_URL="$url" pnpm db:seed
+          done
+      - name: Build (the payment flow needs a publishable key at build time)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_wolffE2E
+      - run: pnpm --filter @wolff/web exec playwright install --with-deps chromium
+      - name: Login and quote -> invoice -> payment flows
+        run: pnpm --filter @wolff/web exec playwright test -c playwright.flows.config.ts
+        env:
+          DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
+      - name: Visual regression (10 key pages x 3 widths)
+        # Linux baselines are generated on the first run and uploaded below;
+        # commit them to make this step a real comparison (docs/phase-1.md).
+        run: pnpm --filter @wolff/web exec playwright test -c playwright.visual.config.ts --update-snapshots=missing
+        env:
+          DATABASE_URL: ${{ env.VISUAL_DATABASE_URL }}
+      - name: Upload screenshots and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            apps/web/test-results
+            apps/web/e2e/visual/__screenshots__/linux
+          if-no-files-found: ignore
+          retention-days: 14

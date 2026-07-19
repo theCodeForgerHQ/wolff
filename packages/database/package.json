@@ -13,6 +13,8 @@
     "generate": "prisma generate",
     "push": "prisma db push",
     "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
     "seed:prod": "tsx prisma/seed-production.ts",

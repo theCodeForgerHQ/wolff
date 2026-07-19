@@ -28,6 +28,8 @@
     "db:generate": "pnpm --filter @wolff/database generate",
     "db:push": "pnpm --filter @wolff/database push",
     "db:migrate": "pnpm --filter @wolff/database migrate",
+    "db:migrate:deploy": "pnpm --filter @wolff/database migrate:deploy",
+    "db:migrate:check": "pnpm --filter @wolff/database migrate:check",
     "db:studio": "pnpm --filter @wolff/database studio",
     "db:seed": "pnpm --filter @wolff/database seed",
     "clean": "turbo clean && rm -rf node_modules",
