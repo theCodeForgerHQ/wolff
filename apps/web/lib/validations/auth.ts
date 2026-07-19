@@ -91,11 +91,12 @@ export const updateProfileSchema = z.object({
     .max(100, 'Name must be less than 100 characters')
     .optional(),
   email: emailSchema.optional(),
-  image: z.string().url().optional().nullable(),
+  image: z.url().optional().nullable(),
 });
 
 // Type exports
 export type LoginInput = z.infer<typeof loginSchema>;
+export type LoginFormInput = z.input<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

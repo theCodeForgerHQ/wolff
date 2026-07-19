@@ -11,9 +11,9 @@ import { logger, maskEmail, maskIp } from '@/lib/logger';
 
 const registerSchema = z.object({
   name: z.string().min(2),
-  email: z.string().email(),
+  email: z.email(),
   password: passwordSchema,
-  termsAccepted: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms and conditions' }) }),
+  termsAccepted: z.literal(true, { error: 'You must accept the terms and conditions' }),
 });
 
 // Reserved slugs that conflict with system routes
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Return user-friendly messages without exposing internal schema details
-      const messages = error.errors.map(e => e.message);
+      const messages = error.issues.map((e) => e.message);
       return NextResponse.json(
         { error: 'Invalid request data', messages },
         { status: 400 }

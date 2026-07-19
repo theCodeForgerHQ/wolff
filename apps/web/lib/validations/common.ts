@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 // Common ID schema — Prisma uses @default(uuid()) for all IDs
-export const idSchema = z.string().uuid();
+// z.guid() keeps Zod 3's uuid() behaviour (any 8-4-4-4-12 hex string);
+// Zod 4's z.uuid() also checks the RFC 9562 version and variant bits.
+export const idSchema = z.guid();
 
 // Pagination schema
 export const paginationSchema = z.object({
@@ -28,9 +30,9 @@ export const dateRangeSchema = z.object({
 
 // Combined list query schema
 export const listQuerySchema = paginationSchema
-  .merge(sortSchema)
-  .merge(searchSchema)
-  .merge(dateRangeSchema);
+  .extend(sortSchema.shape)
+  .extend(searchSchema.shape)
+  .extend(dateRangeSchema.shape);
 
 // Low #92: min(1) first so empty string shows "Email is required" not "invalid email"
 export const emailSchema = z
@@ -63,7 +65,7 @@ export const urlSchema = z
     }
     return val;
   })
-  .pipe(z.string().url('Please enter a valid URL'))
+  .pipe(z.url('Please enter a valid URL'))
   .optional()
   .or(z.literal(''));
 
@@ -114,7 +116,7 @@ export const fileUploadSchema = z.object({
   filename: z.string().min(1),
   mimetype: z.string().min(1),
   size: z.number().int().positive(),
-  url: z.string().url(),
+  url: z.url(),
 });
 
 // Token schema (for public access tokens) — DB column allows up to 100 chars

@@ -39,6 +39,10 @@ const { auth } = NextAuth({
 export default auth;
 
 export const config = {
+  // Node.js runtime (stable since Next 15.5): the shared auth config
+  // lazily imports @wolff/database, and the Prisma 7 client (pg driver
+  // adapter) can't be bundled for the Edge runtime.
+  runtime: 'nodejs',
   matcher: [
     /*
      * Match all request paths except for the ones starting with:

@@ -83,6 +83,7 @@ export const clientImportSchema = z.object({
 export type ClientType = z.infer<typeof clientTypeSchema>;
 export type ClientContact = z.infer<typeof clientContactSchema>;
 export type CreateClientInput = z.infer<typeof createClientSchema>;
+export type CreateClientFormInput = z.input<typeof createClientSchema>;
 export type UpdateClientInput = z.infer<typeof updateClientSchema>;
 export type ClientFilter = z.infer<typeof clientFilterSchema>;
 export type ClientImportRow = z.infer<typeof clientImportRowSchema>;

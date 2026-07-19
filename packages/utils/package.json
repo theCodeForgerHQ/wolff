@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "date-fns": "^4.1.0",
-    "zod": "^3.24.0"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "5.9.3"
   }
 }

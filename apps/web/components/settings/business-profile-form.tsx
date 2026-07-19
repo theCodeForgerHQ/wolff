@@ -22,9 +22,9 @@ import { toast } from 'sonner';
 
 const businessProfileSchema = z.object({
   businessName: z.string().min(1, 'Business name is required').max(200),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
-  website: z.string().url().optional().or(z.literal('')),
+  website: z.url().optional().or(z.literal('')),
   taxId: z.string().max(100).optional(),
   currency: z.string().length(3).default('USD'),
   timezone: z.string().default('UTC'),
@@ -46,7 +46,7 @@ interface BusinessProfileFormProps {
 export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
   const [isSaving, setIsSaving] = React.useState(false);
 
-  const form = useForm<BusinessProfileFormValues>({
+  const form = useForm<z.input<typeof businessProfileSchema>, unknown, BusinessProfileFormValues>({
     resolver: zodResolver(businessProfileSchema),
     defaultValues: {
       businessName: initialData?.businessName || '',
