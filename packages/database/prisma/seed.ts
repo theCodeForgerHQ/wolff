@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { createPrisma } from '../src/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
+const prisma = createPrisma();
 
 // Demo account configuration (must match apps/web/lib/demo/constants.ts)
 const DEMO_CONFIG = {

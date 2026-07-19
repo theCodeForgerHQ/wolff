@@ -3,9 +3,10 @@
  * Fixes corrupted workspace names, user names, and quote/invoice amounts
  * that were changed during manual testing.
  */
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { createPrisma } from '../src/client';
 
-const prisma = new PrismaClient();
+const prisma = createPrisma();
 
 async function main() {
   console.log('Starting production data cleanup...\n');

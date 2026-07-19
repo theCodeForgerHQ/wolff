@@ -47,8 +47,8 @@ RUN mkdir -p node_modules/@wolff && \
     ln -sf ../../../packages/utils node_modules/@wolff/utils && \
     ln -sf ../../../packages/types node_modules/@wolff/types
 
-# Generate Prisma client
-RUN ./node_modules/.bin/prisma generate --schema=packages/database/prisma/schema.prisma
+# Generate Prisma client (Prisma 7 reads packages/database/prisma.config.ts)
+RUN cd packages/database && ../../node_modules/.bin/prisma generate
 
 # Build the application
 ENV NODE_ENV=production
@@ -73,9 +73,10 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 
-# Copy Prisma schema and generated client
+# Copy the Prisma schema and migrations. The generated client is TypeScript
+# source in packages/database, so next build bundles it into the standalone
+# output; there is no node_modules/.prisma engine to copy any more.
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads

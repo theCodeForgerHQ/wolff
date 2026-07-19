@@ -15,9 +15,10 @@
  *   DATABASE_URL="..." E2E_USER_EMAIL="..." npx tsx prisma/seed-e2e-production.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { createPrisma } from '../src/client';
 
-const prisma = new PrismaClient();
+const prisma = createPrisma();
 
 // Get E2E user email from environment - REQUIRED
 const E2E_USER_EMAIL = process.env.E2E_USER_EMAIL;

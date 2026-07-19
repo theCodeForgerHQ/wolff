@@ -1,14 +1,19 @@
 // packages/database/prisma/schema.prisma
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
-  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  previewFeatures     = ["fullTextSearchPostgres"]
+  // CommonJS output with extensionless imports: the workspace packages aren't
+  // "type": "module", and Playwright, tsx scripts, Vitest and Next all load
+  // this client, so it has to work under require() as well as bundlers.
+  moduleFormat        = "cjs"
+  importFileExtension = ""
 }
 
+// The connection URL lives in prisma.config.ts (Prisma 7).
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================

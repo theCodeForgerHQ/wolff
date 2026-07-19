@@ -8,10 +8,10 @@
  * Or: pnpm e2e:seed
  */
 
-import { PrismaClient } from '@prisma/client';
+import { createPrisma } from '@wolff/database';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+const prisma = createPrisma();
 
 // Must match global-setup.ts and auth.fixture.ts
 const E2E_TEST_USER = {
