@@ -112,7 +112,7 @@
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20.17.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/react-signature-canvas": "1.0.7",
@@ -128,7 +128,7 @@
     "jsdom": "^25.0.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
-    "typescript": "^5.7.0",
+    "typescript": "5.9.3",
     "vitest": "^2.1.0"
   }
 }
