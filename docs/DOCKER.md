@@ -101,10 +101,10 @@ After the containers are running, apply the database schema:
 ```bash
 docker run --rm \
   --network wolff-network \
-  -v ./packages/database/prisma:/prisma \
+  -v ./packages/database:/database \
   -e DATABASE_URL="postgresql://wolff:YOUR_PASSWORD@postgres:5432/wolff?schema=public" \
-  node:20-alpine \
-  sh -c "npx prisma@6.19.2 migrate deploy --schema=/prisma/schema.prisma"
+  node:24-alpine \
+  sh -c "cd /database && npx -y prisma@7.10.0 migrate deploy --config prisma.deploy.config.mjs"
 ```
 
 Replace `YOUR_PASSWORD` with the `POSTGRES_PASSWORD` you set in `.env`.
@@ -122,7 +122,7 @@ docker run --rm \
   --network wolff-network \
   -v ./packages/database:/database \
   -e DATABASE_URL="postgresql://wolff:YOUR_PASSWORD@postgres:5432/wolff?schema=public" \
-  node:20-alpine \
+  node:24-alpine \
   sh -c "cd /database && npx tsx prisma/seed.ts"
 ```
 
@@ -505,10 +505,10 @@ If the update includes database changes:
 ```bash
 docker run --rm \
   --network wolff-network \
-  -v ./packages/database/prisma:/prisma \
+  -v ./packages/database:/database \
   -e DATABASE_URL="postgresql://wolff:YOUR_PASSWORD@postgres:5432/wolff?schema=public" \
-  node:20-alpine \
-  sh -c "npx prisma@6.19.2 migrate deploy --schema=/prisma/schema.prisma"
+  node:24-alpine \
+  sh -c "cd /database && npx -y prisma@7.10.0 migrate deploy --config prisma.deploy.config.mjs"
 ```
 
 ### 5. Verify
@@ -634,16 +634,19 @@ docker ps
 docker logs wolff-postgres
 ```
 
-### Migrations fail with "prisma@7.x" errors
+### Migrations fail with Prisma version errors
 
-The migration command must pin Prisma to the version used in the project. If you run `npx prisma` without a version, it downloads the latest (v7+) which has breaking changes:
+Pin the Prisma CLI to the project's version (7.10.0). An unpinned `npx prisma`
+downloads npm's `latest`, which currently points at an 8.0 release candidate.
+Prisma 7 reads the database URL from a config file, not from the schema, so
+pass the dependency-free `prisma.deploy.config.mjs`:
 
 ```bash
-# Wrong — downloads latest (v7), breaks
+# Wrong: unpinned version, and no config file for the datasource URL
 npx prisma migrate deploy --schema=/prisma/schema.prisma
 
-# Correct — pins to project version
-npx prisma@6.19.2 migrate deploy --schema=/prisma/schema.prisma
+# Correct
+cd /database && npx -y prisma@7.10.0 migrate deploy --config prisma.deploy.config.mjs
 ```
 
 ### SSL certificate not working (production)
