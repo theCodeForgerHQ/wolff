@@ -73,7 +73,8 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
+      {/* API 2025-03-31.basil made 'accordion' the default layout; keep tabs. */}
+      <PaymentElement options={{ layout: 'tabs' }} />
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
           <p className="text-sm text-destructive">{error}</p>

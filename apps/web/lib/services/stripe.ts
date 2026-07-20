@@ -1,6 +1,28 @@
 import Stripe from 'stripe';
 import { logger } from '@/lib/logger';
 
+/**
+ * Stripe API version this integration is written against. The SDK major
+ * (22.x) is pinned to the same version, so request and response types match.
+ * See docs/upgrades/stripe.md before changing it.
+ */
+export const STRIPE_API_VERSION = '2026-08-26.dahlia' as const;
+
+/**
+ * Optional override for the Stripe API origin, e.g. `http://localhost:12111`
+ * for stripe-mock in tests and CI. Never set in production.
+ */
+function apiHostOptions(): Pick<Stripe.StripeConfig, 'host' | 'port' | 'protocol'> {
+  const base = process.env.STRIPE_API_BASE_URL;
+  if (!base) return {};
+  const url = new URL(base);
+  return {
+    host: url.hostname,
+    port: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
+    protocol: url.protocol === 'https:' ? 'https' : 'http',
+  };
+}
+
 // Initialize Stripe client
 function getStripeClient(): Stripe | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -11,9 +33,10 @@ function getStripeClient(): Stripe | null {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: '2025-02-24.acacia',
+    apiVersion: STRIPE_API_VERSION,
     typescript: true,
     timeout: 30000, // 30s timeout to prevent hanging requests
+    ...apiHostOptions(),
   });
 }
 
