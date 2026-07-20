@@ -124,6 +124,7 @@
     "eslint": "^9.16.0",
     "eslint-config-next": "16.3.7",
     "jsdom": "^25.0.0",
+    "oauth2-mock-server": "9.2.0",
     "postcss": "^8.4.49",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",

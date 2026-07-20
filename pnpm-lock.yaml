@@ -346,6 +346,9 @@ importers:
       jsdom:
         specifier: ^25.0.0
         version: 25.0.1
+      oauth2-mock-server:
+        specifier: 9.2.0
+        version: 9.2.0
       postcss:
         specifier: ^8.4.49
         version: 8.5.28
@@ -3245,6 +3248,10 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  basic-auth@3.0.0:
+    resolution: {integrity: sha512-B63UKsSJ2atgiSuCJvzAjpfAdFY6mYT3C0vZFlLV/81Rw2/VCs6Tp29UzkpKETB3qA2cHwuU1LjBnhUQ0WkPKw==}
+    engines: {node: '>=22'}
+
   basic-ftp@5.3.1:
     resolution: {integrity: sha512-bopVNp6ugyA150DDuZfPFdt1KZ5a94ZDiwX4hMgZDzF+GttD80lEy8kj98kbyhLXnPvhtIo93mdnLIjpCAeeOw==}
     engines: {node: '>=10.0.0'}
@@ -4825,6 +4832,11 @@ packages:
 
   nwsapi@2.2.28:
     resolution: {integrity: sha512-IlVB7OS7qrOsVYlpnFIkETjMwT9jwvmocJmmM+GZU/PAB3uGi9Ezd7vcWhWBUnSc0ya4ppmQITOyP1ez9gg8cg==}
+
+  oauth2-mock-server@9.2.0:
+    resolution: {integrity: sha512-LKxnpwOaqmiKIenr3Uweppy4vrsWt8fCA1il7VQEh0QJoCqb94nWBjjeUoMyHvMLnWoHKrx4T8EmTt0aBrE3TA==}
+    engines: {node: ^22.12 || ^24 || ^26}
+    hasBin: true
 
   oauth4webapi@3.8.8:
     resolution: {integrity: sha512-8N28E+a/oxfXWBgOMt+ZP/JUf/XR+IFbvkAEPP3gznXOMv9BpAAwiIj0TFNz3tGTPc0ZQ8zmWBNgN1nAys0gng==}
@@ -8796,6 +8808,8 @@ snapshots:
 
   baseline-browser-mapping@2.11.26: {}
 
+  basic-auth@3.0.0: {}
+
   basic-ftp@5.3.1: {}
 
   bcryptjs@2.4.3: {}
@@ -10511,6 +10525,11 @@ snapshots:
       path-key: 4.0.0
 
   nwsapi@2.2.28: {}
+
+  oauth2-mock-server@9.2.0:
+    dependencies:
+      basic-auth: 3.0.0
+      jose: 6.2.12
 
   oauth4webapi@3.8.8: {}
 

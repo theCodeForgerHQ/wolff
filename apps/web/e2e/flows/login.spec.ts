@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+import { prisma } from '@wolff/database';
+
+const DEMO = { email: 'demo@wolff.demo', password: 'DemoPassword123!' };
+
+test.afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+test.describe('credentials login', () => {
+  test('signs the demo user in and lands on the dashboard', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(DEMO.email);
+    await page.getByLabel('Password').fill(DEMO.password);
+    await page.getByRole('button', { name: /^sign in$/i }).click();
+
+    await page.waitForURL(/\/dashboard/);
+    await expect(page.getByRole('link', { name: 'Quotes' }).first()).toBeVisible();
+  });
+
+  test('rejects a wrong password and stays on the login page', async ({ page }) => {
+    await page.goto('/login');
+    // A throwaway address, so the per-email login rate limit never affects the demo user.
+    await page.getByLabel('Email').fill(`nobody-${Date.now()}@wolff.test`);
+    await page.getByLabel('Password').fill('WrongPassword123!');
+    await page.getByRole('button', { name: /^sign in$/i }).click();
+
+    await expect(page.getByText(/invalid email or password/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('sends signed-out visitors to the login page', async ({ page }) => {
+    await page.goto('/invoices');
+    await expect(page).toHaveURL(/\/login\?callbackUrl=/);
+  });
+});
+
+test.describe('Google login (mock OIDC provider)', () => {
+  test('creates the user, links the account and encrypts its tokens', async ({ page }) => {
+    const email = process.env.E2E_GOOGLE_EMAIL!;
+
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Google' }).click();
+
+    // First sign-in: a new user without a workspace goes to onboarding.
+    await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 30_000 });
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email },
+      include: { accounts: true },
+    });
+    expect(user.name).toBe('Google E2E User');
+    expect(user.avatarUrl).toBe('https://lh3.googleusercontent.com/a/e2e');
+
+    const [account] = user.accounts;
+    expect(account?.provider).toBe('google');
+    expect(account?.providerAccountId).toBe(`google-${email}`);
+    expect(account?.accessToken).toMatch(/^enc:/);
+  });
+
+  test('signs the same Google user in again without creating a duplicate', async ({ page }) => {
+    const email = process.env.E2E_GOOGLE_EMAIL!;
+
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Google' }).click();
+    await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 30_000 });
+
+    expect(await prisma.user.count({ where: { email } })).toBe(1);
+    expect(await prisma.account.count({ where: { user: { email } } })).toBe(1);
+  });
+});
