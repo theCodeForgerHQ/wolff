@@ -24,6 +24,8 @@ const volatile = (page: Page): Locator[] => [
   // Known issue (docs/baseline.md): a hydration mismatch in relative
   // timestamps raises a global error toast on the dashboard.
   page.getByText('An unexpected error occurred.'),
+  // Unread count: every portal visit in the run adds a notification.
+  page.getByRole('button', { name: 'Notifications' }).locator('span'),
   page.getByText(/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, /),
   page
     .getByText('Recent Activity', { exact: true })
