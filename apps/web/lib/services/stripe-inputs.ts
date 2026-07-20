@@ -6,6 +6,7 @@
  * loopback), so each input is checked again at the sink.
  */
 import { z } from 'zod';
+import { parseLoopbackUrl } from '@/lib/security/loopback';
 
 /** Stripe object ids: `<prefix>_<alphanumerics>`, no path characters. */
 const stripeId = (prefix: string) =>
@@ -56,8 +57,6 @@ export const refundInput = z.object({
   reason: z.enum(['duplicate', 'fraudulent', 'requested_by_customer']).optional(),
 });
 
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
-
 /**
  * Parses STRIPE_API_BASE_URL (stripe-mock in tests and CI). Only loopback
  * origins are accepted, so a misconfigured deployment can't send the secret
@@ -68,18 +67,7 @@ export function parseStripeApiBase(value: string): {
   port: number;
   protocol: 'http' | 'https';
 } {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error('STRIPE_API_BASE_URL must be an absolute URL');
-  }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new Error('STRIPE_API_BASE_URL must use http or https');
-  }
-  if (!LOOPBACK_HOSTS.has(url.hostname)) {
-    throw new Error('STRIPE_API_BASE_URL must point at a loopback host (stripe-mock)');
-  }
+  const url = parseLoopbackUrl(value, 'STRIPE_API_BASE_URL');
   const protocol = url.protocol === 'https:' ? 'https' : 'http';
   return {
     host: url.hostname,
