@@ -403,7 +403,7 @@ export function InvoiceTemplatesDataTable({ data }: InvoiceTemplatesDataTablePro
 
       {/* Edit Template Dialog - Invoice Builder Style */}
       <Dialog open={!!editingTemplate || isCreating} onOpenChange={(open) => !open && handleCloseEdit()}>
-        <DialogContent className="!flex !flex-col !max-w-[860px] !max-h-[90vh] !p-0 !gap-0 overflow-hidden">
+        <DialogContent className="flex! flex-col! max-w-[860px]! max-h-[90vh]! p-0! gap-0! overflow-hidden">
           {/* Header */}
           <div className="p-8 pb-2">
             <h2 className="text-2xl font-bold tracking-tight">
@@ -511,7 +511,7 @@ export function InvoiceTemplatesDataTable({ data }: InvoiceTemplatesDataTablePro
 
                 {/* Items Table Header */}
                 {editLineItems.length > 0 && (
-                  <div className="grid grid-cols-[1fr,100px,70px,32px] gap-3 mb-3 px-3">
+                  <div className="grid grid-cols-[1fr_100px_70px_32px] gap-3 mb-3 px-3">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
                       Items
                     </span>
@@ -535,11 +535,11 @@ export function InvoiceTemplatesDataTable({ data }: InvoiceTemplatesDataTablePro
                         index !== editLineItems.length - 1 && 'border-b border-border/40'
                       )}
                     >
-                      <div className="grid grid-cols-[1fr,100px,70px,32px] gap-3 items-center">
+                      <div className="grid grid-cols-[1fr_100px_70px_32px] gap-3 items-center">
                         <Input
                           value={item.name}
                           onChange={(e) => handleUpdateLineItem(item.id, 'name', e.target.value)}
-                          className="h-9 border-0 shadow-none px-0 text-sm font-medium focus-visible:ring-0 !bg-transparent"
+                          className="h-9 border-0 shadow-none px-0 text-sm font-medium focus-visible:ring-0 bg-transparent!"
                           placeholder="Item name"
                         />
                         <Input
@@ -571,7 +571,7 @@ export function InvoiceTemplatesDataTable({ data }: InvoiceTemplatesDataTablePro
                       <Input
                         value={item.description}
                         onChange={(e) => handleUpdateLineItem(item.id, 'description', e.target.value)}
-                        className="h-7 text-xs text-muted-foreground border-0 shadow-none px-0 mt-0.5 focus-visible:ring-0 !bg-transparent"
+                        className="h-7 text-xs text-muted-foreground border-0 shadow-none px-0 mt-0.5 focus-visible:ring-0 bg-transparent!"
                         placeholder="Add a description..."
                       />
                     </div>

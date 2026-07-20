@@ -16,7 +16,7 @@ export default function NotFound() {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-gradient-to-b from-background to-muted/50">
+    <div className="flex min-h-screen items-center justify-center p-6 bg-linear-to-b from-background to-muted/50">
       <Card className="max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">

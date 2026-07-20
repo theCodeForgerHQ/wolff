@@ -61,7 +61,7 @@ export function WorkspaceSwitcher({
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
+        className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
         align="start"
         side={isCollapsed ? 'right' : 'bottom'}
         sideOffset={4}

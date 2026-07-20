@@ -1,9 +1,310 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap')
+layer(base);
+@import url('https://fonts.googleapis.com/css2?family=Funnel+Sans:wght@300;400;500;600;700&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@source '../../../packages/ui/src/**/*.{ts,tsx}';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * The shadow scale is defined per theme below as --theme-shadow-*. Tailwind 4
+ * emits @theme tokens as :root variables of the same name, so the upgrade
+ * tool's `--shadow-sm: var(--shadow-sm)` became a self-reference: the
+ * variable was invalid and every shadow utility rendered nothing. `inline`
+ * makes utilities read the per-theme variable where they are used.
+ */
+@theme inline {
+  --shadow-2xs: var(--theme-shadow-2xs);
+  --shadow-xs: var(--theme-shadow-xs);
+  --shadow-sm: var(--theme-shadow-sm);
+  --shadow: var(--theme-shadow);
+  --shadow-md: var(--theme-shadow-md);
+  --shadow-lg: var(--theme-shadow-lg);
+  --shadow-xl: var(--theme-shadow-xl);
+  --shadow-2xl: var(--theme-shadow-2xl);
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-primary-950: var(--primary-950);
+  --color-primary-1000: var(--primary-1000);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-base-50: var(--base-50);
+  --color-base-100: var(--base-100);
+  --color-base-200: var(--base-200);
+  --color-base-300: var(--base-300);
+  --color-base-400: var(--base-400);
+  --color-base-500: var(--base-500);
+  --color-base-600: var(--base-600);
+  --color-base-700: var(--base-700);
+  --color-base-800: var(--base-800);
+  --color-base-900: var(--base-900);
+  --color-base-950: var(--base-950);
+  --color-base-1000: var(--base-1000);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--text-family), Funnel Sans, sans-serif;
+  --font-display: var(--display-family), Lexend, sans-serif;
+  --font-mono: JetBrains Mono, monospace;
+  --font-serif: Merriweather, serif;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-out: fade-out 0.2s ease-out;
+  --animate-slide-in-from-top: slide-in-from-top 0.2s ease-out;
+  --animate-slide-in-from-bottom: slide-in-from-bottom 0.2s ease-out;
+  --animate-slide-in-from-left: slide-in-from-left 0.2s ease-out;
+  --animate-slide-in-from-right: slide-in-from-right 0.2s ease-out;
+  --animate-cell-ripple: cell-ripple var(--duration) ease-out var(--delay);
+  --animate-shimmer: shimmer 3s ease-in-out infinite;
+  --animate-marquee: marquee var(--duration, 40s) linear infinite;
+  --animate-border-spin: border-spin 7s linear infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-from-top {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-in-from-bottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-in-from-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes cell-ripple {
+    0% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    100% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes border-spin {
+    0% {
+      rotate: 0deg;
+    }
+    100% {
+      rotate: 360deg;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility font-display {
+  font-family: var(--display-family);
+  font-weight: var(--display-weight);
+}
+
+@utility font-text {
+  font-family: var(--text-family);
+  font-weight: var(--text-weight);
+}
+
+@utility gradient-primary {
+  /* Theme gradients — primary (blue) → secondary (violet) */
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+}
+
+@utility gradient-primary-subtle {
+  background: linear-gradient(135deg, var(--primary-50), var(--primary-100));
+
+  .dark & {
+    background: linear-gradient(135deg, var(--primary-950), var(--primary-900));
+  }
+}
+
+@utility gradient-primary-text {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility gradient-accent {
+  background: linear-gradient(135deg, var(--primary-400), var(--primary-600));
+}
+
+@utility gradient-card-border {
+  border-image: linear-gradient(135deg, var(--primary-200), var(--primary-400))
+    1;
+}
+
+@utility dark {
+  & .gradient-primary-subtle {
+    background: linear-gradient(135deg, var(--primary-950), var(--primary-900));
+  }
+}
 
 @layer base {
   :root {
@@ -80,14 +381,14 @@
     --sidebar-ring: var(--primary-500);
     --font-size-scale: 1.03; /* Intentional: 3% bump over browser default (16px → ~16.5px) for improved readability */
     --radius: 0.5rem;
-    --shadow-2xs: 0px 4px 8px -1px rgb(0 0 0 / 0.05);
-    --shadow-xs: 0px 4px 8px -1px rgb(0 0 0 / 0.05);
-    --shadow-sm: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 1px 2px -2px rgb(0 0 0 / 0.10);
-    --shadow: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 1px 2px -2px rgb(0 0 0 / 0.10);
-    --shadow-md: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 2px 4px -2px rgb(0 0 0 / 0.10);
-    --shadow-lg: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 4px 6px -2px rgb(0 0 0 / 0.10);
-    --shadow-xl: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 8px 10px -2px rgb(0 0 0 / 0.10);
-    --shadow-2xl: 0px 4px 8px -1px rgb(0 0 0 / 0.25);
+    --theme-shadow-2xs: 0px 4px 8px -1px rgb(0 0 0 / 0.05);
+    --theme-shadow-xs: 0px 4px 8px -1px rgb(0 0 0 / 0.05);
+    --theme-shadow-sm: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 1px 2px -2px rgb(0 0 0 / 0.10);
+    --theme-shadow: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 1px 2px -2px rgb(0 0 0 / 0.10);
+    --theme-shadow-md: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 2px 4px -2px rgb(0 0 0 / 0.10);
+    --theme-shadow-lg: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 4px 6px -2px rgb(0 0 0 / 0.10);
+    --theme-shadow-xl: 0px 4px 8px -1px rgb(0 0 0 / 0.10), 0px 8px 10px -2px rgb(0 0 0 / 0.10);
+    --theme-shadow-2xl: 0px 4px 8px -1px rgb(0 0 0 / 0.25);
   }
 
   .dark {
@@ -128,14 +429,14 @@
     --sidebar-accent-foreground: var(--base-100);
     --sidebar-border: var(--base-800);
     --sidebar-ring: var(--primary-400);
-    --shadow-2xs: 0 1px 3px 0px rgb(0 0 0 / 0.15);
-    --shadow-xs: 0 1px 3px 0px rgb(0 0 0 / 0.15);
-    --shadow-sm: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 1px 2px -1px rgb(0 0 0 / 0.20);
-    --shadow: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 1px 2px -1px rgb(0 0 0 / 0.20);
-    --shadow-md: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 2px 4px -1px rgb(0 0 0 / 0.20);
-    --shadow-lg: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 4px 6px -1px rgb(0 0 0 / 0.20);
-    --shadow-xl: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 8px 10px -1px rgb(0 0 0 / 0.20);
-    --shadow-2xl: 0 1px 3px 0px rgb(0 0 0 / 0.35);
+    --theme-shadow-2xs: 0 1px 3px 0px rgb(0 0 0 / 0.15);
+    --theme-shadow-xs: 0 1px 3px 0px rgb(0 0 0 / 0.15);
+    --theme-shadow-sm: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 1px 2px -1px rgb(0 0 0 / 0.20);
+    --theme-shadow: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 1px 2px -1px rgb(0 0 0 / 0.20);
+    --theme-shadow-md: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 2px 4px -1px rgb(0 0 0 / 0.20);
+    --theme-shadow-lg: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 4px 6px -1px rgb(0 0 0 / 0.20);
+    --theme-shadow-xl: 0 1px 3px 0px rgb(0 0 0 / 0.20), 0 8px 10px -1px rgb(0 0 0 / 0.20);
+    --theme-shadow-2xl: 0 1px 3px 0px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -160,50 +461,6 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--display-family);
     font-weight: var(--display-weight);
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .font-display {
-    font-family: var(--display-family);
-    font-weight: var(--display-weight);
-  }
-
-  .font-text {
-    font-family: var(--text-family);
-    font-weight: var(--text-weight);
-  }
-
-  /* Theme gradients — primary (blue) → secondary (violet) */
-  .gradient-primary {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
-  }
-
-  .gradient-primary-subtle {
-    background: linear-gradient(135deg, var(--primary-50), var(--primary-100));
-  }
-
-  .gradient-primary-text {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .gradient-accent {
-    background: linear-gradient(135deg, var(--primary-400), var(--primary-600));
-  }
-
-  .gradient-card-border {
-    border-image: linear-gradient(135deg, var(--primary-200), var(--primary-400)) 1;
-  }
-
-  .dark .gradient-primary-subtle {
-    background: linear-gradient(135deg, var(--primary-950), var(--primary-900));
   }
 }
 

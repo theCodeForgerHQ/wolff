@@ -109,7 +109,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm dark:prose-invert max-w-none min-h-[200px] px-4 py-3 focus:outline-none text-sm [&_p]:text-sm [&_p]:leading-relaxed',
+          'prose prose-sm dark:prose-invert max-w-none min-h-[200px] px-4 py-3 focus:outline-hidden text-sm [&_p]:text-sm [&_p]:leading-relaxed',
       },
     },
   });

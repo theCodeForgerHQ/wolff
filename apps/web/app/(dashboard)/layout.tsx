@@ -56,7 +56,7 @@ async function HeaderWithData({ user }: { user: { id: string; email: string; nam
 // Lightweight skeleton for sidebar while data loads
 function SidebarFallback() {
   return (
-    <div className="flex h-full w-[var(--sidebar-width)] flex-col border-r bg-sidebar p-4 space-y-4">
+    <div className="flex h-full w-(--sidebar-width) flex-col border-r bg-sidebar p-4 space-y-4">
       <Skeleton className="h-10 w-full" />
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, i) => (

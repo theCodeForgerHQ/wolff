@@ -442,7 +442,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
     <div className="flex h-[calc(100vh-64px)] flex-col">
       {/* ─── Main Content ────────────────────────────── */}
       <div className="flex-1 overflow-hidden">
-        <div className="grid h-full lg:grid-cols-[1fr,420px] xl:grid-cols-[1fr,480px]">
+        <div className="grid h-full lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px]">
           {/* ═══════════════════════════════════════════ */}
           {/* LEFT PANEL — Editor                        */}
           {/* ═══════════════════════════════════════════ */}
@@ -902,7 +902,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
 
                 {/* Items Table Header */}
                 {lineItems.length > 0 && (
-                  <div className="mb-3 grid grid-cols-[1fr,80px,60px,32px] gap-3 px-3">
+                  <div className="mb-3 grid grid-cols-[1fr_80px_60px_32px] gap-3 px-3">
                     <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-widest">
                       Items
                     </span>
@@ -926,12 +926,12 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
                         index !== lineItems.length - 1 && 'border-border/40 border-b'
                       )}
                     >
-                      <div className="grid grid-cols-[1fr,80px,60px,32px] items-center gap-3">
+                      <div className="grid grid-cols-[1fr_80px_60px_32px] items-center gap-3">
                         <Input
                           placeholder="Item name"
                           value={item.name}
                           onChange={(e) => updateLineItem(item.id, 'name', e.target.value)}
-                          className="h-9 border-0 !bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-0"
+                          className="h-9 border-0 bg-transparent! px-0 text-sm font-medium shadow-none focus-visible:ring-0"
                         />
                         <Input
                           type="number"
@@ -967,7 +967,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
                         placeholder="Add a description..."
                         value={item.description}
                         onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        className="text-muted-foreground mt-0.5 h-7 border-0 !bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
+                        className="text-muted-foreground mt-0.5 h-7 border-0 bg-transparent! px-0 text-xs shadow-none focus-visible:ring-0"
                       />
                     </div>
                   ))}
@@ -1257,7 +1257,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
           {/* ═══════════════════════════════════════════ */}
           <div className="no-scrollbar bg-muted/30 flex flex-col overflow-y-auto">
             {/* Preview Tabs */}
-            <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 border-b px-4 pb-3 pt-4 backdrop-blur">
+            <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-10 border-b px-4 pb-3 pt-4 backdrop-blur-sm">
               <Tabs value={previewTab} onValueChange={(v) => setPreviewTab(v as PreviewTab)}>
                 <TabsList className="grid h-10 w-full grid-cols-3">
                   <TabsTrigger
@@ -1539,7 +1539,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
                       transform: 'scale(var(--pdf-scale, 0.68))',
                       transformOrigin: 'top center',
                     }}
-                    className="border-border/40 relative flex-shrink-0 rounded-sm border bg-white shadow-2xl"
+                    className="border-border/40 relative shrink-0 rounded-sm border bg-white shadow-2xl"
                   >
                     <DownloadUnavailable className="absolute right-2.5 top-2.5 z-20">
                       <button

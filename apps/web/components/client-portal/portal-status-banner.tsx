@@ -47,11 +47,11 @@ const variantStyles: Record<StatusVariant, { bg: string; text: string; border: s
 };
 
 const variantIcons: Record<StatusVariant, React.ReactNode> = {
-  info: <Info className="h-5 w-5 flex-shrink-0" />,
-  warning: <AlertTriangle className="h-5 w-5 flex-shrink-0" />,
-  success: <CheckCircle2 className="h-5 w-5 flex-shrink-0" />,
-  error: <XCircle className="h-5 w-5 flex-shrink-0" />,
-  muted: <AlertCircle className="h-5 w-5 flex-shrink-0" />,
+  info: <Info className="h-5 w-5 shrink-0" />,
+  warning: <AlertTriangle className="h-5 w-5 shrink-0" />,
+  success: <CheckCircle2 className="h-5 w-5 shrink-0" />,
+  error: <XCircle className="h-5 w-5 shrink-0" />,
+  muted: <AlertCircle className="h-5 w-5 shrink-0" />,
 };
 
 export function PortalStatusBanner({

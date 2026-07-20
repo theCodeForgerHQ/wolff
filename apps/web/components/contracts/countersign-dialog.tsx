@@ -59,7 +59,7 @@ export function CountersignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[600px] !max-h-[85vh] !p-0 !gap-0 !flex !flex-col overflow-hidden">
+      <DialogContent className="max-w-[600px]! max-h-[85vh]! p-0! gap-0! flex! flex-col! overflow-hidden">
         <div className="p-6 pb-3 shrink-0">
           <DialogHeader>
             <DialogTitle>Countersign Contract</DialogTitle>

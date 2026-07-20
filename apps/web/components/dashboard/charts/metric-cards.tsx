@@ -53,7 +53,7 @@ function RadialProgress({
           fill="none"
           stroke="var(--primary-100)"
           strokeWidth={strokeWidth}
-          className="dark:stroke-[var(--primary-950)]"
+          className="dark:stroke-(--primary-950)"
         />
         <circle
           cx={center}
@@ -212,7 +212,7 @@ export function PipelineCard({ data, className }: PipelineCardProps) {
                   <span className="text-muted-foreground">{stage.label}</span>
                   <span className="font-medium tabular-nums">{stage.value}</span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--primary-100)] dark:bg-[var(--primary-950)]">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--primary-100) dark:bg-(--primary-950)">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{

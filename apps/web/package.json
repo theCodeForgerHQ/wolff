@@ -108,6 +108,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
+    "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
     "@types/bcryptjs": "^2.4.6",
@@ -120,12 +121,11 @@
     "@typescript-eslint/parser": "^8.18.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@vitest/coverage-v8": "^2.1.0",
-    "autoprefixer": "^10.4.20",
     "eslint": "^9.16.0",
     "eslint-config-next": "16.3.7",
     "jsdom": "^25.0.0",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vitest": "^2.1.0"
   }

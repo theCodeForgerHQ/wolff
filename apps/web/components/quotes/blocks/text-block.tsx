@@ -58,7 +58,7 @@ export function TextBlockContent({ block }: TextBlockContentProps) {
         contentEditable
         suppressContentEditableWarning
         className={cn(
-          'min-h-[1.5em] outline-none prose prose-sm max-w-none',
+          'min-h-[1.5em] outline-hidden prose prose-sm max-w-none',
           alignmentClass
         )}
         onBlur={handleBlur}

@@ -347,7 +347,7 @@ export function ContractTemplateList({
 
       {/* Edit Template Dialog */}
       <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && handleCloseEdit()}>
-        <DialogContent className="!flex !flex-col !max-w-[860px] !max-h-[90vh] !p-0 !gap-0 overflow-hidden">
+        <DialogContent className="flex! flex-col! max-w-[860px]! max-h-[90vh]! p-0! gap-0! overflow-hidden">
           {/* Header */}
           <div className="p-6 pb-4">
             <DialogHeader className="space-y-1">
@@ -368,7 +368,7 @@ export function ContractTemplateList({
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-base font-semibold !bg-transparent outline-none border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
+                  className="text-base font-semibold bg-transparent! outline-hidden border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
                   placeholder="Template name"
                 />
                 <button
@@ -382,7 +382,7 @@ export function ContractTemplateList({
               </div>
 
               {/* Contract Editor */}
-              <div className="[&_.ProseMirror]:!min-h-[150px] [&_.ProseMirror]:!max-h-[220px] [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm [&_.prose_h2]:text-base [&_.prose_h2]:font-semibold [&_.prose_h3]:text-sm [&_.prose_h3]:font-semibold [&_.prose_p]:text-sm">
+              <div className="[&_.ProseMirror]:min-h-[150px]! [&_.ProseMirror]:max-h-[220px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm [&_.prose_h2]:text-base [&_.prose_h2]:font-semibold [&_.prose_h3]:text-sm [&_.prose_h3]:font-semibold [&_.prose_p]:text-sm">
                 <ContractEditor
                   key={editingTemplate?.id}
                   content={editContent}

@@ -241,7 +241,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
 
       {/* Contract View Dialog */}
       <Dialog open={!!viewingContract} onOpenChange={(open) => !open && handleCloseView()}>
-        <DialogContent className="!flex !flex-col !max-w-[860px] !max-h-[90vh] !p-0 !gap-0 overflow-hidden">
+        <DialogContent className="flex! flex-col! max-w-[860px]! max-h-[90vh]! p-0! gap-0! overflow-hidden">
           <DialogTitle className="sr-only">Contract Preview</DialogTitle>
           {contract && (
             <>
@@ -388,7 +388,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                   {/* Contract Content */}
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Contract Content</p>
-                    <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:!min-h-[100px] [&_.ProseMirror]:!max-h-[300px] [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
+                    <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[300px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
                       <ContractEditor
                         key={contract.id}
                         content={contract.content}
