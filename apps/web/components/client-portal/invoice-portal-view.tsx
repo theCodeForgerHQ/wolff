@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { PublicInvoiceData } from '@/lib/invoices/portal-actions';
+import { PaymentForm } from './payment-form';
 
 interface InvoicePortalViewProps {
   invoice: PublicInvoiceData;
@@ -47,9 +48,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
     ? `${invoice.branding.primaryColor}18`
     : ACCENT_LIGHT;
 
-  const handlePayment = () => {
-    alert('Online payment is not yet available for this invoice. Please contact the business directly for payment options.');
-  };
+  const [paymentStep, setPaymentStep] = useState<'idle' | 'paying' | 'submitted'>('idle');
 
   return (
     <div className="relative overflow-hidden">
@@ -249,10 +248,27 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
 
       {/* Action Buttons */}
       <div className="space-y-2 px-6 pb-4 pt-2">
-        {invoice.canPay && invoice.totals.amountDue > 0 ? (
+        {paymentStep === 'paying' ? (
+          <PaymentForm
+            invoiceId={invoice.id}
+            accessToken={accessToken}
+            amountDue={invoice.totals.amountDue}
+            currency={currency}
+            onSuccess={() => setPaymentStep('submitted')}
+            onCancel={() => setPaymentStep('idle')}
+          />
+        ) : paymentStep === 'submitted' ? (
+          <div role="status" className="flex flex-col items-center gap-1 py-4 text-center">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+            <p className="text-sm font-medium">Payment received</p>
+            <p className="text-xs text-muted-foreground">
+              We&apos;re confirming it with the bank; this invoice will show as paid shortly.
+            </p>
+          </div>
+        ) : invoice.canPay && invoice.totals.amountDue > 0 ? (
           <>
             <button
-              onClick={handlePayment}
+              onClick={() => setPaymentStep('paying')}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-white transition-colors"
               style={{ backgroundColor: accentColor }}
             >

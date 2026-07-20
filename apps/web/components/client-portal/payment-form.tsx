@@ -11,9 +11,13 @@ import {
 import { Loader2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+// Loaded on first use, not at import: the portal imports this module for every
+// invoice view, and only a client who clicks Pay needs Stripe.js.
+let stripePromise: ReturnType<typeof loadStripe> | null = null;
+function getStripe() {
+  stripePromise ??= loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+  return stripePromise;
+}
 
 interface PaymentFormProps {
   invoiceId: string;
@@ -161,7 +165,7 @@ export function PaymentForm(props: PaymentFormProps) {
 
   return (
     <Elements
-      stripe={stripePromise}
+      stripe={getStripe()}
       options={{
         clientSecret,
         appearance: {
