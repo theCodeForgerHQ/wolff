@@ -38,6 +38,7 @@ describe.skipIf(!mockUrl)('Stripe requests against stripe-mock', () => {
       customerId: 'cus_contract',
       stripeAccountId: 'acct_contract',
       metadata: { workspaceId: 'ws_contract' },
+      attempt: 0,
     });
     expect(intent?.object).toBe('payment_intent');
     expect(intent?.id).toMatch(/^pi_/);

@@ -15,6 +15,7 @@ const validIntent = {
   customerId: 'cus_Q1w2E3r4',
   stripeAccountId: 'acct_1Abc',
   metadata: { workspaceId: 'ws-1', invoiceNumber: 'INV-0001' },
+  attempt: 0,
 };
 
 describe('paymentIntentInput', () => {
@@ -31,6 +32,8 @@ describe('paymentIntentInput', () => {
     ['an account id with path characters', { stripeAccountId: 'acct_1/../../v1/charges' }],
     ['a customer id with the wrong prefix', { customerId: 'acct_123' }],
     ['an invoice id with separators', { invoiceId: 'inv_1?x=1' }],
+    ['a negative attempt', { attempt: -1 }],
+    ['a fractional attempt', { attempt: 0.5 }],
     ['a metadata value over 500 chars', { metadata: { note: 'x'.repeat(501) } }],
   ])('rejects %s', (_label, patch) => {
     expect(paymentIntentInput.safeParse({ ...validIntent, ...patch }).success).toBe(false);
@@ -48,9 +51,9 @@ describe('refundInput', () => {
   });
 
   it('rejects an unknown refund reason', () => {
-    expect(
-      refundInput.safeParse({ paymentIntentId: 'pi_123', reason: 'because' }).success
-    ).toBe(false);
+    expect(refundInput.safeParse({ paymentIntentId: 'pi_123', reason: 'because' }).success).toBe(
+      false
+    );
   });
 
   it('rejects a payment intent id that could change the request path', () => {

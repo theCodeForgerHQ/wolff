@@ -189,6 +189,12 @@ export async function createInvoicePaymentIntent(
       },
     });
 
+    // Every earlier intent for this invoice left a payment row behind, so
+    // their count numbers this attempt (see paymentIntentIdempotencyKey).
+    const attempt = await prisma.payment.count({
+      where: { invoiceId: invoice.id, stripePaymentIntentId: { not: null } },
+    });
+
     // Create payment intent (route funds to connected Stripe account)
     const paymentIntent = await createPaymentIntent({
       amount: Math.round(parseFloat((amountToPay * 100).toPrecision(12))), // Convert to cents (avoid floating-point rounding errors)
@@ -196,6 +202,7 @@ export async function createInvoicePaymentIntent(
       invoiceId: invoice.id,
       customerId: customer?.id,
       stripeAccountId: paymentSettings.stripeAccountId,
+      attempt,
       metadata: {
         workspaceId: invoice.workspaceId,
         invoiceNumber: invoice.invoiceNumber,

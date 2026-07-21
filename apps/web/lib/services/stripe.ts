@@ -4,6 +4,7 @@ import {
   customerInput,
   parseStripeApiBase,
   paymentIntentId as paymentIntentIdSchema,
+  paymentIntentIdempotencyKey,
   paymentIntentInput,
   refundInput,
 } from './stripe-inputs';
@@ -56,16 +57,16 @@ export async function createPaymentIntent(params: {
   customerId?: string;
   stripeAccountId?: string;
   metadata?: Record<string, string>;
+  attempt: number; // PaymentIntents this invoice has had before this one
 }): Promise<Stripe.PaymentIntent | null> {
   if (!stripe) {
     throw new Error('Stripe is not configured');
   }
 
-  const { amount, currency, invoiceId, customerId, stripeAccountId, metadata } =
+  const { amount, currency, invoiceId, customerId, stripeAccountId, metadata, attempt } =
     paymentIntentInput.parse(params);
 
-  // Use invoice ID + amount as idempotency key to prevent duplicate payment intents
-  const idempotencyKey = `pi_${invoiceId}_${amount}_${currency}`;
+  const idempotencyKey = paymentIntentIdempotencyKey({ invoiceId, amount, currency, attempt });
 
   const paymentIntent = await stripe.paymentIntents.create(
     {
@@ -155,10 +156,7 @@ export async function createRefund(params: {
 }
 
 // Construct webhook event from payload
-export function constructWebhookEvent(
-  payload: string | Buffer,
-  signature: string
-): Stripe.Event {
+export function constructWebhookEvent(payload: string | Buffer, signature: string): Stripe.Event {
   if (!stripe) {
     throw new Error('Stripe is not configured');
   }
