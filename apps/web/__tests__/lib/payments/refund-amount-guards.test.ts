@@ -16,7 +16,6 @@ vi.mock('@wolff/database', () => ({
 }));
 
 vi.mock('@/lib/services/stripe', () => ({
-  stripe: {},
   isStripeEnabled: () => true,
   createRefund: mocks.createRefund,
   constructWebhookEvent: vi.fn(),

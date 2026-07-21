@@ -1,6 +1,10 @@
 import Stripe from 'stripe';
 import { logger } from '@/lib/logger';
 import {
+  accountOnboardingLinkInput,
+  checkoutSessionInput,
+  connectAccountId,
+  connectAccountInput,
   customerInput,
   parseStripeApiBase,
   paymentIntentId as paymentIntentIdSchema,
@@ -42,7 +46,9 @@ function getStripeClient(): Stripe | null {
   });
 }
 
-export const stripe = getStripeClient();
+// Not exported: every Stripe request goes through a function in this module,
+// which parses its input first (see stripe-inputs.ts).
+const stripe = getStripeClient();
 
 // Helper to check if Stripe is enabled
 export function isStripeEnabled(): boolean {
@@ -126,12 +132,108 @@ export async function getOrCreateCustomer(params: {
 // Retrieve a payment intent
 export async function retrievePaymentIntent(
   paymentIntentId: string
-): Promise<Stripe.PaymentIntent | null> {
+): Promise<Stripe.PaymentIntent> {
   if (!stripe) {
     throw new Error('Stripe is not configured');
   }
 
   return stripe.paymentIntents.retrieve(paymentIntentIdSchema.parse(paymentIntentId));
+}
+
+// Cancel a payment intent that can no longer be used
+export async function cancelPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  return stripe.paymentIntents.cancel(paymentIntentIdSchema.parse(paymentIntentId));
+}
+
+// Create a hosted Checkout Session for one invoice
+export async function createCheckoutSession(params: {
+  invoiceId: string;
+  amount: number; // in cents
+  currency: string;
+  description: string;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<Stripe.Checkout.Session> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  const { invoiceId, amount, currency, description, customerEmail, successUrl, cancelUrl } =
+    checkoutSessionInput.parse(params);
+
+  return stripe.checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency,
+          product_data: { name: description },
+          unit_amount: amount,
+        },
+        quantity: 1,
+      },
+    ],
+    customer_email: customerEmail,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: { invoiceId },
+  });
+}
+
+// Create the Stripe Connect account a workspace is paid through
+export async function createConnectAccount(params: {
+  workspaceId: string;
+  email?: string;
+  businessName?: string;
+}): Promise<Stripe.Account> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  const { workspaceId, email, businessName } = connectAccountInput.parse(params);
+
+  return stripe.accounts.create({
+    type: 'standard',
+    country: 'US',
+    ...(email && { email }),
+    ...(businessName && { business_profile: { name: businessName } }),
+    metadata: { workspaceId },
+  });
+}
+
+// Retrieve a Connect account to read its onboarding status
+export async function retrieveConnectAccount(accountId: string): Promise<Stripe.Account> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  return stripe.accounts.retrieve(connectAccountId.parse(accountId));
+}
+
+// Create the link that sends a workspace owner through Connect onboarding
+export async function createAccountOnboardingLink(params: {
+  accountId: string;
+  refreshUrl: string;
+  returnUrl: string;
+}): Promise<Stripe.AccountLink> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  const { accountId, refreshUrl, returnUrl } = accountOnboardingLinkInput.parse(params);
+
+  return stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: refreshUrl,
+    return_url: returnUrl,
+    type: 'account_onboarding',
+  });
 }
 
 // Create a refund

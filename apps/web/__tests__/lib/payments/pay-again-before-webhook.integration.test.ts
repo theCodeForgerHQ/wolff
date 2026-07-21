@@ -27,15 +27,8 @@ vi.mock('@wolff/database', async (importOriginal) => {
 });
 
 vi.mock('@/lib/services/stripe', () => ({
-  stripe: {
-    paymentIntents: {
-      retrieve: stripeMocks.retrievePaymentIntent,
-      cancel: stripeMocks.cancelPaymentIntent,
-    },
-  },
   isStripeEnabled: () => true,
-  createPaymentIntent: stripeMocks.createPaymentIntent,
-  getOrCreateCustomer: stripeMocks.getOrCreateCustomer,
+  ...stripeMocks,
 }));
 
 // The portal path authenticates by access token; the session lookup is unused.

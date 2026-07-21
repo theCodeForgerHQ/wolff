@@ -7,10 +7,11 @@
 
 import { prisma } from '@wolff/database';
 import {
-  stripe,
   isStripeEnabled,
+  cancelPaymentIntent,
   createPaymentIntent,
   getOrCreateCustomer,
+  retrievePaymentIntent,
 } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { sendPaymentReceivedEmail } from '@/lib/services/email';
@@ -30,7 +31,7 @@ export async function createInvoicePaymentIntent(
   invoiceId: string,
   accessToken?: string
 ): Promise<PaymentIntentResult> {
-  if (!stripe || !isStripeEnabled()) {
+  if (!isStripeEnabled()) {
     return { success: false, error: 'Stripe payments are not available' };
   }
 
@@ -102,9 +103,7 @@ export async function createInvoicePaymentIntent(
     if (existingPayment?.stripePaymentIntentId) {
       // Retrieve the existing payment intent from Stripe to get a fresh client secret
       try {
-        const existingIntent = await stripe.paymentIntents.retrieve(
-          existingPayment.stripePaymentIntentId
-        );
+        const existingIntent = await retrievePaymentIntent(existingPayment.stripePaymentIntentId);
         // If the intent is still usable, verify amount matches current amountDue
         if (
           existingIntent.status === 'requires_payment_method' ||
@@ -119,7 +118,7 @@ export async function createInvoicePaymentIntent(
             };
           }
           // Amount changed — cancel stale intent and create a fresh one
-          await stripe.paymentIntents.cancel(existingIntent.id);
+          await cancelPaymentIntent(existingIntent.id);
           await prisma.payment.update({
             where: { id: existingPayment.id },
             data: { status: 'failed' },

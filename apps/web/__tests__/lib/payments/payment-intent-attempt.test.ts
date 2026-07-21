@@ -31,7 +31,8 @@ vi.mock('@wolff/database', () => ({
 }));
 
 vi.mock('@/lib/services/stripe', () => ({
-  stripe: { paymentIntents: { retrieve: mocks.retrieve, cancel: mocks.cancel } },
+  retrievePaymentIntent: mocks.retrieve,
+  cancelPaymentIntent: mocks.cancel,
   isStripeEnabled: () => true,
   createPaymentIntent: mocks.createPaymentIntent,
   getOrCreateCustomer: mocks.getOrCreateCustomer,

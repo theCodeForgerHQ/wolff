@@ -92,19 +92,9 @@ describe('parseStripeApiBase', () => {
   );
 });
 
-describe('lib/services/stripe validates before calling the SDK', () => {
+describe('lib/services/stripe client construction', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
-  });
-
-  it('never sends a zero-cent refund', async () => {
-    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_wolff');
-    vi.resetModules();
-    const { createRefund, stripe } = await import('@/lib/services/stripe');
-    const create = vi.spyOn(stripe!.refunds, 'create');
-
-    await expect(createRefund({ paymentIntentId: 'pi_123', amount: 0 })).rejects.toThrow();
-    expect(create).not.toHaveBeenCalled();
   });
 
   it('refuses to build a client for a non-loopback API origin', async () => {

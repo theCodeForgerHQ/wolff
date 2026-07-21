@@ -66,6 +66,33 @@ export const customerInput = z.object({
 
 export const paymentIntentId = stripeId('pi');
 
+export const connectAccountId = stripeId('acct');
+
+/** URLs Stripe redirects the browser to; http(s) only, never javascript: or data:. */
+const redirectUrl = z.url({ protocol: /^https?$/ }).max(2048);
+
+export const connectAccountInput = z.object({
+  workspaceId: internalId,
+  email: z.email().max(512).optional(),
+  businessName: z.string().trim().min(1).max(5000).optional(),
+});
+
+export const accountOnboardingLinkInput = z.object({
+  accountId: connectAccountId,
+  refreshUrl: redirectUrl,
+  returnUrl: redirectUrl,
+});
+
+export const checkoutSessionInput = z.object({
+  invoiceId: internalId,
+  amount: minorUnits,
+  currency,
+  description: z.string().trim().min(1).max(250),
+  customerEmail: z.email().max(512),
+  successUrl: redirectUrl,
+  cancelUrl: redirectUrl,
+});
+
 export const refundInput = z.object({
   paymentIntentId,
   // Omitted means a full refund. Present must be a positive integer, so a

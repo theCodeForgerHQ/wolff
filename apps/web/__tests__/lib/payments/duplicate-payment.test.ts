@@ -18,7 +18,6 @@ vi.mock('@wolff/database', () => {
 });
 
 vi.mock('@/lib/services/stripe', () => ({
-  stripe: {},
   isStripeEnabled: () => true,
   createPaymentIntent: vi.fn(),
   getOrCreateCustomer: vi.fn(),
@@ -133,7 +132,12 @@ describe('Duplicate Payment Prevention', () => {
     mockPrisma.invoice.update.mockResolvedValue({ ...mockInvoice, amountPaid: 100 });
     mockPrisma.invoiceEvent.create.mockResolvedValue({});
 
-    const result = await processPaymentWebhook('pi_test_123', 'succeeded', 'ch_123', 'https://receipt.url');
+    const result = await processPaymentWebhook(
+      'pi_test_123',
+      'succeeded',
+      'ch_123',
+      'https://receipt.url'
+    );
 
     expect(result.success).toBe(true);
     expect(mockPrisma.$transaction).toHaveBeenCalled();
