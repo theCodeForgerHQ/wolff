@@ -1,7 +1,13 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin();
+
+// The browser SDK posts events to the DSN's host; allow it only when Sentry is on.
+const sentryOrigin = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? new URL(process.env.NEXT_PUBLIC_SENTRY_DSN).origin
+  : null;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -27,7 +33,7 @@ const nextConfig: NextConfig = {
           "img-src 'self' data: blob: https:",
           "font-src 'self' https://fonts.gstatic.com",
           "frame-src https://js.stripe.com",
-          "connect-src 'self' https://api.stripe.com",
+          `connect-src 'self' https://api.stripe.com${sentryOrigin ? ` ${sentryOrigin}` : ''}`,
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",
@@ -86,4 +92,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Source maps are only uploaded when SENTRY_AUTH_TOKEN (plus org/project) is
+// set, e.g. in a release pipeline; without it the build makes no Sentry calls.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  silent: !process.env.CI,
+  telemetry: false,
+});

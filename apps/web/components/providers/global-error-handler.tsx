@@ -11,8 +11,9 @@ import { toast } from 'sonner';
  * - Unhandled promise rejections (failed API calls, server action errors)
  * - Uncaught runtime errors in event handlers, setTimeout, etc.
  *
- * Shows a toast to the user and logs to console for debugging.
- * When Sentry is added later, plug it in here.
+ * Shows a toast to the user and logs to console for debugging. Sentry's
+ * browser SDK (instrumentation-client.ts) reports the same events through its
+ * own global handlers, so they aren't captured again here.
  */
 export function GlobalErrorHandler() {
   useEffect(() => {
@@ -31,9 +32,6 @@ export function GlobalErrorHandler() {
       toast.error('Something went wrong. Please try again.', {
         description: process.env.NODE_ENV === 'development' ? message : undefined,
       });
-
-      // TODO: Send to Sentry when configured
-      // Sentry.captureException(reason);
     };
 
     const handleError = (event: ErrorEvent) => {
@@ -47,9 +45,6 @@ export function GlobalErrorHandler() {
             ? event.message
             : undefined,
       });
-
-      // TODO: Send to Sentry when configured
-      // Sentry.captureException(event.error);
     };
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
