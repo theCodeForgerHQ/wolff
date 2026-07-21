@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Loader2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -33,10 +28,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 function CheckoutForm({
@@ -80,11 +77,11 @@ function CheckoutForm({
       {/* API 2025-03-31.basil made 'accordion' the default layout; keep tabs. */}
       <PaymentElement options={{ layout: 'tabs' }} />
       {error && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-3">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
-      <div className="flex gap-3 justify-end">
+      <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
           Cancel
         </Button>
@@ -107,9 +104,11 @@ function CheckoutForm({
 }
 
 export function PaymentForm(props: PaymentFormProps) {
+  const { onSuccess } = props;
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [alreadyReceived, setAlreadyReceived] = useState(false);
 
   // Create payment intent on mount
   useEffect(() => {
@@ -124,6 +123,12 @@ export function PaymentForm(props: PaymentFormProps) {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
+        // Paid already (e.g. a reload before the webhook landed): show the
+        // same "payment received" state as a payment made just now.
+        if (data.alreadyReceived) {
+          setAlreadyReceived(true);
+          return;
+        }
         if (data.error) {
           setError(data.error);
         } else {
@@ -136,14 +141,20 @@ export function PaymentForm(props: PaymentFormProps) {
         setError('Failed to initialize payment. Please try again.');
         setIsLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [props.invoiceId, props.accessToken]);
+
+  useEffect(() => {
+    if (alreadyReceived) onSuccess();
+  }, [alreadyReceived, onSuccess]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Setting up payment...</span>
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <span className="text-muted-foreground ml-2">Setting up payment...</span>
       </div>
     );
   }
@@ -151,8 +162,8 @@ export function PaymentForm(props: PaymentFormProps) {
   if (error) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-4">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={props.onCancel}>
           Cancel

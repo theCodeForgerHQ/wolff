@@ -19,6 +19,9 @@ import type { PaymentIntentResult } from './types';
 import { domainEvents } from '@/lib/events/emitter';
 import { logger } from '@/lib/logger';
 
+const PAYMENT_ALREADY_RECEIVED =
+  'We have already received a payment for this invoice. It will show as paid shortly.';
+
 /**
  * Create payment intent for invoice (called from checkout API route).
  * Amount is always determined server-side from the invoice record.
@@ -69,10 +72,16 @@ export async function createInvoicePaymentIntent(
     // Verify workspace has a connected Stripe account with charges enabled
     const paymentSettings = invoice.workspace.paymentSettings;
     if (!paymentSettings?.stripeAccountId) {
-      return { success: false, error: 'Payment processing is not configured. Please complete Stripe onboarding.' };
+      return {
+        success: false,
+        error: 'Payment processing is not configured. Please complete Stripe onboarding.',
+      };
     }
     if (!paymentSettings.stripeOnboardingComplete) {
-      return { success: false, error: 'Stripe account setup is incomplete. Please complete onboarding first.' };
+      return {
+        success: false,
+        error: 'Stripe account setup is incomplete. Please complete onboarding first.',
+      };
     }
 
     const amountToPay = Number(invoice.amountDue);
@@ -97,7 +106,10 @@ export async function createInvoicePaymentIntent(
           existingPayment.stripePaymentIntentId
         );
         // If the intent is still usable, verify amount matches current amountDue
-        if (existingIntent.status === 'requires_payment_method' || existingIntent.status === 'requires_confirmation') {
+        if (
+          existingIntent.status === 'requires_payment_method' ||
+          existingIntent.status === 'requires_confirmation'
+        ) {
           const expectedAmountCents = Math.round(amountToPay * 100);
           if (existingIntent.amount === expectedAmountCents) {
             return {
@@ -113,11 +125,19 @@ export async function createInvoicePaymentIntent(
             data: { status: 'failed' },
           });
         }
-        // If intent is in a terminal state, clean up the stale record
-        if (['canceled', 'succeeded'].includes(existingIntent.status)) {
+        // The client already paid (or the payment is settling) and the
+        // webhook hasn't arrived yet, e.g. they reloaded and clicked Pay
+        // again. Leave the row pending: processPaymentWebhook is the only
+        // place that credits the invoice, and it skips rows that are no
+        // longer pending.
+        if (existingIntent.status === 'succeeded' || existingIntent.status === 'processing') {
+          return { success: false, alreadyReceived: true, error: PAYMENT_ALREADY_RECEIVED };
+        }
+        // A cancelled intent can't be paid; retire the row and start again.
+        if (existingIntent.status === 'canceled') {
           await prisma.payment.update({
             where: { id: existingPayment.id },
-            data: { status: existingIntent.status === 'succeeded' ? 'completed' : 'failed' },
+            data: { status: 'failed' },
           });
         }
       } catch {
@@ -134,9 +154,29 @@ export async function createInvoicePaymentIntent(
     const currency = (invoice.currency || (settings?.currency as string) || 'USD').toLowerCase();
 
     // Bug #18: Validate currency is supported by Stripe before creating PaymentIntent
-    const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'inr', 'sgd', 'hkd', 'nzd', 'chf', 'sek', 'nok', 'dkk', 'mxn', 'brl'];
+    const SUPPORTED_CURRENCIES = [
+      'usd',
+      'eur',
+      'gbp',
+      'cad',
+      'aud',
+      'jpy',
+      'inr',
+      'sgd',
+      'hkd',
+      'nzd',
+      'chf',
+      'sek',
+      'nok',
+      'dkk',
+      'mxn',
+      'brl',
+    ];
     if (!SUPPORTED_CURRENCIES.includes(currency)) {
-      return { success: false, error: `Unsupported currency: ${currency.toUpperCase()}. Please update the invoice currency.` };
+      return {
+        success: false,
+        error: `Unsupported currency: ${currency.toUpperCase()}. Please update the invoice currency.`,
+      };
     }
 
     // Get or create Stripe customer
@@ -321,7 +361,11 @@ export async function processRefundWebhook(
     try {
       domainEvents.emit({
         type: 'payment.refunded',
-        payload: { paymentId: payment.id, workspaceId: payment.invoice.workspaceId, amount: refundAmount },
+        payload: {
+          paymentId: payment.id,
+          workspaceId: payment.invoice.workspaceId,
+          amount: refundAmount,
+        },
       });
     } catch {}
 
@@ -423,7 +467,12 @@ export async function processPaymentWebhook(
       try {
         domainEvents.emit({
           type: 'payment.received',
-          payload: { paymentId: payment.id, invoiceId: payment.invoiceId, workspaceId: payment.invoice.workspaceId, amount: paymentAmount },
+          payload: {
+            paymentId: payment.id,
+            invoiceId: payment.invoiceId,
+            workspaceId: payment.invoice.workspaceId,
+            amount: paymentAmount,
+          },
         });
       } catch {}
 
