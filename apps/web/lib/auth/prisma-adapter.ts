@@ -20,6 +20,7 @@ import type {
   VerificationToken,
 } from 'next-auth/adapters';
 import type { Account, PrismaClient, Session, User } from '@wolff/database';
+import { createUserWithWorkspace } from './provision-user';
 
 type DbUser = Pick<User, 'id' | 'email' | 'name' | 'avatarUrl' | 'emailVerifiedAt'>;
 
@@ -102,9 +103,13 @@ export function WolffPrismaAdapter(prisma: PrismaClient): Adapter {
   return {
     async createUser({ id: _id, ...user }) {
       // Let the database generate the UUID; Auth.js proposes its own id.
-      const created = await prisma.user.create({
-        data: { email: user.email.toLowerCase(), ...toUserData(user) },
-        select: USER_SELECT,
+      // A first OAuth sign-in is a registration, so the user gets a workspace
+      // exactly as they would from the register route.
+      const created = await createUserWithWorkspace(prisma, {
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl ?? user.image ?? null,
+        emailVerifiedAt: user.emailVerified,
       });
       return toAdapterUser(created);
     },

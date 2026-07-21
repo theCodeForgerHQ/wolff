@@ -25,7 +25,10 @@ describe.skipIf(!url)('encrypted auth adapter (Postgres)', () => {
   });
 
   afterAll(async () => {
-    if (userId) await prisma.user.deleteMany({ where: { id: userId } });
+    if (userId) {
+      await prisma.workspace.deleteMany({ where: { ownerId: userId } });
+      await prisma.user.deleteMany({ where: { id: userId } });
+    }
     await prisma.$disconnect();
     if (previousKey === undefined) delete process.env.ENCRYPTION_KEY;
     else process.env.ENCRYPTION_KEY = previousKey;
@@ -47,6 +50,21 @@ describe.skipIf(!url)('encrypted auth adapter (Postgres)', () => {
     const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(row.avatarUrl).toBe('https://example.com/a.png');
     expect(row.emailVerifiedAt?.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+  });
+
+  it('createUser gives the new user a workspace they own', async () => {
+    const memberships = await prisma.workspaceMember.findMany({
+      where: { userId },
+      include: { workspace: true },
+    });
+
+    expect(memberships).toHaveLength(1);
+    const [membership] = memberships;
+    expect(membership?.role).toBe('owner');
+    expect(membership?.acceptedAt).not.toBeNull();
+    expect(membership?.workspace.ownerId).toBe(userId);
+    expect(membership?.workspace.name).toBe("Adapter Test's Workspace");
+    expect(membership?.workspace.settings).toEqual({ onboardingCompleted: false });
   });
 
   it('linkAccount encrypts OAuth tokens at rest', async () => {
