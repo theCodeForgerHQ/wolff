@@ -1,5 +1,28 @@
 import Stripe from 'stripe';
 import { logger } from '@/lib/logger';
+import {
+  customerInput,
+  parseStripeApiBase,
+  paymentIntentId as paymentIntentIdSchema,
+  paymentIntentInput,
+  refundInput,
+} from './stripe-inputs';
+
+/**
+ * Stripe API version this integration is written against. The SDK major
+ * (22.x) is pinned to the same version, so request and response types match.
+ * See docs/upgrades/stripe.md before changing it.
+ */
+export const STRIPE_API_VERSION = '2026-08-26.dahlia' as const;
+
+/**
+ * Optional override for the Stripe API origin, e.g. `http://localhost:12111`
+ * for stripe-mock in tests and CI. Loopback hosts only (see stripe-inputs).
+ */
+function apiHostOptions(): Pick<Stripe.StripeConfig, 'host' | 'port' | 'protocol'> {
+  const base = process.env.STRIPE_API_BASE_URL;
+  return base ? parseStripeApiBase(base) : {};
+}
 
 // Initialize Stripe client
 function getStripeClient(): Stripe | null {
@@ -11,9 +34,10 @@ function getStripeClient(): Stripe | null {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: '2025-02-24.acacia',
+    apiVersion: STRIPE_API_VERSION,
     typescript: true,
     timeout: 30000, // 30s timeout to prevent hanging requests
+    ...apiHostOptions(),
   });
 }
 
@@ -37,7 +61,8 @@ export async function createPaymentIntent(params: {
     throw new Error('Stripe is not configured');
   }
 
-  const { amount, currency, invoiceId, customerId, stripeAccountId, metadata = {} } = params;
+  const { amount, currency, invoiceId, customerId, stripeAccountId, metadata } =
+    paymentIntentInput.parse(params);
 
   // Use invoice ID + amount as idempotency key to prevent duplicate payment intents
   const idempotencyKey = `pi_${invoiceId}_${amount}_${currency}`;
@@ -45,7 +70,7 @@ export async function createPaymentIntent(params: {
   const paymentIntent = await stripe.paymentIntents.create(
     {
       amount,
-      currency: currency.toLowerCase(),
+      currency,
       metadata: {
         invoiceId,
         ...metadata,
@@ -74,7 +99,7 @@ export async function getOrCreateCustomer(params: {
     throw new Error('Stripe is not configured');
   }
 
-  const { email, name, metadata = {} } = params;
+  const { email, name, metadata } = customerInput.parse(params);
 
   // Search for existing customer
   const existingCustomers = await stripe.customers.list({
@@ -105,7 +130,7 @@ export async function retrievePaymentIntent(
     throw new Error('Stripe is not configured');
   }
 
-  return stripe.paymentIntents.retrieve(paymentIntentId);
+  return stripe.paymentIntents.retrieve(paymentIntentIdSchema.parse(paymentIntentId));
 }
 
 // Create a refund
@@ -118,11 +143,11 @@ export async function createRefund(params: {
     throw new Error('Stripe is not configured');
   }
 
-  const { paymentIntentId, amount, reason } = params;
+  const { paymentIntentId, amount, reason } = refundInput.parse(params);
 
   const refund = await stripe.refunds.create({
     payment_intent: paymentIntentId,
-    ...(amount && { amount }),
+    ...(amount !== undefined && { amount }),
     ...(reason && { reason }),
   });
 

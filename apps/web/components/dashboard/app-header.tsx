@@ -192,7 +192,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
       <div className="flex items-center justify-between gap-4 px-4 py-2 sm:px-6">
         {/* Left: Sidebar trigger + Breadcrumbs */}
         <div className="flex items-center gap-4">
-          <SidebarTrigger className="[&_svg]:!size-5" />
+          <SidebarTrigger className="[&_svg]:size-5!" />
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="cursor-default rounded-full border border-blue-400 px-2 py-0.5 text-[11px] font-medium text-blue-500">
@@ -203,7 +203,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               {BETA_TOOLTIP_MESSAGE}
             </TooltipContent>
           </Tooltip>
-          <Separator orientation="vertical" className="hidden !h-4 md:block" />
+          <Separator orientation="vertical" className="hidden h-4! md:block" />
 
           {/* Breadcrumbs - hidden on mobile */}
           <Breadcrumb className="hidden md:block">

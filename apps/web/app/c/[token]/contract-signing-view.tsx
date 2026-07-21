@@ -244,7 +244,7 @@ export function ContractSigningView({
             {/* Contract Content */}
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Contract Content</p>
-              <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:!min-h-[100px] [&_.ProseMirror]:!max-h-[400px] [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
+              <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[400px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
                 <ContractEditor
                   key={contract.id}
                   content={contract.content}

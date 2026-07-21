@@ -5,11 +5,11 @@ import { authConfig } from '@/lib/auth/config';
 const secret = (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || '')
   .replace(/\\n$/g, '').replace(/\n$/g, '').trim();
 
-// Use a lightweight NextAuth instance for middleware (Edge Runtime compatible).
-// This does NOT import the Prisma adapter, which requires Node.js runtime.
-// The JWT callback is overridden to skip the Prisma DB check (soft-delete/password-change)
-// because Prisma binary engine does not run in Edge Runtime. The full DB check still runs
-// in the main auth (server components, server actions) which uses Node.js runtime.
+// A lightweight NextAuth instance for the proxy (Next 16's name for middleware,
+// always on the Node.js runtime). It has no database adapter, and the JWT
+// callback skips the soft-delete/password-change DB check so this hop, which
+// runs on every page request, stays cheap. The full check runs in the main
+// auth instance used by server components and server actions.
 const { auth } = NextAuth({
   secret,
   session: { strategy: 'jwt' },
@@ -39,10 +39,6 @@ const { auth } = NextAuth({
 export default auth;
 
 export const config = {
-  // Node.js runtime (stable since Next 15.5): the shared auth config
-  // lazily imports @wolff/database, and the Prisma 7 client (pg driver
-  // adapter) can't be bundled for the Edge runtime.
-  runtime: 'nodejs',
   matcher: [
     /*
      * Match all request paths except for the ones starting with:

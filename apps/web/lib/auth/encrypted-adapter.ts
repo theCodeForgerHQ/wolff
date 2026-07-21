@@ -1,25 +1,20 @@
 /**
- * Wraps PrismaAdapter to encrypt/decrypt OAuth tokens at rest.
+ * Wraps the Wolff Prisma adapter to encrypt/decrypt OAuth tokens at rest.
  * Only encrypts access_token and refresh_token fields.
  * Falls back to plaintext if ENCRYPTION_KEY is not set.
  */
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import type { Adapter, AdapterAccount } from 'next-auth/adapters';
-import { prisma } from '@wolff/database';
+import { prisma, type PrismaClient } from '@wolff/database';
 import { encrypt, decrypt, isEncryptionEnabled } from '@/lib/encryption';
+import { WolffPrismaAdapter } from './prisma-adapter';
 
-const baseAdapter = PrismaAdapter(prisma) as Adapter;
-
-function encryptTokens(account: Record<string, unknown>): Record<string, unknown> {
+function encryptTokens(account: AdapterAccount): AdapterAccount {
   if (!isEncryptionEnabled()) return account;
-  const result = { ...account };
-  if (typeof result.access_token === 'string') {
-    result.access_token = encrypt(result.access_token);
-  }
-  if (typeof result.refresh_token === 'string') {
-    result.refresh_token = encrypt(result.refresh_token);
-  }
-  return result;
+  return {
+    ...account,
+    access_token: account.access_token ? encrypt(account.access_token) : account.access_token,
+    refresh_token: account.refresh_token ? encrypt(account.refresh_token) : account.refresh_token,
+  };
 }
 
 function decryptTokens(account: AdapterAccount | null): AdapterAccount | null {
@@ -31,20 +26,14 @@ function decryptTokens(account: AdapterAccount | null): AdapterAccount | null {
   };
 }
 
-export const encryptedAdapter: Adapter = {
-  ...baseAdapter,
+export function createEncryptedAdapter(client: PrismaClient): Adapter {
+  const base = WolffPrismaAdapter(client);
+  return {
+    ...base,
+    linkAccount: (account) => base.linkAccount!(encryptTokens(account)),
+    getAccount: async (providerAccountId, provider) =>
+      decryptTokens(await base.getAccount!(providerAccountId, provider)),
+  };
+}
 
-  linkAccount: async (account) => {
-    const encrypted = encryptTokens(account as unknown as Record<string, unknown>);
-    const result = await baseAdapter.linkAccount!(encrypted as Parameters<NonNullable<Adapter['linkAccount']>>[0]);
-    return result ?? undefined;
-  },
-
-  // Prisma adapter doesn't expose getAccount directly, but NextAuth
-  // calls it internally via the adapter. The PrismaAdapter reads tokens
-  // in getUserByAccount which we wrap here.
-  getUserByAccount: async (providerAccountId) => {
-    // Call base to get the user, tokens are only used internally by NextAuth
-    return baseAdapter.getUserByAccount!(providerAccountId);
-  },
-};
+export const encryptedAdapter: Adapter = createEncryptedAdapter(prisma);

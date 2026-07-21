@@ -172,7 +172,7 @@ export default function NewContractForm({
     <div className="flex flex-col h-[calc(100vh-64px)]">
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="grid lg:grid-cols-[1fr,420px] xl:grid-cols-[1fr,480px] h-full">
+        <div className="grid lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] h-full">
           {/* LEFT PANEL -- Editor */}
           <div className="overflow-y-auto border-r bg-background">
             <div className="max-w-[640px] mx-auto py-10 px-8 space-y-0">
@@ -401,7 +401,7 @@ export default function NewContractForm({
           {/* RIGHT PANEL -- Live Preview */}
           <div className="overflow-y-auto bg-muted/30 flex flex-col">
             {/* Preview Tabs */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pt-4 pb-3">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 border-b px-4 pt-4 pb-3">
               <Tabs
                 value={previewTab}
                 onValueChange={(v) => setPreviewTab(v as PreviewTab)}
@@ -605,7 +605,7 @@ export default function NewContractForm({
                       transform: 'scale(var(--pdf-scale, 0.68))',
                       transformOrigin: 'top center',
                     }}
-                    className="bg-white shadow-2xl rounded-sm border border-border/40 flex-shrink-0 relative"
+                    className="bg-white shadow-2xl rounded-sm border border-border/40 shrink-0 relative"
                   >
                     <div
                       className="w-full h-full flex flex-col text-black overflow-hidden"

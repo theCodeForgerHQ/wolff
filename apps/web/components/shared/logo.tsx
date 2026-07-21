@@ -41,7 +41,7 @@ export function Logo({ href, showText = true, className, size = 'md' }: LogoProp
     <div className={cn('flex items-center space-x-2', className)}>
       <div
         className={cn(
-          'rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center',
+          'rounded-lg bg-linear-to-br from-blue-600 to-violet-600 flex items-center justify-center',
           sizes.icon
         )}
       >

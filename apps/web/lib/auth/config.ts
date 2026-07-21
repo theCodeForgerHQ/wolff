@@ -4,6 +4,7 @@ import Google from 'next-auth/providers/google';
 import GitHub from 'next-auth/providers/github';
 import { loginSchema } from '@/lib/validations/auth';
 import { logger } from '@/lib/logger';
+import { parseLoopbackUrl } from '@/lib/security/loopback';
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -118,6 +119,10 @@ export const authConfig: NextAuthConfig = {
       ? [Google({
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          // E2E only: a local mock OIDC server stands in for accounts.google.com.
+          ...(process.env.AUTH_GOOGLE_ISSUER && {
+            issuer: parseLoopbackUrl(process.env.AUTH_GOOGLE_ISSUER, 'AUTH_GOOGLE_ISSUER').origin,
+          }),
         })]
       : []),
     ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET

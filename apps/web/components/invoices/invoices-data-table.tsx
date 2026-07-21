@@ -273,7 +273,7 @@ export function InvoicesDataTable({ data: initialData, recurringInvoiceIds: serv
 
       {/* Invoice View Dialog -- Payment Page Style */}
       <Dialog open={!!viewingInvoice} onOpenChange={(open) => !open && handleCloseView()}>
-        <DialogContent className="!flex !flex-col !max-w-[520px] !max-h-[90vh] !p-0 !gap-0 overflow-hidden">
+        <DialogContent className="flex! flex-col! max-w-[520px]! max-h-[90vh]! p-0! gap-0! overflow-hidden">
           <DialogTitle className="sr-only">Invoice Preview</DialogTitle>
           {invoice && (
             <>

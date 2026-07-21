@@ -295,7 +295,7 @@ export function SendEmailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="!max-w-[1100px] !w-[95vw] !max-h-[90vh] !h-[85vh] !p-0 !gap-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[1100px]! w-[95vw]! max-h-[90vh]! h-[85vh]! p-0! gap-0! overflow-hidden flex flex-col">
         {/* ─── Header ───────────────────────────────── */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-background shrink-0">
           <div>
@@ -307,7 +307,7 @@ export function SendEmailDialog({
         </div>
 
         {/* ─── Two Panel Layout ────────────────────── */}
-        <div className="flex-1 overflow-hidden grid grid-cols-[1fr,1fr] lg:grid-cols-[1fr,1.1fr]">
+        <div className="flex-1 overflow-hidden grid grid-cols-[1fr_1fr] lg:grid-cols-[1fr_1.1fr]">
 
           {/* ═══ LEFT PANEL — Form ═══════════════════ */}
           <div className="overflow-y-auto border-r bg-background">
@@ -445,7 +445,7 @@ export function SendEmailDialog({
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Enter a message..."
-                    className="w-full min-h-[200px] p-4 text-sm resize-none focus:outline-none bg-background"
+                    className="w-full min-h-[200px] p-4 text-sm resize-none focus:outline-hidden bg-background"
                   />
                 </div>
               </div>

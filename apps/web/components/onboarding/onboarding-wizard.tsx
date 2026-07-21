@@ -72,7 +72,7 @@ export function OnboardingWizard({ initialProgress, stripeEnabled }: OnboardingW
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl">Welcome to Wolff</CardTitle>

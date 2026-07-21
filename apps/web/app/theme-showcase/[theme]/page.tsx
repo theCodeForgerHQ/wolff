@@ -278,7 +278,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         }
       `}</style>
 
-      <div className={`min-h-screen bg-gradient-to-br ${theme.heroGradient}`}>
+      <div className={`min-h-screen bg-linear-to-br ${theme.heroGradient}`}>
         {/* Theme Switcher Banner */}
         <div className="bg-foreground text-background py-3 border-b border-border/10">
           <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -308,12 +308,12 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         </div>
 
         {/* Header */}
-        <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b border-border bg-background/80 backdrop-blur-xs sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-2.5">
-                  <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.logoGradient} flex items-center justify-center shadow-sm`}>
+                  <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${theme.logoGradient} flex items-center justify-center shadow-sm`}>
                     <FileText className="h-5 w-5 text-white" />
                   </div>
                   <span className="text-xl font-bold text-foreground">Wolff</span>
@@ -335,7 +335,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
                   <Bell className="h-5 w-5 text-muted-foreground" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
                 </button>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold shadow-sm">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold shadow-sm">
                   JD
                 </div>
               </div>
@@ -457,7 +457,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
 
           {/* Feature Showcase */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className={`p-6 rounded-xl bg-gradient-to-br ${theme.logoGradient} text-white shadow-lg`}>
+            <div className={`p-6 rounded-xl bg-linear-to-br ${theme.logoGradient} text-white shadow-lg`}>
               <h3 className="text-lg font-semibold mb-2">Visual Quote Builder</h3>
               <p className="text-white/80 text-sm mb-4">Drag-and-drop blocks to create stunning quotes in minutes.</p>
               <button className="flex items-center gap-2 text-sm font-medium bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
@@ -486,7 +486,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg bg-gradient-to-br ${theme.logoGradient}`}>
+                  <div className={`p-2 rounded-lg bg-linear-to-br ${theme.logoGradient}`}>
                     <ThemeIcon className="h-5 w-5 text-white" />
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
@@ -548,7 +548,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
           <div className="container mx-auto px-4 py-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${theme.logoGradient} flex items-center justify-center`}>
+                <div className={`w-7 h-7 rounded-md bg-linear-to-br ${theme.logoGradient} flex items-center justify-center`}>
                   <FileText className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-semibold text-foreground">Wolff</span>

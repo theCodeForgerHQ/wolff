@@ -41,18 +41,18 @@ const activityIcons: Record<ActivityItem['type'], typeof FileText> = {
 };
 
 const activityColors: Record<ActivityItem['type'], string> = {
-  quote_created: 'text-[var(--primary-500)]',
-  quote_sent: 'text-[var(--primary-400)]',
+  quote_created: 'text-(--primary-500)',
+  quote_sent: 'text-(--primary-400)',
   quote_accepted: 'text-emerald-500',
   quote_declined: 'text-destructive',
   quote_expired: 'text-muted-foreground',
-  invoice_created: 'text-[var(--primary-600)]',
-  invoice_sent: 'text-[var(--primary-400)]',
+  invoice_created: 'text-(--primary-600)',
+  invoice_sent: 'text-(--primary-400)',
   invoice_paid: 'text-emerald-500',
   invoice_overdue: 'text-destructive',
-  invoice_viewed: 'text-[var(--primary-300)]',
-  quote_viewed: 'text-[var(--primary-300)]',
-  client_created: 'text-[var(--primary-300)]',
+  invoice_viewed: 'text-(--primary-300)',
+  quote_viewed: 'text-(--primary-300)',
+  client_created: 'text-(--primary-300)',
 };
 
 export function RecentActivity({ activities, currency = 'USD' }: RecentActivityProps) {

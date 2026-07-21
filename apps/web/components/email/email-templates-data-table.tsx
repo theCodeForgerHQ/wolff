@@ -393,7 +393,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
 
       {/* Edit Template Dialog */}
       <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && handleCloseEdit()}>
-        <DialogContent className="!flex !flex-col !max-w-[860px] !max-h-[90vh] !p-0 !gap-0 overflow-hidden">
+        <DialogContent className="flex! flex-col! max-w-[860px]! max-h-[90vh]! p-0! gap-0! overflow-hidden">
           <div className="p-6 pb-4">
             <DialogHeader className="space-y-1">
               <DialogTitle>Edit email template</DialogTitle>
@@ -412,7 +412,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-base font-semibold !bg-transparent outline-none border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
+                  className="text-base font-semibold bg-transparent! outline-hidden border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
                   placeholder="Template name"
                 />
                 <button
