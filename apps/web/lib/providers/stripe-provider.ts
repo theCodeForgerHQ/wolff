@@ -1,10 +1,17 @@
-import type { PaymentProvider, CheckoutParams, CheckoutResult, WebhookResult, RefundResult } from './payment';
+import type {
+  PaymentProvider,
+  CheckoutParams,
+  CheckoutResult,
+  WebhookResult,
+  RefundResult,
+} from './payment';
 import {
   stripe,
   isStripeEnabled,
   constructWebhookEvent,
   createRefund,
 } from '@/lib/services/stripe';
+import { toRefundMinorUnits } from '@/lib/payments/refund-amount';
 import type Stripe from 'stripe';
 
 export class StripeProvider implements PaymentProvider {
@@ -84,7 +91,7 @@ export class StripeProvider implements PaymentProvider {
   async refund(paymentId: string, amount?: number): Promise<RefundResult> {
     const refund = await createRefund({
       paymentIntentId: paymentId,
-      amount: amount ? Math.round(amount * 100) : undefined,
+      amount: toRefundMinorUnits(amount),
     });
 
     if (!refund) {

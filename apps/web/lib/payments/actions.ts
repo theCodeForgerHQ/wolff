@@ -2,11 +2,7 @@
 
 import { prisma } from '@wolff/database';
 import { revalidatePath } from 'next/cache';
-import {
-  stripe,
-  isStripeEnabled,
-  createRefund,
-} from '@/lib/services/stripe';
+import { stripe, isStripeEnabled, createRefund } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { toNumber, getBaseUrl } from '@/lib/utils';
 import type {
@@ -15,6 +11,7 @@ import type {
   PaymentSettingsData,
   StripeOnboardingResult,
 } from './types';
+import { isValidRefundAmount, toRefundMinorUnits } from './refund-amount';
 import { logger } from '@/lib/logger';
 
 /**
@@ -88,8 +85,12 @@ export async function updatePaymentSettings(data: {
       where: { workspaceId },
       update: {
         ...(data.enabledPaymentMethods && { enabledPaymentMethods: data.enabledPaymentMethods }),
-        ...(data.passProcessingFees !== undefined && { passProcessingFees: data.passProcessingFees }),
-        ...(data.defaultPaymentTerms !== undefined && { defaultPaymentTerms: data.defaultPaymentTerms }),
+        ...(data.passProcessingFees !== undefined && {
+          passProcessingFees: data.passProcessingFees,
+        }),
+        ...(data.defaultPaymentTerms !== undefined && {
+          defaultPaymentTerms: data.defaultPaymentTerms,
+        }),
       },
       create: {
         workspaceId,
@@ -120,12 +121,14 @@ export async function createStripeOnboardingLink(options?: {
 
   const { workspaceId } = await getCurrentUserWorkspace();
   const baseUrl = getBaseUrl();
-  const returnPath = options?.returnTo === 'onboarding'
-    ? '/onboarding?stripe=success'
-    : '/settings/payments?success=true';
-  const refreshPath = options?.returnTo === 'onboarding'
-    ? '/onboarding?stripe=refresh'
-    : '/settings/payments?refresh=true';
+  const returnPath =
+    options?.returnTo === 'onboarding'
+      ? '/onboarding?stripe=success'
+      : '/settings/payments?success=true';
+  const refreshPath =
+    options?.returnTo === 'onboarding'
+      ? '/onboarding?stripe=refresh'
+      : '/settings/payments?refresh=true';
 
   try {
     // Get or create payment settings
@@ -397,7 +400,8 @@ export async function refundPayment(
 
     // Bug #14: Validate refund amount does not exceed payment amount
     if (params?.amount !== undefined) {
-      if (params.amount <= 0) {
+      // NaN passes every comparison below, so check it explicitly
+      if (!isValidRefundAmount(params.amount)) {
         return { success: false, error: 'Refund amount must be greater than zero' };
       }
       if (params.amount > Number(payment.amount)) {
@@ -410,10 +414,8 @@ export async function refundPayment(
       }
     }
 
-    // Amount in cents for Stripe (DB stores dollars)
-    const refundAmountCents = params?.amount
-      ? Math.round(params.amount * 100)
-      : undefined; // undefined = full refund
+    // Amount in cents for Stripe (DB stores dollars); undefined = full refund
+    const refundAmountCents = toRefundMinorUnits(params?.amount);
 
     await createRefund({
       paymentIntentId: payment.stripePaymentIntentId,
