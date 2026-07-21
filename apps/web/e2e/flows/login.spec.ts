@@ -81,4 +81,20 @@ test.describe('Google login (mock OIDC provider)', () => {
     expect(await prisma.account.count({ where: { user: { email } } })).toBe(1);
     expect(await prisma.workspaceMember.count({ where: { user: { email } } })).toBe(1);
   });
+
+  test('refuses a deactivated account with an explanation', async ({ page }) => {
+    const email = process.env.E2E_GOOGLE_EMAIL!;
+    await prisma.user.update({ where: { email }, data: { deletedAt: new Date() } });
+
+    try {
+      await page.goto('/login');
+      await page.getByRole('button', { name: 'Google' }).click();
+
+      await page.waitForURL(/\/login\?error=AccountDeactivated/, { timeout: 30_000 });
+      await expect(page.getByRole('alert').filter({ hasText: /deactivated/i })).toBeVisible();
+      expect(await prisma.user.count({ where: { email } })).toBe(1);
+    } finally {
+      await prisma.user.update({ where: { email }, data: { deletedAt: null } });
+    }
+  });
 });

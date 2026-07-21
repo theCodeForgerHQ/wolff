@@ -5,6 +5,7 @@ import GitHub from 'next-auth/providers/github';
 import { loginSchema } from '@/lib/validations/auth';
 import { logger } from '@/lib/logger';
 import { parseLoopbackUrl } from '@/lib/security/loopback';
+import { ACCOUNT_DEACTIVATED_ERROR } from './errors';
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -25,10 +26,10 @@ export const authConfig: NextAuthConfig = {
         '/forgot-password',
         '/reset-password',
         '/verify-email',
-        '/p/',  // Client portal (public quote view)
-        '/q/',  // Quote portal
-        '/i/',  // Invoice portal
-        '/c/',  // Contract portal
+        '/p/', // Client portal (public quote view)
+        '/q/', // Quote portal
+        '/i/', // Invoice portal
+        '/c/', // Contract portal
         '/invite/',
       ];
       const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
@@ -47,10 +48,43 @@ export const authConfig: NextAuthConfig = {
       if (isLoggedIn) return true;
       return false; // Redirect to login
     },
+    /**
+     * OAuth sign-in for a soft-deleted user. The adapter's lookups hide
+     * deleted users, so Auth.js would treat the profile as new and
+     * createUser would hit the unique email constraint (the row still
+     * exists), ending in an opaque error page. Reject it here with a code
+     * the login page explains. Credentials are checked in verifyCredentials.
+     */
+    async signIn({ user, account }) {
+      if (!account || account.provider === 'credentials') return true;
+
+      const { prisma } = await import('@wolff/database');
+      const { provider, providerAccountId } = account;
+      const [byEmail, linked] = await Promise.all([
+        user.email
+          ? prisma.user.findUnique({
+              where: { email: user.email.toLowerCase() },
+              select: { deletedAt: true },
+            })
+          : null,
+        prisma.account.findUnique({
+          where: { provider_providerAccountId: { provider, providerAccountId } },
+          select: { user: { select: { deletedAt: true } } },
+        }),
+      ]);
+
+      if (byEmail?.deletedAt || linked?.user.deletedAt) {
+        logger.warn({ provider }, '[AUTH] OAuth sign-in rejected: account is deactivated');
+        return `/login?error=${ACCOUNT_DEACTIVATED_ERROR}`;
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       if (user) {
         if (!user.id) {
-          logger.warn('[AUTH] JWT callback received user without id — this may indicate an OAuth provider issue');
+          logger.warn(
+            '[AUTH] JWT callback received user without id — this may indicate an OAuth provider issue'
+          );
         }
         token.id = user.id ?? '';
         token.email = user.email ?? '';
@@ -92,7 +126,8 @@ export const authConfig: NextAuthConfig = {
             token.dbCheckFailures = 0;
           } catch {
             // Track consecutive failures — invalidate after 3 to prevent indefinite access during outages
-            const failures = (typeof token.dbCheckFailures === 'number' ? token.dbCheckFailures : 0) + 1;
+            const failures =
+              (typeof token.dbCheckFailures === 'number' ? token.dbCheckFailures : 0) + 1;
             token.dbCheckFailures = failures;
             // 5 consecutive failures × 5 min interval = 25 min sustained outage before invalidation
             if (failures >= 5) {
@@ -116,20 +151,24 @@ export const authConfig: NextAuthConfig = {
   },
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [Google({
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          // E2E only: a local mock OIDC server stands in for accounts.google.com.
-          ...(process.env.AUTH_GOOGLE_ISSUER && {
-            issuer: parseLoopbackUrl(process.env.AUTH_GOOGLE_ISSUER, 'AUTH_GOOGLE_ISSUER').origin,
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            // E2E only: a local mock OIDC server stands in for accounts.google.com.
+            ...(process.env.AUTH_GOOGLE_ISSUER && {
+              issuer: parseLoopbackUrl(process.env.AUTH_GOOGLE_ISSUER, 'AUTH_GOOGLE_ISSUER').origin,
+            }),
           }),
-        })]
+        ]
       : []),
     ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
-      ? [GitHub({
-          clientId: process.env.GITHUB_CLIENT_ID,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        })]
+      ? [
+          GitHub({
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          }),
+        ]
       : []),
     Credentials({
       name: 'credentials',
