@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 // invoice view, and only a client who clicks Pay needs Stripe.js.
 let stripePromise: ReturnType<typeof loadStripe> | null = null;
 function getStripe() {
-  stripePromise ??= loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+  // canPay (lib/invoices/can-pay.ts) hides the Pay button when the key is
+  // missing, so the form isn't reachable without one.
+  stripePromise ??= loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
   return stripePromise;
 }
 

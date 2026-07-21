@@ -3,6 +3,7 @@
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
 import type { InvoiceLineItem } from './types';
+import { canPayOnline } from './can-pay';
 import { toNumber } from '@/lib/utils';
 import { notifyWorkspaceMembers } from '@/lib/notifications/internal';
 import { logger } from '@/lib/logger';
@@ -161,10 +162,7 @@ export async function getInvoiceByAccessToken(
     // Calculate overdue status
     const now = new Date();
     const dueDate = new Date(invoice.dueDate);
-    const isOverdue =
-      invoice.status !== 'paid' &&
-      invoice.status !== 'voided' &&
-      dueDate < now;
+    const isOverdue = invoice.status !== 'paid' && invoice.status !== 'voided' && dueDate < now;
     const daysOverdue = isOverdue
       ? Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
       : 0;
@@ -175,13 +173,13 @@ export async function getInvoiceByAccessToken(
     // Voided invoices owe nothing regardless of DB value
     const amountDue = invoice.status === 'voided' ? 0 : toNumber(invoice.amountDue);
 
-    // Determine if online payment is possible
     const paymentConfigured = !!invoice.workspace.paymentSettings?.stripeOnboardingComplete;
-    const canPay =
-      invoice.status !== 'paid' &&
-      invoice.status !== 'voided' &&
-      amountDue > 0 &&
-      paymentConfigured;
+    const canPay = canPayOnline({
+      status: invoice.status,
+      amountDue,
+      stripeOnboardingComplete: paymentConfigured,
+      publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    });
 
     const publicInvoice: PublicInvoiceData = {
       id: invoice.id,
@@ -218,7 +216,8 @@ export async function getInvoiceByAccessToken(
         email: invoice.workspace.businessProfile?.email || null,
         phone: invoice.workspace.businessProfile?.phone || null,
         logoUrl: invoice.workspace.businessProfile?.logoUrl || null,
-        address: (invoice.workspace.businessProfile?.address as string | Record<string, string>) || null,
+        address:
+          (invoice.workspace.businessProfile?.address as string | Record<string, string>) || null,
       },
       branding: invoice.workspace.brandingSettings
         ? {
