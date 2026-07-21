@@ -60,6 +60,11 @@ Together they exercise the shadcn/ui primitives most exposed to the
 Tailwind 4 changes (borders, rings, shadows, radii) and both layouts (public
 and dashboard).
 
+Baselines are stored per platform (`__screenshots__/darwin/…`), because
+font rasterisation differs between macOS and Linux; the committed set was
+captured on macOS. Linux baselines for CI come from the first CI run
+(see `docs/phase-1.md`).
+
 Masked regions, because they change between runs rather than between builds:
 wall-clock text (greeting, today's date, relative times), the dashboard
 activity feed, charts, toasts and the sticky demo banner. The detail and
@@ -72,8 +77,7 @@ How to run:
 
 ```bash
 pnpm build
-DATABASE_URL=… TZ=UTC TRUST_HOST=true AUTH_TRUST_HOST=true \
-  NEXTAUTH_URL=http://localhost:3100 pnpm --filter @wolff/web exec next start -p 3100
+# The config starts `next start` on :3100 (TZ=UTC, trust-host set) itself.
 DATABASE_URL=… pnpm --filter @wolff/web exec playwright test -c playwright.visual.config.ts
 ```
 
