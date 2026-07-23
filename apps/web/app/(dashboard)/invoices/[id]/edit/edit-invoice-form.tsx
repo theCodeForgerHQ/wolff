@@ -1020,7 +1020,7 @@ export function EditInvoiceForm({
                           placeholder="Item name"
                           value={item.name}
                           onChange={(e) => updateLineItem(item.id, 'name', e.target.value)}
-                          className="h-9 border-0 bg-transparent! px-0 text-sm font-medium shadow-none focus-visible:ring-0"
+                          className="bg-transparent! h-9 border-0 px-0 text-sm font-medium shadow-none focus-visible:ring-0"
                         />
                         <Input
                           type="number"
@@ -1061,7 +1061,7 @@ export function EditInvoiceForm({
                         placeholder="Add a description..."
                         value={item.description}
                         onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        className="text-muted-foreground mt-0.5 h-7 border-0 bg-transparent! px-0 text-xs shadow-none focus-visible:ring-0"
+                        className="text-muted-foreground bg-transparent! mt-0.5 h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
                       />
                     </div>
                   ))}
@@ -1223,7 +1223,7 @@ export function EditInvoiceForm({
                       >
                         <RotateCcw className="text-muted-foreground h-4 w-4" />
                         <span>Recurring Invoice</span>
-                        <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
+                        <HelpCircle className="text-muted-foreground h-3 w-3" />
                         {showRecurring && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
@@ -1232,7 +1232,7 @@ export function EditInvoiceForm({
                       >
                         <Link2 className="text-muted-foreground h-4 w-4" />
                         <span>Custom Links</span>
-                        <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
+                        <HelpCircle className="text-muted-foreground h-3 w-3" />
                         {showCustomLinks && <Check className="text-primary ml-auto h-3.5 w-3.5" />}
                       </button>
                       <button
@@ -1242,7 +1242,7 @@ export function EditInvoiceForm({
                         <div className="flex items-center gap-2.5">
                           <FileText className="text-muted-foreground h-4 w-4" />
                           <span>PDF Payment Link</span>
-                          <HelpCircle className="text-muted-foreground/50 h-3 w-3" />
+                          <HelpCircle className="text-muted-foreground h-3 w-3" />
                         </div>
                         {pdfPaymentLink && <Check className="text-primary h-3.5 w-3.5" />}
                       </button>
@@ -1600,7 +1600,7 @@ export function EditInvoiceForm({
                                     {item.quantity} &times;{' '}
                                     {formatMoney(item.rate, selectedCurrency)}
                                     {item.description && (
-                                      <span className="text-muted-foreground/70 ml-1.5">
+                                      <span className="text-muted-foreground ml-1.5">
                                         &middot; {item.description}
                                       </span>
                                     )}
@@ -1705,7 +1705,7 @@ export function EditInvoiceForm({
                   <div className="px-6 pb-5">
                     <div className="flex items-center justify-center gap-2">
                       <div className="bg-border/40 h-px flex-1" />
-                      <p className="text-muted-foreground/50 whitespace-nowrap text-[10px]">
+                      <p className="text-muted-foreground whitespace-nowrap text-[10px]">
                         Powered by Wolff
                       </p>
                       <div className="bg-border/40 h-px flex-1" />
@@ -2029,7 +2029,7 @@ export function EditInvoiceForm({
                               <p className="text-muted-foreground truncate text-xs">
                                 {item.quantity} &times; {formatMoney(item.rate, selectedCurrency)}
                                 {item.description && (
-                                  <span className="text-muted-foreground/70 ml-1.5">
+                                  <span className="text-muted-foreground ml-1.5">
                                     &middot; {item.description}
                                   </span>
                                 )}

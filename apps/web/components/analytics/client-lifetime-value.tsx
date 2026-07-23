@@ -25,13 +25,18 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
-export function ClientLifetimeValueCard({ data: propData, currency = 'USD' }: ClientLifetimeValueCardProps) {
+export function ClientLifetimeValueCard({
+  data: propData,
+  currency = 'USD',
+}: ClientLifetimeValueCardProps) {
   const { clientData, averageLTV } = useMemo(() => {
     if (!propData || propData.length === 0) {
       return { clientData: [], averageLTV: 0 };
@@ -47,7 +52,7 @@ export function ClientLifetimeValueCard({ data: propData, currency = 'USD' }: Cl
           <CardTitle className="text-sm font-medium">Client Lifetime Value</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-[200px] items-center justify-center text-sm">
             No client LTV data available
           </div>
         </CardContent>
@@ -60,7 +65,7 @@ export function ClientLifetimeValueCard({ data: propData, currency = 'USD' }: Cl
       <CardHeader className="pb-4">
         <div className="flex items-baseline justify-between">
           <CardTitle className="text-sm font-medium">Client Lifetime Value</CardTitle>
-          <span className="text-xs text-muted-foreground/60">
+          <span className="text-muted-foreground text-xs">
             Avg {formatCurrency(averageLTV, currency)}
           </span>
         </div>
@@ -77,16 +82,16 @@ export function ClientLifetimeValueCard({ data: propData, currency = 'USD' }: Cl
 
             return (
               <div key={client.id} className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary shrink-0">
+                <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium">
                   {initials}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{client.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{client.name}</p>
                   {client.email && (
-                    <p className="text-xs text-muted-foreground/60 truncate">{client.email}</p>
+                    <p className="text-muted-foreground truncate text-xs">{client.email}</p>
                   )}
                 </div>
-                <div className="text-right shrink-0">
+                <div className="shrink-0 text-right">
                   <p className="text-sm font-medium tabular-nums">
                     {formatCurrency(client.ltv, currency)}
                   </p>

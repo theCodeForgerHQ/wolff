@@ -58,42 +58,44 @@ function replaceVariables(text: string) {
   // First unescape any double-escaped HTML (RichTextEditor wraps content in <p> tags
   // while escaping any HTML the user typed, causing double-encoding)
   const unescaped = unescapeHtml(text);
-  return unescaped
-    // camelCase variables (used by DEFAULT_TEMPLATES and email-template-form)
-    .replace(/\{\{businessName\}\}/g, 'Acme Corp')
-    .replace(/\{\{clientName\}\}/g, 'John Smith')
-    .replace(/\{\{clientEmail\}\}/g, 'john@example.com')
-    .replace(/\{\{quoteName\}\}/g, 'Website Redesign')
-    .replace(/\{\{quoteNumber\}\}/g, 'QT-0001')
-    .replace(/\{\{quoteUrl\}\}/g, '#')
-    .replace(/\{\{quoteTotal\}\}/g, '$5,000.00')
-    .replace(/\{\{quoteValidUntil\}\}/g, '2026-12-31')
-    .replace(/\{\{invoiceNumber\}\}/g, 'INV-0001')
-    .replace(/\{\{invoiceUrl\}\}/g, '#')
-    .replace(/\{\{invoiceTotal\}\}/g, '$5,000.00')
-    .replace(/\{\{invoiceDueDate\}\}/g, '2026-04-01')
-    .replace(/\{\{amountPaid\}\}/g, '$5,000.00')
-    .replace(/\{\{amountDue\}\}/g, '$5,000.00')
-    .replace(/\{\{daysOverdue\}\}/g, '7')
-    .replace(/\{\{contractName\}\}/g, 'Service Agreement')
-    .replace(/\{\{contractUrl\}\}/g, '#')
-    .replace(/\{\{message\}\}/g, 'Looking forward to working with you!')
-    // snake_case variables (fallback)
-    .replace(/\{\{business_name\}\}/g, 'Acme Corp')
-    .replace(/\{\{client_name\}\}/g, 'John Smith')
-    .replace(/\{\{client_email\}\}/g, 'john@example.com')
-    .replace(/\{\{quote_name\}\}/g, 'Website Redesign')
-    .replace(/\{\{quote_number\}\}/g, 'QT-0001')
-    .replace(/\{\{quote_link\}\}/g, '#')
-    .replace(/\{\{quote_total\}\}/g, '$5,000.00')
-    .replace(/\{\{invoice_number\}\}/g, 'INV-0001')
-    .replace(/\{\{invoice_link\}\}/g, '#')
-    .replace(/\{\{invoice_total\}\}/g, '$5,000.00')
-    .replace(/\{\{invoice_due_date\}\}/g, '2026-04-01')
-    .replace(/\{\{contract_name\}\}/g, 'Service Agreement')
-    .replace(/\{\{contract_link\}\}/g, '#')
-    // Handle conditionals {{#if variable}}...{{/if}} — show the content
-    .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  return (
+    unescaped
+      // camelCase variables (used by DEFAULT_TEMPLATES and email-template-form)
+      .replace(/\{\{businessName\}\}/g, 'Acme Corp')
+      .replace(/\{\{clientName\}\}/g, 'John Smith')
+      .replace(/\{\{clientEmail\}\}/g, 'john@example.com')
+      .replace(/\{\{quoteName\}\}/g, 'Website Redesign')
+      .replace(/\{\{quoteNumber\}\}/g, 'QT-0001')
+      .replace(/\{\{quoteUrl\}\}/g, '#')
+      .replace(/\{\{quoteTotal\}\}/g, '$5,000.00')
+      .replace(/\{\{quoteValidUntil\}\}/g, '2026-12-31')
+      .replace(/\{\{invoiceNumber\}\}/g, 'INV-0001')
+      .replace(/\{\{invoiceUrl\}\}/g, '#')
+      .replace(/\{\{invoiceTotal\}\}/g, '$5,000.00')
+      .replace(/\{\{invoiceDueDate\}\}/g, '2026-04-01')
+      .replace(/\{\{amountPaid\}\}/g, '$5,000.00')
+      .replace(/\{\{amountDue\}\}/g, '$5,000.00')
+      .replace(/\{\{daysOverdue\}\}/g, '7')
+      .replace(/\{\{contractName\}\}/g, 'Service Agreement')
+      .replace(/\{\{contractUrl\}\}/g, '#')
+      .replace(/\{\{message\}\}/g, 'Looking forward to working with you!')
+      // snake_case variables (fallback)
+      .replace(/\{\{business_name\}\}/g, 'Acme Corp')
+      .replace(/\{\{client_name\}\}/g, 'John Smith')
+      .replace(/\{\{client_email\}\}/g, 'john@example.com')
+      .replace(/\{\{quote_name\}\}/g, 'Website Redesign')
+      .replace(/\{\{quote_number\}\}/g, 'QT-0001')
+      .replace(/\{\{quote_link\}\}/g, '#')
+      .replace(/\{\{quote_total\}\}/g, '$5,000.00')
+      .replace(/\{\{invoice_number\}\}/g, 'INV-0001')
+      .replace(/\{\{invoice_link\}\}/g, '#')
+      .replace(/\{\{invoice_total\}\}/g, '$5,000.00')
+      .replace(/\{\{invoice_due_date\}\}/g, '2026-04-01')
+      .replace(/\{\{contract_name\}\}/g, 'Service Agreement')
+      .replace(/\{\{contract_link\}\}/g, '#')
+      // Handle conditionals {{#if variable}}...{{/if}} — show the content
+      .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1')
+  );
 }
 
 function PreviewBody({ body }: { body: string }) {
@@ -254,13 +256,11 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Name" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => (
         <button
           type="button"
-          className="font-medium text-primary hover:underline text-left"
+          className="text-primary text-left font-medium hover:underline"
           onClick={() => handleOpenEdit(row.original)}
         >
           {row.original.name}
@@ -269,36 +269,22 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
     },
     {
       accessorKey: 'subject',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Subject" />
-      ),
-      cell: ({ row }) => (
-        <div className="text-muted-foreground">
-          {row.original.subject}
-        </div>
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Subject" />,
+      cell: ({ row }) => <div className="text-muted-foreground">{row.original.subject}</div>,
     },
     {
       accessorKey: 'activity',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Activity" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Activity" />,
       cell: ({ row }) => (
-        <div className="text-muted-foreground">
-          {row.original.activity ?? 'No activity'}
-        </div>
+        <div className="text-muted-foreground">{row.original.activity ?? 'No activity'}</div>
       ),
       enableSorting: false,
     },
     {
       accessorKey: 'createdAt',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => (
-        <div className="text-muted-foreground">
-          {formatRelativeDate(row.original.createdAt)}
-        </div>
+        <div className="text-muted-foreground">{formatRelativeDate(row.original.createdAt)}</div>
       ),
     },
     {
@@ -316,7 +302,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+      <Mail className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No email templates</h3>
       <p className="text-muted-foreground mb-4">
         Create email templates for quotes, invoices, and reminders.
@@ -333,7 +319,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
   return (
     <>
       {data.length > 0 && (
-        <div className="flex items-center justify-end mb-4">
+        <div className="mb-4 flex items-center justify-end">
           <Button asChild>
             <Link href="/settings/emails/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -355,7 +341,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
 
       {/* Preview Dialog — read-only rendered email */}
       <Dialog open={!!previewTemplate} onOpenChange={(open) => !open && handleClosePreview()}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-auto">
           <DialogHeader>
             <DialogTitle>{previewTemplate?.name}</DialogTitle>
             <DialogDescription asChild>
@@ -364,19 +350,25 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
                   {previewTemplate?.type.replace(/_/g, ' ')}
                 </Badge>
                 {previewTemplate?.isDefault && (
-                  <Badge variant="secondary" className="text-xs">Default</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Default
+                  </Badge>
                 )}
               </div>
             </DialogDescription>
           </DialogHeader>
-          <div className="border rounded-lg p-4 bg-card space-y-3">
+          <div className="bg-card space-y-3 rounded-lg border p-4">
             <p className="text-sm">
               <span className="text-muted-foreground">Subject: </span>
-              <span className="font-medium">{replaceVariables(previewTemplate?.subject ?? '')}</span>
+              <span className="font-medium">
+                {replaceVariables(previewTemplate?.subject ?? '')}
+              </span>
             </p>
             <hr />
             <div
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(replaceVariables(previewTemplate?.body ?? '')) }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(replaceVariables(previewTemplate?.body ?? '')),
+              }}
               className="prose prose-sm max-w-none"
             />
           </div>
@@ -405,19 +397,19 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
 
           <Separator />
 
-          <div className="flex-1 overflow-y-auto bg-muted/20">
-            <div className="p-6 space-y-5">
+          <div className="bg-muted/20 flex-1 overflow-y-auto">
+            <div className="space-y-5 p-6">
               {/* Template Name + Delete */}
               <div className="flex items-center justify-between gap-4">
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-base font-semibold bg-transparent! outline-hidden border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
+                  className="bg-transparent! outline-hidden placeholder:text-muted-foreground flex-1 border-none text-base font-semibold shadow-none"
                   placeholder="Template name"
                 />
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-destructive flex shrink-0 items-center gap-1.5 text-xs transition-colors"
                   onClick={handleDeleteFromDialog}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -434,8 +426,9 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
                   onChange={(e) => setEditSubject(e.target.value)}
                   placeholder="Email subject..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use variables like {'{{business_name}}'}, {'{{quote_name}}'}, {'{{invoice_number}}'} for dynamic content.
+                <p className="text-muted-foreground text-xs">
+                  Use variables like {'{{business_name}}'}, {'{{quote_name}}'},{' '}
+                  {'{{invoice_number}}'} for dynamic content.
                 </p>
               </div>
 
@@ -449,8 +442,9 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
                   showAttachment
                   onAttachment={() => toast.info('Attachment feature coming soon')}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use variables like {'{{client_name}}'}, {'{{quote_link}}'}, {'{{invoice_link}}'} for personalized content.
+                <p className="text-muted-foreground text-xs">
+                  Use variables like {'{{client_name}}'}, {'{{quote_link}}'}, {'{{invoice_link}}'}{' '}
+                  for personalized content.
                 </p>
               </div>
 
@@ -470,30 +464,20 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label>Active</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Enable this template for automated email notifications.
                   </p>
                 </div>
-                <Switch
-                  checked={editIsActive}
-                  onCheckedChange={setEditIsActive}
-                />
+                <Switch checked={editIsActive} onCheckedChange={setEditIsActive} />
               </div>
 
               {/* Save / Cancel */}
               <div className="flex items-center gap-2 pt-1">
-                <Button
-                  onClick={handleSaveTemplate}
-                  disabled={isSaving}
-                >
+                <Button onClick={handleSaveTemplate} disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCloseEdit}
-                  disabled={isSaving}
-                >
+                <Button variant="outline" onClick={handleCloseEdit} disabled={isSaving}>
                   Cancel
                 </Button>
               </div>
@@ -508,8 +492,7 @@ export function EmailTemplatesDataTable({ data }: EmailTemplatesDataTableProps) 
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this email template? This action
-              cannot be undone.
+              Are you sure you want to delete this email template? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

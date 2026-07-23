@@ -19,16 +19,8 @@ import { getQuoteColumns, quoteStatusOptions } from './quotes-columns';
 import { QuoteListItem } from '@/lib/quotes/types';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { duplicateQuote, deleteQuote, getQuote } from '@/lib/quotes/actions';
 import { getBusinessProfile } from '@/lib/settings/actions';
@@ -45,10 +37,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 function formatDate(dateString: string): string {
@@ -130,7 +124,9 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
   // Business name for email dialog
   const [businessName, setBusinessName] = useState('');
   useEffect(() => {
-    getBusinessProfile().then((p) => setBusinessName(p?.businessName || '')).catch(() => {});
+    getBusinessProfile()
+      .then((p) => setBusinessName(p?.businessName || ''))
+      .catch(() => {});
   }, []);
 
   // Dialog states
@@ -145,11 +141,7 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
 
   const handleSendComplete = useCallback(() => {
     if (sendTarget) {
-      setData((prev) =>
-        prev.map((q) =>
-          q.id === sendTarget.id ? { ...q, status: 'sent' } : q
-        )
-      );
+      setData((prev) => prev.map((q) => (q.id === sendTarget.id ? { ...q, status: 'sent' } : q)));
     }
     setSendTarget(null);
   }, [sendTarget]);
@@ -169,32 +161,33 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
   }, []);
 
   // Convert to Invoice
-  const handleConvertToInvoice = useCallback(async (quote: QuoteListItem) => {
-    if (quote.status !== 'accepted') {
-      toast.error('Only accepted quotes can be converted to invoices');
-      return;
-    }
-
-    toast.loading('Converting quote to invoice...', { id: 'convert' });
-    try {
-      const result = await createInvoiceFromQuote(quote.id);
-      if (result.success && result.invoice) {
-        toast.success('Quote converted to invoice!', { id: 'convert' });
-        setData((prev) =>
-          prev.map((q) =>
-            q.id === quote.id ? { ...q, status: 'converted' } : q
-          )
-        );
-        router.push(`/invoices/${result.invoice.id}`);
-      } else {
-        toast.error(result.error || 'Failed to convert quote', { id: 'convert' });
+  const handleConvertToInvoice = useCallback(
+    async (quote: QuoteListItem) => {
+      if (quote.status !== 'accepted') {
+        toast.error('Only accepted quotes can be converted to invoices');
+        return;
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to convert quote';
-      console.error('Convert to invoice error:', err);
-      toast.error(msg, { id: 'convert' });
-    }
-  }, [router]);
+
+      toast.loading('Converting quote to invoice...', { id: 'convert' });
+      try {
+        const result = await createInvoiceFromQuote(quote.id);
+        if (result.success && result.invoice) {
+          toast.success('Quote converted to invoice!', { id: 'convert' });
+          setData((prev) =>
+            prev.map((q) => (q.id === quote.id ? { ...q, status: 'converted' } : q))
+          );
+          router.push(`/invoices/${result.invoice.id}`);
+        } else {
+          toast.error(result.error || 'Failed to convert quote', { id: 'convert' });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to convert quote';
+        console.error('Convert to invoice error:', err);
+        toast.error(msg, { id: 'convert' });
+      }
+    },
+    [router]
+  );
 
   const columns = getQuoteColumns({
     onView: handleView,
@@ -242,11 +235,9 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+      <FileText className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No quotes yet</h3>
-      <p className="text-muted-foreground mb-4">
-        Create your first quote to get started
-      </p>
+      <p className="text-muted-foreground mb-4">Create your first quote to get started</p>
       <Button asChild>
         <Link href="/quotes/new">
           <Plus className="mr-2 h-4 w-4" />
@@ -259,16 +250,17 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
   const quote = viewingQuote;
 
   // Extract line items from blocks for the view dialog
-  const lineItems = quote?.blocks
-    ?.filter((b: any) => b.type === 'service-item')
-    ?.map((b: any) => ({
-      id: b.id,
-      name: b.content.name || 'Untitled Item',
-      description: b.content.description || '',
-      quantity: b.content.quantity || 0,
-      rate: b.content.rate || 0,
-      amount: (b.content.quantity || 0) * (b.content.rate || 0),
-    })) || [];
+  const lineItems =
+    quote?.blocks
+      ?.filter((b: any) => b.type === 'service-item')
+      ?.map((b: any) => ({
+        id: b.id,
+        name: b.content.name || 'Untitled Item',
+        description: b.content.description || '',
+        quantity: b.content.quantity || 0,
+        rate: b.content.rate || 0,
+        amount: (b.content.quantity || 0) * (b.content.rate || 0),
+      })) || [];
 
   return (
     <>
@@ -294,17 +286,30 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
               {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto">
                 {/* Payment Page Card */}
-                <div className="bg-card overflow-hidden relative">
+                <div className="bg-card relative overflow-hidden">
                   {/* Subtle wave decoration */}
-                  <svg className="absolute top-0 left-0 pointer-events-none" viewBox="0 0 200 120" fill="none" style={{ width: '45%', height: '100px' }}>
-                    <path d="M0 0 L0 80 Q60 72 120 40 Q160 18 200 0 Z" fill={ACCENT} opacity="0.05" />
-                    <path d="M0 0 L0 50 Q40 44 80 24 Q110 10 140 0 Z" fill={ACCENT} opacity="0.03" />
+                  <svg
+                    className="pointer-events-none absolute left-0 top-0"
+                    viewBox="0 0 200 120"
+                    fill="none"
+                    style={{ width: '45%', height: '100px' }}
+                  >
+                    <path
+                      d="M0 0 L0 80 Q60 72 120 40 Q160 18 200 0 Z"
+                      fill={ACCENT}
+                      opacity="0.05"
+                    />
+                    <path
+                      d="M0 0 L0 50 Q40 44 80 24 Q110 10 140 0 Z"
+                      fill={ACCENT}
+                      opacity="0.03"
+                    />
                   </svg>
 
                   {/* Header — centered */}
-                  <div className="px-6 pt-8 pb-5 text-center relative">
+                  <div className="relative px-6 pb-5 pt-8 text-center">
                     <div
-                      className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-3"
+                      className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full"
                       style={{ backgroundColor: ACCENT_LIGHT }}
                     >
                       <Check className="h-5 w-5" style={{ color: ACCENT }} />
@@ -312,11 +317,14 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                     <h3 className="text-base font-semibold tracking-tight">
                       {quote.client?.name || 'Quote'}
                     </h3>
-                    <p className="text-3xl font-bold tracking-tight mt-1" style={{ color: ACCENT }}>
+                    <p className="mt-1 text-3xl font-bold tracking-tight" style={{ color: ACCENT }}>
                       {formatCurrency(quote.totals.total, quote.currency)}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Quote #{quote.quoteNumber} &middot; {quote.expirationDate ? `Valid until ${formatDate(String(quote.expirationDate))}` : `Issued ${formatDate(String(quote.issueDate))}`}
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Quote #{quote.quoteNumber} &middot;{' '}
+                      {quote.expirationDate
+                        ? `Valid until ${formatDate(String(quote.expirationDate))}`
+                        : `Issued ${formatDate(String(quote.issueDate))}`}
                     </p>
                   </div>
 
@@ -325,19 +333,17 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                   {/* Client + Line Items (Collapsible) */}
                   <div className="px-6 py-4">
                     <Collapsible open={showDetails} onOpenChange={setShowDetails}>
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="mb-3 flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-sm">
+                          <p className="text-sm font-semibold">
                             {quote.client?.name || 'Select a customer'}
                           </p>
                           {quote.client?.company && quote.client.company !== quote.client.name && (
-                            <p className="text-xs text-muted-foreground">
-                              {quote.client.company}
-                            </p>
+                            <p className="text-muted-foreground text-xs">{quote.client.company}</p>
                           )}
                         </div>
                         <CollapsibleTrigger asChild>
-                          <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                          <button className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors">
                             {showDetails ? 'Hide' : 'Details'}
                             <ChevronUp
                               className={cn(
@@ -357,20 +363,21 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                               key={item.id}
                               className="flex items-center justify-between py-2 text-sm"
                             >
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium">
                                   {item.name || 'Untitled Item'}
                                 </p>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {item.quantity} &times; {formatCurrency(item.rate, quote.currency)}
+                                <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                  {item.quantity} &times;{' '}
+                                  {formatCurrency(item.rate, quote.currency)}
                                   {item.description && (
-                                    <span className="ml-1.5 text-muted-foreground/70">
+                                    <span className="text-muted-foreground ml-1.5">
                                       &middot; {item.description}
                                     </span>
                                   )}
                                 </p>
                               </div>
-                              <span className="ml-4 font-medium tabular-nums text-sm">
+                              <span className="ml-4 text-sm font-medium tabular-nums">
                                 {formatCurrency(item.amount, quote.currency)}
                               </span>
                             </div>
@@ -380,30 +387,38 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
 
                           {/* Subtotal/Discount rows if applicable */}
                           {quote.totals.discountAmount > 0 && (
-                            <div className="space-y-2 mb-3">
+                            <div className="mb-3 space-y-2">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Subtotal</span>
-                                <span className="tabular-nums">{formatCurrency(quote.totals.subtotal, quote.currency)}</span>
+                                <span className="tabular-nums">
+                                  {formatCurrency(quote.totals.subtotal, quote.currency)}
+                                </span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Discount</span>
-                                <span className="tabular-nums text-green-600">-{formatCurrency(quote.totals.discountAmount, quote.currency)}</span>
+                                <span className="tabular-nums text-green-600">
+                                  -{formatCurrency(quote.totals.discountAmount, quote.currency)}
+                                </span>
                               </div>
                             </div>
                           )}
 
                           {/* Tax row if applicable */}
                           {quote.totals.taxTotal > 0 && (
-                            <div className="space-y-2 mb-3">
+                            <div className="mb-3 space-y-2">
                               {quote.totals.discountAmount === 0 && (
                                 <div className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">Subtotal</span>
-                                  <span className="tabular-nums">{formatCurrency(quote.totals.subtotal, quote.currency)}</span>
+                                  <span className="tabular-nums">
+                                    {formatCurrency(quote.totals.subtotal, quote.currency)}
+                                  </span>
                                 </div>
                               )}
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Tax</span>
-                                <span className="tabular-nums">{formatCurrency(quote.totals.taxTotal, quote.currency)}</span>
+                                <span className="tabular-nums">
+                                  {formatCurrency(quote.totals.taxTotal, quote.currency)}
+                                </span>
                               </div>
                             </div>
                           )}
@@ -411,13 +426,16 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                           {/* Total row */}
                           <div
                             className={cn(
-                              'flex justify-between items-baseline rounded-lg px-3 py-3 -mx-3 border-l-2',
-                              ACCENT_BG,
+                              '-mx-3 flex items-baseline justify-between rounded-lg border-l-2 px-3 py-3',
+                              ACCENT_BG
                             )}
                             style={{ borderLeftColor: ACCENT }}
                           >
-                            <span className="font-semibold text-sm">Total</span>
-                            <span className="text-lg font-bold tabular-nums" style={{ color: ACCENT }}>
+                            <span className="text-sm font-semibold">Total</span>
+                            <span
+                              className="text-lg font-bold tabular-nums"
+                              style={{ color: ACCENT }}
+                            >
                               {formatCurrency(quote.totals.total, quote.currency)}
                             </span>
                           </div>
@@ -431,7 +449,7 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                     <>
                       <Separator className="border-gray-100" />
                       <div className="px-6 py-5">
-                        <p className="text-sm text-muted-foreground">{quote.notes}</p>
+                        <p className="text-muted-foreground text-sm">{quote.notes}</p>
                       </div>
                     </>
                   )}
@@ -441,16 +459,18 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                     <>
                       <Separator className="border-gray-100" />
                       <div className="px-6 py-5">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Terms & Conditions</p>
-                        <p className="text-sm text-muted-foreground">{quote.terms}</p>
+                        <p className="text-muted-foreground mb-1 text-xs font-medium">
+                          Terms & Conditions
+                        </p>
+                        <p className="text-muted-foreground text-sm">{quote.terms}</p>
                       </div>
                     </>
                   )}
 
                   {/* Action Buttons */}
-                  <div className="px-6 pb-4 pt-2 space-y-2">
+                  <div className="space-y-2 px-6 pb-4 pt-2">
                     <button
-                      className="w-full h-12 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors text-white"
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-white transition-colors"
                       style={{ backgroundColor: ACCENT }}
                     >
                       <CheckCircle2 className="h-4 w-4" />
@@ -458,7 +478,7 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
                     </button>
                     <button
                       onClick={() => window.open(`/api/pdf/quote/${quote.id}`, '_blank')}
-                      className="w-full h-10 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors border border-border text-muted-foreground hover:bg-muted/50"
+                      className="border-border text-muted-foreground hover:bg-muted/50 flex h-10 w-full items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-colors"
                     >
                       <Download className="h-4 w-4" />
                       Download Quote
@@ -467,17 +487,16 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
 
                   {/* Powered By Footer */}
                   <div className="px-6 pb-5 pt-2">
-                    <div className="flex items-center gap-2 justify-center">
-                      <div className="h-px flex-1 bg-border/40" />
-                      <p className="text-[10px] text-muted-foreground/50 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="bg-border/40 h-px flex-1" />
+                      <p className="text-muted-foreground whitespace-nowrap text-[10px]">
                         Powered by Wolff
                       </p>
-                      <div className="h-px flex-1 bg-border/40" />
+                      <div className="bg-border/40 h-px flex-1" />
                     </div>
                   </div>
                 </div>
               </div>
-
             </>
           )}
         </DialogContent>

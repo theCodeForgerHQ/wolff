@@ -23,18 +23,14 @@ function StatItem({ title, value, change, changeLabel }: StatItemProps) {
 
   return (
     <div className="relative flex flex-col gap-1 p-5">
-      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+      <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
         {title}
       </span>
-      <span className="text-2xl font-semibold tracking-tight text-foreground">
-        {value}
-      </span>
-      <div className="flex items-center gap-1.5 mt-0.5">
+      <span className="text-foreground text-2xl font-semibold tracking-tight">{value}</span>
+      <div className="mt-0.5 flex items-center gap-1.5">
         <span
           className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-            isPositive
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-red-600 dark:text-red-400'
+            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
           }`}
         >
           {isPositive ? (
@@ -44,7 +40,7 @@ function StatItem({ title, value, change, changeLabel }: StatItemProps) {
           )}
           {Math.abs(change).toFixed(1)}%
         </span>
-        <span className="text-xs text-muted-foreground/60">{changeLabel}</span>
+        <span className="text-muted-foreground text-xs">{changeLabel}</span>
       </div>
     </div>
   );
@@ -53,9 +49,8 @@ function StatItem({ title, value, change, changeLabel }: StatItemProps) {
 export function StatsCards({ stats, currency = 'USD' }: StatsCardsProps) {
   // Bug #6/#7: Guard against division by zero
   const revenueDenominator = stats.totalRevenue - stats.revenueThisMonth;
-  const revenueChange = revenueDenominator > 0
-    ? (stats.revenueThisMonth / revenueDenominator) * 100
-    : 0;
+  const revenueChange =
+    revenueDenominator > 0 ? (stats.revenueThisMonth / revenueDenominator) * 100 : 0;
 
   const cards = [
     {
@@ -74,12 +69,14 @@ export function StatsCards({ stats, currency = 'USD' }: StatsCardsProps) {
     {
       title: 'Outstanding',
       value: formatCurrency(stats.outstandingAmount, currency),
-      change: stats.overdueAmount > 0 && stats.outstandingAmount > 0
-        ? -(stats.overdueAmount / stats.outstandingAmount) * 100
-        : 0,
-      changeLabel: stats.overdueAmount > 0
-        ? `${formatCurrency(stats.overdueAmount, currency)} overdue`
-        : 'No overdue',
+      change:
+        stats.overdueAmount > 0 && stats.outstandingAmount > 0
+          ? -(stats.overdueAmount / stats.outstandingAmount) * 100
+          : 0,
+      changeLabel:
+        stats.overdueAmount > 0
+          ? `${formatCurrency(stats.overdueAmount, currency)} overdue`
+          : 'No overdue',
     },
     {
       title: 'Conversion Rate',
@@ -91,7 +88,7 @@ export function StatsCards({ stats, currency = 'USD' }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 rounded-lg border bg-card divide-x divide-border">
+    <div className="bg-card divide-border grid grid-cols-2 divide-x rounded-lg border lg:grid-cols-4">
       {cards.map((card) => (
         <StatItem
           key={card.title}

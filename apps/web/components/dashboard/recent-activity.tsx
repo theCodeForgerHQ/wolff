@@ -11,12 +11,7 @@ import {
   Eye,
   AlertCircle,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 import type { ActivityItem } from '@/lib/dashboard/types';
 
@@ -57,22 +52,19 @@ const activityColors: Record<ActivityItem['type'], string> = {
 
 export function RecentActivity({ activities, currency = 'USD' }: RecentActivityProps) {
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-4">
         <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 flex-1 overflow-y-auto">
+      <CardContent className="flex-1 overflow-y-auto pt-0">
         {activities.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No recent activity
-          </p>
+          <p className="text-muted-foreground py-8 text-center text-sm">No recent activity</p>
         ) : (
           <div className="relative">
             <div
-              className="absolute left-[9px] top-1 bottom-1 w-px"
+              className="absolute bottom-1 left-[9px] top-1 w-px"
               style={{
-                background:
-                  'linear-gradient(to bottom, var(--primary-200), transparent)',
+                background: 'linear-gradient(to bottom, var(--primary-200), transparent)',
               }}
             />
 
@@ -93,14 +85,14 @@ export function RecentActivity({ activities, currency = 'USD' }: RecentActivityP
                     href={href}
                     className="group relative flex gap-3 rounded-md py-1 transition-colors"
                   >
-                    <div className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-card ring-2 ring-card">
+                    <div className="bg-card ring-card relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-2">
                       <Icon className={`h-3 w-3 ${color}`} />
                     </div>
-                    <div className="min-w-0 flex-1 -mt-0.5">
-                      <p className="text-sm leading-snug group-hover:text-primary transition-colors">
+                    <div className="-mt-0.5 min-w-0 flex-1">
+                      <p className="group-hover:text-primary text-sm leading-snug transition-colors">
                         {activity.title}
                       </p>
-                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 mt-0.5">
+                      <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[11px]">
                         <span>{formatRelativeTime(activity.date)}</span>
                         {activity.amount && activity.amount > 0 && (
                           <>
