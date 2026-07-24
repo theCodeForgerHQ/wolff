@@ -1,6 +1,8 @@
 # Phase 1: upgrades and foundation
 
-Branch `phase1-upgrades`, 25 commits on top of `phase0-baseline` (`a1f6f4d`).
+Branch `phase1-upgrades`, 37 commits on top of `phase0-baseline` (`a1f6f4d`):
+25 for the phase itself and 12 that fix the findings of a peer review
+(see [Review findings and fixes](#review-findings-and-fixes)).
 Phase 1 has a task list and a definition of done (DoD). The
 starting point is recorded in [`docs/baseline.md`](baseline.md); the Stripe
 analysis is in [`docs/upgrades/stripe.md`](upgrades/stripe.md).
@@ -15,28 +17,33 @@ analysis is in [`docs/upgrades/stripe.md`](upgrades/stripe.md).
 | Docker runtime | `node:20.18-alpine`                     | `node:24-alpine`                                                                               | `6f2e2be`            |
 | TypeScript     | `^5.7`                                  | `5.9.3` (exact); `@types/node` 24                                                              | `21dc45c`            |
 | Zod            | 3.25                                    | 4.6.5, `@hookform/resolvers` 5.9                                                               | `2829898`            |
-| Prisma         | 6.19 (Rust engine)                      | 7.10.0 exact: `prisma-client` generator, pg driver adapter, `prisma.config.ts`                 | `471eef5`            |
-| Auth adapter   | `@auth/prisma-adapter`                  | Wolff-schema adapter inside the encryption wrapper (D10 fallback)                              | `4dccee2`            |
-| Next.js        | 15.5.26, `middleware.ts`                | 16.3.7 exact, `proxy.ts`, Turbopack builds, flat ESLint config                                 | `cdebeb9`, `76d9fa6` |
-| Tailwind       | 3.4 + `tailwind.config.ts`              | 4.3.3 CSS-first `@theme` via the official upgrade tool                                         | `194cafc`, `d67ed2a` |
-| Stripe         | SDK 17.7, API `2025-02-24.acacia`       | SDK 22.6.2, API `2026-08-26.dahlia`                                                            | `f18c508`, `8fcbbfa` |
-| Vitest         | 2.1                                     | 5.0.2 (+ Vite 8, plugin-react 6.1.1)                                                           | `bd77908`            |
-| Playwright     | `^1.49` (resolved 1.63)                 | `1.63.0` exact                                                                                 | `e641656`            |
-| Sentry         | none                                    | `@sentry/nextjs` 11.1.0, disabled unless a DSN is set                                          | `c96ebc5`            |
-| E2E            | none for the DoD                        | login (credentials + mock Google OIDC), quote → invoice → Stripe payment                       | `34a6bd7`, `ef166ec` |
-| CI             | lint, types, unit, build on Postgres 15 | + migrations check, DB/stripe-mock suites, E2E job, Postgres 17                                | `36fa31b`            |
+| Prisma         | 6.19 (Rust engine)                      | 7.10.0 exact: `prisma-client` generator, pg driver adapter, `prisma.config.ts`                 | `e9eaf85`            |
+| Auth adapter   | `@auth/prisma-adapter`                  | Wolff-schema adapter inside the encryption wrapper (D10 fallback)                              | `51bb9aa`            |
+| Next.js        | 15.5.26, `middleware.ts`                | 16.3.7 exact, `proxy.ts`, Turbopack builds, flat ESLint config                                 | `6bfc7ea`, `f41d1cd` |
+| Tailwind       | 3.4 + `tailwind.config.ts`              | 4.3.3 CSS-first `@theme` via the official upgrade tool                                         | `32ca2bd`, `922b01b` |
+| Stripe         | SDK 17.7, API `2025-02-24.acacia`       | SDK 22.6.2, API `2026-08-26.dahlia`                                                            | `87dac2c`, `7ef3bc4` |
+| Vitest         | 2.1                                     | 5.0.2 (+ Vite 8, plugin-react 6.1.1)                                                           | `03e72bc`            |
+| Playwright     | `^1.49` (resolved 1.63)                 | `1.63.0` exact                                                                                 | `8bc9cb5`            |
+| Sentry         | none                                    | `@sentry/nextjs` 11.1.0, disabled unless a DSN is set                                          | `477d184`            |
+| E2E            | none for the DoD                        | login (credentials + mock Google OIDC), quote → invoice → Stripe payment                       | `6f803a5`, `68ac8f7` |
+| CI             | lint, types, unit, build on Postgres 15 | + migrations check, DB/stripe-mock suites, E2E job, Postgres 17                                | `a6aea32`            |
 
 Fixes that came out of the work, each in its own `fix:` commit:
 
 - `236fbee` pino's `pino/file` transport crashed every logging route in
   `next dev` (`Cannot find module …/vendor-chunks/lib/worker.js`).
-- `4dccee2` First-time Google/GitHub sign-in could never create a user:
+- `51bb9aa` First-time Google/GitHub sign-in could never create a user:
   `@auth/prisma-adapter` writes the Auth.js reference schema, not Wolff's.
-- `8fcbbfa` (from a security review of the Stripe commit) A refund that
-  rounded to 0 cents was sent as a _full_ refund;
-  Stripe ids, amounts, currency, email and metadata are now validated at the
-  SDK boundary; the stripe-mock override accepts loopback hosts only.
-- `a39d1ad` The portal's Pay button showed "online payment is not yet
+- `7ef3bc4` (from a security review of the Stripe commit) A refund that
+  rounded to 0 cents was sent as a _full_ refund; the functions in
+  `lib/services/stripe.ts` validate Stripe ids, amounts, currency, email and
+  metadata before calling the SDK; the stripe-mock override accepts loopback
+  hosts only. At that commit six calls still used the SDK client directly and
+  skipped the schemas. `b4665d3` moved them into the service and stopped
+  exporting the client, so every request the app sends to Stripe is now
+  validated first. Webhook verification (`constructEvent`) sends nothing; it
+  checks the signature of what Stripe sent.
+- `bc70218` The portal's Pay button showed "online payment is not yet
   available" for every invoice since the portal redesign (`334c165`).
 
 ## Definition of done
@@ -45,20 +52,23 @@ Fixes that came out of the work, each in its own `fix:` commit:
 
 |                                                         | Baseline (`a1f6f4d`)  | Now                                               |
 | ------------------------------------------------------- | --------------------- | ------------------------------------------------- |
-| `vitest run` without services                           | 989 tests, 989 passed | **1052 tests: 1038 passed, 14 skipped, 0 failed** |
-| with `TEST_DATABASE_URL` + `STRIPE_MOCK_URL` (as in CI) | n/a                   | **1052 passed, 0 skipped**                        |
+| `vitest run` without services                           | 989 tests, 989 passed | **1118 tests: 1100 passed, 18 skipped, 0 failed** |
+| with `TEST_DATABASE_URL` + `STRIPE_MOCK_URL` (as in CI) | n/a                   | **1118 passed, 0 skipped**                        |
 
-The 14 skipped tests are the Postgres adapter integration tests (7) and the
-stripe-mock contract tests (7); CI provides both services. New tests: auth
+The 18 skipped tests need a service: the Postgres adapter integration tests
+(8), the pay-again payment sequence against Postgres (3) and the stripe-mock
+contract tests (7); CI provides both services. Tests added in the phase: auth
 adapter mapping (4) and integration (7), Stripe webhook signatures (5),
 stripe-mock contracts (7), Stripe input validation (22), loopback URL rule (8),
-portal payment component (4), Sentry options (6).
+portal payment component (4), Sentry options (6). The review fixes added 66
+more, listed per finding below.
 
 Commands: `TEST_DATABASE_URL=… STRIPE_MOCK_URL=http://localhost:12111 npx turbo test`.
 
 ### `pnpm build` green
 
-`pnpm build` passes (Next 16.3.7, Turbopack). `pnpm type-check` passes.
+`pnpm build` passes (Next 16.3.7, Turbopack). `pnpm type-check` passes (6 of 6
+packages).
 `pnpm lint` has 0 errors and 69 warnings (baseline: 0 and 26); the increase is
 the React Compiler rules that eslint-config-next 16 brings in, see Known issues.
 The Docker image builds and, run against Postgres 17, starts on Node 24.21 and
@@ -82,20 +92,30 @@ database:
 | Upgrade                                                | Result                                                                                                                                                                                 |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Postgres 17, Prisma 7, Next 16, Stripe, Vitest, Sentry | 30/30 within 0.01                                                                                                                                                                      |
-| Tailwind 4                                             | 22/30 within 0.01 after three fixes (shadows, Label spacing, variant props); 8 updated in `d67ed2a`, which lists each remaining difference and why it is intended Tailwind 4 behaviour |
+| Tailwind 4                                             | 22/30 within 0.01 after three fixes (shadows, Label spacing, variant props); 8 updated in `922b01b`, which lists each remaining difference and why it is intended Tailwind 4 behaviour |
 
 Every baseline set was confirmed stable with 2–3 consecutive runs before it
 was committed.
 
+Two baseline sets are committed, keyed by platform: `darwin` (macOS, local
+runs) and `linux` (CI). At the tip both pass 21/21. The linux set is recorded
+and checked with `apps/web/e2e/visual/run-in-linux.sh`, which runs the suite in
+`mcr.microsoft.com/playwright:v1.63.0-noble` against the production build.
+
+`922b01b` accepted one change it should not have: text with an opacity modifier
+on `text-muted-foreground` became visible and far too faint. `d6ead99` fixes it
+and re-records the 9 macOS screenshots it touches (finding 8 below).
+
 ### Playwright: login (credentials + mocked Google), quote → invoice → Stripe test payment
 
-`playwright.flows.config.ts`, 6 tests, 2 consecutive green runs:
+`playwright.flows.config.ts`, 7 tests, green at the tip:
 
 - credentials sign-in, wrong password, redirect of signed-out visitors;
 - Google sign-in through `oauth2-mock-server` (discovery, PKCE, token
-  exchange, id_token verification run for real): the user is created, the
-  account linked, the access token stored encrypted (`enc:`), and a second
-  sign-in reuses both;
+  exchange, id_token verification run for real): the user is created with a
+  workspace they own, the account linked, the access token stored encrypted
+  (`enc:`), the onboarding wizard renders, and a second sign-in reuses all of
+  it; a deactivated account is sent back to the login page with an explanation;
 - an accepted quote converted in the dashboard, paid from the client portal,
   confirmed by a signed `payment_intent.succeeded` webhook, ending with the
   invoice `paid` in the database and on the invoice page.
@@ -116,32 +136,36 @@ Stripe-hosted card form or real card networks.
   branding stays "Wolff" and the NOTICE/AGPL credit ships with the rename.
 - **D10 took the fallback path**, but for a different reason than the spec
   expected: `@auth/prisma-adapter` works with Prisma 7, but it never matched
-  Wolff's schema (see `4dccee2`).
+  Wolff's schema (see `51bb9aa`).
 - **Prisma client module format.** The design implies the ESM `prisma-client`
   output; it is generated as CommonJS (`moduleFormat = "cjs"`) because
   Playwright and the tsx seed scripts load it through `require()` and the
   workspace packages aren't `"type": "module"`.
 - **Middleware runtime.** The auth middleware moved to the Node.js runtime
-  (`cdebeb9`) before the Next 16 upgrade, which then renamed it to `proxy.ts`.
-- **Visual baselines are per platform.** The committed set is macOS; Linux
-  baselines for CI are produced by the first CI run (see below).
+  (`6bfc7ea`) before the Next 16 upgrade, which then renamed it to `proxy.ts`.
+- **Visual baselines are per platform.** macOS and Linux sets are both
+  committed. The Linux set was recorded on linux/arm64, not CI's x86_64 (see
+  Known issues).
 - **Stripe testing uses stripe-mock** instead of Stripe test mode (no keys).
 
 ## Known issues and follow-ups
 
-| Issue                                                                                                           | Status                                                                                                                                     |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Seeded quotes and invoices have readable ids (`demo-quote-6`) that the UUID-only detail and edit routes reject  | Left for the Phase 3 deterministic seed; tests use UUID clones                                                                             |
-| `lib/auth/index.ts` reads `TRUST_HOST`, `proxy.ts` reads `AUTH_TRUST_HOST`                                      | Both must be set for `next start` outside Vercel; unify later                                                                              |
-| `/dashboard` hydration mismatch (React #418) raises the global error toast                                      | Seen at baseline; masked in the visual suite, not yet fixed                                                                                |
-| 35 findings from eslint-plugin-react-hooks 7 (React Compiler rules: `set-state-in-effect`, `refs`, `purity`, …) | Set to `warn` in `eslint.config.mjs`; fix before enabling the React Compiler                                                               |
-| Turbopack warns that `lib/services/storage.ts` and the PDF Chromium lookup trace the whole project              | Output size only; add `turbopackIgnore` or narrow the paths                                                                                |
-| `app/opengraph-image.tsx` and `app/twitter-image.tsx` use the deprecated Edge runtime                           | Switch to the Node.js runtime                                                                                                              |
-| Standard Connect accounts are charged with `transfer_data.destination`                                          | Pre-existing; revisit in the Phase 3 `PaymentProvider` work (`docs/upgrades/stripe.md`)                                                    |
-| stripe-mock 0.205.0 may lag the newest API version                                                              | Contract tests catch request-shape breaks, not the newest response fields                                                                  |
-| Linux visual baselines aren't committed                                                                         | The CI `e2e` job generates them with `--update-snapshots=missing` and uploads them; commit that artifact to make the Linux comparison real |
-| next-auth is still `5.0.0-beta.32`                                                                              | Pinned exactly                                                                                                              |
-| Local development ran on Node 26.6; the project targets Node 24                                                 | All checks pass on 26; CI and Docker use 24                                                                                                |
+| Issue                                                                                                                                                                                                                    | Status                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Seeded quotes and invoices have readable ids (`demo-quote-6`) that the UUID-only detail and edit routes reject                                                                                                           | Left for the Phase 3 deterministic seed; tests use UUID clones                                                                                                                                            |
+| `lib/auth/index.ts` reads `TRUST_HOST`, `proxy.ts` reads `AUTH_TRUST_HOST`                                                                                                                                               | Both must be set for `next start` outside Vercel; unify later                                                                                                                                             |
+| `/dashboard` hydration mismatch (React #418) raises the global error toast                                                                                                                                               | Seen at baseline; masked in the visual suite, not yet fixed                                                                                                                                               |
+| 35 findings from eslint-plugin-react-hooks 7 (React Compiler rules: `set-state-in-effect`, `refs`, `purity`, …)                                                                                                          | Set to `warn` in `eslint.config.mjs`; fix before enabling the React Compiler                                                                                                                              |
+| Turbopack warns that `lib/services/storage.ts` and the PDF Chromium lookup trace the whole project                                                                                                                       | Output size only; add `turbopackIgnore` or narrow the paths                                                                                                                                               |
+| `app/opengraph-image.tsx` and `app/twitter-image.tsx` use the deprecated Edge runtime                                                                                                                                    | Switch to the Node.js runtime                                                                                                                                                                             |
+| Standard Connect accounts are charged with `transfer_data.destination`                                                                                                                                                   | Pre-existing; revisit in the Phase 3 `PaymentProvider` work (`docs/upgrades/stripe.md`)                                                                                                                   |
+| stripe-mock 0.205.0 may lag the newest API version                                                                                                                                                                       | Contract tests catch request-shape breaks, not the newest response fields                                                                                                                                 |
+| Linux baselines were recorded on linux/arm64 (Apple silicon); `ubuntu-latest` is x86_64, and Chromium crashes under amd64 emulation locally                                                                              | Same image, fonts and Chromium build, software rasterising, 1% tolerance, but unproven until the first remote run. If it differs: re-record on an x86_64 host, or run the `e2e` job on `ubuntu-24.04-arm` |
+| A payment row marked `failed` (by `payment_intent.payment_failed`, or when the intent can't be retrieved) is skipped by a later `succeeded` webhook for the same intent, e.g. after the client retries with another card | Found while fixing finding 1, read from the code, not reproduced or fixed; needs a decision on whether `failed` should be terminal                                                                        |
+| The macOS screenshots rendered today differ from the older committed `darwin` files by a few colour levels across whole pages (login background 248,250,252 then, 244,248,249 now), with and without the review fixes    | Below Playwright's per-pixel threshold, so the suite passes; cause not found. The Linux container set is the reproducible one                                                                             |
+| The `⌘K` hint in the header measures 4.34:1 (`text-muted-foreground` on the muted chip), under the AA 4.5:1                                                                                                              | Same colours as at baseline; other opacity-modified text colours (`text-primary/80`, `text-foreground/50`, `text-sidebar-foreground/70`) were not measured                                                |
+| next-auth is still `5.0.0-beta.32`                                                                                                                                                                                       | Pinned exactly                                                                                                                                                                             |
+| Local checks ran on Node 26.6 (no Node 24 on the machine); the project targets Node 24                                                                                                                                   | All checks pass on 26. The Linux visual run uses the image's Node 24.20; CI and Docker use 24                                                                                                             |
 
 ## Needs a person with accounts or keys
 
@@ -153,8 +177,54 @@ Stripe-hosted card form or real card networks.
 - **Sentry project (Phase 2):** set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`,
   and `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT` for source maps.
 - **CI:** the workflow has only been validated locally (actionlint 1.7.12,
-  every job's commands run by hand). The first remote run also produces the
-  Linux visual baselines.
+  every job's commands run by hand). The first remote run is also the first
+  comparison of the Linux baselines on x86_64.
+
+## Review findings and fixes
+
+A peer review of the 25 phase commits reported 12 findings. Each was
+checked against the code before it was changed; all 12 held. Bugs were fixed
+test-first: the test was written, seen to fail for the stated reason, then
+made to pass.
+
+| #   | Finding                                                                                                                               | Fix                                                                                                                                                                                                        | Commit    | Tests                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------- |
+| 1   | Pay clicked again before the webhook landed marked the payment `completed` without crediting the invoice; the webhook then skipped it | The checkout call returns `alreadyReceived` (HTTP 409) for a `succeeded` or `processing` intent and writes nothing; the webhook settles it; the portal shows its "payment received" state                  | `747ecb4` | 3 against Postgres (the exact sequence), 3 component |
+| 2   | First Google/GitHub sign-in created no workspace, so `/onboarding` threw; the E2E only waited for the URL                             | `lib/auth/provision-user.ts` creates user, workspace and owner membership in one transaction, used by both the register route and the adapter; the E2E asserts the wizard renders and the workspace exists | `74ee453` | 1 against Postgres, 3 unit, E2E                      |
+| 3   | CI's visual step would write baselines and fail 21 of 21                                                                              | 30 Linux baselines committed; CI compares without `--update-snapshots`                                                                                                                                     | `8d4c4e4` | visual suite in the Linux image                      |
+| 4   | A refund amount of `0` or `NaN` became a full refund                                                                                  | `toRefundMinorUnits`: only an omitted amount is a full refund; a given amount must be finite and positive                                                                                                  | `5b95aac` | 12                                                   |
+| 5   | Six SDK calls bypassed the validation that `7ef3bc4` and this document claimed                                                        | Five new validated service functions, the client is no longer exported                                                                                                                                     | `b4665d3` | 22, and the stripe-mock contracts use them           |
+| 6   | A replacement PaymentIntent reused the idempotency key and got the cancelled intent back for 24h                                      | The key ends with an attempt number (payment rows the invoice already has)                                                                                                                                 | `629ba11` | 4, plus 2 schema cases                               |
+| 7   | OAuth sign-in for a soft-deleted user failed on the unique email constraint                                                           | A `signIn` callback redirects to `/login?error=AccountDeactivated`; the login form shows the reason                                                                                                        | `1e62394` | 8 unit, E2E                                          |
+| 8   | "Powered by Wolff" and dashboard secondary text became much fainter in the Tailwind 4 baseline update                                 | Measured 1.93:1 to 2.66:1 against AA's 4.5:1: a regression. All 53 `text-muted-foreground/NN` become `text-muted-foreground` (4.55:1); baselines re-recorded                                               | `d6ead99` | 1 guard test, visual suite                           |
+| 9   | `canPay` ignored the publishable key the payment form needs                                                                           | `canPayOnline` requires it; the non-null assertion is gone                                                                                                                                                 | `49f65c5` | 8                                                    |
+| 10  | Stale comment in `proxy.ts` about Edge and Prisma                                                                                     | Rewritten                                                                                                                                                                                                  | `68bcca7` | n/a                                                  |
+| 11  | `apps/web/AGENTS.md` and `apps/web/CLAUDE.md` (written by `next dev`) were committed                                                  | Removed and gitignored                                                                                                                                                                                     | `3df31ae` | n/a                                                  |
+| 12  | Three commit messages were inaccurate                                                                                                 | Reworded only; the tree at the old tip and the reworded tip is identical, dates unchanged                                                                                                                  | see below | n/a                                                  |
+
+Finding 12, by subject (rewording a commit changes its hash and those after it):
+
+- `7ef3bc4` "fix(security): validate every value…" said the review was of "the
+  previous commit"; it was of the Stripe SDK upgrade two commits earlier.
+- `6bfc7ea` was labelled `refactor` although it changes the runtime the
+  middleware executes on; it is now `feat(middleware)`.
+- `922b01b` said the 8 screenshots differ by 2–4% of pixels. The range is
+  roughly 2–8%; the reviewer measured 6.7% and 7.6% on the two mobile portal
+  screenshots. (The body already described the mask it adds to the spec.)
+
+Checks at the tip (macOS, Node 26.6, Postgres 17, stripe-mock 0.205.0):
+
+| Check                                    | Result                            |
+| ---------------------------------------- | --------------------------------- |
+| `pnpm type-check`                        | 6 of 6 packages pass              |
+| `pnpm lint`                              | 0 errors, 69 warnings (unchanged) |
+| Unit tests with Postgres and stripe-mock | 1118 passed, 0 skipped, 71 files  |
+| Unit tests without services              | 1100 passed, 18 skipped           |
+| `pnpm build`                             | passes                            |
+| `pnpm db:migrate:check`                  | "No difference detected."         |
+| E2E flows                                | 7 of 7                            |
+| Visual suite, macOS                      | 21 of 21 (30 screenshots)         |
+| Visual suite, Linux container (arm64)    | 21 of 21 (30 screenshots)         |
 
 ## Local data
 

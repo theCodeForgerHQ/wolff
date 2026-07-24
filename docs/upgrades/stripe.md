@@ -68,10 +68,11 @@ follow it are additive.
   real SDK verifies payloads signed with `Stripe.webhooks.generateTestHeaderString`
   and rejects tampered bodies, wrong secrets and stale timestamps.
 - `__tests__/lib/services/stripe-mock.contract.test.ts` (runs when
-  `STRIPE_MOCK_URL` is set; CI starts `stripe/stripe-mock`): Wolff's own request
-  code creates a destination-charge PaymentIntent, retrieves and cancels one,
-  looks up a customer, refunds, and creates a Checkout Session, a Connect
-  account and its onboarding link. stripe-mock validates each request against
+  `STRIPE_MOCK_URL` is set; CI starts `stripe/stripe-mock`): the service
+  functions in `lib/services/stripe.ts`, the only module that holds the client,
+  create a destination-charge PaymentIntent, retrieve and cancel one, look up
+  a customer, refund, and create a Checkout Session, a Connect account and its
+  onboarding link. stripe-mock validates each request against
   Stripe's OpenAPI spec (0.205.0 was used locally; it can lag the newest API
   version by a few releases).
 - The Playwright payment flow runs the app against stripe-mock through
