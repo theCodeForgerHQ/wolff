@@ -4,14 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
-import {
-  FileText,
-  Plus,
-  Trash2,
-  Copy,
-  Loader2,
-  X,
-} from 'lucide-react';
+import { FileText, Plus, Trash2, Copy, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,9 +50,7 @@ interface ContractTemplateListProps {
   searchQuery?: string;
 }
 
-export function ContractTemplateList({
-  templates,
-}: ContractTemplateListProps) {
+export function ContractTemplateList({ templates }: ContractTemplateListProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [selectedRows, setSelectedRows] = useState<ContractTemplateListItem[]>([]);
@@ -233,15 +224,13 @@ export function ContractTemplateList({
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Name" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => {
         const template = row.original;
         return (
           <button
             type="button"
-            className="font-medium text-primary hover:underline text-left"
+            className="text-primary text-left font-medium hover:underline"
             onClick={() => handleOpenEdit(template.id)}
           >
             {template.name}
@@ -251,13 +240,9 @@ export function ContractTemplateList({
     },
     {
       accessorKey: 'updatedAt',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => (
-        <div className="text-muted-foreground">
-          {formatDate(row.original.updatedAt)}
-        </div>
+        <div className="text-muted-foreground">{formatDate(row.original.updatedAt)}</div>
       ),
     },
     {
@@ -285,7 +270,7 @@ export function ContractTemplateList({
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+      <FileText className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No contract templates</h3>
       <p className="text-muted-foreground mb-4">
         Create your first contract template to get started.
@@ -301,7 +286,7 @@ export function ContractTemplateList({
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div />
         <Button asChild size="sm">
           <Link href="/templates/new">
@@ -311,24 +296,13 @@ export function ContractTemplateList({
         </Button>
       </div>
       {selectedRows.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-muted-foreground">
-            {selectedRows.length} selected
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBulkDuplicate}
-          >
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">{selectedRows.length} selected</span>
+          <Button variant="outline" size="sm" onClick={handleBulkDuplicate}>
             <Copy className="mr-2 h-4 w-4" />
             Duplicate
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDelete}
-            disabled={isDeleting}
-          >
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete Selected
           </Button>
@@ -361,19 +335,19 @@ export function ContractTemplateList({
           <Separator />
 
           {/* Scrollable Body */}
-          <div className="flex-1 overflow-y-auto bg-muted/20">
-            <div className="p-6 space-y-5">
+          <div className="bg-muted/20 flex-1 overflow-y-auto">
+            <div className="space-y-5 p-6">
               {/* Template Name + Delete */}
               <div className="flex items-center justify-between gap-4">
                 <input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="text-base font-semibold bg-transparent! outline-hidden border-none shadow-none flex-1 placeholder:text-muted-foreground/40"
+                  className="bg-transparent! outline-hidden placeholder:text-muted-foreground flex-1 border-none text-base font-semibold shadow-none"
                   placeholder="Template name"
                 />
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-destructive flex shrink-0 items-center gap-1.5 text-xs transition-colors"
                   onClick={handleDeleteFromDialog}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -382,7 +356,7 @@ export function ContractTemplateList({
               </div>
 
               {/* Contract Editor */}
-              <div className="[&_.ProseMirror]:min-h-[150px]! [&_.ProseMirror]:max-h-[220px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm [&_.prose_h2]:text-base [&_.prose_h2]:font-semibold [&_.prose_h3]:text-sm [&_.prose_h3]:font-semibold [&_.prose_p]:text-sm">
+              <div className="[&_.ProseMirror]:min-h-[150px]! [&_.ProseMirror]:max-h-[220px]! [&_.prose]:!prose-sm [&_.ProseMirror]:overflow-y-auto [&_.prose_h2]:text-base [&_.prose_h2]:font-semibold [&_.prose_h3]:text-sm [&_.prose_h3]:font-semibold [&_.prose_p]:text-sm">
                 <ContractEditor
                   key={editingTemplate?.id}
                   content={editContent}
@@ -434,7 +408,7 @@ export function ContractTemplateList({
               ) : (
                 <button
                   type="button"
-                  className="w-full border border-dashed border-border rounded-md py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors flex items-center justify-center gap-1.5"
+                  className="border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2.5 text-sm transition-colors"
                   onClick={() => setShowNewFieldInput(true)}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -448,13 +422,13 @@ export function ContractTemplateList({
                   {editVariables.map((variable, index) => (
                     <div
                       key={variable.key}
-                      className="group inline-flex items-center rounded-md border bg-background px-2.5 py-1 text-xs font-medium cursor-default"
+                      className="bg-background group inline-flex cursor-default items-center rounded-md border px-2.5 py-1 text-xs font-medium"
                     >
                       {variable.label}
                       <button
                         type="button"
                         onClick={() => handleRemoveVariable(index)}
-                        className="ml-1.5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                        className="text-muted-foreground hover:text-destructive ml-1.5 opacity-0 transition-all group-hover:opacity-100"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -465,18 +439,11 @@ export function ContractTemplateList({
 
               {/* Save / Cancel */}
               <div className="flex items-center gap-2 pt-1">
-                <Button
-                  onClick={handleSaveTemplate}
-                  disabled={isSaving}
-                >
+                <Button onClick={handleSaveTemplate} disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCloseEdit}
-                  disabled={isSaving}
-                >
+                <Button variant="outline" onClick={handleCloseEdit} disabled={isSaving}>
                   Cancel
                 </Button>
               </div>
@@ -491,8 +458,7 @@ export function ContractTemplateList({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this contract template? This action
-              cannot be undone.
+              Are you sure you want to delete this contract template? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

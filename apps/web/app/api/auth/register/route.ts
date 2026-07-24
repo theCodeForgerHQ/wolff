@@ -4,6 +4,7 @@ import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@wolff/database';
 import { hashPassword } from '@/lib/auth/credentials';
+import { createUserWithWorkspace } from '@/lib/auth/provision-user';
 import { checkRateLimit, getRateLimitHeaders, strictRateLimitOptions } from '@/lib/rate-limit';
 import { passwordSchema } from '@/lib/validations/auth';
 import { validateRequestOrigin } from '@/lib/csrf';
@@ -15,29 +16,6 @@ const registerSchema = z.object({
   password: passwordSchema,
   termsAccepted: z.literal(true, { error: 'You must accept the terms and conditions' }),
 });
-
-// Reserved slugs that conflict with system routes
-const RESERVED_SLUGS = new Set([
-  'api', 'admin', 'auth', 'login', 'register', 'settings', 'dashboard',
-  'onboarding', 'quotes', 'invoices', 'clients', 'projects', 'analytics',
-  'help', 'templates', 'contracts', 'rate-cards', 'q', 'i', 'p', 'c',
-  'invite', 'verify-email', 'reset-password', 'forgot-password',
-  'public', 'static', 'assets', '_next',
-]);
-
-// Generate a unique workspace slug from name
-function generateSlug(name: string): string {
-  let baseSlug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-  // Ensure slug doesn't collide with reserved routes
-  if (RESERVED_SLUGS.has(baseSlug)) {
-    baseSlug = `ws-${baseSlug}`;
-  }
-  const randomSuffix = crypto.randomUUID().substring(0, 8);
-  return `${baseSlug}-${randomSuffix}`;
-}
 
 export async function POST(request: Request) {
   try {
@@ -77,47 +55,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create user with workspace in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create user
-      const user = await tx.user.create({
-        data: {
-          name,
-          email,
-          passwordHash,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      });
-
-      // Create workspace for the user
-      const workspaceName = `${name}'s Workspace`;
-      const workspace = await tx.workspace.create({
-        data: {
-          name: workspaceName,
-          slug: generateSlug(name),
-          ownerId: user.id,
-          settings: {
-            onboardingCompleted: false,
-          },
-        },
-      });
-
-      // Add user as workspace member with owner role
-      await tx.workspaceMember.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: user.id,
-          role: 'owner',
-          acceptedAt: new Date(),
-        },
-      });
-
-      return user;
-    });
+    // The user, their workspace and the owner membership, in one transaction
+    const result = await createUserWithWorkspace(prisma, { name, email, passwordHash });
 
     // Create email verification token and send email
     try {
@@ -149,26 +88,26 @@ export async function POST(request: Request) {
     }
 
     // Bug #72: Audit log for new account creation
-    logger.info({ userId: result.id, email: maskEmail(result.email), ip: maskIp(clientIp) }, '[AUDIT] New account registered');
+    logger.info(
+      { userId: result.id, email: maskEmail(result.email), ip: maskIp(clientIp) },
+      '[AUDIT] New account registered'
+    );
 
-    return NextResponse.json({
-      user: result,
-      message: 'Account created. Please check your email to verify your account.',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        user: { id: result.id, name: result.name, email: result.email },
+        message: 'Account created. Please check your email to verify your account.',
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Return user-friendly messages without exposing internal schema details
       const messages = error.issues.map((e) => e.message);
-      return NextResponse.json(
-        { error: 'Invalid request data', messages },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid request data', messages }, { status: 400 });
     }
 
     logger.error({ err: error }, 'Registration error');
-    return NextResponse.json(
-      { error: 'Something went wrong' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

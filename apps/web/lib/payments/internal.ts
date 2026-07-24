@@ -7,10 +7,11 @@
 
 import { prisma } from '@wolff/database';
 import {
-  stripe,
   isStripeEnabled,
+  cancelPaymentIntent,
   createPaymentIntent,
   getOrCreateCustomer,
+  retrievePaymentIntent,
 } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { sendPaymentReceivedEmail } from '@/lib/services/email';
@@ -18,6 +19,9 @@ import { formatCurrency } from '@/lib/utils';
 import type { PaymentIntentResult } from './types';
 import { domainEvents } from '@/lib/events/emitter';
 import { logger } from '@/lib/logger';
+
+const PAYMENT_ALREADY_RECEIVED =
+  'We have already received a payment for this invoice. It will show as paid shortly.';
 
 /**
  * Create payment intent for invoice (called from checkout API route).
@@ -27,7 +31,7 @@ export async function createInvoicePaymentIntent(
   invoiceId: string,
   accessToken?: string
 ): Promise<PaymentIntentResult> {
-  if (!stripe || !isStripeEnabled()) {
+  if (!isStripeEnabled()) {
     return { success: false, error: 'Stripe payments are not available' };
   }
 
@@ -69,10 +73,16 @@ export async function createInvoicePaymentIntent(
     // Verify workspace has a connected Stripe account with charges enabled
     const paymentSettings = invoice.workspace.paymentSettings;
     if (!paymentSettings?.stripeAccountId) {
-      return { success: false, error: 'Payment processing is not configured. Please complete Stripe onboarding.' };
+      return {
+        success: false,
+        error: 'Payment processing is not configured. Please complete Stripe onboarding.',
+      };
     }
     if (!paymentSettings.stripeOnboardingComplete) {
-      return { success: false, error: 'Stripe account setup is incomplete. Please complete onboarding first.' };
+      return {
+        success: false,
+        error: 'Stripe account setup is incomplete. Please complete onboarding first.',
+      };
     }
 
     const amountToPay = Number(invoice.amountDue);
@@ -93,11 +103,12 @@ export async function createInvoicePaymentIntent(
     if (existingPayment?.stripePaymentIntentId) {
       // Retrieve the existing payment intent from Stripe to get a fresh client secret
       try {
-        const existingIntent = await stripe.paymentIntents.retrieve(
-          existingPayment.stripePaymentIntentId
-        );
+        const existingIntent = await retrievePaymentIntent(existingPayment.stripePaymentIntentId);
         // If the intent is still usable, verify amount matches current amountDue
-        if (existingIntent.status === 'requires_payment_method' || existingIntent.status === 'requires_confirmation') {
+        if (
+          existingIntent.status === 'requires_payment_method' ||
+          existingIntent.status === 'requires_confirmation'
+        ) {
           const expectedAmountCents = Math.round(amountToPay * 100);
           if (existingIntent.amount === expectedAmountCents) {
             return {
@@ -107,17 +118,25 @@ export async function createInvoicePaymentIntent(
             };
           }
           // Amount changed — cancel stale intent and create a fresh one
-          await stripe.paymentIntents.cancel(existingIntent.id);
+          await cancelPaymentIntent(existingIntent.id);
           await prisma.payment.update({
             where: { id: existingPayment.id },
             data: { status: 'failed' },
           });
         }
-        // If intent is in a terminal state, clean up the stale record
-        if (['canceled', 'succeeded'].includes(existingIntent.status)) {
+        // The client already paid (or the payment is settling) and the
+        // webhook hasn't arrived yet, e.g. they reloaded and clicked Pay
+        // again. Leave the row pending: processPaymentWebhook is the only
+        // place that credits the invoice, and it skips rows that are no
+        // longer pending.
+        if (existingIntent.status === 'succeeded' || existingIntent.status === 'processing') {
+          return { success: false, alreadyReceived: true, error: PAYMENT_ALREADY_RECEIVED };
+        }
+        // A cancelled intent can't be paid; retire the row and start again.
+        if (existingIntent.status === 'canceled') {
           await prisma.payment.update({
             where: { id: existingPayment.id },
-            data: { status: existingIntent.status === 'succeeded' ? 'completed' : 'failed' },
+            data: { status: 'failed' },
           });
         }
       } catch {
@@ -134,9 +153,29 @@ export async function createInvoicePaymentIntent(
     const currency = (invoice.currency || (settings?.currency as string) || 'USD').toLowerCase();
 
     // Bug #18: Validate currency is supported by Stripe before creating PaymentIntent
-    const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'inr', 'sgd', 'hkd', 'nzd', 'chf', 'sek', 'nok', 'dkk', 'mxn', 'brl'];
+    const SUPPORTED_CURRENCIES = [
+      'usd',
+      'eur',
+      'gbp',
+      'cad',
+      'aud',
+      'jpy',
+      'inr',
+      'sgd',
+      'hkd',
+      'nzd',
+      'chf',
+      'sek',
+      'nok',
+      'dkk',
+      'mxn',
+      'brl',
+    ];
     if (!SUPPORTED_CURRENCIES.includes(currency)) {
-      return { success: false, error: `Unsupported currency: ${currency.toUpperCase()}. Please update the invoice currency.` };
+      return {
+        success: false,
+        error: `Unsupported currency: ${currency.toUpperCase()}. Please update the invoice currency.`,
+      };
     }
 
     // Get or create Stripe customer
@@ -149,6 +188,12 @@ export async function createInvoicePaymentIntent(
       },
     });
 
+    // Every earlier intent for this invoice left a payment row behind, so
+    // their count numbers this attempt (see paymentIntentIdempotencyKey).
+    const attempt = await prisma.payment.count({
+      where: { invoiceId: invoice.id, stripePaymentIntentId: { not: null } },
+    });
+
     // Create payment intent (route funds to connected Stripe account)
     const paymentIntent = await createPaymentIntent({
       amount: Math.round(parseFloat((amountToPay * 100).toPrecision(12))), // Convert to cents (avoid floating-point rounding errors)
@@ -156,6 +201,7 @@ export async function createInvoicePaymentIntent(
       invoiceId: invoice.id,
       customerId: customer?.id,
       stripeAccountId: paymentSettings.stripeAccountId,
+      attempt,
       metadata: {
         workspaceId: invoice.workspaceId,
         invoiceNumber: invoice.invoiceNumber,
@@ -321,7 +367,11 @@ export async function processRefundWebhook(
     try {
       domainEvents.emit({
         type: 'payment.refunded',
-        payload: { paymentId: payment.id, workspaceId: payment.invoice.workspaceId, amount: refundAmount },
+        payload: {
+          paymentId: payment.id,
+          workspaceId: payment.invoice.workspaceId,
+          amount: refundAmount,
+        },
       });
     } catch {}
 
@@ -423,7 +473,12 @@ export async function processPaymentWebhook(
       try {
         domainEvents.emit({
           type: 'payment.received',
-          payload: { paymentId: payment.id, invoiceId: payment.invoiceId, workspaceId: payment.invoice.workspaceId, amount: paymentAmount },
+          payload: {
+            paymentId: payment.id,
+            invoiceId: payment.invoiceId,
+            workspaceId: payment.invoice.workspaceId,
+            amount: paymentAmount,
+          },
         });
       } catch {}
 

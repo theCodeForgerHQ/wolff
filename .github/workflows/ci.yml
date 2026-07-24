@@ -186,18 +186,16 @@ jobs:
         env:
           DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
       - name: Visual regression (10 key pages x 3 widths)
-        # Linux baselines are generated on the first run and uploaded below;
-        # commit them to make this step a real comparison (docs/phase-1.md).
-        run: pnpm --filter @wolff/web exec playwright test -c playwright.visual.config.ts --update-snapshots=missing
+        # Compares against the committed linux baselines. Missing baselines
+        # fail the step; record them with apps/web/e2e/visual/run-in-linux.sh.
+        run: pnpm --filter @wolff/web exec playwright test -c playwright.visual.config.ts
         env:
           DATABASE_URL: ${{ env.VISUAL_DATABASE_URL }}
-      - name: Upload screenshots and reports
+      - name: Upload traces and screenshot diffs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts
-          path: |
-            apps/web/test-results
-            apps/web/e2e/visual/__screenshots__/linux
+          path: apps/web/test-results
           if-no-files-found: ignore
           retention-days: 14

@@ -20,7 +20,10 @@ export async function POST(
 
     // Rate limit: 10 checkout attempts per minute per IP
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await checkRateLimit(`checkout:${clientIp}`, { limit: 10, windowMs: 60000 });
+    const rateLimitResult = await checkRateLimit(`checkout:${clientIp}`, {
+      limit: 10,
+      windowMs: 60000,
+    });
     if (rateLimitResult.limited) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -44,6 +47,10 @@ export async function POST(
     // Amount is determined server-side from the invoice record, not client input
     const result = await createInvoicePaymentIntent(invoiceId, accessToken);
 
+    if (result.alreadyReceived) {
+      return NextResponse.json({ error: result.error, alreadyReceived: true }, { status: 409 });
+    }
+
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
@@ -54,9 +61,6 @@ export async function POST(
     });
   } catch (error) {
     logger.error({ err: error }, 'Error creating checkout session');
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

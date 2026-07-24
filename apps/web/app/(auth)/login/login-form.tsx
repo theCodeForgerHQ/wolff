@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { DEMO_CONFIG } from '@/lib/demo/constants';
+import { signInErrorMessage } from '@/lib/auth/errors';
 import { loginSchema, type LoginFormInput, type LoginInput } from '@/lib/validations/auth';
 
 // Bug #448: Use shared login schema from lib/validations/auth.ts
@@ -24,7 +25,10 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   // HIGH #1: Validate callbackUrl is a relative path to prevent open redirect attacks
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard';
-  const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/dashboard';
+  const callbackUrl =
+    rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/dashboard';
+  // Set by Auth.js when a redirect-based (OAuth) sign-in is refused.
+  const signInError = signInErrorMessage(searchParams.get('error'));
   const [isLoading, setIsLoading] = React.useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = React.useState<string | null>(null);
   const [isDemoLoading, setIsDemoLoading] = React.useState(false);
@@ -102,6 +106,14 @@ export function LoginForm() {
   return (
     <Card>
       <CardContent className="pt-6">
+        {signInError && (
+          <div
+            role="alert"
+            className="border-destructive/50 bg-destructive/10 text-destructive mb-4 rounded-lg border p-3 text-sm"
+          >
+            {signInError}
+          </div>
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -113,18 +125,13 @@ export function LoginForm() {
               disabled={isLoading}
               {...register('email')}
             />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
+              <Link href="/forgot-password" className="text-primary text-sm hover:underline">
                 Forgot password?
               </Link>
             </div>
@@ -136,11 +143,11 @@ export function LoginForm() {
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" className="h-12 w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign In
           </Button>
@@ -153,11 +160,11 @@ export function LoginForm() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-card text-muted-foreground px-2">Or continue with</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 w-full">
+        <div className="grid w-full grid-cols-2 gap-4">
           <Button
             variant="outline"
             onClick={() => onOAuthSignIn('google')}
@@ -210,13 +217,13 @@ export function LoginForm() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or try it first</span>
+            <span className="bg-card text-muted-foreground px-2">Or try it first</span>
           </div>
         </div>
 
         <Button
           variant="secondary"
-          className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-100 dark:hover:bg-blue-900/30 dark:border-blue-800"
+          className="w-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100 dark:hover:bg-blue-900/30"
           onClick={onDemoSignIn}
           disabled={isLoading || isOAuthLoading !== null || isDemoLoading}
         >

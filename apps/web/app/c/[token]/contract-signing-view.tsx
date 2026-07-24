@@ -89,7 +89,9 @@ export function ContractSigningView({
         router.refresh();
       } catch (error) {
         console.error('Failed to sign contract:', error);
-        setSignError('Failed to sign the contract. Please try again or contact the business directly.');
+        setSignError(
+          'Failed to sign the contract. Please try again or contact the business directly.'
+        );
       }
     });
   };
@@ -97,21 +99,18 @@ export function ContractSigningView({
   const showSignedView = isSigned || contract.status === 'signed' || contract.status === 'pending';
 
   return (
-    <div className="flex min-h-screen items-start justify-center bg-gray-100/80 px-4 py-8 dark:bg-neutral-950 sm:py-12">
-      <div className="w-full max-w-[860px] overflow-hidden rounded-2xl border bg-card shadow-lg">
+    <div className="flex min-h-screen items-start justify-center bg-gray-100/80 px-4 py-8 sm:py-12 dark:bg-neutral-950">
+      <div className="bg-card w-full max-w-[860px] overflow-hidden rounded-2xl border shadow-lg">
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">{contract.contractName}</h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 For {contract.clientName} &middot; Created {formatDate(contract.createdAt)}
               </p>
             </div>
-            <Badge
-              variant="outline"
-              className={`gap-1 ${config.className}`}
-            >
+            <Badge variant="outline" className={`gap-1 ${config.className}`}>
               {config.icon}
               {config.label}
             </Badge>
@@ -122,43 +121,45 @@ export function ContractSigningView({
 
         {/* Body */}
         <div className="bg-muted/20">
-          <div className="p-6 space-y-6">
+          <div className="space-y-6 p-6">
             {/* Contract Details */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Details</p>
+              <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                Details
+              </p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-                  <p className="font-medium text-sm">{contract.clientName}</p>
+                  <p className="text-muted-foreground mb-0.5 text-xs">Client</p>
+                  <p className="text-sm font-medium">{contract.clientName}</p>
                 </div>
                 {contract.quoteName && (
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Related Quote</p>
-                    <p className="font-medium text-sm">{contract.quoteName}</p>
+                    <p className="text-muted-foreground mb-0.5 text-xs">Related Quote</p>
+                    <p className="text-sm font-medium">{contract.quoteName}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Sent</p>
-                  <p className="font-medium text-sm">
+                  <p className="text-muted-foreground mb-0.5 text-xs">Sent</p>
+                  <p className="text-sm font-medium">
                     {contract.sentAt ? formatDate(contract.sentAt) : 'Not sent'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Viewed</p>
-                  <p className="font-medium text-sm">
+                  <p className="text-muted-foreground mb-0.5 text-xs">Viewed</p>
+                  <p className="text-sm font-medium">
                     {contract.viewedAt ? formatDate(contract.viewedAt) : 'Not viewed'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Signed</p>
-                  <p className="font-medium text-sm">
+                  <p className="text-muted-foreground mb-0.5 text-xs">Signed</p>
+                  <p className="text-sm font-medium">
                     {contract.signedAt ? formatDate(contract.signedAt) : 'Not signed'}
                   </p>
                 </div>
                 {contract.signerIpAddress && (
                   <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Client IP</p>
-                    <p className="font-medium text-sm font-mono">{contract.signerIpAddress}</p>
+                    <p className="text-muted-foreground mb-0.5 text-xs">Client IP</p>
+                    <p className="font-mono text-sm font-medium">{contract.signerIpAddress}</p>
                   </div>
                 )}
               </div>
@@ -169,11 +170,15 @@ export function ContractSigningView({
               <>
                 <Separator className="bg-border/60" />
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Signatures</p>
+                  <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                    Signatures
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {/* Client Signature */}
-                    <div className="rounded-lg border bg-background p-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Client Signature</p>
+                    <div className="bg-background rounded-lg border p-4">
+                      <p className="text-muted-foreground mb-2 text-xs font-medium">
+                        Client Signature
+                      </p>
                       {contract.signatureData ? (
                         <>
                           {contract.signatureData.type === 'drawn' ? (
@@ -191,21 +196,23 @@ export function ContractSigningView({
                               {contract.signatureData.value}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-2">
+                          <p className="text-muted-foreground mt-2 text-xs">
                             Signed by {contract.signatureData.name} on{' '}
                             {formatDate(new Date(contract.signatureData.date))}
                           </p>
                         </>
                       ) : (
-                        <div className="h-16 border-2 border-dashed rounded flex items-center justify-center text-sm text-muted-foreground">
+                        <div className="text-muted-foreground flex h-16 items-center justify-center rounded border-2 border-dashed text-sm">
                           Awaiting signature
                         </div>
                       )}
                     </div>
 
                     {/* Business Signature */}
-                    <div className="rounded-lg border bg-background p-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Business Signature</p>
+                    <div className="bg-background rounded-lg border p-4">
+                      <p className="text-muted-foreground mb-2 text-xs font-medium">
+                        Business Signature
+                      </p>
                       {contract.countersignatureData ? (
                         <>
                           {contract.countersignatureData.type === 'drawn' ? (
@@ -223,13 +230,13 @@ export function ContractSigningView({
                               {contract.countersignatureData.value}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-2">
+                          <p className="text-muted-foreground mt-2 text-xs">
                             Countersigned by {contract.countersignatureData.name} on{' '}
                             {formatDate(new Date(contract.countersignatureData.date))}
                           </p>
                         </>
                       ) : (
-                        <div className="h-16 border-2 border-dashed rounded flex items-center justify-center text-sm text-muted-foreground">
+                        <div className="text-muted-foreground flex h-16 items-center justify-center rounded border-2 border-dashed text-sm">
                           Awaiting countersignature
                         </div>
                       )}
@@ -243,13 +250,11 @@ export function ContractSigningView({
 
             {/* Contract Content */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Contract Content</p>
-              <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[400px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
-                <ContractEditor
-                  key={contract.id}
-                  content={contract.content}
-                  editable={false}
-                />
+              <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                Contract Content
+              </p>
+              <div className="bg-background [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[400px]! [&_.prose]:!prose-sm rounded-lg border p-4 [&_.ProseMirror]:overflow-y-auto">
+                <ContractEditor key={contract.id} content={contract.content} editable={false} />
               </div>
             </div>
 
@@ -271,11 +276,10 @@ export function ContractSigningView({
               <>
                 <Separator className="bg-border/60" />
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Your Signature</p>
-                  <SignaturePad
-                    onSignatureChange={setSignature}
-                    signerName={contract.clientName}
-                  />
+                  <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                    Your Signature
+                  </p>
+                  <SignaturePad onSignatureChange={setSignature} signerName={contract.clientName} />
                 </div>
               </>
             )}
@@ -288,14 +292,14 @@ export function ContractSigningView({
             <Separator />
             <div className="p-4">
               {signError && (
-                <div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-                  <p className="text-sm text-destructive">{signError}</p>
+                <div className="border-destructive/50 bg-destructive/10 mb-3 rounded-lg border p-3">
+                  <p className="text-destructive text-sm">{signError}</p>
                 </div>
               )}
               <button
                 onClick={handleSign}
                 disabled={!signature || isPending}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-colors disabled:opacity-50"
+                className="bg-primary text-primary-foreground flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {isPending ? (
                   <>
@@ -309,9 +313,9 @@ export function ContractSigningView({
                   </>
                 )}
               </button>
-              <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                By signing, you agree to all terms above. Your signature, timestamp,
-                and IP address will be recorded.
+              <p className="text-muted-foreground mt-3 text-center text-[11px]">
+                By signing, you agree to all terms above. Your signature, timestamp, and IP address
+                will be recorded.
               </p>
             </div>
           </>
@@ -320,11 +324,9 @@ export function ContractSigningView({
         {/* Powered By Footer */}
         <div className="px-6 pb-5 pt-2">
           <div className="flex items-center justify-center gap-2">
-            <div className="h-px flex-1 bg-border/40" />
-            <p className="whitespace-nowrap text-[10px] text-muted-foreground/50">
-              Powered by Wolff
-            </p>
-            <div className="h-px flex-1 bg-border/40" />
+            <div className="bg-border/40 h-px flex-1" />
+            <p className="text-muted-foreground whitespace-nowrap text-[10px]">Powered by Wolff</p>
+            <div className="bg-border/40 h-px flex-1" />
           </div>
         </div>
       </div>

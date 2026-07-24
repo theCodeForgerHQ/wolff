@@ -42,8 +42,11 @@ test.describe('Google login (mock OIDC provider)', () => {
     await page.goto('/login');
     await page.getByRole('button', { name: 'Google' }).click();
 
-    // First sign-in: a new user without a workspace goes to onboarding.
-    await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 30_000 });
+    // First sign-in: a new user lands in onboarding, and the wizard renders.
+    // Waiting for the URL alone isn't enough: the page used to throw
+    // "No workspace found" after the redirect.
+    await page.waitForURL(/\/onboarding/, { timeout: 30_000 });
+    await expect(page.getByText('Welcome to Wolff')).toBeVisible();
 
     const user = await prisma.user.findUniqueOrThrow({
       where: { email },
@@ -56,6 +59,14 @@ test.describe('Google login (mock OIDC provider)', () => {
     expect(account?.provider).toBe('google');
     expect(account?.providerAccountId).toBe(`google-${email}`);
     expect(account?.accessToken).toMatch(/^enc:/);
+
+    const memberships = await prisma.workspaceMember.findMany({
+      where: { userId: user.id },
+      include: { workspace: true },
+    });
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0]?.role).toBe('owner');
+    expect(memberships[0]?.workspace.ownerId).toBe(user.id);
   });
 
   test('signs the same Google user in again without creating a duplicate', async ({ page }) => {
@@ -63,9 +74,27 @@ test.describe('Google login (mock OIDC provider)', () => {
 
     await page.goto('/login');
     await page.getByRole('button', { name: 'Google' }).click();
-    await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 30_000 });
+    await page.waitForURL(/\/onboarding/, { timeout: 30_000 });
+    await expect(page.getByText('Welcome to Wolff')).toBeVisible();
 
     expect(await prisma.user.count({ where: { email } })).toBe(1);
     expect(await prisma.account.count({ where: { user: { email } } })).toBe(1);
+    expect(await prisma.workspaceMember.count({ where: { user: { email } } })).toBe(1);
+  });
+
+  test('refuses a deactivated account with an explanation', async ({ page }) => {
+    const email = process.env.E2E_GOOGLE_EMAIL!;
+    await prisma.user.update({ where: { email }, data: { deletedAt: new Date() } });
+
+    try {
+      await page.goto('/login');
+      await page.getByRole('button', { name: 'Google' }).click();
+
+      await page.waitForURL(/\/login\?error=AccountDeactivated/, { timeout: 30_000 });
+      await expect(page.getByRole('alert').filter({ hasText: /deactivated/i })).toBeVisible();
+      expect(await prisma.user.count({ where: { email } })).toBe(1);
+    } finally {
+      await prisma.user.update({ where: { email }, data: { deletedAt: null } });
+    }
   });
 });

@@ -21,10 +21,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 // Use opacity steps of primary color for a cohesive palette
@@ -46,7 +48,7 @@ export function TopClientsChart({ data: propData, currency = 'USD' }: TopClients
           <CardTitle className="text-sm font-medium">Top Clients</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-[200px] items-center justify-center text-sm">
             No client revenue data available
           </div>
         </CardContent>
@@ -59,7 +61,7 @@ export function TopClientsChart({ data: propData, currency = 'USD' }: TopClients
       <CardHeader className="pb-4">
         <div className="flex items-baseline justify-between">
           <CardTitle className="text-sm font-medium">Top Clients</CardTitle>
-          <span className="text-xs text-muted-foreground/60">
+          <span className="text-muted-foreground text-xs">
             {formatCurrency(totalRevenue, currency)} total
           </span>
         </div>
@@ -68,17 +70,20 @@ export function TopClientsChart({ data: propData, currency = 'USD' }: TopClients
         <div className="space-y-3">
           {chartData.map((client, i) => {
             const pct = (client.revenue / maxRevenue) * 100;
-            const sharePct = totalRevenue > 0 ? ((client.revenue / totalRevenue) * 100).toFixed(0) : '0';
+            const sharePct =
+              totalRevenue > 0 ? ((client.revenue / totalRevenue) * 100).toFixed(0) : '0';
             return (
               <div key={client.name} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium truncate">{client.name}</span>
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
-                    <span className="text-xs text-muted-foreground/60 tabular-nums">{sharePct}%</span>
-                    <span className="font-medium tabular-nums">{formatCurrency(client.revenue, currency)}</span>
+                  <span className="truncate font-medium">{client.name}</span>
+                  <div className="ml-3 flex shrink-0 items-center gap-2">
+                    <span className="text-muted-foreground text-xs tabular-nums">{sharePct}%</span>
+                    <span className="font-medium tabular-nums">
+                      {formatCurrency(client.revenue, currency)}
+                    </span>
                   </div>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{

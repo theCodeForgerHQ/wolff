@@ -169,22 +169,22 @@ export default function NewContractForm({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex h-[calc(100vh-64px)] flex-col">
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="grid lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] h-full">
+        <div className="grid h-full lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px]">
           {/* LEFT PANEL -- Editor */}
-          <div className="overflow-y-auto border-r bg-background">
-            <div className="max-w-[640px] mx-auto py-10 px-8 space-y-0">
+          <div className="bg-background overflow-y-auto border-r">
+            <div className="mx-auto max-w-[640px] space-y-0 px-8 py-10">
               {/* Contract Details Section */}
               <div className="pb-8">
-                <h3 className="text-xl font-semibold tracking-tight font-display mb-6">
+                <h3 className="font-display mb-6 text-xl font-semibold tracking-tight">
                   Contract Details
                 </h3>
 
                 {/* Template Selector */}
                 <div className="mb-5 space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Contract Template</Label>
+                  <Label className="text-muted-foreground text-xs">Contract Template</Label>
                   <Select value={selectedTemplateId} onValueChange={handleTemplateChange}>
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select a contract template" />
@@ -193,7 +193,7 @@ export default function NewContractForm({
                       {templates.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           <div className="flex items-center gap-2">
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                            <FileText className="text-muted-foreground h-3.5 w-3.5" />
                             <span>{template.name}</span>
                             <span className="text-muted-foreground text-xs">
                               ({template.instanceCount} used)
@@ -208,9 +208,9 @@ export default function NewContractForm({
                 {/* Client / Signee Selector */}
                 <div className="mb-5">
                   {selectedClient ? (
-                    <div className="flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 bg-muted/20">
+                    <div className="border-border/60 bg-muted/20 flex items-center justify-between rounded-lg border px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
                           {selectedClient.name
                             .split(' ')
                             .map((n) => n[0])
@@ -219,15 +219,17 @@ export default function NewContractForm({
                             .slice(0, 2)}
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{selectedClient.name}</p>
-                          {selectedClient.email && <p className="text-xs text-muted-foreground">{selectedClient.email}</p>}
+                          <p className="text-sm font-medium">{selectedClient.name}</p>
+                          {selectedClient.email && (
+                            <p className="text-muted-foreground text-xs">{selectedClient.email}</p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="text-muted-foreground h-8 w-8"
                           onClick={() => setSelectedClientId('')}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -235,7 +237,7 @@ export default function NewContractForm({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="text-muted-foreground h-8 w-8"
                           onClick={() => setSelectedClientId('')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -244,7 +246,7 @@ export default function NewContractForm({
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Signee</Label>
+                      <Label className="text-muted-foreground text-xs">Signee</Label>
                       <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Select a signee" />
@@ -270,7 +272,7 @@ export default function NewContractForm({
 
                 {/* Related Quote (Optional) */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Related Quote (Optional)</Label>
+                  <Label className="text-muted-foreground text-xs">Related Quote (Optional)</Label>
                   <Select
                     value={selectedQuoteId || 'none'}
                     onValueChange={(v) => setSelectedQuoteId(v === 'none' ? '' : v)}
@@ -295,21 +297,19 @@ export default function NewContractForm({
               {/* Variables Section */}
               {selectedTemplate && selectedTemplate.variables.length > 0 && (
                 <div className="py-8">
-                  <h3 className="text-xl font-semibold tracking-tight font-display mb-2">
+                  <h3 className="font-display mb-2 text-xl font-semibold tracking-tight">
                     Contract Variables
                   </h3>
-                  <p className="text-[13px] text-muted-foreground mb-5">
+                  <p className="text-muted-foreground mb-5 text-[13px]">
                     Fill in the values for this contract&apos;s merge fields.
                   </p>
 
                   <div className="space-y-4">
                     {selectedTemplate.variables.map((variable) => (
                       <div key={variable.key} className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
+                        <Label className="text-muted-foreground text-xs">
                           {variable.label}
-                          {variable.required && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
+                          {variable.required && <span className="text-destructive ml-1">*</span>}
                         </Label>
                         {variable.type === 'boolean' ? (
                           <Select
@@ -359,10 +359,10 @@ export default function NewContractForm({
               {/* Contract Content Editor */}
               {selectedTemplateId && contractContent && (
                 <div className="py-8">
-                  <h3 className="text-xl font-semibold tracking-tight font-display mb-2">
+                  <h3 className="font-display mb-2 text-xl font-semibold tracking-tight">
                     Contract Content
                   </h3>
-                  <p className="text-[13px] text-muted-foreground mb-5">
+                  <p className="text-muted-foreground mb-5 text-[13px]">
                     Edit the contract content or leave as-is from the template.
                   </p>
                   <ContractEditor
@@ -375,7 +375,7 @@ export default function NewContractForm({
               )}
 
               {/* Bottom Action Bar */}
-              <div className="flex items-center gap-3 pt-4 pb-8 border-t">
+              <div className="flex items-center gap-3 border-t pb-8 pt-4">
                 <Button
                   onClick={() => handleSubmit(false)}
                   disabled={loading || !selectedTemplateId || !selectedClientId}
@@ -399,30 +399,24 @@ export default function NewContractForm({
           </div>
 
           {/* RIGHT PANEL -- Live Preview */}
-          <div className="overflow-y-auto bg-muted/30 flex flex-col">
+          <div className="bg-muted/30 flex flex-col overflow-y-auto">
             {/* Preview Tabs */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 border-b px-4 pt-4 pb-3">
-              <Tabs
-                value={previewTab}
-                onValueChange={(v) => setPreviewTab(v as PreviewTab)}
-              >
-                <TabsList className="w-full grid grid-cols-3 h-10">
+            <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-10 border-b px-4 pb-3 pt-4 backdrop-blur-sm">
+              <Tabs value={previewTab} onValueChange={(v) => setPreviewTab(v as PreviewTab)}>
+                <TabsList className="grid h-10 w-full grid-cols-3">
                   <TabsTrigger
                     value="contract"
-                    className="text-xs data-[state=active]:text-foreground"
+                    className="data-[state=active]:text-foreground text-xs"
                   >
                     Contract Page
                   </TabsTrigger>
                   <TabsTrigger
                     value="email"
-                    className="text-xs data-[state=active]:text-foreground"
+                    className="data-[state=active]:text-foreground text-xs"
                   >
                     Email Preview
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="pdf"
-                    className="text-xs data-[state=active]:text-foreground"
-                  >
+                  <TabsTrigger value="pdf" className="data-[state=active]:text-foreground text-xs">
                     Contract PDF
                   </TabsTrigger>
                 </TabsList>
@@ -431,21 +425,19 @@ export default function NewContractForm({
 
             {/* CONTRACT PAGE TAB */}
             {previewTab === 'contract' && (
-              <div className="p-4 flex-1">
-                <div className="bg-card border shadow-sm overflow-hidden rounded-2xl relative">
+              <div className="flex-1 p-4">
+                <div className="bg-card relative overflow-hidden rounded-2xl border shadow-sm">
                   {/* Header */}
-                  <div className="px-6 pt-8 pb-5 text-center">
-                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-3 bg-primary/10">
-                      <FileText className="h-5 w-5 text-primary" />
+                  <div className="px-6 pb-5 pt-8 text-center">
+                    <div className="bg-primary/10 mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full">
+                      <FileText className="text-primary h-5 w-5" />
                     </div>
                     <h3 className="text-base font-semibold tracking-tight">{businessName}</h3>
-                    <p className="text-lg font-bold tracking-tight mt-1 text-primary">
+                    <p className="text-primary mt-1 text-lg font-bold tracking-tight">
                       {selectedTemplate?.name || 'Select a Template'}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {selectedClient
-                        ? `Prepared for ${selectedClient.name}`
-                        : 'Select a signee'}
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {selectedClient ? `Prepared for ${selectedClient.name}` : 'Select a signee'}
                       {' \u00B7 '}
                       {format(new Date(), 'MMM dd, yyyy')}
                     </p>
@@ -457,13 +449,13 @@ export default function NewContractForm({
                   <div className="px-6 py-5">
                     {previewContent ? (
                       <div
-                        className="prose prose-sm max-w-none text-sm [&_strong]:text-foreground [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 max-h-[400px] overflow-y-auto"
+                        className="prose prose-sm [&_strong]:text-foreground max-h-[400px] max-w-none overflow-y-auto text-sm [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold"
                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent) }}
                       />
                     ) : (
                       <div className="py-12 text-center">
-                        <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
-                        <p className="text-sm text-muted-foreground">
+                        <FileText className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
+                        <p className="text-muted-foreground text-sm">
                           Select a contract template to see the preview
                         </p>
                       </div>
@@ -474,23 +466,21 @@ export default function NewContractForm({
 
                   {/* Signature Area */}
                   <div className="px-6 py-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <PenLine className="h-4 w-4 text-muted-foreground" />
+                    <div className="mb-4 flex items-center gap-3">
+                      <PenLine className="text-muted-foreground h-4 w-4" />
                       <span className="text-sm font-medium">Signature</span>
                     </div>
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center bg-muted/10">
-                      <p className="text-sm text-muted-foreground">
+                    <div className="bg-muted/10 rounded-lg border-2 border-dashed p-6 text-center">
+                      <p className="text-muted-foreground text-sm">
                         {selectedClient?.name || 'Signee'} will sign here
                       </p>
-                      <p className="text-xs text-muted-foreground/60 mt-1">
-                        Draw or type signature
-                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">Draw or type signature</p>
                     </div>
                   </div>
 
                   {/* Action Button */}
                   <div className="px-6 pb-6 pt-2">
-                    <button className="w-full h-12 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-primary text-primary-foreground">
+                    <button className="bg-primary text-primary-foreground flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium">
                       <PenLine className="h-4 w-4" />
                       Sign Contract
                     </button>
@@ -498,12 +488,12 @@ export default function NewContractForm({
 
                   {/* Footer */}
                   <div className="px-6 pb-5">
-                    <div className="flex items-center gap-2 justify-center">
-                      <div className="h-px flex-1 bg-border/40" />
-                      <p className="text-[10px] text-muted-foreground/50 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="bg-border/40 h-px flex-1" />
+                      <p className="text-muted-foreground whitespace-nowrap text-[10px]">
                         Powered by Wolff
                       </p>
-                      <div className="h-px flex-1 bg-border/40" />
+                      <div className="bg-border/40 h-px flex-1" />
                     </div>
                   </div>
                 </div>
@@ -512,8 +502,8 @@ export default function NewContractForm({
 
             {/* EMAIL PREVIEW TAB */}
             {previewTab === 'email' && (
-              <div className="p-4 flex-1">
-                <div className="bg-card border shadow-sm overflow-hidden rounded-2xl relative">
+              <div className="flex-1 p-4">
+                <div className="bg-card relative overflow-hidden rounded-2xl border shadow-sm">
                   {/* Email Header */}
                   <div className="px-6 pb-4 pt-6">
                     <div className="flex items-start justify-between">
@@ -521,9 +511,9 @@ export default function NewContractForm({
                         <h3 className="text-lg font-bold tracking-tight">{businessName}</h3>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground">{businessName}</p>
-                        <p className="font-bold text-lg mt-0.5 text-primary">Contract</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-muted-foreground text-xs">{businessName}</p>
+                        <p className="text-primary mt-0.5 text-lg font-bold">Contract</p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
                           {format(new Date(), 'MMM dd, yyyy')}
                         </p>
                       </div>
@@ -531,11 +521,11 @@ export default function NewContractForm({
                   </div>
 
                   {/* CTA Buttons */}
-                  <div className="px-6 pb-4 flex gap-3">
-                    <button className="flex-1 h-11 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-primary text-primary-foreground">
+                  <div className="flex gap-3 px-6 pb-4">
+                    <button className="bg-primary text-primary-foreground flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium">
                       View & Sign Contract
                     </button>
-                    <button className="flex-1 h-11 rounded-lg font-medium text-sm flex items-center justify-center gap-2 border border-border hover:bg-muted transition-colors">
+                    <button className="border-border hover:bg-muted flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-colors">
                       Download PDF
                     </button>
                   </div>
@@ -543,14 +533,12 @@ export default function NewContractForm({
                   <Separator />
 
                   {/* Contract Summary */}
-                  <div className="px-6 py-4 space-y-3">
-                    <p className="text-sm font-medium">
-                      {selectedTemplate?.name || 'Contract'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="space-y-3 px-6 py-4">
+                    <p className="text-sm font-medium">{selectedTemplate?.name || 'Contract'}</p>
+                    <p className="text-muted-foreground text-sm">
                       Hi {selectedClient?.name || '[Client Name]'},
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Please review and sign the attached contract at your earliest convenience.
                       Click the button above to view the full contract and add your signature.
                     </p>
@@ -558,7 +546,7 @@ export default function NewContractForm({
                       <>
                         <Separator />
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
                             Key Details
                           </p>
                           <div className="space-y-1.5">
@@ -579,11 +567,11 @@ export default function NewContractForm({
                   <Separator />
 
                   {/* Legal Footer */}
-                  <div className="px-6 py-4 bg-muted/30 border-t">
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      This email and any attachments are intended solely for the use of the individual
-                      or entity to whom they are addressed. If you have received this message in error,
-                      please notify {businessName} immediately.
+                  <div className="bg-muted/30 border-t px-6 py-4">
+                    <p className="text-muted-foreground text-[10px] leading-relaxed">
+                      This email and any attachments are intended solely for the use of the
+                      individual or entity to whom they are addressed. If you have received this
+                      message in error, please notify {businessName} immediately.
                     </p>
                   </div>
                 </div>
@@ -592,12 +580,12 @@ export default function NewContractForm({
 
             {/* CONTRACT PDF TAB */}
             {previewTab === 'pdf' && (
-              <div className="p-4 flex-1 flex flex-col items-center">
-                <p className="text-xs text-muted-foreground mb-3 w-full">
+              <div className="flex flex-1 flex-col items-center p-4">
+                <p className="text-muted-foreground mb-3 w-full text-xs">
                   A4 Preview · {selectedTemplate?.name || 'No template selected'}
                 </p>
 
-                <div className="w-full overflow-hidden flex-1 flex items-start justify-center">
+                <div className="flex w-full flex-1 items-start justify-center overflow-hidden">
                   <div
                     style={{
                       width: '595px',
@@ -605,19 +593,19 @@ export default function NewContractForm({
                       transform: 'scale(var(--pdf-scale, 0.68))',
                       transformOrigin: 'top center',
                     }}
-                    className="bg-white shadow-2xl rounded-sm border border-border/40 shrink-0 relative"
+                    className="border-border/40 relative shrink-0 rounded-sm border bg-white shadow-2xl"
                   >
                     <div
-                      className="w-full h-full flex flex-col text-black overflow-hidden"
+                      className="flex h-full w-full flex-col overflow-hidden text-black"
                       style={{ fontFamily: 'system-ui, sans-serif' }}
                     >
                       {/* Header */}
-                      <div className="flex items-start justify-between px-10 pt-8 pb-6">
+                      <div className="flex items-start justify-between px-10 pb-6 pt-8">
                         <div>
                           <h2 className="text-xl font-bold" style={{ color: '#111' }}>
                             {businessName}
                           </h2>
-                          <p className="text-xs mt-1" style={{ color: '#666' }}>
+                          <p className="mt-1 text-xs" style={{ color: '#666' }}>
                             hello@company.com
                           </p>
                         </div>
@@ -628,7 +616,7 @@ export default function NewContractForm({
                           >
                             CONTRACT
                           </h1>
-                          <p className="text-xs mt-1" style={{ color: '#666' }}>
+                          <p className="mt-1 text-xs" style={{ color: '#666' }}>
                             {format(new Date(), 'MMM dd, yyyy')}
                           </p>
                         </div>
@@ -637,7 +625,7 @@ export default function NewContractForm({
                       {/* Prepared For */}
                       <div className="px-10 pb-4">
                         <p
-                          className="text-[10px] uppercase tracking-wider font-semibold mb-1"
+                          className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
                           style={{ color: '#999' }}
                         >
                           Prepared For
@@ -654,27 +642,21 @@ export default function NewContractForm({
 
                       {/* Contract Title */}
                       <div className="px-10 pb-4">
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: '#3786b3' }}
-                        >
+                        <p className="text-sm font-semibold" style={{ color: '#3786b3' }}>
                           {selectedTemplate?.name || 'Contract'}
                         </p>
                       </div>
 
                       {/* Content Preview */}
-                      <div className="px-10 flex-1 overflow-hidden">
+                      <div className="flex-1 overflow-hidden px-10">
                         {previewContent ? (
                           <div
-                            className="text-[10px] leading-relaxed max-h-[500px] overflow-hidden"
+                            className="max-h-[500px] overflow-hidden text-[10px] leading-relaxed"
                             style={{ color: '#333' }}
                             dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent) }}
                           />
                         ) : (
-                          <p
-                            className="text-xs py-8 text-center"
-                            style={{ color: '#999' }}
-                          >
+                          <p className="py-8 text-center text-xs" style={{ color: '#999' }}>
                             Select a template to preview
                           </p>
                         )}
@@ -684,14 +666,8 @@ export default function NewContractForm({
                       <div className="px-10 pb-8 pt-4">
                         <div className="flex gap-16">
                           <div className="flex-1">
-                            <div
-                              className="border-t pt-2"
-                              style={{ borderColor: '#ddd' }}
-                            >
-                              <p
-                                className="text-[10px] font-medium"
-                                style={{ color: '#333' }}
-                              >
+                            <div className="border-t pt-2" style={{ borderColor: '#ddd' }}>
+                              <p className="text-[10px] font-medium" style={{ color: '#333' }}>
                                 {selectedClient?.name || 'Client'}
                               </p>
                               <p className="text-[9px]" style={{ color: '#999' }}>
@@ -700,14 +676,8 @@ export default function NewContractForm({
                             </div>
                           </div>
                           <div className="flex-1">
-                            <div
-                              className="border-t pt-2"
-                              style={{ borderColor: '#ddd' }}
-                            >
-                              <p
-                                className="text-[10px] font-medium"
-                                style={{ color: '#333' }}
-                              >
+                            <div className="border-t pt-2" style={{ borderColor: '#ddd' }}>
+                              <p className="text-[10px] font-medium" style={{ color: '#333' }}>
                                 {businessName}
                               </p>
                               <p className="text-[9px]" style={{ color: '#999' }}>

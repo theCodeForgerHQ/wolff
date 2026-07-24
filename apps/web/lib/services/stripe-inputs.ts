@@ -39,7 +39,24 @@ export const paymentIntentInput = z.object({
   customerId: stripeId('cus').optional(),
   stripeAccountId: stripeId('acct').optional(),
   metadata: metadata.default({}),
+  // How many PaymentIntents this invoice has had before this one.
+  attempt: z.number().int().nonnegative().max(9_999),
 });
+
+/**
+ * Stripe replays the stored response for a key for 24 hours. The attempt
+ * number keeps a double click idempotent (same attempt, same key) while a
+ * replacement for a cancelled or failed intent of the same amount gets a
+ * new key instead of the old intent back.
+ */
+export function paymentIntentIdempotencyKey(input: {
+  invoiceId: string;
+  amount: number;
+  currency: string;
+  attempt: number;
+}): string {
+  return `pi_${input.invoiceId}_${input.amount}_${input.currency}_${input.attempt}`;
+}
 
 export const customerInput = z.object({
   email: z.email().max(512),
@@ -48,6 +65,33 @@ export const customerInput = z.object({
 });
 
 export const paymentIntentId = stripeId('pi');
+
+export const connectAccountId = stripeId('acct');
+
+/** URLs Stripe redirects the browser to; http(s) only, never javascript: or data:. */
+const redirectUrl = z.url({ protocol: /^https?$/ }).max(2048);
+
+export const connectAccountInput = z.object({
+  workspaceId: internalId,
+  email: z.email().max(512).optional(),
+  businessName: z.string().trim().min(1).max(5000).optional(),
+});
+
+export const accountOnboardingLinkInput = z.object({
+  accountId: connectAccountId,
+  refreshUrl: redirectUrl,
+  returnUrl: redirectUrl,
+});
+
+export const checkoutSessionInput = z.object({
+  invoiceId: internalId,
+  amount: minorUnits,
+  currency,
+  description: z.string().trim().min(1).max(250),
+  customerEmail: z.email().max(512),
+  successUrl: redirectUrl,
+  cancelUrl: redirectUrl,
+});
 
 export const refundInput = z.object({
   paymentIntentId,

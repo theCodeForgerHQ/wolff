@@ -3,9 +3,11 @@
 import { prisma } from '@wolff/database';
 import { revalidatePath } from 'next/cache';
 import {
-  stripe,
   isStripeEnabled,
+  createAccountOnboardingLink,
+  createConnectAccount,
   createRefund,
+  retrieveConnectAccount,
 } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { toNumber, getBaseUrl } from '@/lib/utils';
@@ -15,6 +17,7 @@ import type {
   PaymentSettingsData,
   StripeOnboardingResult,
 } from './types';
+import { isValidRefundAmount, toRefundMinorUnits } from './refund-amount';
 import { logger } from '@/lib/logger';
 
 /**
@@ -88,8 +91,12 @@ export async function updatePaymentSettings(data: {
       where: { workspaceId },
       update: {
         ...(data.enabledPaymentMethods && { enabledPaymentMethods: data.enabledPaymentMethods }),
-        ...(data.passProcessingFees !== undefined && { passProcessingFees: data.passProcessingFees }),
-        ...(data.defaultPaymentTerms !== undefined && { defaultPaymentTerms: data.defaultPaymentTerms }),
+        ...(data.passProcessingFees !== undefined && {
+          passProcessingFees: data.passProcessingFees,
+        }),
+        ...(data.defaultPaymentTerms !== undefined && {
+          defaultPaymentTerms: data.defaultPaymentTerms,
+        }),
       },
       create: {
         workspaceId,
@@ -114,18 +121,20 @@ export async function updatePaymentSettings(data: {
 export async function createStripeOnboardingLink(options?: {
   returnTo?: 'settings' | 'onboarding';
 }): Promise<StripeOnboardingResult> {
-  if (!stripe || !isStripeEnabled()) {
+  if (!isStripeEnabled()) {
     return { success: false, error: 'Stripe is not configured' };
   }
 
   const { workspaceId } = await getCurrentUserWorkspace();
   const baseUrl = getBaseUrl();
-  const returnPath = options?.returnTo === 'onboarding'
-    ? '/onboarding?stripe=success'
-    : '/settings/payments?success=true';
-  const refreshPath = options?.returnTo === 'onboarding'
-    ? '/onboarding?stripe=refresh'
-    : '/settings/payments?refresh=true';
+  const returnPath =
+    options?.returnTo === 'onboarding'
+      ? '/onboarding?stripe=success'
+      : '/settings/payments?success=true';
+  const refreshPath =
+    options?.returnTo === 'onboarding'
+      ? '/onboarding?stripe=refresh'
+      : '/settings/payments?refresh=true';
 
   try {
     // Get or create payment settings
@@ -142,16 +151,10 @@ export async function createStripeOnboardingLink(options?: {
         include: { businessProfile: true },
       });
 
-      const account = await stripe.accounts.create({
-        type: 'standard',
-        country: 'US',
+      const account = await createConnectAccount({
+        workspaceId,
         email: workspace?.businessProfile?.email || undefined,
-        business_profile: {
-          name: workspace?.businessProfile?.businessName || workspace?.name,
-        },
-        metadata: {
-          workspaceId,
-        },
+        businessName: workspace?.businessProfile?.businessName || workspace?.name || undefined,
       });
 
       accountId = account.id;
@@ -168,11 +171,10 @@ export async function createStripeOnboardingLink(options?: {
     }
 
     // Create account link for onboarding
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${baseUrl}${refreshPath}`,
-      return_url: `${baseUrl}${returnPath}`,
-      type: 'account_onboarding',
+    const accountLink = await createAccountOnboardingLink({
+      accountId,
+      refreshUrl: `${baseUrl}${refreshPath}`,
+      returnUrl: `${baseUrl}${returnPath}`,
     });
 
     return { success: true, url: accountLink.url };
@@ -191,7 +193,7 @@ export async function checkStripeAccountStatus(): Promise<{
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
 }> {
-  if (!stripe || !isStripeEnabled()) {
+  if (!isStripeEnabled()) {
     return { connected: false, status: null, chargesEnabled: false, payoutsEnabled: false };
   }
 
@@ -206,7 +208,7 @@ export async function checkStripeAccountStatus(): Promise<{
       return { connected: false, status: null, chargesEnabled: false, payoutsEnabled: false };
     }
 
-    const account = await stripe.accounts.retrieve(settings.stripeAccountId);
+    const account = await retrieveConnectAccount(settings.stripeAccountId);
 
     // Update status in database
     const status = account.details_submitted ? 'active' : 'pending';
@@ -371,7 +373,7 @@ export async function refundPayment(
   paymentId: string,
   params?: { amount?: number; reason?: string }
 ): Promise<{ success: boolean; error?: string }> {
-  if (!stripe || !isStripeEnabled()) {
+  if (!isStripeEnabled()) {
     return { success: false, error: 'Stripe is not configured' };
   }
 
@@ -397,7 +399,8 @@ export async function refundPayment(
 
     // Bug #14: Validate refund amount does not exceed payment amount
     if (params?.amount !== undefined) {
-      if (params.amount <= 0) {
+      // NaN passes every comparison below, so check it explicitly
+      if (!isValidRefundAmount(params.amount)) {
         return { success: false, error: 'Refund amount must be greater than zero' };
       }
       if (params.amount > Number(payment.amount)) {
@@ -410,10 +413,8 @@ export async function refundPayment(
       }
     }
 
-    // Amount in cents for Stripe (DB stores dollars)
-    const refundAmountCents = params?.amount
-      ? Math.round(params.amount * 100)
-      : undefined; // undefined = full refund
+    // Amount in cents for Stripe (DB stores dollars); undefined = full refund
+    const refundAmountCents = toRefundMinorUnits(params?.amount);
 
     await createRefund({
       paymentIntentId: payment.stripePaymentIntentId,

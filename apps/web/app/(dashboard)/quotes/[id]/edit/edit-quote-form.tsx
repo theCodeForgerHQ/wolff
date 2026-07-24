@@ -1055,7 +1055,7 @@ export default function EditQuoteForm({ quote }: EditQuoteFormProps) {
                           placeholder="Item name"
                           value={item.name}
                           onChange={(e) => updateLineItem(item.id, 'name', e.target.value)}
-                          className="h-9 border-0 bg-transparent! px-0 text-sm font-medium shadow-none focus-visible:ring-0"
+                          className="bg-transparent! h-9 border-0 px-0 text-sm font-medium shadow-none focus-visible:ring-0"
                         />
                         <Input
                           type="number"
@@ -1091,7 +1091,7 @@ export default function EditQuoteForm({ quote }: EditQuoteFormProps) {
                         placeholder="Add a description..."
                         value={item.description}
                         onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                        className="text-muted-foreground mt-0.5 h-7 border-0 bg-transparent! px-0 text-xs shadow-none focus-visible:ring-0"
+                        className="text-muted-foreground bg-transparent! mt-0.5 h-7 border-0 px-0 text-xs shadow-none focus-visible:ring-0"
                       />
                     </div>
                   ))}
@@ -1551,7 +1551,7 @@ export default function EditQuoteForm({ quote }: EditQuoteFormProps) {
                                   <p className="text-muted-foreground mt-0.5 truncate text-xs">
                                     {item.quantity} × {formatCurrency(item.rate, currency)}
                                     {item.description && (
-                                      <span className="text-muted-foreground/70 ml-1.5">
+                                      <span className="text-muted-foreground ml-1.5">
                                         · {item.description}
                                       </span>
                                     )}
@@ -1638,7 +1638,7 @@ export default function EditQuoteForm({ quote }: EditQuoteFormProps) {
                   <div className="px-6 pb-5 pt-2">
                     <div className="flex items-center justify-center gap-2">
                       <div className="bg-border/40 h-px flex-1" />
-                      <p className="text-muted-foreground/50 whitespace-nowrap text-[10px]">
+                      <p className="text-muted-foreground whitespace-nowrap text-[10px]">
                         Powered by Wolff
                       </p>
                       <div className="bg-border/40 h-px flex-1" />
@@ -1938,7 +1938,7 @@ export default function EditQuoteForm({ quote }: EditQuoteFormProps) {
                               <p className="text-muted-foreground truncate text-xs">
                                 {item.quantity} × {formatCurrency(item.rate, currency)}
                                 {item.description && (
-                                  <span className="text-muted-foreground/70 ml-1.5">
+                                  <span className="text-muted-foreground ml-1.5">
                                     · {item.description}
                                   </span>
                                 )}

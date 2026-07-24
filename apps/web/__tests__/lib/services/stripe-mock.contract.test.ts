@@ -38,6 +38,7 @@ describe.skipIf(!mockUrl)('Stripe requests against stripe-mock', () => {
       customerId: 'cus_contract',
       stripeAccountId: 'acct_contract',
       metadata: { workspaceId: 'ws_contract' },
+      attempt: 0,
     });
     expect(intent?.object).toBe('payment_intent');
     expect(intent?.id).toMatch(/^pi_/);
@@ -79,31 +80,27 @@ describe.skipIf(!mockUrl)('Stripe requests against stripe-mock', () => {
     expect(session.sessionId).toMatch(/^cs_/);
   });
 
-  it('creates a Connect account and its onboarding link (lib/payments/actions.ts)', async () => {
-    const stripe = service.stripe!;
-    const account = await stripe.accounts.create({
-      type: 'standard',
-      country: 'US',
+  it('creates a Connect account and its onboarding link', async () => {
+    const account = await service.createConnectAccount({
+      workspaceId: 'ws_contract',
       email: 'owner@example.com',
-      business_profile: { name: 'Acme Design Studio' },
-      metadata: { workspaceId: 'ws_contract' },
+      businessName: 'Acme Design Studio',
     });
     expect(account.object).toBe('account');
 
-    const link = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: 'https://app.example.com/settings/payments?refresh=1',
-      return_url: 'https://app.example.com/settings/payments?connected=1',
-      type: 'account_onboarding',
+    const link = await service.createAccountOnboardingLink({
+      accountId: account.id,
+      refreshUrl: 'https://app.example.com/settings/payments?refresh=1',
+      returnUrl: 'https://app.example.com/settings/payments?connected=1',
     });
     expect(link.object).toBe('account_link');
 
-    const retrieved = await stripe.accounts.retrieve(account.id);
+    const retrieved = await service.retrieveConnectAccount(account.id);
     expect(typeof retrieved.charges_enabled).toBe('boolean');
   });
 
   it('cancels a PaymentIntent', async () => {
-    const cancelled = await service.stripe!.paymentIntents.cancel('pi_contract');
+    const cancelled = await service.cancelPaymentIntent('pi_contract');
     expect(cancelled.object).toBe('payment_intent');
   });
 });

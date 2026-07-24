@@ -1,11 +1,20 @@
-import type { PaymentProvider, CheckoutParams, CheckoutResult, WebhookResult, RefundResult } from './payment';
+import type {
+  PaymentProvider,
+  CheckoutParams,
+  CheckoutResult,
+  WebhookResult,
+  RefundResult,
+} from './payment';
 import {
-  stripe,
   isStripeEnabled,
   constructWebhookEvent,
+  createCheckoutSession,
   createRefund,
 } from '@/lib/services/stripe';
+import { toRefundMinorUnits } from '@/lib/payments/refund-amount';
 import type Stripe from 'stripe';
+
+const MINOR_UNITS_PER_MAJOR = 100;
 
 export class StripeProvider implements PaymentProvider {
   name = 'stripe';
@@ -15,31 +24,14 @@ export class StripeProvider implements PaymentProvider {
   }
 
   async createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult> {
-    if (!stripe) {
-      throw new Error('Stripe is not configured');
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: params.currency.toLowerCase(),
-            product_data: {
-              name: params.description,
-            },
-            unit_amount: Math.round(params.amount * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      customer_email: params.customerEmail,
-      success_url: params.successUrl,
-      cancel_url: params.cancelUrl,
-      metadata: {
-        invoiceId: params.invoiceId,
-      },
+    const session = await createCheckoutSession({
+      invoiceId: params.invoiceId,
+      amount: Math.round(params.amount * MINOR_UNITS_PER_MAJOR),
+      currency: params.currency,
+      description: params.description,
+      customerEmail: params.customerEmail,
+      successUrl: params.successUrl,
+      cancelUrl: params.cancelUrl,
     });
 
     return {
@@ -84,7 +76,7 @@ export class StripeProvider implements PaymentProvider {
   async refund(paymentId: string, amount?: number): Promise<RefundResult> {
     const refund = await createRefund({
       paymentIntentId: paymentId,
-      amount: amount ? Math.round(amount * 100) : undefined,
+      amount: toRefundMinorUnits(amount),
     });
 
     if (!refund) {

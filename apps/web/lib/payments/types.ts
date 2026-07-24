@@ -6,7 +6,8 @@
  * they require a valid Stripe API key to be actionable (Bug #83).
  */
 
-export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+export type PaymentStatus =
+  'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'cancelled';
 
 export type PaymentMethod = 'card' | 'bank_transfer' | 'cash' | 'check' | 'other';
 
@@ -73,6 +74,11 @@ export interface PaymentIntentResult {
   clientSecret?: string;
   paymentIntentId?: string;
   error?: string;
+  /**
+   * Stripe has the payment but its webhook hasn't been processed yet. No new
+   * intent is created; `error` holds a message that is safe to show.
+   */
+  alreadyReceived?: boolean;
 }
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [

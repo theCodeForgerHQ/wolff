@@ -3,11 +3,7 @@
 import { useState } from 'react';
 import { Check, Download, CreditCard, ChevronUp, CheckCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { PublicInvoiceData } from '@/lib/invoices/portal-actions';
 import { PaymentForm } from './payment-form';
@@ -26,10 +22,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 function formatDate(date: string | Date): string {
@@ -53,7 +51,12 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
   return (
     <div className="relative overflow-hidden">
       {/* Subtle wave decoration */}
-      <svg className="pointer-events-none absolute left-0 top-0" viewBox="0 0 200 120" fill="none" style={{ width: '45%', height: '100px' }}>
+      <svg
+        className="pointer-events-none absolute left-0 top-0"
+        viewBox="0 0 200 120"
+        fill="none"
+        style={{ width: '45%', height: '100px' }}
+      >
         <path d="M0 0 L0 80 Q60 72 120 40 Q160 18 200 0 Z" fill={accentColor} opacity="0.05" />
         <path d="M0 0 L0 50 Q40 44 80 24 Q110 10 140 0 Z" fill={accentColor} opacity="0.03" />
       </svg>
@@ -66,13 +69,11 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
         >
           <Check className="h-5 w-5" style={{ color: accentColor }} />
         </div>
-        <h3 className="text-base font-semibold tracking-tight">
-          {invoice.business.name}
-        </h3>
+        <h3 className="text-base font-semibold tracking-tight">{invoice.business.name}</h3>
         <p className="mt-1 text-3xl font-bold tracking-tight" style={{ color: accentColor }}>
           {formatCurrency(invoice.totals.amountDue || invoice.totals.total, currency)}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           Invoice #{invoice.invoiceNumber} &middot; Due {formatDate(invoice.dueDate)}
         </p>
       </div>
@@ -83,7 +84,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
       {invoice.payments.length > 0 && (
         <>
           <div className="px-6 py-4">
-            <p className="mb-3 text-xs font-medium text-muted-foreground">Payment History</p>
+            <p className="text-muted-foreground mb-3 text-xs font-medium">Payment History</p>
             <div className="space-y-2">
               {invoice.payments.map((payment) => (
                 <div
@@ -94,7 +95,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
                     <p className="text-sm font-medium capitalize">
                       {payment.paymentMethod.replace('_', ' ')}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {payment.processedAt ? formatDate(payment.processedAt) : ''}
                     </p>
                   </div>
@@ -116,17 +117,14 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
             <div>
               <p className="text-sm font-semibold">{invoice.client.name}</p>
               {invoice.client.company && invoice.client.company !== invoice.client.name && (
-                <p className="text-xs text-muted-foreground">{invoice.client.company}</p>
+                <p className="text-muted-foreground text-xs">{invoice.client.company}</p>
               )}
             </div>
             <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+              <button className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors">
                 {showDetails ? 'Hide' : 'Details'}
                 <ChevronUp
-                  className={cn(
-                    'h-3 w-3 transition-transform',
-                    !showDetails && 'rotate-180'
-                  )}
+                  className={cn('h-3 w-3 transition-transform', !showDetails && 'rotate-180')}
                 />
               </button>
             </CollapsibleTrigger>
@@ -136,18 +134,13 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
             <Separator className="mb-4 border-gray-100" />
             <div className="space-y-2">
               {invoice.lineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-2 text-sm"
-                >
+                <div key={item.id} className="flex items-center justify-between py-2 text-sm">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {item.name || 'Untitled Item'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-medium">{item.name || 'Untitled Item'}</p>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
                       {item.quantity} &times; {formatCurrency(item.rate, currency)}
                       {item.description && (
-                        <span className="ml-1.5 text-muted-foreground/70">
+                        <span className="text-muted-foreground ml-1.5">
                           &middot; {item.description}
                         </span>
                       )}
@@ -166,11 +159,15 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
                 <div className="mb-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="tabular-nums">{formatCurrency(invoice.totals.subtotal, currency)}</span>
+                    <span className="tabular-nums">
+                      {formatCurrency(invoice.totals.subtotal, currency)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Discount</span>
-                    <span className="tabular-nums text-green-600">-{formatCurrency(invoice.totals.discountAmount, currency)}</span>
+                    <span className="tabular-nums text-green-600">
+                      -{formatCurrency(invoice.totals.discountAmount, currency)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -181,12 +178,16 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
                   {invoice.totals.discountAmount === 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="tabular-nums">{formatCurrency(invoice.totals.subtotal, currency)}</span>
+                      <span className="tabular-nums">
+                        {formatCurrency(invoice.totals.subtotal, currency)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax</span>
-                    <span className="tabular-nums">{formatCurrency(invoice.totals.taxTotal, currency)}</span>
+                    <span className="tabular-nums">
+                      {formatCurrency(invoice.totals.taxTotal, currency)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -197,12 +198,16 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
                   {invoice.totals.discountAmount === 0 && invoice.totals.taxTotal === 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="tabular-nums">{formatCurrency(invoice.totals.subtotal, currency)}</span>
+                      <span className="tabular-nums">
+                        {formatCurrency(invoice.totals.subtotal, currency)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Paid</span>
-                    <span className="tabular-nums text-green-600">-{formatCurrency(invoice.totals.amountPaid, currency)}</span>
+                    <span className="tabular-nums text-green-600">
+                      -{formatCurrency(invoice.totals.amountPaid, currency)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -211,7 +216,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
               <div
                 className={cn(
                   '-mx-3 flex items-baseline justify-between rounded-lg border-l-2 px-3 py-3',
-                  ACCENT_BG,
+                  ACCENT_BG
                 )}
                 style={{ borderLeftColor: accentColor }}
               >
@@ -230,7 +235,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
         <>
           <Separator className="border-gray-100" />
           <div className="px-6 py-5">
-            <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+            <p className="text-muted-foreground text-sm">{invoice.notes}</p>
           </div>
         </>
       )}
@@ -240,8 +245,8 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
         <>
           <Separator className="border-gray-100" />
           <div className="px-6 py-5">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Terms & Conditions</p>
-            <p className="text-sm text-muted-foreground">{invoice.terms}</p>
+            <p className="text-muted-foreground mb-1 text-xs font-medium">Terms & Conditions</p>
+            <p className="text-muted-foreground text-sm">{invoice.terms}</p>
           </div>
         </>
       )}
@@ -261,7 +266,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
           <div role="status" className="flex flex-col items-center gap-1 py-4 text-center">
             <CheckCircle className="h-6 w-6 text-green-600" />
             <p className="text-sm font-medium">Payment received</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               We&apos;re confirming it with the bank; this invoice will show as paid shortly.
             </p>
           </div>
@@ -276,8 +281,10 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
               Pay {formatCurrency(invoice.totals.amountDue, currency)}
             </button>
             <button
-              onClick={() => window.open(`/api/download/invoice/${invoice.id}?token=${accessToken}`, '_blank')}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50"
+              onClick={() =>
+                window.open(`/api/download/invoice/${invoice.id}?token=${accessToken}`, '_blank')
+              }
+              className="border-border text-muted-foreground hover:bg-muted/50 flex h-10 w-full items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-colors"
             >
               <Download className="h-4 w-4" />
               Download Invoice
@@ -285,7 +292,9 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
           </>
         ) : (
           <button
-            onClick={() => window.open(`/api/download/invoice/${invoice.id}?token=${accessToken}`, '_blank')}
+            onClick={() =>
+              window.open(`/api/download/invoice/${invoice.id}?token=${accessToken}`, '_blank')
+            }
             className="flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-white transition-colors"
             style={{ backgroundColor: accentColor }}
           >
@@ -298,11 +307,9 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
       {/* Powered By Footer */}
       <div className="px-6 pb-5 pt-2">
         <div className="flex items-center justify-center gap-2">
-          <div className="h-px flex-1 bg-border/40" />
-          <p className="whitespace-nowrap text-[10px] text-muted-foreground/50">
-            Powered by Wolff
-          </p>
-          <div className="h-px flex-1 bg-border/40" />
+          <div className="bg-border/40 h-px flex-1" />
+          <p className="text-muted-foreground whitespace-nowrap text-[10px]">Powered by Wolff</p>
+          <div className="bg-border/40 h-px flex-1" />
         </div>
       </div>
     </div>

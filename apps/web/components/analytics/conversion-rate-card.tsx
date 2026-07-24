@@ -16,7 +16,15 @@ interface ConversionRateCardProps {
   conversionFunnel?: ConversionFunnelData;
 }
 
-function RadialProgress({ value, size = 80, strokeWidth = 6 }: { value: number; size?: number; strokeWidth?: number }) {
+function RadialProgress({
+  value,
+  size = 80,
+  strokeWidth = 6,
+}: {
+  value: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const filled = (Math.min(value, 100) / 100) * circumference;
@@ -100,7 +108,7 @@ export function ConversionRateCard({ data: propData, conversionFunnel }: Convers
           </div>
 
           {/* Stats */}
-          <div className="space-y-1.5 min-w-0">
+          <div className="min-w-0 space-y-1.5">
             <div className="flex items-center gap-1">
               <span
                 className={`inline-flex items-center gap-0.5 text-xs font-medium ${
@@ -114,11 +122,12 @@ export function ConversionRateCard({ data: propData, conversionFunnel }: Convers
                 ) : (
                   <ArrowDownRight className="h-3 w-3" />
                 )}
-                {trend.isPositive ? '+' : '-'}{trend.value}%
+                {trend.isPositive ? '+' : '-'}
+                {trend.value}%
               </span>
-              <span className="text-xs text-muted-foreground/60">vs prev</span>
+              <span className="text-muted-foreground text-xs">vs prev</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {data.acceptedCount} of {data.totalSentCount} quotes converted
             </p>
           </div>

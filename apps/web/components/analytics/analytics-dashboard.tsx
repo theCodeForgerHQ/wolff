@@ -2,7 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { subDays, startOfMonth, endOfMonth, startOfYear } from 'date-fns';
-import { ArrowUpRight, ArrowDownRight, Banknote, FileText, Receipt, TrendingUp } from 'lucide-react';
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Banknote,
+  FileText,
+  Receipt,
+  TrendingUp,
+} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 
 import { cn } from '@/lib/utils';
@@ -11,10 +18,7 @@ import { RevenueForecastChart } from './revenue-forecast-chart';
 import { TopClientsChart } from './top-clients-chart';
 import { ClientLifetimeValueCard } from './client-lifetime-value';
 
-import type {
-  AnalyticsStats,
-  ForecastDataPoint,
-} from '@/lib/dashboard/types';
+import type { AnalyticsStats, ForecastDataPoint } from '@/lib/dashboard/types';
 
 interface TopClient {
   name: string;
@@ -64,10 +68,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 interface StatItemProps {
@@ -83,11 +89,11 @@ interface StatItemProps {
 function StatItem({ title, value, trend, detail }: StatItemProps) {
   return (
     <div className="relative flex flex-col gap-1 p-5">
-      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+      <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
         {title}
       </span>
-      <span className="text-2xl font-semibold tracking-tight text-foreground">{value}</span>
-      <div className="flex items-center gap-1.5 mt-0.5">
+      <span className="text-foreground text-2xl font-semibold tracking-tight">{value}</span>
+      <div className="mt-0.5 flex items-center gap-1.5">
         {trend && (
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-medium ${
@@ -104,9 +110,7 @@ function StatItem({ title, value, trend, detail }: StatItemProps) {
             {trend.value}%
           </span>
         )}
-        {detail && (
-          <span className="text-xs text-muted-foreground/60">{detail}</span>
-        )}
+        {detail && <span className="text-muted-foreground text-xs">{detail}</span>}
       </div>
     </div>
   );
@@ -128,9 +132,7 @@ export function AnalyticsDashboard({
   currency = 'USD',
 }: AnalyticsDashboardProps) {
   const [selectedPreset, setSelectedPreset] = useState('30d');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(
-    getDateRangeFromPreset('30d')
-  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getDateRangeFromPreset('30d'));
 
   const handlePresetChange = (value: string) => {
     setSelectedPreset(value);
@@ -138,23 +140,29 @@ export function AnalyticsDashboard({
   };
 
   const revenueTrend = useMemo(() => {
-    const change = stats.prevMonthRevenue > 0
-      ? ((stats.revenueThisMonth - stats.prevMonthRevenue) / stats.prevMonthRevenue) * 100
-      : stats.revenueThisMonth > 0 ? 100 : 0;
+    const change =
+      stats.prevMonthRevenue > 0
+        ? ((stats.revenueThisMonth - stats.prevMonthRevenue) / stats.prevMonthRevenue) * 100
+        : stats.revenueThisMonth > 0
+          ? 100
+          : 0;
     return { value: Math.abs(Math.round(change)), isPositive: change >= 0 };
   }, [stats]);
 
   const quotesTrend = useMemo(() => {
-    const change = stats.prevMonthQuotes > 0
-      ? ((stats.quotesThisMonth - stats.prevMonthQuotes) / stats.prevMonthQuotes) * 100
-      : stats.quotesThisMonth > 0 ? 100 : 0;
+    const change =
+      stats.prevMonthQuotes > 0
+        ? ((stats.quotesThisMonth - stats.prevMonthQuotes) / stats.prevMonthQuotes) * 100
+        : stats.quotesThisMonth > 0
+          ? 100
+          : 0;
     return { value: Math.abs(Math.round(change)), isPositive: change >= 0 };
   }, [stats]);
 
   return (
     <div className="space-y-6">
       {/* Period Selector */}
-      <div className="flex items-center gap-1 rounded-lg border bg-card p-1 w-fit">
+      <div className="bg-card flex w-fit items-center gap-1 rounded-lg border p-1">
         {PERIOD_OPTIONS.map((option) => (
           <button
             key={option.value}
@@ -172,8 +180,8 @@ export function AnalyticsDashboard({
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 rounded-lg border bg-card divide-x divide-border relative">
-        <span className="absolute -top-5 right-0 text-[11px] text-muted-foreground/60">
+      <div className="bg-card divide-border relative grid grid-cols-2 divide-x rounded-lg border lg:grid-cols-4">
+        <span className="text-muted-foreground absolute -top-5 right-0 text-[11px]">
           All amounts in {currency}
         </span>
         <StatItem
@@ -201,14 +209,17 @@ export function AnalyticsDashboard({
       </div>
 
       {/* Revenue Forecast - Full width hero chart */}
-      <RevenueForecastChart dateRange={dateRange} forecastData={revenueForecast} currency={currency} />
+      <RevenueForecastChart
+        dateRange={dateRange}
+        forecastData={revenueForecast}
+        currency={currency}
+      />
 
-{/* Client Insights */}
+      {/* Client Insights */}
       <div className="grid gap-6 lg:grid-cols-2">
         <TopClientsChart data={topClients} currency={currency} />
         <ClientLifetimeValueCard data={clientLTV} currency={currency} />
       </div>
-
     </div>
   );
 }
