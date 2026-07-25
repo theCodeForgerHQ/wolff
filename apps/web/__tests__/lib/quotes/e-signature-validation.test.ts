@@ -222,7 +222,10 @@ describe('E-Signature Validation (Bug #337)', () => {
     });
 
     it('accepts ISO 8601 timestamp', () => {
-      const result = validateSignature({ ...validSignature, timestamp: '2026-03-08T12:00:00.000Z' });
+      const result = validateSignature({
+        ...validSignature,
+        timestamp: '2026-03-08T12:00:00.000Z',
+      });
       expect(result.valid).toBe(true);
     });
 

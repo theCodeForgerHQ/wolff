@@ -40,9 +40,7 @@ export function IntegrationsManager({ initialData }: IntegrationsManagerProps) {
                 {PROVIDER_ICONS[webhooks.provider]}
                 <div>
                   <span className="font-medium">{webhooks.name}</span>
-                  <p className="text-sm text-muted-foreground">
-                    {webhooks.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{webhooks.description}</p>
                 </div>
               </div>
               <Button size="sm" asChild>
@@ -61,9 +59,9 @@ export function IntegrationsManager({ initialData }: IntegrationsManagerProps) {
         <CardHeader>
           <CardTitle>Automation Tools</CardTitle>
           <CardDescription>
-            Connect Wolff to thousands of apps using these automation platforms.
-            All of them work through webhooks — configure a webhook first, then use
-            the webhook URL as a trigger in your automation tool.
+            Connect Wolff to thousands of apps using these automation platforms. All of them work
+            through webhooks — configure a webhook first, then use the webhook URL as a trigger in
+            your automation tool.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -77,17 +75,18 @@ export function IntegrationsManager({ initialData }: IntegrationsManagerProps) {
                   {PROVIDER_ICONS[integration.provider]}
                   <div>
                     <span className="font-medium">{integration.name}</span>
-                    <p className="text-sm text-muted-foreground">
-                      {integration.description}
-                    </p>
+                    <p className="text-muted-foreground text-sm">{integration.description}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-4 text-sm">
             To get started, create a webhook in{' '}
-            <Link href="/settings/webhooks" className="text-primary underline underline-offset-4 hover:text-primary/80">
+            <Link
+              href="/settings/webhooks"
+              className="text-primary hover:text-primary/80 underline underline-offset-4"
+            >
               Webhook Settings
             </Link>
             , then paste the webhook URL into your automation tool as a trigger.

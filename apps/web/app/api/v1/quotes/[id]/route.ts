@@ -90,7 +90,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     notes?: string;
     terms?: string;
     status?: string;
-    lineItems?: Array<{ name: string; description?: string; quantity: number; rate: number; taxRate?: number }>;
+    lineItems?: Array<{
+      name: string;
+      description?: string;
+      quantity: number;
+      rate: number;
+      taxRate?: number;
+    }>;
   };
 
   // Validate line items early (before transaction) to fail fast
@@ -102,7 +108,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (item.quantity < 0) return apiError('Line item quantity cannot be negative', 400);
       if (item.rate < 0) return apiError('Line item rate cannot be negative', 400);
       // Bug #40: Upper bound on rate and quantity
-      if (item.quantity > 1_000_000) return apiError('Line item quantity must be at most 1,000,000', 400);
+      if (item.quantity > 1_000_000)
+        return apiError('Line item quantity must be at most 1,000,000', 400);
       if (item.rate > 1_000_000) return apiError('Line item rate must be at most 1,000,000', 400);
       if (item.taxRate !== undefined && item.taxRate !== null && !Number.isFinite(item.taxRate)) {
         return apiError('Line item taxRate must be a valid number', 400);
@@ -132,7 +139,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       };
       const allowed = validTransitions[quote.status];
       if (!allowed || !allowed.includes(status)) {
-        return { error: `Cannot transition from '${quote.status}' to '${status}'`, status: 400 } as const;
+        return {
+          error: `Cannot transition from '${quote.status}' to '${status}'`,
+          status: 400,
+        } as const;
       }
       updateData.status = status;
       if (status === 'accepted') updateData.acceptedAt = new Date();
@@ -202,9 +212,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (!('data' in result)) return apiError('Unexpected error', 500);
 
   // Bug #187: Create audit event for v1 API updates
-  await prisma.quoteEvent.create({
-    data: { quoteId: id, eventType: 'updated', actorType: 'system', metadata: { via: 'api' } }
-  }).catch(() => {});
+  await prisma.quoteEvent
+    .create({
+      data: { quoteId: id, eventType: 'updated', actorType: 'system', metadata: { via: 'api' } },
+    })
+    .catch(() => {});
 
   return apiSuccess(formatQuote(result.data));
 }

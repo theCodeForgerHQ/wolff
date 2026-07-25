@@ -95,7 +95,11 @@ async function completeOnboardingIfNeeded(page: import('@playwright/test').Page)
  */
 async function globalSetup(config: FullConfig) {
   const { baseURL } = config.projects[0]?.use || {};
-  const appUrl = baseURL || process.env.BASE_URL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
+  const appUrl =
+    baseURL ||
+    process.env.BASE_URL ||
+    process.env.PLAYWRIGHT_TEST_BASE_URL ||
+    'http://localhost:3000';
 
   console.log(`\n🔧 Global Setup - Target: ${appUrl}`);
   console.log(`📧 Test user: ${TEST_USER.email}`);
@@ -136,7 +140,9 @@ async function globalSetup(config: FullConfig) {
     console.log('🔐 Attempting login...');
 
     // Wait for login form - use role-based selectors for robustness
-    await page.waitForSelector('input[type="email"], input#email, [name="email"]', { timeout: 10000 });
+    await page.waitForSelector('input[type="email"], input#email, [name="email"]', {
+      timeout: 10000,
+    });
 
     // Fill login form using role-based selectors (more robust)
     await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email);
@@ -161,9 +167,16 @@ async function globalSetup(config: FullConfig) {
       console.log(`📍 After stabilization: ${page.url()}`);
 
       // Check if we're on onboarding by looking at the page content
-      const isOnOnboarding = page.url().includes('/onboarding') ||
-        await page.getByText('Welcome to Wolff').isVisible().catch(() => false) ||
-        await page.getByText('set up your account').isVisible().catch(() => false);
+      const isOnOnboarding =
+        page.url().includes('/onboarding') ||
+        (await page
+          .getByText('Welcome to Wolff')
+          .isVisible()
+          .catch(() => false)) ||
+        (await page
+          .getByText('set up your account')
+          .isVisible()
+          .catch(() => false));
 
       if (isOnOnboarding) {
         console.log('📝 On onboarding page, completing flow...');
@@ -175,8 +188,12 @@ async function globalSetup(config: FullConfig) {
       await page.goto(`${appUrl}/dashboard`, { waitUntil: 'networkidle' });
 
       // Check again if we got redirected to onboarding
-      const stillOnOnboarding = page.url().includes('/onboarding') ||
-        await page.getByText('Welcome to Wolff').isVisible().catch(() => false);
+      const stillOnOnboarding =
+        page.url().includes('/onboarding') ||
+        (await page
+          .getByText('Welcome to Wolff')
+          .isVisible()
+          .catch(() => false));
 
       if (stillOnOnboarding) {
         console.log('📝 Still on onboarding after navigation, completing...');
@@ -186,8 +203,12 @@ async function globalSetup(config: FullConfig) {
         await page.goto(`${appUrl}/dashboard`, { waitUntil: 'networkidle' });
 
         // Final check
-        const finalCheck = page.url().includes('/onboarding') ||
-          await page.getByText('Welcome to Wolff').isVisible().catch(() => false);
+        const finalCheck =
+          page.url().includes('/onboarding') ||
+          (await page
+            .getByText('Welcome to Wolff')
+            .isVisible()
+            .catch(() => false));
 
         if (finalCheck) {
           console.log('⚠ Could not complete onboarding, taking screenshot...');
@@ -196,8 +217,15 @@ async function globalSetup(config: FullConfig) {
       }
 
       // Verify we're on dashboard by checking for sidebar or dashboard elements
-      const onDashboard = await page.getByRole('navigation').isVisible().catch(() => false) ||
-        await page.locator('[data-sidebar]').isVisible().catch(() => false) ||
+      const onDashboard =
+        (await page
+          .getByRole('navigation')
+          .isVisible()
+          .catch(() => false)) ||
+        (await page
+          .locator('[data-sidebar]')
+          .isVisible()
+          .catch(() => false)) ||
         page.url().includes('/dashboard');
 
       if (onDashboard && !page.url().includes('/onboarding')) {
@@ -225,9 +253,15 @@ async function globalSetup(config: FullConfig) {
     }
 
     // Check for error message indicating user doesn't exist
-    const errorText = await page.locator('.text-destructive, [role="alert"]').textContent().catch(() => '');
+    const errorText = await page
+      .locator('.text-destructive, [role="alert"]')
+      .textContent()
+      .catch(() => '');
 
-    if (errorText?.toLowerCase().includes('invalid') || errorText?.toLowerCase().includes('incorrect')) {
+    if (
+      errorText?.toLowerCase().includes('invalid') ||
+      errorText?.toLowerCase().includes('incorrect')
+    ) {
       console.log('⚠ User does not exist, attempting registration...');
 
       // Navigate to register page
@@ -264,7 +298,6 @@ async function globalSetup(config: FullConfig) {
 
     // Take screenshot for debugging
     await page.screenshot({ path: path.join(authDir, 'setup-failure.png') });
-
   } catch (error) {
     console.error('❌ Global setup failed:', error);
 
@@ -371,7 +404,6 @@ async function setupOnboardingUser(appUrl: string, authDir: string) {
     // Save credentials for tests to use
     fs.writeFileSync(ONBOARDING_CREDENTIALS_FILE, JSON.stringify(ONBOARDING_USER, null, 2));
     console.log('📝 Saved onboarding credentials for tests');
-
   } catch (error) {
     console.error('❌ Onboarding user setup failed:', error);
     try {
@@ -404,7 +436,11 @@ async function mainGlobalSetup(config: FullConfig) {
 
   // Also setup the onboarding user
   const { baseURL } = config.projects[0]?.use || {};
-  const appUrl = baseURL || process.env.BASE_URL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
+  const appUrl =
+    baseURL ||
+    process.env.BASE_URL ||
+    process.env.PLAYWRIGHT_TEST_BASE_URL ||
+    'http://localhost:3000';
   const authDir = path.dirname(AUTH_FILE);
 
   await setupOnboardingUser(appUrl, authDir);

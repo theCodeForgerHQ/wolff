@@ -5,7 +5,9 @@ test.describe('Authentication - Registration', () => {
     test('should display registration page', async ({ page }) => {
       await page.goto('/register');
 
-      await expect(page.getByRole('heading', { name: /sign up|register|create account/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /sign up|register|create account/i })
+      ).toBeVisible();
     });
 
     test('should show name field', async ({ page }) => {
@@ -126,7 +128,9 @@ test.describe('Authentication - Registration', () => {
       await signUpButton.click();
 
       // Should show error for existing email (or redirect if test account exists)
-      await page.waitForURL(/register|login|dashboard|onboarding/, { timeout: 5000 }).catch(() => {});
+      await page
+        .waitForURL(/register|login|dashboard|onboarding/, { timeout: 5000 })
+        .catch(() => {});
     });
   });
 
@@ -276,7 +280,7 @@ test.describe('Authentication - Reset Password', () => {
       const passwordInput = page.getByLabel(/new.*password|^password$/i);
       const confirmInput = page.getByLabel(/confirm/i);
 
-      if (await passwordInput.isVisible() && await confirmInput.isVisible()) {
+      if ((await passwordInput.isVisible()) && (await confirmInput.isVisible())) {
         await passwordInput.fill('NewPassword123!');
         await confirmInput.fill('DifferentPassword!');
 

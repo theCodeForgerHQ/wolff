@@ -30,10 +30,7 @@ function formatToday() {
 }
 
 async function DashboardContent() {
-  const [data, currency] = await Promise.all([
-    getDashboardData(),
-    getWorkspaceCurrency(),
-  ]);
+  const [data, currency] = await Promise.all([getDashboardData(), getWorkspaceCurrency()]);
 
   return (
     <>
@@ -48,11 +45,11 @@ async function DashboardContent() {
         <div className="lg:col-span-2">
           <RecentActivity activities={data.recentActivity} currency={currency} />
         </div>
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="flex-1 min-h-0">
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          <div className="min-h-0 flex-1">
             <RecentQuotes quotes={data.recentQuotes} currency={currency} />
           </div>
-          <div className="flex-1 min-h-0">
+          <div className="min-h-0 flex-1">
             <RecentInvoices invoices={data.recentInvoices} currency={currency} />
           </div>
         </div>
@@ -75,7 +72,7 @@ function DashboardSkeleton() {
         <div className="lg:col-span-2">
           <Skeleton className="h-96" />
         </div>
-        <div className="lg:col-span-3 flex flex-col gap-6">
+        <div className="flex flex-col gap-6 lg:col-span-3">
           <Skeleton className="h-80" />
           <Skeleton className="h-80" />
         </div>
@@ -89,10 +86,8 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {getGreeting()}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{getGreeting()}</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           {formatToday()} &mdash; Here&apos;s how your business is doing.
         </p>
       </div>

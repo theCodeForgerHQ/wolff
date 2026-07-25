@@ -115,17 +115,19 @@ export async function sendEmail(
 
     // Bug #89: Generate plaintext fallback by stripping HTML tags if no text provided
     const htmlContent = options.html || options.text || 'This email has no content';
-    const textContent = options.text || htmlContent
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    const textContent =
+      options.text ||
+      htmlContent
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 
     const { data, error } = await client.emails.send({
       from: config.from,
@@ -186,7 +188,8 @@ export async function sendQuoteSentEmail(params: {
   message?: string;
   rateLimitKey?: string;
 }): Promise<EmailResult> {
-  const { to, clientName, quoteName, quoteUrl, businessName, validUntil, message, rateLimitKey } = params;
+  const { to, clientName, quoteName, quoteUrl, businessName, validUntil, message, rateLimitKey } =
+    params;
 
   const safeBusinessName = escapeHtml(businessName);
   const safeClientName = escapeHtml(clientName);
@@ -214,14 +217,15 @@ export async function sendQuoteSentEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject: `Quote: ${quoteName} from ${businessName}`,
-    html,
-    tags: [
-      { name: 'type', value: 'quote_sent' },
-    ],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject: `Quote: ${quoteName} from ${businessName}`,
+      html,
+      tags: [{ name: 'type', value: 'quote_sent' }],
+    },
+    rateLimitKey
+  );
 }
 
 export async function sendInvoiceSentEmail(params: {
@@ -235,7 +239,17 @@ export async function sendInvoiceSentEmail(params: {
   message?: string;
   rateLimitKey?: string;
 }): Promise<EmailResult> {
-  const { to, clientName, invoiceNumber, invoiceUrl, businessName, amount, dueDate, message, rateLimitKey } = params;
+  const {
+    to,
+    clientName,
+    invoiceNumber,
+    invoiceUrl,
+    businessName,
+    amount,
+    dueDate,
+    message,
+    rateLimitKey,
+  } = params;
 
   const safeBusinessName = escapeHtml(businessName);
   const safeClientName = escapeHtml(clientName);
@@ -268,14 +282,15 @@ export async function sendInvoiceSentEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject: `Invoice ${invoiceNumber} from ${businessName} - ${amount}`,
-    html,
-    tags: [
-      { name: 'type', value: 'invoice_sent' },
-    ],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject: `Invoice ${invoiceNumber} from ${businessName} - ${amount}`,
+      html,
+      tags: [{ name: 'type', value: 'invoice_sent' }],
+    },
+    rateLimitKey
+  );
 }
 
 export async function sendPaymentReceivedEmail(params: {
@@ -299,13 +314,17 @@ export async function sendPaymentReceivedEmail(params: {
       <h2>Payment Received</h2>
       <p>Hi ${safeClientName},</p>
       <p>Thank you! We have received your payment of <strong>${safeAmount}</strong> for invoice ${safeInvoiceNumber}.</p>
-      ${receiptUrl ? `
+      ${
+        receiptUrl
+          ? `
         <p style="margin: 24px 0;">
           <a href="${validateEmailUrl(receiptUrl)}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             View Receipt
           </a>
         </p>
-      ` : ''}
+      `
+          : ''
+      }
       <hr style="margin: 24px 0; border: none; border-top: 1px solid #eee;" />
       <p style="color: #666; font-size: 14px;">
         Sent via Wolff on behalf of ${safeBusinessName}
@@ -313,14 +332,15 @@ export async function sendPaymentReceivedEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject: `Payment Received - Invoice ${invoiceNumber}`,
-    html,
-    tags: [
-      { name: 'type', value: 'payment_received' },
-    ],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject: `Payment Received - Invoice ${invoiceNumber}`,
+      html,
+      tags: [{ name: 'type', value: 'payment_received' }],
+    },
+    rateLimitKey
+  );
 }
 
 export async function sendQuoteAcceptedEmail(params: {
@@ -358,14 +378,15 @@ export async function sendQuoteAcceptedEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject: `Quote Accepted: ${quoteName} - ${amount}`,
-    html,
-    tags: [
-      { name: 'type', value: 'quote_accepted' },
-    ],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject: `Quote Accepted: ${quoteName} - ${amount}`,
+      html,
+      tags: [{ name: 'type', value: 'quote_accepted' }],
+    },
+    rateLimitKey
+  );
 }
 
 export async function sendInvoiceReminderEmail(params: {
@@ -379,7 +400,17 @@ export async function sendInvoiceReminderEmail(params: {
   daysOverdue?: number;
   rateLimitKey?: string;
 }): Promise<EmailResult> {
-  const { to, clientName, invoiceNumber, invoiceUrl, businessName, amount, dueDate, daysOverdue, rateLimitKey } = params;
+  const {
+    to,
+    clientName,
+    invoiceNumber,
+    invoiceUrl,
+    businessName,
+    amount,
+    dueDate,
+    daysOverdue,
+    rateLimitKey,
+  } = params;
 
   const safeClientName = escapeHtml(clientName);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
@@ -399,9 +430,10 @@ export async function sendInvoiceReminderEmail(params: {
       </h2>
       <p>Hi ${safeClientName},</p>
       <p>
-        ${isOverdue
-          ? `This is a reminder that invoice ${safeInvoiceNumber} is now ${daysOverdue} days past due.`
-          : `This is a friendly reminder that invoice ${safeInvoiceNumber} is due on ${dueDate.toLocaleDateString()}.`
+        ${
+          isOverdue
+            ? `This is a reminder that invoice ${safeInvoiceNumber} is now ${daysOverdue} days past due.`
+            : `This is a friendly reminder that invoice ${safeInvoiceNumber} is due on ${dueDate.toLocaleDateString()}.`
         }
       </p>
       <div style="background: ${isOverdue ? '#fef2f2' : '#fffbeb'}; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid ${isOverdue ? '#EF4444' : '#F59E0B'};">
@@ -421,14 +453,15 @@ export async function sendInvoiceReminderEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject,
-    html,
-    tags: [
-      { name: 'type', value: isOverdue ? 'invoice_overdue' : 'invoice_reminder' },
-    ],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject,
+      html,
+      tags: [{ name: 'type', value: isOverdue ? 'invoice_overdue' : 'invoice_reminder' }],
+    },
+    rateLimitKey
+  );
 }
 
 /**
@@ -467,12 +500,15 @@ export async function sendInvitationEmail(params: {
     </div>
   `;
 
-  return sendEmail({
-    to,
-    subject: `You've been invited to ${workspaceName} - Wolff`,
-    html,
-    tags: [{ name: 'type', value: 'workspace_invitation' }],
-  }, rateLimitKey);
+  return sendEmail(
+    {
+      to,
+      subject: `You've been invited to ${workspaceName} - Wolff`,
+      html,
+      tags: [{ name: 'type', value: 'workspace_invitation' }],
+    },
+    rateLimitKey
+  );
 }
 
 /**

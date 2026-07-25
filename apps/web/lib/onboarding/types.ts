@@ -2,12 +2,7 @@
  * Onboarding Types
  */
 
-export type OnboardingStep =
-  | 'welcome'
-  | 'business'
-  | 'branding'
-  | 'payment'
-  | 'complete';
+export type OnboardingStep = 'welcome' | 'business' | 'branding' | 'payment' | 'complete';
 
 export interface OnboardingProgress {
   currentStep: OnboardingStep;
@@ -29,7 +24,7 @@ export const ONBOARDING_STEPS: OnboardingStepInfo[] = [
   {
     id: 'welcome',
     title: 'Welcome to Wolff',
-    description: 'Let\'s get your account set up',
+    description: "Let's get your account set up",
     isRequired: true,
   },
   {

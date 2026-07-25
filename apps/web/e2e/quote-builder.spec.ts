@@ -44,7 +44,7 @@ test.describe('Quote Builder', () => {
       await page.goto('/quotes/new');
 
       const canvas = page.locator('[class*="canvas"], [class*="editor"], [contenteditable="true"]');
-      if (await canvas.count() > 0) {
+      if ((await canvas.count()) > 0) {
         await expect(canvas.first()).toBeVisible();
       }
     });
@@ -69,7 +69,7 @@ test.describe('Quote Builder', () => {
 
         // Should add a new block
         const textBlock = page.locator('[class*="block"], [data-block-type="text"]');
-        if (await textBlock.count() > 0) {
+        if ((await textBlock.count()) > 0) {
           await expect(textBlock.first()).toBeVisible();
         }
       }
@@ -83,7 +83,7 @@ test.describe('Quote Builder', () => {
         await addHeadingButton.click();
 
         const headingBlock = page.locator('[class*="heading"], h1, h2, h3');
-        if (await headingBlock.count() > 0) {
+        if ((await headingBlock.count()) > 0) {
           await expect(headingBlock.first()).toBeVisible();
         }
       }
@@ -98,7 +98,7 @@ test.describe('Quote Builder', () => {
 
         // Should add line item with fields
         const lineItem = page.locator('[class*="line-item"], [data-block-type="lineItem"]');
-        if (await lineItem.count() > 0) {
+        if ((await lineItem.count()) > 0) {
           await expect(lineItem.first()).toBeVisible();
         }
       }
@@ -151,7 +151,7 @@ test.describe('Quote Builder', () => {
       await page.goto('/quotes/new');
 
       const dragHandle = page.locator('[class*="drag"], [data-drag-handle]');
-      if (await dragHandle.count() > 0) {
+      if ((await dragHandle.count()) > 0) {
         await expect(dragHandle.first()).toBeVisible();
       }
     });
@@ -161,7 +161,7 @@ test.describe('Quote Builder', () => {
 
       // Get drag handles
       const dragHandles = page.locator('[data-drag-handle], [class*="drag-handle"]');
-      if (await dragHandles.count() >= 2) {
+      if ((await dragHandles.count()) >= 2) {
         const firstHandle = dragHandles.first();
         const secondHandle = dragHandles.nth(1);
 
@@ -172,7 +172,10 @@ test.describe('Quote Builder', () => {
           // Perform drag
           await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2);
           await page.mouse.down();
-          await page.mouse.move(secondBox.x + secondBox.width / 2, secondBox.y + secondBox.height + 20);
+          await page.mouse.move(
+            secondBox.x + secondBox.width / 2,
+            secondBox.y + secondBox.height + 20
+          );
           await page.mouse.up();
         }
       }
@@ -238,7 +241,7 @@ test.describe('Quote Builder', () => {
       const quantityInput = page.getByLabel(/quantity/i).first();
       const rateInput = page.getByLabel(/rate|price/i).first();
 
-      if (await quantityInput.isVisible() && await rateInput.isVisible()) {
+      if ((await quantityInput.isVisible()) && (await rateInput.isVisible())) {
         await quantityInput.fill('3');
         await rateInput.fill('100');
 
@@ -300,7 +303,7 @@ test.describe('Quote Builder', () => {
         await editor.click();
 
         const formattingToolbar = page.locator('[class*="toolbar"], [class*="menu"]');
-        if (await formattingToolbar.count() > 0) {
+        if ((await formattingToolbar.count()) > 0) {
           await expect(formattingToolbar.first()).toBeVisible();
         }
       }
@@ -600,7 +603,7 @@ test.describe('Quote Builder Accessibility', () => {
     await page.goto('/quotes/new');
 
     const labels = page.locator('label');
-    if (await labels.count() > 0) {
+    if ((await labels.count()) > 0) {
       await expect(labels.first()).toBeVisible();
     }
   });
@@ -609,7 +612,7 @@ test.describe('Quote Builder Accessibility', () => {
     await page.goto('/quotes/new');
 
     const buttons = page.getByRole('button');
-    if (await buttons.count() > 0) {
+    if ((await buttons.count()) > 0) {
       await expect(buttons.first()).toBeVisible();
     }
   });

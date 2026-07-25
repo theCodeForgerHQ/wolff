@@ -10,9 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function InvoicePortalLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-linear-to-b from-muted/30 to-background">
-      {children}
-    </div>
-  );
+  return <div className="bg-linear-to-b from-muted/30 to-background min-h-screen">{children}</div>;
 }

@@ -28,26 +28,23 @@ export async function getOnboardingProgress(): Promise<OnboardingProgress> {
     }),
   ]);
 
-  const workspaceSettings = workspace?.settings as Record<string, unknown> ?? {};
+  const workspaceSettings = (workspace?.settings as Record<string, unknown>) ?? {};
   const onboardingCompleted = workspaceSettings.onboardingCompleted === true;
 
   // Determine completed steps
   const completedSteps: OnboardingStep[] = ['welcome'];
 
-  const businessProfileComplete =
-    !!businessProfile?.businessName && !!businessProfile?.email;
+  const businessProfileComplete = !!businessProfile?.businessName && !!businessProfile?.email;
   if (businessProfileComplete) {
     completedSteps.push('business');
   }
 
-  const brandingComplete =
-    !!brandingSettings?.primaryColor || !!brandingSettings?.logoUrl;
+  const brandingComplete = !!brandingSettings?.primaryColor || !!brandingSettings?.logoUrl;
   if (brandingComplete) {
     completedSteps.push('branding');
   }
 
-  const paymentSetupSkipped =
-    !paymentSettings?.stripeAccountId && onboardingCompleted;
+  const paymentSetupSkipped = !paymentSettings?.stripeAccountId && onboardingCompleted;
 
   if (paymentSettings?.stripeOnboardingComplete || paymentSetupSkipped) {
     completedSteps.push('payment');
@@ -113,9 +110,7 @@ export async function completeOnboarding(): Promise<{ success: boolean }> {
 /**
  * Skip a specific onboarding step
  */
-export async function skipOnboardingStep(
-  step: OnboardingStep
-): Promise<{ success: boolean }> {
+export async function skipOnboardingStep(step: OnboardingStep): Promise<{ success: boolean }> {
   // Steps like branding and payment can be skipped
   // Just mark progress in workspace metadata if needed
   return { success: true };

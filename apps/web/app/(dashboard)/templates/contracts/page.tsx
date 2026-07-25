@@ -11,19 +11,18 @@ interface PageProps {
   searchParams: Promise<{ search?: string; page?: string }>;
 }
 
-async function ContractTemplateContent({ searchParams }: { searchParams: { search?: string; page?: string } }) {
+async function ContractTemplateContent({
+  searchParams,
+}: {
+  searchParams: { search?: string; page?: string };
+}) {
   const { data: templates } = await getContractTemplates({
     search: searchParams.search,
     page: searchParams.page ? parseInt(searchParams.page, 10) : 1,
     isTemplate: true,
   });
 
-  return (
-    <ContractTemplateList
-      templates={templates}
-      searchQuery={searchParams.search}
-    />
-  );
+  return <ContractTemplateList templates={templates} searchQuery={searchParams.search} />;
 }
 
 function TemplateListSkeleton() {
@@ -36,7 +35,7 @@ function TemplateListSkeleton() {
       <div className="rounded-md border">
         <div className="space-y-0">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0">
+            <div key={i} className="flex items-center gap-4 border-b px-4 py-3 last:border-b-0">
               <Skeleton className="h-4 flex-1" />
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-6 w-24" />

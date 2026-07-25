@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { AppError, ValidationError, NotFoundError, UnauthorizedError, ForbiddenError } from './errors';
+import {
+  AppError,
+  ValidationError,
+  NotFoundError,
+  UnauthorizedError,
+  ForbiddenError,
+} from './errors';
 import { logger } from '@/lib/logger';
 
 export interface ApiResponse<T = unknown> {
@@ -84,7 +90,8 @@ export function errorResponse(
       success: false,
       error: {
         code: 'INTERNAL_ERROR',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred',
+        message:
+          process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred',
       },
     },
     { status: status ?? 500 }

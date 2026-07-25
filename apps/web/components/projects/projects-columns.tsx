@@ -5,7 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableColumnHeader } from '@/components/ui/data-table/data-table-column-header';
 import { DataTableRowActions } from '@/components/ui/data-table/data-table-row-actions';
-import { FolderKanban, FileText, Receipt, Pencil, Trash2, Power, PowerOff, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  FolderKanban,
+  FileText,
+  Receipt,
+  Pencil,
+  Trash2,
+  Power,
+  PowerOff,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 
 export interface ProjectListItem {
   id: string;
@@ -44,7 +54,9 @@ function formatDate(date: Date): string {
   });
 }
 
-export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDef<ProjectListItem>[] {
+export function getProjectColumns(
+  options: ProjectColumnsOptions = {}
+): ColumnDef<ProjectListItem>[] {
   const { onView, onEdit, onDelete, onCreateQuote, onCreateInvoice, onToggleActive } = options;
 
   return [
@@ -74,15 +86,9 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Project" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Project" />,
       cell: ({ row }) => {
-        return (
-          <div className="font-medium text-primary">
-            {row.original.name}
-          </div>
-        );
+        return <div className="text-primary font-medium">{row.original.name}</div>;
       },
       filterFn: (row, id, value) => {
         const project = row.original;
@@ -97,9 +103,7 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
     {
       id: 'status',
       accessorKey: 'isActive',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const isActive = row.original.isActive;
         return (
@@ -107,8 +111,8 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
             variant="outline"
             className={`gap-1 ${
               isActive
-                ? 'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950'
-                : 'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900'
+                ? 'border-green-300 bg-green-50 text-green-600 dark:border-green-600 dark:bg-green-950 dark:text-green-400'
+                : 'border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-400'
             }`}
           >
             {isActive ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
@@ -124,9 +128,7 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
     },
     {
       accessorKey: 'client',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
       cell: ({ row }) => {
         const client = row.original.client;
         const displayName = client.company || client.name;
@@ -139,14 +141,12 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
 
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
               {initials}
             </div>
             <div>
               <div className="font-medium">{displayName}</div>
-              {client.email && (
-                <div className="text-sm text-muted-foreground">{client.email}</div>
-              )}
+              {client.email && <div className="text-muted-foreground text-sm">{client.email}</div>}
             </div>
           </div>
         );
@@ -155,15 +155,9 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
     {
       id: 'created',
       accessorKey: 'createdAt',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => {
-        return (
-          <div className="text-muted-foreground">
-            {formatDate(row.original.createdAt)}
-          </div>
-        );
+        return <div className="text-muted-foreground">{formatDate(row.original.createdAt)}</div>;
       },
     },
     {
@@ -177,19 +171,62 @@ export function getProjectColumns(options: ProjectColumnsOptions = {}): ColumnDe
             onEdit={onEdit}
             onDelete={onDelete}
             actions={[
-              ...(onView ? [{ label: 'View Details', icon: <FolderKanban className="mr-2 h-4 w-4" />, onClick: onView }] : []),
-              ...(onEdit ? [{ label: 'Edit', icon: <Pencil className="mr-2 h-4 w-4" />, onClick: onEdit }] : []),
-              ...(onCreateQuote ? [{ label: 'Create Quote', icon: <FileText className="mr-2 h-4 w-4" />, onClick: onCreateQuote, separator: true }] : []),
-              ...(onCreateInvoice ? [{ label: 'Create Invoice', icon: <Receipt className="mr-2 h-4 w-4" />, onClick: onCreateInvoice }] : []),
-              ...(onToggleActive ? [{
-                label: project.isActive ? 'Deactivate' : 'Reactivate',
-                icon: project.isActive
-                  ? <PowerOff className="mr-2 h-4 w-4" />
-                  : <Power className="mr-2 h-4 w-4" />,
-                onClick: onToggleActive,
-                separator: true,
-              }] : []),
-              ...(onDelete ? [{ label: 'Delete', icon: <Trash2 className="mr-2 h-4 w-4" />, onClick: onDelete, variant: 'destructive' as const, separator: !onToggleActive }] : []),
+              ...(onView
+                ? [
+                    {
+                      label: 'View Details',
+                      icon: <FolderKanban className="mr-2 h-4 w-4" />,
+                      onClick: onView,
+                    },
+                  ]
+                : []),
+              ...(onEdit
+                ? [{ label: 'Edit', icon: <Pencil className="mr-2 h-4 w-4" />, onClick: onEdit }]
+                : []),
+              ...(onCreateQuote
+                ? [
+                    {
+                      label: 'Create Quote',
+                      icon: <FileText className="mr-2 h-4 w-4" />,
+                      onClick: onCreateQuote,
+                      separator: true,
+                    },
+                  ]
+                : []),
+              ...(onCreateInvoice
+                ? [
+                    {
+                      label: 'Create Invoice',
+                      icon: <Receipt className="mr-2 h-4 w-4" />,
+                      onClick: onCreateInvoice,
+                    },
+                  ]
+                : []),
+              ...(onToggleActive
+                ? [
+                    {
+                      label: project.isActive ? 'Deactivate' : 'Reactivate',
+                      icon: project.isActive ? (
+                        <PowerOff className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Power className="mr-2 h-4 w-4" />
+                      ),
+                      onClick: onToggleActive,
+                      separator: true,
+                    },
+                  ]
+                : []),
+              ...(onDelete
+                ? [
+                    {
+                      label: 'Delete',
+                      icon: <Trash2 className="mr-2 h-4 w-4" />,
+                      onClick: onDelete,
+                      variant: 'destructive' as const,
+                      separator: !onToggleActive,
+                    },
+                  ]
+                : []),
             ]}
           />
         );

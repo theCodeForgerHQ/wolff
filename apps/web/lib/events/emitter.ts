@@ -1,7 +1,9 @@
 import type { DomainEvent, DomainEventType, DomainEventPayload } from './types';
 import { logger } from '@/lib/logger';
 
-type EventHandler<T extends DomainEventType> = (payload: DomainEventPayload<T>) => void | Promise<void>;
+type EventHandler<T extends DomainEventType> = (
+  payload: DomainEventPayload<T>
+) => void | Promise<void>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyHandler = EventHandler<any>;

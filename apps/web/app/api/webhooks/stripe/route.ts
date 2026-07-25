@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { constructWebhookEvent, isStripeEnabled } from '@/lib/services/stripe';
-import { processPaymentWebhook, processAccountUpdate, processRefundWebhook } from '@/lib/payments/internal';
+import {
+  processPaymentWebhook,
+  processAccountUpdate,
+  processRefundWebhook,
+} from '@/lib/payments/internal';
 import { prisma } from '@wolff/database';
 import type Stripe from 'stripe';
 import { logger } from '@/lib/logger';
@@ -71,13 +75,17 @@ export async function POST(request: NextRequest) {
 
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge;
-        const paymentIntentId = typeof charge.payment_intent === 'string'
-          ? charge.payment_intent
-          : charge.payment_intent?.id;
+        const paymentIntentId =
+          typeof charge.payment_intent === 'string'
+            ? charge.payment_intent
+            : charge.payment_intent?.id;
         if (paymentIntentId) {
           await processRefundWebhook(paymentIntentId, charge.amount_refunded);
         } else {
-          logger.warn({ eventId: event.id }, '[stripe-webhook] Orphaned refund event: charge.payment_intent is null. Refund processed by Stripe but no matching payment in Wolff.');
+          logger.warn(
+            { eventId: event.id },
+            '[stripe-webhook] Orphaned refund event: charge.payment_intent is null. Refund processed by Stripe but no matching payment in Wolff.'
+          );
         }
         break;
       }
@@ -97,9 +105,13 @@ export async function POST(request: NextRequest) {
     logger.error({ err: error }, 'Error processing webhook');
     // Permanent business logic errors (not found, invalid data) → 200 so Stripe stops retrying
     const message = error instanceof Error ? error.message : '';
-    const isPermanent = message.includes('not found') || message.includes('invalid') || message.includes('already');
+    const isPermanent =
+      message.includes('not found') || message.includes('invalid') || message.includes('already');
     if (isPermanent) {
-      return NextResponse.json({ received: true, error: 'Permanent failure — will not retry' }, { status: 200 });
+      return NextResponse.json(
+        { received: true, error: 'Permanent failure — will not retry' },
+        { status: 200 }
+      );
     }
     // Transient errors (DB timeout, network) → 500 so Stripe retries with exponential backoff
     // Idempotency guard prevents duplicate processing on successful retry

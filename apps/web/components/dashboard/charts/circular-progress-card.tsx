@@ -54,7 +54,7 @@ export function CircularProgressCard({
             <span className="text-2xl font-bold">{percentage.toFixed(0)}%</span>
           </div>
         </div>
-        <p className="mt-3 text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-muted-foreground mt-3 text-sm font-medium">{label}</p>
       </CardContent>
     </Card>
   );

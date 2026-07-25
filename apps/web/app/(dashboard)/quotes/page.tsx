@@ -20,9 +20,7 @@ export default function QuotesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quotes</h1>
-          <p className="text-muted-foreground">
-            Create and manage your quotes and proposals
-          </p>
+          <p className="text-muted-foreground">Create and manage your quotes and proposals</p>
         </div>
         <Button asChild>
           <Link href="/quotes/new">
@@ -46,11 +44,11 @@ async function QuotesContent() {
 
 function TableSkeleton() {
   return (
-    <div className="rounded-md border p-4 space-y-3">
+    <div className="space-y-3 rounded-md border p-4">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4">
           <Skeleton className="h-4 w-4" />
-          <Skeleton className="h-4 flex-1 max-w-[200px]" />
+          <Skeleton className="h-4 max-w-[200px] flex-1" />
           <Skeleton className="h-6 w-16" />
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-20" />

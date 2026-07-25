@@ -4,7 +4,13 @@ import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
-import type { QuoteDocument, QuoteBlock, ServiceItemBlock, QuoteStatus, QuoteListItem } from './types';
+import type {
+  QuoteDocument,
+  QuoteBlock,
+  ServiceItemBlock,
+  QuoteStatus,
+  QuoteListItem,
+} from './types';
 import { sendTemplatedEmail } from '@/lib/email/actions';
 import { createNotification } from '@/lib/notifications/internal';
 import { ROUTES } from '@/lib/routes';
@@ -20,13 +26,22 @@ function safeParseQuoteSettings(raw: unknown) {
   const settings = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   return {
     blocks: (Array.isArray(settings.blocks) ? settings.blocks : []) as QuoteBlock[],
-    requireSignature: typeof settings.requireSignature === 'boolean' ? settings.requireSignature : true,
-    autoConvertToInvoice: typeof settings.autoConvertToInvoice === 'boolean' ? settings.autoConvertToInvoice : false,
-    depositRequired: typeof settings.depositRequired === 'boolean' ? settings.depositRequired : false,
-    depositType: (settings.depositType === 'percentage' || settings.depositType === 'fixed' ? settings.depositType : 'percentage') as 'percentage' | 'fixed',
+    requireSignature:
+      typeof settings.requireSignature === 'boolean' ? settings.requireSignature : true,
+    autoConvertToInvoice:
+      typeof settings.autoConvertToInvoice === 'boolean' ? settings.autoConvertToInvoice : false,
+    depositRequired:
+      typeof settings.depositRequired === 'boolean' ? settings.depositRequired : false,
+    depositType: (settings.depositType === 'percentage' || settings.depositType === 'fixed'
+      ? settings.depositType
+      : 'percentage') as 'percentage' | 'fixed',
     depositValue: typeof settings.depositValue === 'number' ? settings.depositValue : 50,
-    showLineItemPrices: typeof settings.showLineItemPrices === 'boolean' ? settings.showLineItemPrices : true,
-    allowPartialAcceptance: typeof settings.allowPartialAcceptance === 'boolean' ? settings.allowPartialAcceptance : false,
+    showLineItemPrices:
+      typeof settings.showLineItemPrices === 'boolean' ? settings.showLineItemPrices : true,
+    allowPartialAcceptance:
+      typeof settings.allowPartialAcceptance === 'boolean'
+        ? settings.allowPartialAcceptance
+        : false,
     currency: typeof settings.currency === 'string' ? settings.currency : 'USD',
     taxInclusive: typeof settings.taxInclusive === 'boolean' ? settings.taxInclusive : false,
   };
@@ -123,8 +138,16 @@ export async function getNextQuoteNumber(): Promise<string> {
 
 /** Allowed block types for server-side validation */
 const VALID_BLOCK_TYPES = new Set([
-  'header', 'text', 'service-item', 'service-group',
-  'image', 'divider', 'spacer', 'columns', 'table', 'signature',
+  'header',
+  'text',
+  'service-item',
+  'service-group',
+  'image',
+  'divider',
+  'spacer',
+  'columns',
+  'table',
+  'signature',
 ]);
 
 /**
@@ -202,27 +225,36 @@ export async function createQuote(data: {
   // Validate line item values
   // CR #8: Also reject Infinity/NaN to prevent PDF generation crashes
   for (const block of serviceItems) {
-    if (!Number.isFinite(block.content.rate) || block.content.rate < 0 || block.content.rate > 1_000_000) {
+    if (
+      !Number.isFinite(block.content.rate) ||
+      block.content.rate < 0 ||
+      block.content.rate > 1_000_000
+    ) {
       return { success: false, error: 'Line item rate must be between 0 and 1,000,000' };
     }
-    if (!Number.isFinite(block.content.quantity) || block.content.quantity < 0 || block.content.quantity > 1_000_000) {
+    if (
+      !Number.isFinite(block.content.quantity) ||
+      block.content.quantity < 0 ||
+      block.content.quantity > 1_000_000
+    ) {
       return { success: false, error: 'Line item quantity must be between 0 and 1,000,000' };
     }
   }
 
-  const lineItems = serviceItems
-    .map((block, index) => ({
-      name: block.content.name,
-      description: block.content.description || null,
-      quantity: block.content.quantity,
-      rate: block.content.rate,
-      amount: Math.round(block.content.quantity * block.content.rate * 100) / 100,
-      taxRate: block.content.taxRate,
-      taxAmount: block.content.taxRate
-        ? Math.round(block.content.quantity * block.content.rate * (block.content.taxRate / 100) * 100) / 100
-        : 0,
-      sortOrder: index,
-    }));
+  const lineItems = serviceItems.map((block, index) => ({
+    name: block.content.name,
+    description: block.content.description || null,
+    quantity: block.content.quantity,
+    rate: block.content.rate,
+    amount: Math.round(block.content.quantity * block.content.rate * 100) / 100,
+    taxRate: block.content.taxRate,
+    taxAmount: block.content.taxRate
+      ? Math.round(
+          block.content.quantity * block.content.rate * (block.content.taxRate / 100) * 100
+        ) / 100
+      : 0,
+    sortOrder: index,
+  }));
 
   // Calculate totals
   const subtotal = Math.round(lineItems.reduce((sum, item) => sum + item.amount, 0) * 100) / 100;
@@ -238,7 +270,9 @@ export async function createQuote(data: {
       title: data.title,
       status: data.isDraft !== false ? 'draft' : 'sent',
       currency,
-      expirationDate: data.expirationDate ? new Date(data.expirationDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expirationDate: data.expirationDate
+        ? new Date(data.expirationDate)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       accessToken: generateAccessToken(),
       notes: data.notes || null,
       terms: data.terms || null,
@@ -274,7 +308,10 @@ export async function createQuote(data: {
   revalidatePath(ROUTES.quotes);
 
   try {
-    domainEvents.emit({ type: 'quote.created', payload: { quoteId: quote.id, workspaceId: workspace.id } });
+    domainEvents.emit({
+      type: 'quote.created',
+      payload: { quoteId: quote.id, workspaceId: workspace.id },
+    });
   } catch {}
 
   return {
@@ -319,7 +356,10 @@ export async function updateQuote(
 
   // Bug #455: RBAC — viewers cannot update quotes
   if (role === 'viewer') {
-    return { success: false as const, error: 'Insufficient permissions: viewers cannot edit quotes' };
+    return {
+      success: false as const,
+      error: 'Insufficient permissions: viewers cannot edit quotes',
+    };
   }
 
   // Validate title length if provided
@@ -342,7 +382,10 @@ export async function updateQuote(
 
   // Bug #11: Prevent modifications to signed/accepted quotes
   if (['accepted', 'converted'].includes(existingQuote.status) || existingQuote.signedAt) {
-    return { success: false as const, error: 'Cannot modify a quote that has been accepted or signed' };
+    return {
+      success: false as const,
+      error: 'Cannot modify a quote that has been accepted or signed',
+    };
   }
 
   // Bug #49: Extract service items recursively (includes items inside service-group blocks)
@@ -367,11 +410,22 @@ export async function updateQuote(
   // Validate line item values
   if (serviceBlocks) {
     for (const block of serviceBlocks) {
-      if (!Number.isFinite(block.content.rate) || block.content.rate < 0 || block.content.rate > 1_000_000) {
+      if (
+        !Number.isFinite(block.content.rate) ||
+        block.content.rate < 0 ||
+        block.content.rate > 1_000_000
+      ) {
         return { success: false as const, error: 'Line item rate must be between 0 and 1,000,000' };
       }
-      if (!Number.isFinite(block.content.quantity) || block.content.quantity < 0 || block.content.quantity > 1_000_000) {
-        return { success: false as const, error: 'Line item quantity must be between 0 and 1,000,000' };
+      if (
+        !Number.isFinite(block.content.quantity) ||
+        block.content.quantity < 0 ||
+        block.content.quantity > 1_000_000
+      ) {
+        return {
+          success: false as const,
+          error: 'Line item quantity must be between 0 and 1,000,000',
+        };
       }
     }
   }
@@ -384,17 +438,24 @@ export async function updateQuote(
     amount: Math.round(block.content.quantity * block.content.rate * 100) / 100,
     taxRate: block.content.taxRate,
     taxAmount: block.content.taxRate
-      ? Math.round(block.content.quantity * block.content.rate * (block.content.taxRate / 100) * 100) / 100
+      ? Math.round(
+          block.content.quantity * block.content.rate * (block.content.taxRate / 100) * 100
+        ) / 100
       : 0,
     sortOrder: index,
   }));
 
   // Calculate totals
-  const subtotal = Math.round((lineItems?.reduce((sum, item) => sum + item.amount, 0) || 0) * 100) / 100;
-  let taxTotal = Math.round((lineItems?.reduce((sum, item) => sum + item.taxAmount, 0) || 0) * 100) / 100;
+  const subtotal =
+    Math.round((lineItems?.reduce((sum, item) => sum + item.amount, 0) || 0) * 100) / 100;
+  let taxTotal =
+    Math.round((lineItems?.reduce((sum, item) => sum + item.taxAmount, 0) || 0) * 100) / 100;
 
   // Bug #123: Validate discount values server-side
-  const mergedSettings = { ...(existingQuote.settings as Record<string, unknown>), ...data.settings };
+  const mergedSettings = {
+    ...(existingQuote.settings as Record<string, unknown>),
+    ...data.settings,
+  };
   const discountType = mergedSettings.discountType as string | undefined;
   const discountValue = Number(mergedSettings.discountValue) || 0;
   if (discountValue < 0) {
@@ -663,12 +724,14 @@ export async function getQuotes(options?: {
       currency: quote.currency,
       issueDate: (quote.issueDate ?? new Date()).toISOString().split('T')[0]!,
       expirationDate: quote.expirationDate?.toISOString().split('T')[0] || null,
-      client: quote.client ? {
-        id: quote.client.id,
-        name: quote.client.name,
-        email: quote.client.email,
-        company: quote.client.company,
-      } : null,
+      client: quote.client
+        ? {
+            id: quote.client.id,
+            name: quote.client.name,
+            email: quote.client.email,
+            company: quote.client.company,
+          }
+        : null,
       createdAt: quote.createdAt.toISOString(),
     })),
     total,
@@ -692,7 +755,10 @@ export async function deleteQuote(quoteId: string) {
   });
 
   if (linkedInvoice) {
-    return { success: false, error: 'Cannot delete a quote that has a linked invoice. Delete or void the invoice first.' };
+    return {
+      success: false,
+      error: 'Cannot delete a quote that has a linked invoice. Delete or void the invoice first.',
+    };
   }
 
   // Bug #79: Clean up signature data before soft-deleting
@@ -766,7 +832,7 @@ export async function duplicateQuote(quoteId: string) {
       terms: original.terms,
       settings: original.settings as Prisma.InputJsonValue,
       lineItems: {
-        create: original.lineItems.map((item: typeof original.lineItems[number]) => ({
+        create: original.lineItems.map((item: (typeof original.lineItems)[number]) => ({
           name: item.name,
           description: item.description,
           quantity: item.quantity,
@@ -797,7 +863,10 @@ export async function updateQuoteStatus(
 
   // Bug #455: RBAC — viewers cannot change quote status
   if (role === 'viewer') {
-    return { success: false, error: 'Insufficient permissions: viewers cannot change quote status' };
+    return {
+      success: false,
+      error: 'Insufficient permissions: viewers cannot change quote status',
+    };
   }
 
   // Validate state transitions
@@ -820,7 +889,10 @@ export async function updateQuoteStatus(
 
   const allowed = validTransitions[existingQuote.status] || [];
   if (!allowed.includes(status)) {
-    return { success: false, error: `Cannot change status from '${existingQuote.status}' to '${status}'` };
+    return {
+      success: false,
+      error: `Cannot change status from '${existingQuote.status}' to '${status}'`,
+    };
   }
 
   const statusTimestamps: Record<string, string> = {
@@ -857,9 +929,15 @@ export async function updateQuoteStatus(
 
   try {
     if (status === 'accepted') {
-      domainEvents.emit({ type: 'quote.accepted', payload: { quoteId, workspaceId: workspace.id } });
+      domainEvents.emit({
+        type: 'quote.accepted',
+        payload: { quoteId, workspaceId: workspace.id },
+      });
     } else if (status === 'declined') {
-      domainEvents.emit({ type: 'quote.declined', payload: { quoteId, workspaceId: workspace.id } });
+      domainEvents.emit({
+        type: 'quote.declined',
+        payload: { quoteId, workspaceId: workspace.id },
+      });
     }
   } catch {}
 
@@ -927,7 +1005,7 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
     if (emailOptions.recipients.length > 10) {
       return { success: false, error: 'Maximum 10 recipients allowed' };
     }
-    const invalidEmails = emailOptions.recipients.filter(e => !emailRegex.test(e));
+    const invalidEmails = emailOptions.recipients.filter((e) => !emailRegex.test(e));
     if (invalidEmails.length > 0) {
       return { success: false, error: `Invalid email addresses: ${invalidEmails.join(', ')}` };
     }
@@ -943,14 +1021,26 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
       to: emailRecipients,
       variables: {
         businessName: workspace.name,
-        businessEmail: (await prisma.businessProfile.findUnique({ where: { workspaceId: workspace.id }, select: { email: true } }))?.email || '',
+        businessEmail:
+          (
+            await prisma.businessProfile.findUnique({
+              where: { workspaceId: workspace.id },
+              select: { email: true },
+            })
+          )?.email || '',
         clientName: quote.client.name,
         clientEmail: quote.client.email,
         quoteName: quote.title || `Quote ${quote.quoteNumber}`,
         quoteNumber: quote.quoteNumber,
         quoteUrl,
         quoteTotal: formatCurrency(toNumber(quote.total), quote.currency),
-        quoteValidUntil: quote.expirationDate ? quote.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : undefined,
+        quoteValidUntil: quote.expirationDate
+          ? quote.expirationDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          : undefined,
         message: emailOptions?.message || undefined,
       },
       customSubject: emailOptions?.subject || undefined,
@@ -958,7 +1048,10 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
     emailSent = emailResult.success;
     if (!emailResult.success) {
       logger.error({ err: emailResult.error }, 'Failed to send quote email');
-      return { success: false, error: 'Email could not be sent. Please check your email settings.' };
+      return {
+        success: false,
+        error: 'Email could not be sent. Please check your email settings.',
+      };
     }
   } catch (err) {
     logger.error({ err }, 'Failed to send quote email');
@@ -1007,7 +1100,10 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
   revalidatePath(ROUTES.quoteDetail(quoteId));
 
   try {
-    domainEvents.emit({ type: 'quote.sent', payload: { quoteId, workspaceId: workspace.id, clientEmail: quote.client.email } });
+    domainEvents.emit({
+      type: 'quote.sent',
+      payload: { quoteId, workspaceId: workspace.id, clientEmail: quote.client.email },
+    });
   } catch {}
 
   return { success: true, recipientEmail: quote.client.email, emailSent };

@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  calculateDepositAmount,
-  formatQuoteCurrency,
-  isQuoteExpired,
-} from '@/lib/quotes/utils';
+import { calculateDepositAmount, formatQuoteCurrency, isQuoteExpired } from '@/lib/quotes/utils';
 
 describe('calculateDepositAmount', () => {
   describe('percentage-based deposits', () => {

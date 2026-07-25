@@ -1,22 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  Hourglass,
-  Eye,
-  Mail,
-  FileText,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Hourglass, Eye, Mail, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ContractEditor } from '@/components/contracts/contract-editor';
@@ -48,7 +34,11 @@ export async function generateMetadata({ params }: PageProps) {
 
 const statusConfig: Record<
   string,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }
+  {
+    label: string;
+    variant: 'default' | 'secondary' | 'destructive' | 'outline';
+    icon: React.ReactNode;
+  }
 > = {
   draft: {
     label: 'Draft',
@@ -104,7 +94,7 @@ export default async function ContractDetailPage({ params }: PageProps) {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold">{instance.contractName}</h1>
               <Badge variant={config?.variant ?? 'secondary'} className="gap-1">
                 {config?.icon}
@@ -132,45 +122,45 @@ export default async function ContractDetailPage({ params }: PageProps) {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">Client</p>
+              <p className="text-muted-foreground text-sm">Client</p>
               <p className="font-medium">{instance.clientName}</p>
             </div>
             {instance.quoteName && (
               <div>
-                <p className="text-sm text-muted-foreground">Related Quote</p>
+                <p className="text-muted-foreground text-sm">Related Quote</p>
                 <p className="font-medium">{instance.quoteName}</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-muted-foreground">Sent</p>
+              <p className="text-muted-foreground text-sm">Sent</p>
               <p className="font-medium">
                 {instance.sentAt ? formatDate(instance.sentAt) : 'Not sent'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Viewed</p>
+              <p className="text-muted-foreground text-sm">Viewed</p>
               <p className="font-medium">
                 {instance.viewedAt ? formatDate(instance.viewedAt) : 'Not viewed'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Signed</p>
+              <p className="text-muted-foreground text-sm">Signed</p>
               <p className="font-medium">
                 {instance.signedAt ? formatDate(instance.signedAt) : 'Not signed'}
               </p>
             </div>
             {instance.signerIpAddress && (
               <div>
-                <p className="text-sm text-muted-foreground">Client IP</p>
-                <p className="font-medium font-mono text-sm">
-                  {instance.signerIpAddress}
-                </p>
+                <p className="text-muted-foreground text-sm">Client IP</p>
+                <p className="font-mono text-sm font-medium">{instance.signerIpAddress}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {(instance.signatureData || instance.status === 'pending' || instance.status === 'signed') && (
+        {(instance.signatureData ||
+          instance.status === 'pending' ||
+          instance.status === 'signed') && (
           <Card>
             <CardHeader>
               <CardTitle>Signatures</CardTitle>
@@ -179,17 +169,19 @@ export default async function ContractDetailPage({ params }: PageProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Client Signature */}
                 <div>
-                  <p className="text-sm font-medium mb-2">Client Signature</p>
+                  <p className="mb-2 text-sm font-medium">Client Signature</p>
                   {instance.signatureData ? (
-                    <div className="border rounded-lg p-4 bg-card">
-                      {instance.signatureData.type === 'drawn' && (instance.signatureData.value.startsWith('data:image/') || instance.signatureData.value.startsWith('https://')) ? (
+                    <div className="bg-card rounded-lg border p-4">
+                      {instance.signatureData.type === 'drawn' &&
+                      (instance.signatureData.value.startsWith('data:image/') ||
+                        instance.signatureData.value.startsWith('https://')) ? (
                         <img
                           src={instance.signatureData.value}
                           alt="Client Signature"
                           className="max-h-24"
                         />
                       ) : instance.signatureData.type === 'drawn' ? (
-                        <p className="text-sm text-muted-foreground">Invalid signature data</p>
+                        <p className="text-muted-foreground text-sm">Invalid signature data</p>
                       ) : (
                         <p
                           className="text-3xl"
@@ -198,13 +190,13 @@ export default async function ContractDetailPage({ params }: PageProps) {
                           {instance.signatureData.value}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-muted-foreground mt-2 text-xs">
                         Signed by {instance.signatureData.name} on{' '}
                         {formatDate(new Date(instance.signatureData.date))}
                       </p>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed rounded-lg p-4 h-24 flex items-center justify-center text-sm text-muted-foreground">
+                    <div className="text-muted-foreground flex h-24 items-center justify-center rounded-lg border-2 border-dashed p-4 text-sm">
                       Awaiting client signature
                     </div>
                   )}
@@ -212,17 +204,19 @@ export default async function ContractDetailPage({ params }: PageProps) {
 
                 {/* Business Signature */}
                 <div>
-                  <p className="text-sm font-medium mb-2">Business Signature</p>
+                  <p className="mb-2 text-sm font-medium">Business Signature</p>
                   {instance.countersignatureData ? (
-                    <div className="border rounded-lg p-4 bg-card">
-                      {instance.countersignatureData.type === 'drawn' && (instance.countersignatureData.value.startsWith('data:image/') || instance.countersignatureData.value.startsWith('https://')) ? (
+                    <div className="bg-card rounded-lg border p-4">
+                      {instance.countersignatureData.type === 'drawn' &&
+                      (instance.countersignatureData.value.startsWith('data:image/') ||
+                        instance.countersignatureData.value.startsWith('https://')) ? (
                         <img
                           src={instance.countersignatureData.value}
                           alt="Business Signature"
                           className="max-h-24"
                         />
                       ) : instance.countersignatureData.type === 'drawn' ? (
-                        <p className="text-sm text-muted-foreground">Invalid signature data</p>
+                        <p className="text-muted-foreground text-sm">Invalid signature data</p>
                       ) : (
                         <p
                           className="text-3xl"
@@ -231,13 +225,13 @@ export default async function ContractDetailPage({ params }: PageProps) {
                           {instance.countersignatureData.value}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-muted-foreground mt-2 text-xs">
                         Countersigned by {instance.countersignatureData.name} on{' '}
                         {formatDate(new Date(instance.countersignatureData.date))}
                       </p>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed rounded-lg p-4 h-24 flex items-center justify-center text-sm text-muted-foreground">
+                    <div className="text-muted-foreground flex h-24 items-center justify-center rounded-lg border-2 border-dashed p-4 text-sm">
                       Awaiting business countersignature
                     </div>
                   )}
@@ -252,10 +246,7 @@ export default async function ContractDetailPage({ params }: PageProps) {
             <CardTitle>Contract Content</CardTitle>
           </CardHeader>
           <CardContent>
-            <ContractEditor
-              content={instance.content}
-              editable={false}
-            />
+            <ContractEditor content={instance.content} editable={false} />
           </CardContent>
         </Card>
       </div>

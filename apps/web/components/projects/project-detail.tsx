@@ -57,7 +57,14 @@ interface ProjectDetailProps {
   currency?: string;
 }
 
-export function ProjectDetail({ project, stats, activity, notes, contracts, currency = 'USD' }: ProjectDetailProps) {
+export function ProjectDetail({
+  project,
+  stats,
+  activity,
+  notes,
+  contracts,
+  currency = 'USD',
+}: ProjectDetailProps) {
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -83,10 +90,10 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
   return (
     <div className="space-y-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
         <Link
           href="/projects"
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          className="hover:text-foreground flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Projects
@@ -100,10 +107,7 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
-            <Badge
-              variant={project.isActive ? 'default' : 'secondary'}
-              className="font-normal"
-            >
+            <Badge variant={project.isActive ? 'default' : 'secondary'} className="font-normal">
               {project.isActive ? 'Active' : 'Inactive'}
             </Badge>
           </div>
@@ -161,33 +165,33 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
       </div>
 
       {/* Financial Summary */}
-      <div className="rounded-lg border bg-card p-6">
+      <div className="bg-card rounded-lg border p-6">
         <div className="grid grid-cols-3 gap-6">
           <div>
-            <p className="text-sm text-muted-foreground">Project Value</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1">
+            <p className="text-muted-foreground text-sm">Project Value</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               {formatCurrency(projectValue, currency)}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Outstanding</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1 text-amber-600">
+            <p className="text-muted-foreground text-sm">Outstanding</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-amber-600">
               {formatCurrency(totalDue, currency)}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Received</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1 text-emerald-600">
+            <p className="text-muted-foreground text-sm">Received</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">
               {formatCurrency(totalReceived, currency)}
             </p>
           </div>
         </div>
         <div className="mt-5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+          <div className="text-muted-foreground mb-1.5 flex items-center justify-between text-xs">
             <span>Payment progress</span>
             <span>{Math.round(paymentProgress)}%</span>
           </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="bg-muted h-1.5 overflow-hidden rounded-full">
             <div
               className="h-full rounded-full bg-emerald-500 transition-all"
               style={{ width: `${paymentProgress}%` }}
@@ -208,23 +212,26 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
               addHref={`/invoices/new?projectId=${project.id}&clientId=${project.client.id}`}
             />
             {project.invoices.length > 0 ? (
-              <div className="rounded-lg border divide-y">
+              <div className="divide-y rounded-lg border">
                 {project.invoices.map((invoice) => (
                   <Link
                     key={invoice.id}
                     href={`/invoices/${invoice.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    className="hover:bg-muted/50 flex items-center justify-between px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
                   >
                     <div>
                       <p className="text-sm font-medium">{invoice.invoiceNumber}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         {invoice.title}
                         {invoice.dueDate && <> &middot; Due {formatDate(invoice.dueDate)}</>}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium tabular-nums">
-                        {formatCurrency(Number(invoice.total), (invoice as any).currency || currency)}
+                        {formatCurrency(
+                          Number(invoice.total),
+                          (invoice as any).currency || currency
+                        )}
                       </span>
                       <StatusBadge status={invoice.status} />
                     </div>
@@ -244,18 +251,16 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
               addHref={`/quotes/new?projectId=${project.id}&clientId=${project.client.id}`}
             />
             {project.quotes.length > 0 ? (
-              <div className="rounded-lg border divide-y">
+              <div className="divide-y rounded-lg border">
                 {project.quotes.map((quote) => (
                   <Link
                     key={quote.id}
                     href={`/quotes/${quote.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    className="hover:bg-muted/50 flex items-center justify-between px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
                   >
                     <div>
-                      <p className="text-sm font-medium">
-                        {quote.title || quote.quoteNumber}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-sm font-medium">{quote.title || quote.quoteNumber}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         {quote.quoteNumber} &middot; {formatDate(quote.createdAt)}
                       </p>
                     </div>
@@ -281,7 +286,7 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
               addHref={`/contracts/new?projectId=${project.id}&clientId=${project.client.id}`}
             />
             {contracts.length > 0 ? (
-              <div className="rounded-lg border divide-y">
+              <div className="divide-y rounded-lg border">
                 {contracts.map((contract) => (
                   <div
                     key={contract.id}
@@ -289,14 +294,14 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
                   >
                     <div>
                       <p className="text-sm font-medium">{contract.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         Added {formatDate(contract.addedAt)}
                       </p>
                     </div>
                     {contract.isSigned ? (
                       <Badge
                         variant="outline"
-                        className="text-xs border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400"
+                        className="border-emerald-200 bg-emerald-50 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400"
                       >
                         <CheckCircle2 className="mr-1 h-3 w-3" />
                         Signed
@@ -322,7 +327,7 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
                 {notes.map((note) => (
                   <div key={note.id} className="rounded-lg border px-4 py-3">
                     <p className="text-sm leading-relaxed">{note.content}</p>
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs">
                       <span>{note.authorName}</span>
                       <span>&middot;</span>
                       <span>{formatDate(note.createdAt)}</span>
@@ -347,25 +352,25 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
         <div className="space-y-8">
           {/* Contact */}
           <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-4">Contact</h2>
-            <div className="rounded-lg border bg-card p-4">
+            <h2 className="text-muted-foreground mb-4 text-sm font-medium">Contact</h2>
+            <div className="bg-card rounded-lg border p-4">
               <Link
                 href={`/clients/${project.client.id}`}
                 className="group flex items-center gap-3"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted shrink-0">
+                <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                   {project.client.company ? (
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <Building2 className="text-muted-foreground h-4 w-4" />
                   ) : (
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <User className="text-muted-foreground h-4 w-4" />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium group-hover:underline truncate">
+                  <p className="truncate text-sm font-medium group-hover:underline">
                     {project.client.name}
                   </p>
                   {project.client.company && (
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-muted-foreground truncate text-xs">
                       {project.client.company}
                     </p>
                   )}
@@ -376,7 +381,7 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
                 {project.client.phone && (
                   <a
                     href={`tel:${project.client.phone}`}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
                   >
                     <Phone className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{project.client.phone}</span>
@@ -384,30 +389,30 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
                 )}
                 <a
                   href={`mailto:${project.client.email}`}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
                 >
                   <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{project.client.email}</span>
                 </a>
               </div>
 
-              <div className="mt-4 pt-4 border-t space-y-1">
+              <div className="mt-4 space-y-1 border-t pt-4">
                 <button
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+                  className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-sm transition-colors"
                   onClick={() => toast.info('Client portal is not yet available')}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   View client portal
                 </button>
                 <button
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+                  className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-sm transition-colors"
                   onClick={() => toast.info('Invite links are not yet available')}
                 >
                   <Link2 className="h-3.5 w-3.5" />
                   Copy invite link
                 </button>
                 <button
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+                  className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-sm transition-colors"
                   onClick={() => toast.info('Invitations are not yet available')}
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -419,29 +424,27 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
 
           {/* Activity */}
           <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-4">Activity</h2>
+            <h2 className="text-muted-foreground mb-4 text-sm font-medium">Activity</h2>
             <div className="space-y-0">
               {activity.map((item, i) => (
                 <div key={item.id} className="flex gap-3">
                   <div className="relative flex flex-col items-center">
                     <div
                       className={cn(
-                        'h-2 w-2 rounded-full mt-1.5 shrink-0 bg-gray-400',
+                        'mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gray-400',
                         (item.type === 'contract_signed' ||
                           item.type === 'quote_accepted' ||
                           item.type === 'invoice_paid') &&
                           'bg-emerald-500',
                         (item.type === 'quote_sent' || item.type === 'invoice_sent') &&
-                          'bg-blue-500',
+                          'bg-blue-500'
                       )}
                     />
-                    {i < activity.length - 1 && (
-                      <div className="w-px flex-1 bg-border mt-1.5" />
-                    )}
+                    {i < activity.length - 1 && <div className="bg-border mt-1.5 w-px flex-1" />}
                   </div>
                   <div className="pb-5">
                     <p className="text-sm">{item.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {formatRelativeDate(item.date)}
                       {item.amount != null && ` \u00b7 ${formatCurrency(item.amount, currency)}`}
                     </p>
@@ -449,11 +452,10 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
                 </div>
               ))}
               {activity.length === 0 && (
-                <p className="text-sm text-muted-foreground py-2">No activity yet</p>
+                <p className="text-muted-foreground py-2 text-sm">No activity yet</p>
               )}
             </div>
           </section>
-
         </div>
       </div>
 
@@ -464,8 +466,8 @@ export function ProjectDetail({ project, stats, activity, notes, contracts, curr
             <AlertDialogTitle>Delete project</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
-              undone. Associated quotes, invoices, and contracts will remain but will no longer
-              be linked to this project.
+              undone. Associated quotes, invoices, and contracts will remain but will no longer be
+              linked to this project.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -496,11 +498,11 @@ function SectionHeader({
   addHref?: string;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
-        <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+        <h2 className="text-muted-foreground text-sm font-medium">{title}</h2>
         {count > 0 && (
-          <span className="text-xs text-muted-foreground tabular-nums bg-muted rounded-full px-2 py-0.5">
+          <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs tabular-nums">
             {count}
           </span>
         )}
@@ -527,10 +529,9 @@ function StatusBadge({ status }: { status: string }) {
           'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400',
         status === 'sent' &&
           'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',
-        status === 'draft' &&
-          'border-border bg-muted text-muted-foreground',
+        status === 'draft' && 'border-border bg-muted text-muted-foreground',
         status === 'overdue' &&
-          'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400',
+          'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400'
       )}
     >
       {status}
@@ -539,7 +540,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function EmptyState({ label }: { label: string }) {
-  return <p className="text-sm text-muted-foreground py-2">{label}</p>;
+  return <p className="text-muted-foreground py-2 text-sm">{label}</p>;
 }
 
 function formatRelativeDate(date: Date) {

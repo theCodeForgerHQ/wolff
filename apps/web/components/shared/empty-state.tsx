@@ -16,25 +16,14 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  action,
-  className,
-}: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center p-8 text-center',
-        className
-      )}
-    >
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-        <Icon className="h-10 w-10 text-muted-foreground" />
+    <div className={cn('flex flex-col items-center justify-center p-8 text-center', className)}>
+      <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-full">
+        <Icon className="text-muted-foreground h-10 w-10" />
       </div>
       <h3 className="mt-6 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground mt-2 max-w-sm text-sm">{description}</p>
       {action && (
         <div className="mt-6">
           {action.href ? (

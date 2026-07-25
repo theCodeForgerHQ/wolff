@@ -16,7 +16,11 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useQuoteBuilderStore } from '@/lib/stores/quote-builder-store';
 import { createBlock, type BlockType, type QuoteBlock } from '@/lib/quotes/types';
-import { useAutoSave, useBuilderKeyboardShortcuts, useUnsavedChangesWarning } from '@/lib/quotes/hooks';
+import {
+  useAutoSave,
+  useBuilderKeyboardShortcuts,
+  useUnsavedChangesWarning,
+} from '@/lib/quotes/hooks';
 import { getQuote } from '@/lib/quotes/actions';
 import { BlocksPanel } from '@/components/quotes/builder/blocks-panel';
 
@@ -31,14 +35,8 @@ export default function EditQuoteBuilderPage() {
   const [error, setError] = useState<string | null>(null);
   const hasInitialized = useRef(false);
 
-  const {
-    document,
-    showBlocksPanel,
-    showPropertiesPanel,
-    addBlock,
-    moveBlock,
-    initDocument,
-  } = useQuoteBuilderStore();
+  const { document, showBlocksPanel, showPropertiesPanel, addBlock, moveBlock, initDocument } =
+    useQuoteBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<QuoteBlock | null>(null);
   const [activeTemplateType, setActiveTemplateType] = useState<BlockType | null>(null);
@@ -62,7 +60,6 @@ export default function EditQuoteBuilderPage() {
       const store = useQuoteBuilderStore.getState();
       if (store.showBlocksPanel) store.toggleBlocksPanel();
       if (store.showPropertiesPanel) store.togglePropertiesPanel();
-
     }
   }, []);
 
@@ -165,7 +162,7 @@ export default function EditQuoteBuilderPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
           <p className="text-muted-foreground">Loading quote...</p>
         </div>
       </div>
@@ -215,14 +212,14 @@ export default function EditQuoteBuilderPage() {
 
         <DragOverlay>
           {activeTemplateType && (
-            <div className="rounded-lg border-2 border-dashed border-primary bg-primary/5 p-4 text-center">
+            <div className="border-primary bg-primary/5 rounded-lg border-2 border-dashed p-4 text-center">
               <p className="text-sm font-medium capitalize">
                 {activeTemplateType.replace('-', ' ')}
               </p>
             </div>
           )}
           {activeBlock && (
-            <div className="rounded-lg border bg-card p-4 shadow-lg opacity-80">
+            <div className="bg-card rounded-lg border p-4 opacity-80 shadow-lg">
               <p className="text-sm font-medium capitalize">
                 {activeBlock.type.replace('-', ' ')} Block
               </p>

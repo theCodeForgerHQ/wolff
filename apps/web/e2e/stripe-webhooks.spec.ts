@@ -265,7 +265,9 @@ test.describe('Stripe Checkout Flow', () => {
         const payButton = page.getByRole('button', { name: /pay.*online|pay now/i });
         if (await payButton.isVisible()) {
           // Listen for navigation to Stripe
-          const navigationPromise = page.waitForURL(/checkout\.stripe\.com/, { timeout: 10000 }).catch(() => null);
+          const navigationPromise = page
+            .waitForURL(/checkout\.stripe\.com/, { timeout: 10000 })
+            .catch(() => null);
           await payButton.click();
 
           // Either redirects to Stripe or shows payment modal
@@ -290,7 +292,9 @@ test.describe('Stripe Checkout Flow', () => {
       if (await unpaidInvoice.isVisible()) {
         await unpaidInvoice.click();
 
-        const copyLinkButton = page.getByRole('button', { name: /copy.*link|share.*link|payment link/i });
+        const copyLinkButton = page.getByRole('button', {
+          name: /copy.*link|share.*link|payment link/i,
+        });
         if (await copyLinkButton.isVisible()) {
           await copyLinkButton.click();
 

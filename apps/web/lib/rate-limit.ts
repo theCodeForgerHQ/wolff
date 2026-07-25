@@ -73,15 +73,30 @@ function checkInMemory(key: string, options: RateLimitOptions): RateLimitResult 
   if (!record || now > record.resetAt) {
     const resetAt = now + options.windowMs;
     inMemoryStore.set(key, { count: 1, resetAt });
-    return { limited: false, limit: options.limit, remaining: options.limit - 1, reset: Math.floor(resetAt / 1000) };
+    return {
+      limited: false,
+      limit: options.limit,
+      remaining: options.limit - 1,
+      reset: Math.floor(resetAt / 1000),
+    };
   }
 
   record.count++;
   if (record.count > options.limit) {
-    return { limited: true, limit: options.limit, remaining: 0, reset: Math.floor(record.resetAt / 1000) };
+    return {
+      limited: true,
+      limit: options.limit,
+      remaining: 0,
+      reset: Math.floor(record.resetAt / 1000),
+    };
   }
 
-  return { limited: false, limit: options.limit, remaining: options.limit - record.count, reset: Math.floor(record.resetAt / 1000) };
+  return {
+    limited: false,
+    limit: options.limit,
+    remaining: options.limit - record.count,
+    reset: Math.floor(record.resetAt / 1000),
+  };
 }
 
 // ─── Main export ────────────────────────────────────────────────────

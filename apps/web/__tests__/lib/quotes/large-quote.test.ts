@@ -52,7 +52,11 @@ function generateMixedBlocks(lineItemCount: number): Block[] {
   blocks.push({ id: 'block-heading', type: 'heading', content: 'Project Proposal' });
 
   // Add text intro
-  blocks.push({ id: 'block-intro', type: 'text', content: 'Thank you for considering our services.' });
+  blocks.push({
+    id: 'block-intro',
+    type: 'text',
+    content: 'Thank you for considering our services.',
+  });
 
   // Add divider
   blocks.push({ id: 'block-divider-1', type: 'divider' });
@@ -60,7 +64,7 @@ function generateMixedBlocks(lineItemCount: number): Block[] {
   // Add line items interspersed with text blocks
   for (let i = 0; i < lineItemCount; i++) {
     const qty = (i % 5) + 1;
-    const rate = 50 + (i * 10);
+    const rate = 50 + i * 10;
     blocks.push({
       id: `block-item-${i}`,
       type: 'line_item',
@@ -137,8 +141,22 @@ describe('Large Quote Handling (Bug #360, #364)', () => {
 
   it('large individual amounts handled (999,999.99)', () => {
     const items: LineItem[] = [
-      { id: '1', name: 'Enterprise License', description: '', qty: 1, rate: 999999.99, amount: 999999.99 },
-      { id: '2', name: 'Implementation', description: '', qty: 1, rate: 999999.99, amount: 999999.99 },
+      {
+        id: '1',
+        name: 'Enterprise License',
+        description: '',
+        qty: 1,
+        rate: 999999.99,
+        amount: 999999.99,
+      },
+      {
+        id: '2',
+        name: 'Implementation',
+        description: '',
+        qty: 1,
+        rate: 999999.99,
+        amount: 999999.99,
+      },
     ];
 
     const total = calculateQuoteTotal(items);

@@ -132,17 +132,13 @@ export function FileUpload({
       {previewUrl && preview ? (
         <div className="relative">
           {isImage ? (
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+            <div className="bg-muted relative aspect-video w-full overflow-hidden rounded-lg border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="h-full w-full object-contain"
-              />
+              <img src={previewUrl} alt="Preview" className="h-full w-full object-contain" />
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-lg border p-3">
-              <File className="h-8 w-8 text-muted-foreground" />
+              <File className="text-muted-foreground h-8 w-8" />
               <span className="flex-1 truncate text-sm">
                 {value instanceof File ? value.name : 'Uploaded file'}
               </span>
@@ -186,30 +182,26 @@ export function FileUpload({
 
           <div className="flex flex-col items-center gap-2">
             {isUploading ? (
-              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-10 w-10 animate-spin" />
             ) : isImage ? (
-              <ImageIcon className="h-10 w-10 text-muted-foreground" />
+              <ImageIcon className="text-muted-foreground h-10 w-10" />
             ) : (
-              <Upload className="h-10 w-10 text-muted-foreground" />
+              <Upload className="text-muted-foreground h-10 w-10" />
             )}
             <div className="text-sm">
-              <span className="font-medium text-primary">
+              <span className="text-primary font-medium">
                 {isUploading ? 'Uploading...' : placeholder}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {accept === 'image/*'
-                ? 'PNG, JPG, GIF up to'
-                : 'Files up to'}{' '}
+            <p className="text-muted-foreground text-xs">
+              {accept === 'image/*' ? 'PNG, JPG, GIF up to' : 'Files up to'}{' '}
               {Math.round(maxSize / 1024 / 1024)}MB
             </p>
           </div>
         </div>
       )}
 
-      {error && (
-        <p className="mt-2 text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-destructive mt-2 text-sm">{error}</p>}
     </div>
   );
 }

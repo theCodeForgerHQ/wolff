@@ -4,8 +4,8 @@ export default function ClientsLoading() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <div className="h-8 w-32 animate-pulse rounded-md bg-muted" />
-        <div className="h-10 w-32 animate-pulse rounded-md bg-muted" />
+        <div className="bg-muted h-8 w-32 animate-pulse rounded-md" />
+        <div className="bg-muted h-10 w-32 animate-pulse rounded-md" />
       </div>
       <CardGridSkeleton cards={6} />
     </div>

@@ -12,21 +12,26 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Dashboard Widgets', () => {
-
   test('should change revenue trend period', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
     // Find the revenue trend period selector
-    const periodSelector = page.locator(
-      '[role="combobox"]:near(:text("Revenue Trend")), ' +
-      'select:near(:text("Revenue")), ' +
-      'button:near(:text("Revenue Trend")):has-text(/days|months|week/i)'
-    ).first();
+    const periodSelector = page
+      .locator(
+        '[role="combobox"]:near(:text("Revenue Trend")), ' +
+          'select:near(:text("Revenue")), ' +
+          'button:near(:text("Revenue Trend")):has-text(/days|months|week/i)'
+      )
+      .first();
 
     if (!(await periodSelector.isVisible().catch(() => false))) {
       // Try alternative: look for any period dropdown near revenue section
-      const altSelector = page.locator('[data-testid*="period"], [data-testid*="trend"] select, [data-testid*="trend"] [role="combobox"]').first();
+      const altSelector = page
+        .locator(
+          '[data-testid*="period"], [data-testid*="trend"] select, [data-testid*="trend"] [role="combobox"]'
+        )
+        .first();
       if (!(await altSelector.isVisible().catch(() => false))) {
         test.skip();
         return;
@@ -37,7 +42,10 @@ test.describe('Dashboard Widgets', () => {
     }
 
     // Select a different period option
-    const option = page.locator('[role="option"], option').filter({ hasText: /30|90|month/i }).first();
+    const option = page
+      .locator('[role="option"], option')
+      .filter({ hasText: /30|90|month/i })
+      .first();
     if (await option.isVisible().catch(() => false)) {
       await option.click();
     }
@@ -50,11 +58,13 @@ test.describe('Dashboard Widgets', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const viewAllAnalytics = page.locator(
-      'a[href*="analytics"]:has-text("View All"), ' +
-      'a:has-text("View All Analytics"), ' +
-      'a[href="/dashboard/analytics"]'
-    ).first();
+    const viewAllAnalytics = page
+      .locator(
+        'a[href*="analytics"]:has-text("View All"), ' +
+          'a:has-text("View All Analytics"), ' +
+          'a[href="/dashboard/analytics"]'
+      )
+      .first();
 
     if (!(await viewAllAnalytics.isVisible().catch(() => false))) {
       test.skip();
@@ -70,10 +80,9 @@ test.describe('Dashboard Widgets', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const viewAllQuotes = page.locator(
-      'a[href="/quotes"]:has-text("View All"), ' +
-      'a:has-text("View All Quotes")'
-    ).first();
+    const viewAllQuotes = page
+      .locator('a[href="/quotes"]:has-text("View All"), ' + 'a:has-text("View All Quotes")')
+      .first();
 
     if (!(await viewAllQuotes.isVisible().catch(() => false))) {
       test.skip();
@@ -89,10 +98,9 @@ test.describe('Dashboard Widgets', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const viewAllInvoices = page.locator(
-      'a[href="/invoices"]:has-text("View All"), ' +
-      'a:has-text("View All Invoices")'
-    ).first();
+    const viewAllInvoices = page
+      .locator('a[href="/invoices"]:has-text("View All"), ' + 'a:has-text("View All Invoices")')
+      .first();
 
     if (!(await viewAllInvoices.isVisible().catch(() => false))) {
       test.skip();
@@ -109,7 +117,9 @@ test.describe('Dashboard Widgets', () => {
     await page.waitForLoadState('networkidle');
 
     // Find a quote detail link on the dashboard (recent quotes section or anywhere)
-    const quoteLink = page.locator('a[href^="/quotes/"]:not([href="/quotes/new"]):not([href="/quotes"])').first();
+    const quoteLink = page
+      .locator('a[href^="/quotes/"]:not([href="/quotes/new"]):not([href="/quotes"])')
+      .first();
 
     if (!(await quoteLink.isVisible().catch(() => false))) {
       test.skip();
@@ -129,7 +139,9 @@ test.describe('Dashboard Widgets', () => {
     await page.waitForLoadState('networkidle');
 
     // Find an invoice detail link on the dashboard (recent invoices section or anywhere)
-    const invoiceLink = page.locator('a[href^="/invoices/"]:not([href="/invoices/new"]):not([href="/invoices"])').first();
+    const invoiceLink = page
+      .locator('a[href^="/invoices/"]:not([href="/invoices/new"]):not([href="/invoices"])')
+      .first();
 
     if (!(await invoiceLink.isVisible().catch(() => false))) {
       test.skip();

@@ -31,7 +31,9 @@ import { BuilderToolbar } from '@/components/quotes/builder/builder-toolbar';
 
 export default function QuoteBuilderPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading builder...</div>}>
+    <Suspense
+      fallback={<div className="flex h-screen items-center justify-center">Loading builder...</div>}
+    >
       <QuoteBuilderContent />
     </Suspense>
   );
@@ -41,14 +43,8 @@ function QuoteBuilderContent() {
   const searchParams = useSearchParams();
   const clientId = searchParams.get('clientId');
 
-  const {
-    document,
-    showBlocksPanel,
-    showPropertiesPanel,
-    addBlock,
-    moveBlock,
-    resetDocument,
-  } = useQuoteBuilderStore();
+  const { document, showBlocksPanel, showPropertiesPanel, addBlock, moveBlock, resetDocument } =
+    useQuoteBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<QuoteBlock | null>(null);
   const [activeTemplateType, setActiveTemplateType] = useState<BlockType | null>(null);
@@ -97,7 +93,6 @@ function QuoteBuilderContent() {
       const store = useQuoteBuilderStore.getState();
       if (store.showBlocksPanel) store.toggleBlocksPanel();
       if (store.showPropertiesPanel) store.togglePropertiesPanel();
-
     }
   }, []);
 
@@ -181,7 +176,7 @@ function QuoteBuilderContent() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
           <p className="text-muted-foreground">Loading builder...</p>
         </div>
       </div>
@@ -209,14 +204,14 @@ function QuoteBuilderContent() {
 
         <DragOverlay>
           {activeTemplateType && (
-            <div className="rounded-lg border-2 border-dashed border-primary bg-primary/5 p-4 text-center">
+            <div className="border-primary bg-primary/5 rounded-lg border-2 border-dashed p-4 text-center">
               <p className="text-sm font-medium capitalize">
                 {activeTemplateType.replace('-', ' ')}
               </p>
             </div>
           )}
           {activeBlock && (
-            <div className="rounded-lg border bg-card p-4 shadow-lg opacity-80">
+            <div className="bg-card rounded-lg border p-4 opacity-80 shadow-lg">
               <p className="text-sm font-medium capitalize">
                 {activeBlock.type.replace('-', ' ')} Block
               </p>

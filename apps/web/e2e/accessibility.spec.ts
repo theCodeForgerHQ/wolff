@@ -136,9 +136,9 @@ test.describe('Accessibility Tests', () => {
       for (let i = 0; i < count; i++) {
         const button = buttons.nth(i);
         const name = await button.evaluate((el) => {
-          return el.getAttribute('aria-label') ||
-                 el.textContent?.trim() ||
-                 el.getAttribute('title');
+          return (
+            el.getAttribute('aria-label') || el.textContent?.trim() || el.getAttribute('title')
+          );
         });
 
         expect(name).toBeTruthy();
@@ -154,9 +154,9 @@ test.describe('Accessibility Tests', () => {
       for (let i = 0; i < count; i++) {
         const link = links.nth(i);
         const name = await link.evaluate((el) => {
-          return el.getAttribute('aria-label') ||
-                 el.textContent?.trim() ||
-                 el.getAttribute('title');
+          return (
+            el.getAttribute('aria-label') || el.textContent?.trim() || el.getAttribute('title')
+          );
         });
 
         expect(name).toBeTruthy();

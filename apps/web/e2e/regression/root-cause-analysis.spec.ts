@@ -54,10 +54,9 @@ test.describe('RCA-001: Route Validation - All Navigation Links Work', () => {
       if (await helpLink.isVisible()) {
         await helpLink.click();
 
-        const response = await page.waitForResponse(
-          (response) => response.url().includes('/help'),
-          { timeout: 5000 }
-        ).catch(() => null);
+        const response = await page
+          .waitForResponse((response) => response.url().includes('/help'), { timeout: 5000 })
+          .catch(() => null);
 
         // Should not show 404
         const notFoundText = page.getByText(/page not found|404/i);
@@ -102,7 +101,9 @@ test.describe('RCA-002: Notification Button Functionality', () => {
       await notificationButton.click();
 
       // Should show notification dropdown content
-      const notificationContent = page.locator('[role="menu"]').filter({ hasText: /notification/i });
+      const notificationContent = page
+        .locator('[role="menu"]')
+        .filter({ hasText: /notification/i });
       await expect(notificationContent).toBeVisible({ timeout: 3000 });
 
       // Should have "Mark all as read" or similar action
@@ -128,10 +129,15 @@ test.describe('RCA-002: Notification Button Functionality', () => {
       await notificationButton.click();
 
       // Should either open dropdown or navigate somewhere
-      const dropdownOpened = await page.locator('[role="menu"]').isVisible().catch(() => false);
+      const dropdownOpened = await page
+        .locator('[role="menu"]')
+        .isVisible()
+        .catch(() => false);
       const navigated = page.url() !== 'about:blank';
 
-      expect(dropdownOpened || navigated, 'Notification button should do something on click').toBe(true);
+      expect(dropdownOpened || navigated, 'Notification button should do something on click').toBe(
+        true
+      );
     }
   });
 });
@@ -158,9 +164,13 @@ test.describe('RCA-003: Theme Toggle is Toggle Not Dropdown', () => {
 
       // Wait for theme class to change on html element
       if (wasDark) {
-        await expect(page.locator('html:not(.dark)')).toBeAttached({ timeout: 2000 }).catch(() => {});
+        await expect(page.locator('html:not(.dark)'))
+          .toBeAttached({ timeout: 2000 })
+          .catch(() => {});
       } else {
-        await expect(page.locator('html.dark')).toBeAttached({ timeout: 2000 }).catch(() => {});
+        await expect(page.locator('html.dark'))
+          .toBeAttached({ timeout: 2000 })
+          .catch(() => {});
       }
 
       // Theme should have changed
@@ -282,7 +292,10 @@ test.describe('RCA-005: Save and Send Buttons Functionality', () => {
 
       // Should either: make network request, show success toast, or redirect
       const hasRequest = requests.length > 0;
-      const hasToast = await page.getByText(/saved|success|created/i).isVisible().catch(() => false);
+      const hasToast = await page
+        .getByText(/saved|success|created/i)
+        .isVisible()
+        .catch(() => false);
       const redirected = !page.url().includes('/new');
 
       const actionTaken = hasRequest || hasToast || redirected;
@@ -308,10 +321,18 @@ test.describe('RCA-005: Save and Send Buttons Functionality', () => {
         await sendButton.click();
 
         // Should open dialog or trigger action
-        const dialogOpened = await page.locator('[role="dialog"]').isVisible().catch(() => false);
-        const toastShown = await page.getByText(/sent|sending|email/i).isVisible().catch(() => false);
+        const dialogOpened = await page
+          .locator('[role="dialog"]')
+          .isVisible()
+          .catch(() => false);
+        const toastShown = await page
+          .getByText(/sent|sending|email/i)
+          .isVisible()
+          .catch(() => false);
 
-        expect(dialogOpened || toastShown, 'Send button should trigger send action or dialog').toBe(true);
+        expect(dialogOpened || toastShown, 'Send button should trigger send action or dialog').toBe(
+          true
+        );
       }
     }
   });
@@ -330,13 +351,16 @@ test.describe('RCA-006: Client Linking in Quote Creation', () => {
     // Should show client selector somewhere in the UI
     const clientSelector = page.locator(
       '[data-testid="client-select"], ' +
-      'select[name*="client"], ' +
-      '[aria-label*="client"], ' +
-      'button:has-text("Select Client"), ' +
-      '[placeholder*="client"]'
+        'select[name*="client"], ' +
+        '[aria-label*="client"], ' +
+        'button:has-text("Select Client"), ' +
+        '[placeholder*="client"]'
     );
 
-    const clientSelectorVisible = await clientSelector.first().isVisible().catch(() => false);
+    const clientSelectorVisible = await clientSelector
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     // Or there should be a client field/section
     const clientSection = page.getByText(/select.*client|choose.*client|client.*required/i);
@@ -406,9 +430,15 @@ test.describe('RCA-007: Quote List to Detail Navigation', () => {
 
         // URL should have changed to the quote detail page
         const currentUrl = page.url();
-        const navigatedToDetail = currentUrl.includes('/quotes/') && !currentUrl.endsWith('/quotes') && !currentUrl.endsWith('/quotes/');
+        const navigatedToDetail =
+          currentUrl.includes('/quotes/') &&
+          !currentUrl.endsWith('/quotes') &&
+          !currentUrl.endsWith('/quotes/');
 
-        expect(navigatedToDetail, `URL should change to quote detail page. Got: ${currentUrl}`).toBe(true);
+        expect(
+          navigatedToDetail,
+          `URL should change to quote detail page. Got: ${currentUrl}`
+        ).toBe(true);
       }
     } else {
       // No quotes exist - test passes (nothing to navigate to)
@@ -431,8 +461,8 @@ test.describe('RCA-007: Quote List to Detail Navigation', () => {
       }
 
       // IDs should be UUIDs or proper database IDs, not "1", "2", "3"
-      const mockIds = hrefs.filter(href =>
-        href.match(/\/quotes\/[123]$/) // Simple numeric mock IDs
+      const mockIds = hrefs.filter(
+        (href) => href.match(/\/quotes\/[123]$/) // Simple numeric mock IDs
       );
 
       expect(mockIds.length, 'Quote IDs should not be simple mock numbers').toBe(0);
@@ -454,7 +484,7 @@ test.describe('RCA-008: All Block Types Render Correctly', () => {
     const blocksPanel = page.locator('[data-testid="blocks-panel"], [class*="blocks-panel"]');
     const addBlockButton = page.getByRole('button', { name: /add.*block/i });
 
-    if (await blocksPanel.isVisible() || await addBlockButton.isVisible()) {
+    if ((await blocksPanel.isVisible()) || (await addBlockButton.isVisible())) {
       // Check that no "Unknown block type" error exists on the page
       const unknownBlockError = page.getByText(/unknown block type/i);
       const hasError = await unknownBlockError.isVisible().catch(() => false);
@@ -471,7 +501,9 @@ test.describe('RCA-008: All Block Types Render Correctly', () => {
     const blockTypes = ['service-group', 'columns', 'table'];
 
     for (const blockType of blockTypes) {
-      const blockButton = page.locator(`[data-block-type="${blockType}"], button:has-text("${blockType}")`);
+      const blockButton = page.locator(
+        `[data-block-type="${blockType}"], button:has-text("${blockType}")`
+      );
 
       if (await blockButton.isVisible()) {
         await blockButton.click();
@@ -504,12 +536,16 @@ test.describe('RCA-009: Form Validation Errors Display Correctly', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show validation errors near fields, not just generic toast
-      const fieldErrors = page.locator('[role="alert"], .error, [class*="error"], [aria-invalid="true"]');
-      const hasFieldErrors = await fieldErrors.count() > 0;
+      const fieldErrors = page.locator(
+        '[role="alert"], .error, [class*="error"], [aria-invalid="true"]'
+      );
+      const hasFieldErrors = (await fieldErrors.count()) > 0;
 
       // At minimum, required fields should be marked
-      const requiredIndicators = page.locator('[aria-required="true"], .required, [class*="required"]');
-      const hasRequiredIndicators = await requiredIndicators.count() > 0;
+      const requiredIndicators = page.locator(
+        '[aria-required="true"], .required, [class*="required"]'
+      );
+      const hasRequiredIndicators = (await requiredIndicators.count()) > 0;
 
       // Some form of specific feedback should exist
       const formFeedback = hasFieldErrors || hasRequiredIndicators;
@@ -535,8 +571,14 @@ test.describe('RCA-009: Form Validation Errors Display Correctly', () => {
       // 2. Actually save (if no validation required)
       // 3. NOT silently fail
 
-      const hasError = await page.getByText(/error|required|invalid/i).isVisible().catch(() => false);
-      const hasSuccess = await page.getByText(/saved|created|success/i).isVisible().catch(() => false);
+      const hasError = await page
+        .getByText(/error|required|invalid/i)
+        .isVisible()
+        .catch(() => false);
+      const hasSuccess = await page
+        .getByText(/saved|created|success/i)
+        .isVisible()
+        .catch(() => false);
       const redirected = !page.url().includes('/new');
 
       // Some feedback should exist
@@ -583,7 +625,9 @@ test.describe('RCA-010: Dashboard Layout Padding', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for container with proper padding class
-    const container = page.locator('.container, [class*="p-4"], [class*="p-6"], [class*="px-"]').first();
+    const container = page
+      .locator('.container, [class*="p-4"], [class*="p-6"], [class*="px-"]')
+      .first();
     const hasContainer = await container.isVisible().catch(() => false);
 
     // Some spacing mechanism should exist
@@ -616,7 +660,10 @@ test.describe('RCA-011: Modal Overlay CSS', () => {
 
         // Modal content should be readable (not obscured)
         const modalContent = modal.locator('input, button, h2, h3');
-        const contentVisible = await modalContent.first().isVisible().catch(() => false);
+        const contentVisible = await modalContent
+          .first()
+          .isVisible()
+          .catch(() => false);
 
         expect(contentVisible, 'Modal content should be visible').toBe(true);
       }

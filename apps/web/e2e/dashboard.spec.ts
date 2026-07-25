@@ -145,7 +145,7 @@ test.describe('Dashboard Module', () => {
       const hasMain = await mainContent.isVisible().catch(() => false);
 
       // Dashboard content should be accessible
-      expect(hasMain || await heading.isVisible()).toBe(true);
+      expect(hasMain || (await heading.isVisible())).toBe(true);
     });
   });
 
@@ -172,8 +172,10 @@ test.describe('Dashboard Module', () => {
       await page.goto('/dashboard');
 
       // Widgets should be clickable/expandable
-      const widgetLinks = page.locator('a[href^="/quotes/"], a[href^="/invoices/"], a[href^="/clients/"]');
-      if (await widgetLinks.count() > 0) {
+      const widgetLinks = page.locator(
+        'a[href^="/quotes/"], a[href^="/invoices/"], a[href^="/clients/"]'
+      );
+      if ((await widgetLinks.count()) > 0) {
         await expect(widgetLinks.first()).toBeVisible();
       }
     });
@@ -218,7 +220,7 @@ test.describe('Dashboard Accessibility', () => {
 
     // Stats should have proper labels
     const cards = page.locator('[class*="card"], [class*="Card"]');
-    if (await cards.count() > 0) {
+    if ((await cards.count()) > 0) {
       // Cards should contain text labels
       await expect(cards.first()).toContainText(/.+/);
     }

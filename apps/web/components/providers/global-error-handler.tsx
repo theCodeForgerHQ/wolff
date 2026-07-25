@@ -22,8 +22,7 @@ export function GlobalErrorHandler() {
       const reason = event.reason;
       if (reason?.name === 'AbortError') return;
 
-      const message =
-        reason instanceof Error ? reason.message : String(reason || 'Unknown error');
+      const message = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
 
       // Don't show duplicate toasts for common non-actionable errors
       if (message.includes('NEXT_NOT_FOUND') || message.includes('NEXT_REDIRECT')) return;
@@ -40,10 +39,7 @@ export function GlobalErrorHandler() {
 
       console.error('[GlobalErrorHandler] Uncaught error:', event.error || event.message);
       toast.error('An unexpected error occurred.', {
-        description:
-          process.env.NODE_ENV === 'development'
-            ? event.message
-            : undefined,
+        description: process.env.NODE_ENV === 'development' ? event.message : undefined,
       });
     };
 

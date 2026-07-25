@@ -3,7 +3,9 @@
  * Checks the Origin or Referer header against the expected app URL.
  * Returns true if the request origin is valid, false otherwise.
  */
-export function validateRequestOrigin(request: { headers: { get(name: string): string | null } }): boolean {
+export function validateRequestOrigin(request: {
+  headers: { get(name: string): string | null };
+}): boolean {
   // Build set of allowed hosts from all known URL env vars
   const allowedHosts = new Set<string>();
 
@@ -15,7 +17,11 @@ export function validateRequestOrigin(request: { headers: { get(name: string): s
     process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined,
   ]) {
     if (envVar) {
-      try { allowedHosts.add(new URL(envVar).host); } catch { /* skip invalid */ }
+      try {
+        allowedHosts.add(new URL(envVar).host);
+      } catch {
+        /* skip invalid */
+      }
     }
   }
 

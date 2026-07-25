@@ -3,14 +3,7 @@
  * These define the data structures for invoices
  */
 
-export type InvoiceStatus =
-  | 'draft'
-  | 'sent'
-  | 'viewed'
-  | 'partial'
-  | 'paid'
-  | 'overdue'
-  | 'voided';
+export type InvoiceStatus = 'draft' | 'sent' | 'viewed' | 'partial' | 'paid' | 'overdue' | 'voided';
 
 export interface InvoiceLineItem {
   id: string;

@@ -10,9 +10,9 @@ export function AnalyticsSkeleton() {
       <Skeleton className="h-9 w-[260px] rounded-lg" />
 
       {/* Overview Stats Skeleton */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 rounded-lg border bg-card divide-x divide-border">
+      <div className="bg-card divide-border grid grid-cols-2 divide-x rounded-lg border lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-5 space-y-3">
+          <div key={i} className="space-y-3 p-5">
             <Skeleton className="h-3 w-[80px]" />
             <Skeleton className="h-7 w-[100px]" />
             <Skeleton className="h-3 w-[60px]" />

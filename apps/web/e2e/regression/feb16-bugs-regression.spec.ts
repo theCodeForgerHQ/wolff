@@ -85,7 +85,10 @@ test.describe('Table Row Clickability - Bug #3 Regression', () => {
     const rowCount = await tableRows.count();
 
     if (rowCount > 0) {
-      const checkbox = tableRows.first().locator('input[type="checkbox"], [role="checkbox"]').first();
+      const checkbox = tableRows
+        .first()
+        .locator('input[type="checkbox"], [role="checkbox"]')
+        .first();
       if (await checkbox.isVisible()) {
         const currentUrl = page.url();
         await checkbox.click();
@@ -119,8 +122,10 @@ test.describe('Dark Mode Compliance - Bug #4/#21 Regression', () => {
       for (let i = 0; i < count; i++) {
         const el = bgWhiteElements.nth(i);
         // It's OK if it's inside an email template preview or PDF canvas
-        const isInPreview = await el.locator('closest([data-preview], [data-email-template])').count();
-        if (isInPreview === 0 && await el.isVisible()) {
+        const isInPreview = await el
+          .locator('closest([data-preview], [data-email-template])')
+          .count();
+        if (isInPreview === 0 && (await el.isVisible())) {
           // This element should use bg-card instead of bg-white
           console.warn(`Found visible bg-white element on quote detail page`);
         }
@@ -164,7 +169,9 @@ test.describe('Dark Mode Compliance - Bug #4/#21 Regression', () => {
         if (className && className.includes('border-') && className.includes('bg-')) {
           // Status badges should have dark: variants
           expect(
-            className.includes('dark:') || className.includes('bg-primary') || className.includes('bg-secondary'),
+            className.includes('dark:') ||
+              className.includes('bg-primary') ||
+              className.includes('bg-secondary'),
             `Badge "${await badge.textContent()}" should have dark mode classes`
           ).toBeTruthy();
         }
@@ -209,7 +216,9 @@ test.describe('Form Data Fetching - Bug #5/#6 Regression', () => {
     await page.waitForLoadState('networkidle');
 
     // Find client select/dropdown
-    const clientSelect = page.locator('[data-testid="client-select"], select[name="clientId"], [role="combobox"]').first();
+    const clientSelect = page
+      .locator('[data-testid="client-select"], select[name="clientId"], [role="combobox"]')
+      .first();
     if (await clientSelect.isVisible()) {
       await clientSelect.click();
 
@@ -234,9 +243,11 @@ test.describe('Form Data Fetching - Bug #5/#6 Regression', () => {
 
     // Should not show error state
     const errorText = page.getByText(/error|failed to load|something went wrong/i);
-    await expect(errorText).not.toBeVisible({ timeout: 3000 }).catch(() => {
-      // Acceptable if no error text found
-    });
+    await expect(errorText)
+      .not.toBeVisible({ timeout: 3000 })
+      .catch(() => {
+        // Acceptable if no error text found
+      });
 
     // Should show the form
     const form = page.locator('form');
@@ -295,13 +306,20 @@ test.describe('Error Handling Visibility - Bug #1 Regression', () => {
       const isGeneric = await genericError.isVisible().catch(() => false);
 
       // If there IS an error shown, it should be specific
-      const anyError = page.locator('[class*="text-destructive"], [class*="text-red"], [role="alert"]');
+      const anyError = page.locator(
+        '[class*="text-destructive"], [class*="text-red"], [role="alert"]'
+      );
       const errorCount = await anyError.count();
 
       if (errorCount > 0 && isGeneric) {
         // If we only see "Something went wrong" without specifics, that's a regression
-        const specificError = page.locator('.text-destructive:not(:has-text("Something went wrong"))');
-        expect(await specificError.count(), 'Should show specific error messages, not just "Something went wrong"').toBeGreaterThan(0);
+        const specificError = page.locator(
+          '.text-destructive:not(:has-text("Something went wrong"))'
+        );
+        expect(
+          await specificError.count(),
+          'Should show specific error messages, not just "Something went wrong"'
+        ).toBeGreaterThan(0);
       }
     }
   });
@@ -323,9 +341,13 @@ test.describe('Error Handling Visibility - Bug #1 Regression', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show validation error for missing content
-      const errorMessages = page.locator('.text-destructive, [role="alert"], [data-testid*="error"]');
+      const errorMessages = page.locator(
+        '.text-destructive, [role="alert"], [data-testid*="error"]'
+      );
       // Either validation error or toast notification should appear
-      const toastError = page.locator('[data-sonner-toast][data-type="error"], [role="status"]:has-text("error")');
+      const toastError = page.locator(
+        '[data-sonner-toast][data-type="error"], [role="status"]:has-text("error")'
+      );
       const hasError = (await errorMessages.count()) > 0 || (await toastError.count()) > 0;
 
       // It's acceptable to either show form validation or toast - just not silence
@@ -348,7 +370,7 @@ test.describe('URL Validation - Bug #14 Regression', () => {
     const emailInput = page.locator('input[name="email"], #email');
     const websiteInput = page.locator('input[name="website"], #website');
 
-    if (await nameInput.isVisible() && await websiteInput.isVisible()) {
+    if ((await nameInput.isVisible()) && (await websiteInput.isVisible())) {
       await nameInput.fill('Test URL Client');
       await emailInput.fill('url-test@e2e-test.local');
 
@@ -393,7 +415,9 @@ test.describe('Internal Notes Editability - Bug #10 Regression', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for the internal notes textarea
-    const notesTextarea = page.locator('textarea[placeholder*="internal" i], textarea[name*="internal" i]');
+    const notesTextarea = page.locator(
+      'textarea[placeholder*="internal" i], textarea[name*="internal" i]'
+    );
 
     if (await notesTextarea.isVisible()) {
       // Should NOT be disabled

@@ -46,10 +46,7 @@ export async function authenticateApiRequest(
   const rawKey = authHeader.slice(7);
   if (!rawKey || !rawKey.startsWith('qc_sk_')) {
     return {
-      error: NextResponse.json(
-        { error: 'Invalid API key format' },
-        { status: 401 }
-      ),
+      error: NextResponse.json({ error: 'Invalid API key format' }, { status: 401 }),
     };
   }
 
@@ -62,28 +59,24 @@ export async function authenticateApiRequest(
 
   if (!apiKey || apiKey.revokedAt) {
     return {
-      error: NextResponse.json(
-        { error: 'Invalid or revoked API key' },
-        { status: 401 }
-      ),
+      error: NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 }),
     };
   }
 
   // Check expiry with 5-second grace period for clock skew (key must be expired by 5s before rejection)
   if (apiKey.expiresAt && apiKey.expiresAt.getTime() + 5000 < Date.now()) {
     return {
-      error: NextResponse.json(
-        { error: 'API key has expired' },
-        { status: 401 }
-      ),
+      error: NextResponse.json({ error: 'API key has expired' }, { status: 401 }),
     };
   }
 
   // Update lastUsedAt (fire and forget — don't block the request)
-  prisma.apiKey.update({
-    where: { id: apiKey.id },
-    data: { lastUsedAt: new Date() },
-  }).catch(() => {});
+  prisma.apiKey
+    .update({
+      where: { id: apiKey.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => {});
 
   return {
     context: {

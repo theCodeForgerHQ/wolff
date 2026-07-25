@@ -174,15 +174,13 @@ describe('InvoiceList', () => {
 
   describe('Empty State', () => {
     it('shows empty state when no invoices', () => {
-      const invoices: typeof createMockInvoice[] = [];
+      const invoices: (typeof createMockInvoice)[] = [];
       expect(invoices.length).toBe(0);
       // Should show "No invoices yet" message
     });
 
     it('shows filtered empty state', () => {
-      const invoices = [
-        createMockInvoice({ status: 'draft' }),
-      ];
+      const invoices = [createMockInvoice({ status: 'draft' })];
 
       const paidInvoices = invoices.filter((inv) => inv.status === ('paid' as string));
       expect(paidInvoices.length).toBe(0);

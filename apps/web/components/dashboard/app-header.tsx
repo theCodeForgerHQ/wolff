@@ -19,7 +19,11 @@ import {
   Banknote,
   XCircle,
 } from 'lucide-react';
-import { markAllNotificationsRead, markNotificationRead, type NotificationData } from '@/lib/notifications/actions';
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationData,
+} from '@/lib/notifications/actions';
 
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { SearchCommand } from '@/components/shared/search-command';
@@ -27,11 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BETA_TOOLTIP_MESSAGE } from '@/lib/constants/beta';
 import {
   Breadcrumb,
@@ -145,7 +145,7 @@ function generateBreadcrumbs(pathname: string) {
       // Capitalize first letter of each word
       label = segment
         .split(/[-_.]/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
     }
 
@@ -203,7 +203,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               {BETA_TOOLTIP_MESSAGE}
             </TooltipContent>
           </Tooltip>
-          <Separator orientation="vertical" className="hidden h-4! md:block" />
+          <Separator orientation="vertical" className="h-4! hidden md:block" />
 
           {/* Breadcrumbs - hidden on mobile */}
           <Breadcrumb className="hidden md:block">
@@ -229,7 +229,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
           {/* Search - visible on mobile when expanded */}
           {searchOpen && (
             <div className="relative md:hidden">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Search..."
                 className="w-40 pl-9"
@@ -261,9 +261,9 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
             className="hidden md:flex"
             onClick={() => setCommandOpen(true)}
           >
-            <Search className="h-4 w-4 mr-2" />
+            <Search className="mr-2 h-4 w-4" />
             <span>Search</span>
-            <kbd className="ml-4 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            <kbd className="bg-muted text-muted-foreground ml-4 rounded px-2 py-0.5 text-xs">
               ⌘K
             </kbd>
           </Button>
@@ -280,7 +280,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                  <span className="bg-destructive text-destructive-foreground absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -293,7 +293,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground h-auto p-0 text-xs"
                     onClick={() => markAllNotificationsRead()}
                   >
                     Mark all as read
@@ -304,9 +304,9 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Bell className="h-8 w-8 text-muted-foreground mb-2" />
+                    <Bell className="text-muted-foreground mb-2 h-8 w-8" />
                     <p className="text-sm font-medium">No new notifications</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       We&apos;ll notify you when something arrives
                     </p>
                   </div>
@@ -316,7 +316,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
                     return (
                       <DropdownMenuItem
                         key={notification.id}
-                        className="flex items-start gap-3 p-3 cursor-pointer"
+                        className="flex cursor-pointer items-start gap-3 p-3"
                         onClick={() => {
                           if (!notification.isRead) {
                             markNotificationRead(notification.id);
@@ -327,21 +327,25 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
                         }}
                       >
                         <div className="mt-0.5 shrink-0">
-                          <IconComponent className="h-4 w-4 text-muted-foreground" />
+                          <IconComponent className="text-muted-foreground h-4 w-4" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate ${!notification.isRead ? 'font-semibold' : ''}`}>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={`truncate text-sm ${!notification.isRead ? 'font-semibold' : ''}`}
+                          >
                             {notification.title}
                           </p>
                           {notification.message && (
-                            <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {notification.message}
+                            </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-muted-foreground mt-0.5 text-xs">
                             {formatTimeAgo(notification.createdAt)}
                           </p>
                         </div>
                         {!notification.isRead && (
-                          <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                          <div className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full" />
                         )}
                       </DropdownMenuItem>
                     );
@@ -375,7 +379,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
                 </Avatar>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{user.name || 'User'}</span>
-                  <span className="text-xs text-muted-foreground">{user.email}</span>
+                  <span className="text-muted-foreground text-xs">{user.email}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

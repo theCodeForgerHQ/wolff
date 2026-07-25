@@ -133,7 +133,10 @@ test('should load dashboard', async ({ page }) => {
 ### Pattern 2: Data Integrity Verification
 
 ```typescript
-import { assertPageDataIntegrity, assertCardDataIntegrity } from './utils/data-integrity-assertions';
+import {
+  assertPageDataIntegrity,
+  assertCardDataIntegrity,
+} from './utils/data-integrity-assertions';
 
 test('should display quote list with valid data', async ({ page }) => {
   await page.goto('/quotes');
@@ -243,47 +246,47 @@ test.describe('Edge case handling', () => {
 
 ### Safe Assertions (`/utils/safe-assertions.ts`)
 
-| Function | Purpose | Replaces |
-|----------|---------|----------|
-| `assertVisible(locator, message)` | Assert element is visible with clear error | `.isVisible().catch(() => false)` |
-| `assertMinCount(locator, min, message)` | Assert at least N elements exist | `if (count > 0) { ... }` |
-| `checkVisibility(locator, description)` | Non-failing visibility check with context | `.isVisible().catch(() => false)` |
-| `navigateAndAssert(page, url)` | Navigate with status and error checking | Plain `page.goto()` |
-| `requireData(data, description)` | Assert data is not null/undefined | Silent null checks |
-| `assertDataOrEmptyState(page, config)` | Verify either data or empty state exists | Partial checks |
-| `assertNoErrorBoundary(page)` | Check no error boundary triggered | No check |
+| Function                                | Purpose                                    | Replaces                          |
+| --------------------------------------- | ------------------------------------------ | --------------------------------- |
+| `assertVisible(locator, message)`       | Assert element is visible with clear error | `.isVisible().catch(() => false)` |
+| `assertMinCount(locator, min, message)` | Assert at least N elements exist           | `if (count > 0) { ... }`          |
+| `checkVisibility(locator, description)` | Non-failing visibility check with context  | `.isVisible().catch(() => false)` |
+| `navigateAndAssert(page, url)`          | Navigate with status and error checking    | Plain `page.goto()`               |
+| `requireData(data, description)`        | Assert data is not null/undefined          | Silent null checks                |
+| `assertDataOrEmptyState(page, config)`  | Verify either data or empty state exists   | Partial checks                    |
+| `assertNoErrorBoundary(page)`           | Check no error boundary triggered          | No check                          |
 
 ### Server Error Detection (`/utils/server-error-detection.ts`)
 
-| Function | Purpose |
-|----------|---------|
-| `detectServerError(page)` | Detect error overlays, HTTP errors, TypeErrors |
-| `detectInvalidRenders(page, selector)` | Find "undefined", "null", "[object Object]" in content |
-| `assertNoServerComponentCrash(page, context)` | Full crash detection with context |
-| `safeNavigate(page, url, options)` | Navigate with automatic crash detection |
-| `monitorConsoleErrors(page)` | Attach listener for console errors |
+| Function                                      | Purpose                                                |
+| --------------------------------------------- | ------------------------------------------------------ |
+| `detectServerError(page)`                     | Detect error overlays, HTTP errors, TypeErrors         |
+| `detectInvalidRenders(page, selector)`        | Find "undefined", "null", "[object Object]" in content |
+| `assertNoServerComponentCrash(page, context)` | Full crash detection with context                      |
+| `safeNavigate(page, url, options)`            | Navigate with automatic crash detection                |
+| `monitorConsoleErrors(page)`                  | Attach listener for console errors                     |
 
 ### Data Integrity Assertions (`/utils/data-integrity-assertions.ts`)
 
-| Function | Purpose |
-|----------|---------|
-| `assertNoNullRenders(locator, context)` | Check for rendered null/undefined values |
-| `assertCardDataIntegrity(page, config)` | Verify card has required fields with valid data |
-| `assertListIntegrity(page, config)` | Verify list items have valid data |
-| `assertValidClientName(locator, context)` | Validate client name field |
-| `assertValidCurrency(locator, context)` | Validate currency amount |
-| `assertTableIntegrity(page, config)` | Verify table data integrity |
-| `assertPageDataIntegrity(page, config)` | Check entire page for null renders |
+| Function                                  | Purpose                                         |
+| ----------------------------------------- | ----------------------------------------------- |
+| `assertNoNullRenders(locator, context)`   | Check for rendered null/undefined values        |
+| `assertCardDataIntegrity(page, config)`   | Verify card has required fields with valid data |
+| `assertListIntegrity(page, config)`       | Verify list items have valid data               |
+| `assertValidClientName(locator, context)` | Validate client name field                      |
+| `assertValidCurrency(locator, context)`   | Validate currency amount                        |
+| `assertTableIntegrity(page, config)`      | Verify table data integrity                     |
+| `assertPageDataIntegrity(page, config)`   | Check entire page for null renders              |
 
 ### Edge Case Fixtures (`/fixtures/edge-case-data.fixture.ts`)
 
-| Export | Purpose |
-|--------|---------|
-| `EDGE_CASE_IDS` | Constants for edge case record IDs |
-| `ERROR_PATTERNS` | Regex patterns for error detection |
-| `verifyEdgeCaseDataExists()` | Check if edge case data is seeded |
-| `assertNoServerError()` | Fixture-based server error check |
-| `assertDataIntegrity()` | Fixture-based data integrity check |
+| Export                       | Purpose                            |
+| ---------------------------- | ---------------------------------- |
+| `EDGE_CASE_IDS`              | Constants for edge case record IDs |
+| `ERROR_PATTERNS`             | Regex patterns for error detection |
+| `verifyEdgeCaseDataExists()` | Check if edge case data is seeded  |
+| `assertNoServerError()`      | Fixture-based server error check   |
+| `assertDataIntegrity()`      | Fixture-based data integrity check |
 
 ---
 

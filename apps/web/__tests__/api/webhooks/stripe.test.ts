@@ -215,7 +215,7 @@ describe('Stripe Webhook API Route', () => {
       const now = Math.floor(Date.now() / 1000);
       const oldTimestamp = now - 600; // 10 minutes ago
 
-      const isExpired = (now - oldTimestamp) > tolerance;
+      const isExpired = now - oldTimestamp > tolerance;
       expect(isExpired).toBe(true);
     });
 
@@ -224,7 +224,7 @@ describe('Stripe Webhook API Route', () => {
       const now = Math.floor(Date.now() / 1000);
       const recentTimestamp = now - 60; // 1 minute ago
 
-      const isExpired = (now - recentTimestamp) > tolerance;
+      const isExpired = now - recentTimestamp > tolerance;
       expect(isExpired).toBe(false);
     });
 
@@ -234,7 +234,10 @@ describe('Stripe Webhook API Route', () => {
       const sig = 't=1234567890,v1=abc123';
       const secret = 'whsec_test_secret';
 
-      mockStripe.webhooks.constructEvent.mockReturnValue({ id: 'evt_123', type: 'checkout.session.completed' });
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        id: 'evt_123',
+        type: 'checkout.session.completed',
+      });
 
       const event = mockStripe.webhooks.constructEvent(body, sig, secret);
       expect(event.id).toBe('evt_123');

@@ -14,7 +14,12 @@ function formatInvoice(inv: Record<string, any>) {
     invoiceNumber: inv.invoiceNumber as string,
     title: inv.title as string,
     status: inv.status as string,
-    client: inv.client as { id: string; name: string; email: string; company: string | null } | null,
+    client: inv.client as {
+      id: string;
+      name: string;
+      email: string;
+      company: string | null;
+    } | null,
     currency: inv.currency as string,
     issueDate: inv.issueDate as Date,
     dueDate: inv.dueDate as Date,
@@ -101,7 +106,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     terms?: string;
     dueDate?: string;
     status?: string;
-    lineItems?: Array<{ name: string; description?: string; quantity: number; rate: number; taxRate?: number }>;
+    lineItems?: Array<{
+      name: string;
+      description?: string;
+      quantity: number;
+      rate: number;
+      taxRate?: number;
+    }>;
   };
 
   const updateData: Record<string, unknown> = {};
@@ -115,7 +126,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   // Bug #30: Paid/voided invoices should not allow ANY changes (except status transitions)
   const immutableStatuses = ['paid', 'voided'];
-  const hasNonStatusChanges = title !== undefined || notes !== undefined || terms !== undefined || dueDate !== undefined || lineItems !== undefined;
+  const hasNonStatusChanges =
+    title !== undefined ||
+    notes !== undefined ||
+    terms !== undefined ||
+    dueDate !== undefined ||
+    lineItems !== undefined;
   if (immutableStatuses.includes(invoice.status) && hasNonStatusChanges) {
     return apiError('Cannot modify a paid or voided invoice', 400);
   }
@@ -135,7 +151,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return apiError('Invalid status transition', 400);
     }
     updateData.status = status;
-    if ((status === 'paid' || status === 'partial') && !invoice.paidAt) updateData.paidAt = new Date();
+    if ((status === 'paid' || status === 'partial') && !invoice.paidAt)
+      updateData.paidAt = new Date();
     if (status === 'voided') updateData.voidedAt = new Date();
     if (status === 'sent') updateData.sentAt = new Date();
   }
@@ -162,7 +179,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (item.quantity < 0) return apiError('Line item quantity cannot be negative', 400);
       if (item.rate < 0) return apiError('Line item rate cannot be negative', 400);
       // Bug #40: Upper bound on rate and quantity
-      if (item.quantity > 1_000_000) return apiError('Line item quantity must be at most 1,000,000', 400);
+      if (item.quantity > 1_000_000)
+        return apiError('Line item quantity must be at most 1,000,000', 400);
       if (item.rate > 1_000_000) return apiError('Line item rate must be at most 1,000,000', 400);
       if (item.taxRate !== undefined && item.taxRate !== null && !Number.isFinite(item.taxRate)) {
         return apiError('Line item taxRate must be a valid number', 400);
@@ -205,7 +223,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     updateData.discountAmount = discountAmount;
     updateData.total = total;
     // Use fresh amountPaid from DB to avoid stale data
-    const freshInvoice = await prisma.invoice.findUnique({ where: { id }, select: { amountPaid: true } });
+    const freshInvoice = await prisma.invoice.findUnique({
+      where: { id },
+      select: { amountPaid: true },
+    });
     updateData.amountDue = Math.max(0, total - toNumber(freshInvoice?.amountPaid));
 
     // Include line item replacement and totals update in same transaction
@@ -223,9 +244,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     });
 
     // Bug #188: Create audit event for v1 API updates
-    await prisma.invoiceEvent.create({
-      data: { invoiceId: id, eventType: 'updated', actorType: 'system', metadata: { via: 'api' } }
-    }).catch(() => {});
+    await prisma.invoiceEvent
+      .create({
+        data: {
+          invoiceId: id,
+          eventType: 'updated',
+          actorType: 'system',
+          metadata: { via: 'api' },
+        },
+      })
+      .catch(() => {});
 
     return apiSuccess(formatInvoice(updated));
   }
@@ -240,9 +268,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   });
 
   // Bug #188: Create audit event for v1 API updates
-  await prisma.invoiceEvent.create({
-    data: { invoiceId: id, eventType: 'updated', actorType: 'system', metadata: { via: 'api' } }
-  }).catch(() => {});
+  await prisma.invoiceEvent
+    .create({
+      data: { invoiceId: id, eventType: 'updated', actorType: 'system', metadata: { via: 'api' } },
+    })
+    .catch(() => {});
 
   return apiSuccess(formatInvoice(updated));
 }

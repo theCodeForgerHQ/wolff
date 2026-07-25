@@ -5,13 +5,13 @@ import { FileText } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DataTableColumnHeader,
-  DataTableRowActions,
-} from '@/components/ui/data-table';
+import { DataTableColumnHeader, DataTableRowActions } from '@/components/ui/data-table';
 import type { QuoteListItem, QuoteStatus } from '@/lib/quotes/types';
 
-const statusColors: Record<QuoteStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string }> = {
+const statusColors: Record<
+  QuoteStatus,
+  { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string }
+> = {
   draft: { variant: 'secondary' },
   sent: { variant: 'default', className: 'bg-blue-500 hover:bg-blue-600' },
   viewed: { variant: 'default', className: 'bg-yellow-500 hover:bg-yellow-600' },
@@ -26,10 +26,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 interface CreateQuoteColumnsProps {
@@ -75,19 +77,17 @@ export function createQuoteColumns({
     {
       id: 'quote',
       accessorKey: 'quoteNumber',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Quote" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Quote" />,
       cell: ({ row }) => {
         const quote = row.original;
         return (
           <Link href={`/quotes/${quote.id}`} className="flex items-center gap-3 hover:underline">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+            <div className="bg-muted flex h-9 w-9 items-center justify-center rounded-lg">
+              <FileText className="text-muted-foreground h-4 w-4" />
             </div>
             <div>
               <p className="font-medium">{quote.title}</p>
-              <p className="text-xs text-muted-foreground">{quote.quoteNumber}</p>
+              <p className="text-muted-foreground text-xs">{quote.quoteNumber}</p>
             </div>
           </Link>
         );
@@ -95,22 +95,16 @@ export function createQuoteColumns({
     },
     {
       accessorKey: 'client',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
       cell: ({ row }) => {
         const client = row.original.client;
         if (!client) {
-          return (
-            <div className="text-muted-foreground italic">No client</div>
-          );
+          return <div className="text-muted-foreground italic">No client</div>;
         }
         return (
           <div>
             <p className="text-sm">{client.name}</p>
-            {client.email && (
-              <p className="text-xs text-muted-foreground">{client.email}</p>
-            )}
+            {client.email && <p className="text-muted-foreground text-xs">{client.email}</p>}
           </div>
         );
       },
@@ -126,9 +120,7 @@ export function createQuoteColumns({
     },
     {
       accessorKey: 'status',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const status = row.getValue('status') as QuoteStatus;
         const statusConfig = statusColors[status] || statusColors.draft;
@@ -145,9 +137,7 @@ export function createQuoteColumns({
     },
     {
       accessorKey: 'total',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Amount" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
       cell: ({ row }) => {
         const total = row.getValue('total') as number;
         return (
@@ -160,28 +150,22 @@ export function createQuoteColumns({
     {
       id: 'created',
       accessorKey: 'issueDate',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => {
         const issueDate = new Date(row.original.issueDate);
         return (
-          <div className="text-sm text-muted-foreground">
-            {issueDate.toLocaleDateString()}
-          </div>
+          <div className="text-muted-foreground text-sm">{issueDate.toLocaleDateString()}</div>
         );
       },
     },
     {
       id: 'expires',
       accessorKey: 'expirationDate',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Expires" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Expires" />,
       cell: ({ row }) => {
         const expirationDate = row.original.expirationDate as string | null;
         if (!expirationDate) {
-          return <div className="text-sm text-muted-foreground">-</div>;
+          return <div className="text-muted-foreground text-sm">-</div>;
         }
         const date = new Date(expirationDate);
         const isExpired = date < new Date();

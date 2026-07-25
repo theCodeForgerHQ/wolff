@@ -11,7 +11,6 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Project Stats & Rate Card Categories', () => {
-
   test.describe('Projects Stats Cards', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/projects');
@@ -19,15 +18,19 @@ test.describe('Project Stats & Rate Card Categories', () => {
     });
 
     test('should display Total Projects stat card', async ({ page }) => {
-      const statCard = page.locator(
-        '.stats-card:has-text("Total Projects"), ' +
-        '[data-testid="stat-total-projects"], ' +
-        ':text("Total Projects")'
-      ).first();
+      const statCard = page
+        .locator(
+          '.stats-card:has-text("Total Projects"), ' +
+            '[data-testid="stat-total-projects"], ' +
+            ':text("Total Projects")'
+        )
+        .first();
 
       if (!(await statCard.isVisible().catch(() => false))) {
         // Projects page might show empty state instead of stats
-        const emptyState = page.locator(':text("Create your first project"), :text("No projects")').first();
+        const emptyState = page
+          .locator(':text("Create your first project"), :text("No projects")')
+          .first();
         if (await emptyState.isVisible().catch(() => false)) {
           // Stats may not show when no projects exist
           test.skip();
@@ -45,11 +48,13 @@ test.describe('Project Stats & Rate Card Categories', () => {
     });
 
     test('should display Active Projects stat card', async ({ page }) => {
-      const statCard = page.locator(
-        '.stats-card:has-text("Active"), ' +
-        '[data-testid="stat-active-projects"], ' +
-        ':text("Active Projects")'
-      ).first();
+      const statCard = page
+        .locator(
+          '.stats-card:has-text("Active"), ' +
+            '[data-testid="stat-active-projects"], ' +
+            ':text("Active Projects")'
+        )
+        .first();
 
       if (!(await statCard.isVisible().catch(() => false))) {
         test.skip();
@@ -60,10 +65,9 @@ test.describe('Project Stats & Rate Card Categories', () => {
     });
 
     test('should display Total Quotes stat card on projects page', async ({ page }) => {
-      const statCard = page.locator(
-        '.stats-card:has-text("Total Quotes"), ' +
-        '[data-testid="stat-total-quotes"]'
-      ).first();
+      const statCard = page
+        .locator('.stats-card:has-text("Total Quotes"), ' + '[data-testid="stat-total-quotes"]')
+        .first();
 
       if (!(await statCard.isVisible().catch(() => false))) {
         test.skip();
@@ -74,10 +78,9 @@ test.describe('Project Stats & Rate Card Categories', () => {
     });
 
     test('should display Total Invoices stat card on projects page', async ({ page }) => {
-      const statCard = page.locator(
-        '.stats-card:has-text("Total Invoices"), ' +
-        '[data-testid="stat-total-invoices"]'
-      ).first();
+      const statCard = page
+        .locator('.stats-card:has-text("Total Invoices"), ' + '[data-testid="stat-total-invoices"]')
+        .first();
 
       if (!(await statCard.isVisible().catch(() => false))) {
         test.skip();
@@ -93,11 +96,13 @@ test.describe('Project Stats & Rate Card Categories', () => {
       await page.goto('/rate-cards');
       await page.waitForLoadState('networkidle');
 
-      const manageCategoriesBtn = page.locator(
-        'button:has-text("Manage Categories"), ' +
-        'button:has-text("Categories"), ' +
-        '[data-testid="manage-categories"]'
-      ).first();
+      const manageCategoriesBtn = page
+        .locator(
+          'button:has-text("Manage Categories"), ' +
+            'button:has-text("Categories"), ' +
+            '[data-testid="manage-categories"]'
+        )
+        .first();
 
       if (!(await manageCategoriesBtn.isVisible().catch(() => false))) {
         test.skip();
@@ -107,9 +112,7 @@ test.describe('Project Stats & Rate Card Categories', () => {
       await manageCategoriesBtn.click();
 
       // A dialog/modal should appear for managing categories
-      const dialog = page.locator(
-        '[role="dialog"], [class*="modal"], [class*="dialog"]'
-      ).first();
+      const dialog = page.locator('[role="dialog"], [class*="modal"], [class*="dialog"]').first();
 
       if (await dialog.isVisible().catch(() => false)) {
         await expect(dialog).toBeVisible();

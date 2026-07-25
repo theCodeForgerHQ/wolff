@@ -12,44 +12,44 @@ import type { DashboardPeriod, AnalyticsDateRange } from './types';
 
 // Theme-aligned color palette (primary OKLCH values from globals.css)
 export const CHART_COLORS = {
-  primary: 'oklch(0.6898 0.1101 233.96)',   // primary-500
+  primary: 'oklch(0.6898 0.1101 233.96)', // primary-500
   secondary: 'oklch(0.5915 0.1022 236.73)', // primary-600
-  success: 'oklch(0.648 0.150 160)',        // success/chart-2
-  warning: 'oklch(0.769 0.189 70.08)',      // warning/chart-4
-  danger: 'oklch(0.577 0.245 27.325)',      // destructive
-  muted: 'oklch(0.554 0.0246 234.94)',      // base-500
-  teal: 'oklch(0.7527 0.1062 232.98)',      // primary-400
-  emerald: 'oklch(0.648 0.150 160)',        // chart-2
-  orange: 'oklch(0.7 0.15 45)',             // chart-5
-  pink: 'oklch(0.5033 0.0865 237.61)',      // primary-700
+  success: 'oklch(0.648 0.150 160)', // success/chart-2
+  warning: 'oklch(0.769 0.189 70.08)', // warning/chart-4
+  danger: 'oklch(0.577 0.245 27.325)', // destructive
+  muted: 'oklch(0.554 0.0246 234.94)', // base-500
+  teal: 'oklch(0.7527 0.1062 232.98)', // primary-400
+  emerald: 'oklch(0.648 0.150 160)', // chart-2
+  orange: 'oklch(0.7 0.15 45)', // chart-5
+  pink: 'oklch(0.5033 0.0865 237.61)', // primary-700
 } as const;
 
 // Status colors using theme primary gradient shades
 export const QUOTE_STATUS_COLORS: Record<string, string> = {
-  draft: 'oklch(0.554 0.0246 234.94)',      // base-500 (muted)
-  sent: 'oklch(0.6898 0.1101 233.96)',      // primary-500
-  viewed: 'oklch(0.769 0.189 70.08)',       // warning
-  accepted: 'oklch(0.648 0.150 160)',       // success
-  declined: 'oklch(0.577 0.245 27.325)',    // destructive
-  expired: 'oklch(0.7047 0.0227 234.18)',   // base-400
+  draft: 'oklch(0.554 0.0246 234.94)', // base-500 (muted)
+  sent: 'oklch(0.6898 0.1101 233.96)', // primary-500
+  viewed: 'oklch(0.769 0.189 70.08)', // warning
+  accepted: 'oklch(0.648 0.150 160)', // success
+  declined: 'oklch(0.577 0.245 27.325)', // destructive
+  expired: 'oklch(0.7047 0.0227 234.18)', // base-400
   converted: 'oklch(0.5033 0.0865 237.61)', // primary-700
 };
 
 // Invoice status colors matching the theme
 export const INVOICE_STATUS_COLORS: Record<string, string> = {
-  draft: 'oklch(0.554 0.0246 234.94)',      // base-500 (muted)
-  sent: 'oklch(0.6898 0.1101 233.96)',      // primary-500
-  viewed: 'oklch(0.769 0.189 70.08)',       // warning
-  paid: 'oklch(0.648 0.150 160)',           // success
-  partial: 'oklch(0.7 0.15 45)',            // chart-5 (orange)
-  overdue: 'oklch(0.577 0.245 27.325)',     // destructive
-  voided: 'oklch(0.7047 0.0227 234.18)',    // base-400
+  draft: 'oklch(0.554 0.0246 234.94)', // base-500 (muted)
+  sent: 'oklch(0.6898 0.1101 233.96)', // primary-500
+  viewed: 'oklch(0.769 0.189 70.08)', // warning
+  paid: 'oklch(0.648 0.150 160)', // success
+  partial: 'oklch(0.7 0.15 45)', // chart-5 (orange)
+  overdue: 'oklch(0.577 0.245 27.325)', // destructive
+  voided: 'oklch(0.7047 0.0227 234.18)', // base-400
 };
 
 // Payment aging bucket colors (gradient from green to red)
 export const AGING_COLORS = {
-  current: '#22C55E',    // Green-500
-  days1to30: '#84CC16',  // Lime-500
+  current: '#22C55E', // Green-500
+  days1to30: '#84CC16', // Lime-500
   days31to60: '#EAB308', // Yellow-500
   days61to90: '#F97316', // Orange-500
   days90plus: '#EF4444', // Red-500
@@ -75,9 +75,11 @@ export const CHART_PALETTE = [
  * Get currency symbol from currency code
  */
 function getCurrencySymbol(currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
-    .formatToParts(0)
-    .find(p => p.type === 'currency')?.value ?? '$';
+  return (
+    new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
+      .formatToParts(0)
+      .find((p) => p.type === 'currency')?.value ?? '$'
+  );
 }
 
 /**
@@ -125,10 +127,12 @@ export function formatFullCurrency(value: number, currency: string = 'USD'): str
     currency,
     minimumFractionDigits: 2,
   }).formatToParts(value);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 /**
@@ -233,8 +237,8 @@ export function formatDateRange(range: AnalyticsDateRange): string {
       '30d': 'Last 30 days',
       '90d': 'Last 90 days',
       '12m': 'Last 12 months',
-      'ytd': 'Year to date',
-      'all': 'All time',
+      ytd: 'Year to date',
+      all: 'All time',
     };
     return presetLabels[range.preset] || 'Custom range';
   }

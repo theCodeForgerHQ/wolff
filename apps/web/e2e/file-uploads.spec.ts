@@ -21,7 +21,7 @@ test.describe('File Uploads', () => {
       await page.goto('/settings/branding');
 
       const fileInput = page.locator('input[type="file"]');
-      if (await fileInput.count() > 0) {
+      if ((await fileInput.count()) > 0) {
         await expect(fileInput.first()).toBeAttached();
       }
     });
@@ -140,7 +140,9 @@ test.describe('File Uploads', () => {
 
       // Check for account settings page content
       const accountHeading = page.getByRole('heading', { name: /account|profile/i }).first();
-      const changeButton = page.getByRole('button', { name: /change|upload|edit.*photo|save/i }).first();
+      const changeButton = page
+        .getByRole('button', { name: /change|upload|edit.*photo|save/i })
+        .first();
 
       const hasHeading = await accountHeading.isVisible().catch(() => false);
       const hasButton = await changeButton.isVisible().catch(() => false);
@@ -177,7 +179,7 @@ test.describe('File Uploads', () => {
         await quoteLink.click();
 
         const attachmentsList = page.locator('[class*="attachment"], [class*="file-list"]');
-        if (await attachmentsList.count() > 0) {
+        if ((await attachmentsList.count()) > 0) {
           await expect(attachmentsList.first()).toBeVisible();
         }
       }
@@ -191,7 +193,7 @@ test.describe('File Uploads', () => {
         await quoteLink.click();
 
         const removeButton = page.locator('[class*="attachment"] button, [class*="file"] button');
-        if (await removeButton.count() > 0) {
+        if ((await removeButton.count()) > 0) {
           await expect(removeButton.first()).toBeVisible();
         }
       }
@@ -228,7 +230,7 @@ test.describe('File Uploads', () => {
       await page.goto('/contracts/new');
 
       const fileInput = page.locator('input[type="file"]');
-      if (await fileInput.count() > 0) {
+      if ((await fileInput.count()) > 0) {
         const acceptAttr = await fileInput.first().getAttribute('accept');
         if (acceptAttr) {
           expect(acceptAttr).toMatch(/pdf|document/i);
@@ -242,7 +244,7 @@ test.describe('File Uploads', () => {
       await page.goto('/settings/branding');
 
       const dropZone = page.locator('[class*="dropzone"], [class*="drop-area"], [class*="drag"]');
-      if (await dropZone.count() > 0) {
+      if ((await dropZone.count()) > 0) {
         await expect(dropZone.first()).toBeVisible();
       }
     });
@@ -329,7 +331,7 @@ test.describe('File Uploads', () => {
       await page.goto('/quotes/new');
 
       const fileInput = page.locator('input[type="file"][multiple]');
-      if (await fileInput.count() > 0) {
+      if ((await fileInput.count()) > 0) {
         await expect(fileInput.first()).toBeAttached();
       }
     });
@@ -346,8 +348,10 @@ test.describe('File Uploads', () => {
     test('should allow removing individual files', async ({ page }) => {
       await page.goto('/quotes/new');
 
-      const removeButtons = page.locator('[class*="file"] [class*="remove"], [class*="file"] button');
-      if (await removeButtons.count() > 0) {
+      const removeButtons = page.locator(
+        '[class*="file"] [class*="remove"], [class*="file"] button'
+      );
+      if ((await removeButtons.count()) > 0) {
         await expect(removeButtons.first()).toBeVisible();
       }
     });
@@ -410,7 +414,7 @@ test.describe('File Upload Accessibility', () => {
 
     // Progress should be announced to screen readers
     const ariaLive = page.locator('[aria-live], [role="status"]');
-    if (await ariaLive.count() > 0) {
+    if ((await ariaLive.count()) > 0) {
       await expect(ariaLive.first()).toBeAttached();
     }
   });

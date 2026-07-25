@@ -2,13 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, Pencil, Copy, Plus, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ContractEditor } from '@/components/contracts/contract-editor';
@@ -50,8 +44,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
           <div>
             <h1 className="text-2xl font-bold">{template.name}</h1>
             <p className="text-muted-foreground">
-              Created {formatDate(template.createdAt)} · Updated{' '}
-              {formatDate(template.updatedAt)}
+              Created {formatDate(template.createdAt)} · Updated {formatDate(template.updatedAt)}
             </p>
           </div>
           <div className="flex gap-2">
@@ -77,8 +70,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
             <CardHeader>
               <CardTitle>Variables</CardTitle>
               <CardDescription>
-                These variables can be customized when creating a contract from
-                this template.
+                These variables can be customized when creating a contract from this template.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -88,9 +80,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                     <code className="text-xs">{`{{${variable.key}}}`}</code>
                     <span className="text-muted-foreground">-</span>
                     <span>{variable.label}</span>
-                    {variable.required && (
-                      <span className="text-destructive">*</span>
-                    )}
+                    {variable.required && <span className="text-destructive">*</span>}
                   </Badge>
                 ))}
               </div>
@@ -104,11 +94,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
             <CardDescription>Preview of the contract template</CardDescription>
           </CardHeader>
           <CardContent>
-            <ContractEditor
-              content={template.content}
-              onChange={() => {}}
-              editable={false}
-            />
+            <ContractEditor content={template.content} onChange={() => {}} editable={false} />
           </CardContent>
         </Card>
 
@@ -117,12 +103,11 @@ export default async function TemplateDetailPage({ params }: PageProps) {
             <CardTitle>Usage Statistics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span>
                 {template._count.instances} contract
-                {template._count.instances !== 1 ? 's' : ''} created from this
-                template
+                {template._count.instances !== 1 ? 's' : ''} created from this template
               </span>
             </div>
           </CardContent>

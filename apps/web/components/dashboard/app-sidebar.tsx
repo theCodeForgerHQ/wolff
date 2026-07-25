@@ -38,11 +38,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -181,11 +177,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
             <SidebarMenu>
               {reportingNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    tooltip={item.title}
-                  >
+                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.title}>
                     <Link href={item.href}>
                       <item.icon className="size-4" />
                       <span>{item.title}</span>
@@ -225,10 +217,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
                         <SidebarMenuSub>
                           {item.items.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
-                              <SidebarMenuSubButton
-                                asChild
-                                isActive={isActive(subItem.href)}
-                              >
+                              <SidebarMenuSubButton asChild isActive={isActive(subItem.href)}>
                                 <Link href={subItem.href}>
                                   <subItem.icon className="size-4" />
                                   <span>{subItem.title}</span>
@@ -242,11 +231,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
                   </Collapsible>
                 ) : (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.href)}
-                      tooltip={item.title}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.title}>
                       <Link href={item.href}>
                         <item.icon className="size-4" />
                         <span>{item.title}</span>
@@ -271,11 +256,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
             <SidebarMenu>
               {resourceNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    tooltip={item.title}
-                  >
+                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.title}>
                     <Link href={item.href}>
                       <item.icon className="size-4" />
                       <span>{item.title}</span>
@@ -304,7 +285,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{user?.name || 'User'}</span>
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="text-muted-foreground truncate text-xs">
                       {user?.email || ''}
                     </span>
                   </div>
@@ -325,7 +306,7 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{user?.name || 'User'}</span>
-                      <span className="truncate text-xs text-muted-foreground">
+                      <span className="text-muted-foreground truncate text-xs">
                         {user?.email || ''}
                       </span>
                     </div>
@@ -345,9 +326,12 @@ export function AppSidebar({ user, workspaces, activeWorkspace }: AppSidebarProp
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer" onClick={() => signOut({ callbackUrl: '/login' })}>
-                    <LogOut className="mr-2 size-4" />
-                    Log out
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
+                  <LogOut className="mr-2 size-4" />
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

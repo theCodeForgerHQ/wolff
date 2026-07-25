@@ -108,7 +108,8 @@ describe('TextBlockContent', () => {
 
   describe('Content Editing', () => {
     it('supports rich text HTML content', () => {
-      const richContent = '<h1>Heading</h1><p>Paragraph with <strong>bold</strong> and <em>italic</em>.</p>';
+      const richContent =
+        '<h1>Heading</h1><p>Paragraph with <strong>bold</strong> and <em>italic</em>.</p>';
       const block = createTextBlock({ html: richContent });
 
       expect(block.content.html).toContain('<strong>');

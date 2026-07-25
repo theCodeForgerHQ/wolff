@@ -71,7 +71,12 @@ const EVENT_GROUPS = [
 
 const ALL_EVENTS = EVENT_GROUPS.flatMap((g) => g.events.map((e) => e.value));
 
-export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }: WebhookEndpointFormProps) {
+export function WebhookEndpointForm({
+  endpoint,
+  onCreated,
+  onUpdated,
+  onCancel,
+}: WebhookEndpointFormProps) {
   const isEditing = !!endpoint;
   const [url, setUrl] = React.useState(endpoint?.url || '');
   const [selectedEvents, setSelectedEvents] = React.useState<string[]>(endpoint?.events || []);
@@ -164,7 +169,7 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
 
   return (
     <Dialog open onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit' : 'Create'} Webhook Endpoint</DialogTitle>
@@ -187,7 +192,7 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
                 placeholder="https://example.com/webhooks"
                 required
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Must be a publicly accessible HTTPS URL.
               </p>
             </div>
@@ -200,7 +205,7 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-xs h-auto py-1"
+                  className="h-auto py-1 text-xs"
                   onClick={toggleAll}
                 >
                   {allSelected ? 'Deselect All' : 'Select All'}
@@ -210,25 +215,30 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
               <div className="space-y-4 rounded-lg border p-4">
                 {EVENT_GROUPS.map((group) => {
                   const groupEventValues = group.events.map((e) => e.value);
-                  const allGroupSelected = groupEventValues.every((e) => selectedEvents.includes(e));
-                  const someGroupSelected = groupEventValues.some((e) => selectedEvents.includes(e));
+                  const allGroupSelected = groupEventValues.every((e) =>
+                    selectedEvents.includes(e)
+                  );
+                  const someGroupSelected = groupEventValues.some((e) =>
+                    selectedEvents.includes(e)
+                  );
 
                   return (
                     <div key={group.label}>
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <Checkbox
                           id={`group-${group.label}`}
                           checked={allGroupSelected}
                           ref={(el) => {
                             if (el) {
-                              (el as unknown as HTMLInputElement).indeterminate = someGroupSelected && !allGroupSelected;
+                              (el as unknown as HTMLInputElement).indeterminate =
+                                someGroupSelected && !allGroupSelected;
                             }
                           }}
                           onCheckedChange={() => toggleGroup(groupEventValues)}
                         />
                         <label
                           htmlFor={`group-${group.label}`}
-                          className="text-sm font-medium cursor-pointer"
+                          className="cursor-pointer text-sm font-medium"
                         >
                           {group.label}
                         </label>
@@ -243,7 +253,7 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
                             />
                             <label
                               htmlFor={`event-${event.value}`}
-                              className="text-sm text-muted-foreground cursor-pointer"
+                              className="text-muted-foreground cursor-pointer text-sm"
                             >
                               {event.label}
                             </label>
@@ -255,14 +265,12 @@ export function WebhookEndpointForm({ endpoint, onCreated, onUpdated, onCancel }
                 })}
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {selectedEvents.length} of {ALL_EVENTS.length} events selected
               </p>
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
 
           <DialogFooter>

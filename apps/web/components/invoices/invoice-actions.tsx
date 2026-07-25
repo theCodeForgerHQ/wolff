@@ -32,7 +32,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { InvoiceDocument } from '@/lib/invoices/types';
-import { sendInvoice, deleteInvoice, updateInvoiceStatus, duplicateInvoice } from '@/lib/invoices/actions';
+import {
+  sendInvoice,
+  deleteInvoice,
+  updateInvoiceStatus,
+  duplicateInvoice,
+} from '@/lib/invoices/actions';
 
 interface InvoiceActionsProps {
   invoice: InvoiceDocument;
@@ -57,7 +62,9 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
         if (result.emailSent) {
           toast.success('Invoice sent and email delivered');
         } else {
-          toast.warning('Invoice marked as sent, but email delivery failed. Please check your email configuration.');
+          toast.warning(
+            'Invoice marked as sent, but email delivery failed. Please check your email configuration.'
+          );
         }
         router.refresh();
         setShowSendDialog(false);
@@ -121,7 +128,8 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
 
   const canEdit = invoice.status === 'draft';
   const canSend = invoice.status === 'draft';
-  const canVoid = invoice.status !== 'draft' && invoice.status !== 'voided' && invoice.status !== 'paid';
+  const canVoid =
+    invoice.status !== 'draft' && invoice.status !== 'voided' && invoice.status !== 'paid';
   // Low #56: Only allow deleting drafts — server rejects voided invoice deletion
   const canDelete = invoice.status === 'draft';
   const hasDropdownActions = canVoid || canDelete;
@@ -130,7 +138,11 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
     <>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={isDuplicating}>
-          {isDuplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+          {isDuplicating ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Copy className="mr-2 h-4 w-4" />
+          )}
           Duplicate
         </Button>
         <Button variant="outline" size="sm" onClick={handleDownload}>
@@ -169,7 +181,10 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {canVoid && (
-                <DropdownMenuItem onClick={() => setShowVoidDialog(true)} className="text-orange-600">
+                <DropdownMenuItem
+                  onClick={() => setShowVoidDialog(true)}
+                  className="text-orange-600"
+                >
                   <Ban className="mr-2 h-4 w-4" />
                   Void Invoice
                 </DropdownMenuItem>
@@ -177,7 +192,10 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
               {canDelete && (
                 <>
                   {canVoid && <DropdownMenuSeparator />}
-                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-600">
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-red-600"
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Invoice
                   </DropdownMenuItem>
@@ -216,8 +234,8 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
           <DialogHeader>
             <DialogTitle>Void Invoice</DialogTitle>
             <DialogDescription>
-              Are you sure you want to void this invoice? This action cannot be undone.
-              The invoice will be marked as voided and the client will no longer be able to pay it.
+              Are you sure you want to void this invoice? This action cannot be undone. The invoice
+              will be marked as voided and the client will no longer be able to pay it.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -242,7 +260,11 @@ export function InvoiceActions({ invoice, isOverdue }: InvoiceActionsProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>

@@ -15,9 +15,7 @@ export const passwordSchema = z
   );
 
 // Simple password (for login, no validation rules)
-export const loginPasswordSchema = z
-  .string()
-  .min(1, 'Password is required');
+export const loginPasswordSchema = z.string().min(1, 'Password is required');
 
 // Login schema
 export const loginSchema = z.object({

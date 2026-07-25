@@ -4,7 +4,7 @@ test.describe('CSRF Protection (Bug #321)', () => {
   test('should reject registration POST from foreign origin', async ({ request }) => {
     const response = await request.post('/api/auth/register', {
       headers: {
-        'origin': 'https://evil-site.com',
+        origin: 'https://evil-site.com',
         'content-type': 'application/json',
       },
       data: {
@@ -22,7 +22,7 @@ test.describe('CSRF Protection (Bug #321)', () => {
   test('should reject forgot-password POST from foreign origin', async ({ request }) => {
     const response = await request.post('/api/auth/forgot-password', {
       headers: {
-        'origin': 'https://evil-site.com',
+        origin: 'https://evil-site.com',
         'content-type': 'application/json',
       },
       data: { email: 'test@example.com' },

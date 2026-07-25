@@ -34,10 +34,12 @@ function formatCurrency(amount: number, currency: string = 'USD') {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 export function CreditNotesList({ creditNotes }: CreditNotesListProps) {
@@ -67,17 +69,15 @@ export function CreditNotesList({ creditNotes }: CreditNotesListProps) {
     <div className="space-y-3">
       {creditNotes.map((cn) => (
         <div key={cn.id} className="flex items-start justify-between gap-3 rounded-lg border p-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="flex min-w-0 items-start gap-3">
+            <FileText className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-sm">{cn.creditNoteNumber}</span>
-                <Badge variant={statusVariants[cn.status] ?? 'outline'}>
-                  {cn.status}
-                </Badge>
+                <span className="text-sm font-medium">{cn.creditNoteNumber}</span>
+                <Badge variant={statusVariants[cn.status] ?? 'outline'}>{cn.status}</Badge>
               </div>
-              <p className="text-sm text-muted-foreground truncate">{cn.reason}</p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground truncate text-sm">{cn.reason}</p>
+              <p className="text-muted-foreground mt-1 text-xs">
                 {new Date(cn.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
@@ -86,8 +86,8 @@ export function CreditNotesList({ creditNotes }: CreditNotesListProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="font-semibold text-sm">{formatCurrency(cn.amount, cn.currency)}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-sm font-semibold">{formatCurrency(cn.amount, cn.currency)}</span>
             {cn.status === 'draft' && (
               <Button
                 variant="outline"
@@ -95,11 +95,7 @@ export function CreditNotesList({ creditNotes }: CreditNotesListProps) {
                 onClick={() => handleIssue(cn.id)}
                 disabled={issuingId === cn.id}
               >
-                {issuingId === cn.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  'Issue'
-                )}
+                {issuingId === cn.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Issue'}
               </Button>
             )}
           </div>

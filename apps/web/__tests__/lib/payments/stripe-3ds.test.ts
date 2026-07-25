@@ -4,12 +4,7 @@ import { describe, it, expect } from 'vitest';
 // Standalone implementation for testing 3DS payment transitions
 
 type PaymentStatus =
-  | 'created'
-  | 'requires_authentication'
-  | 'authenticating'
-  | 'processing'
-  | 'succeeded'
-  | 'failed';
+  'created' | 'requires_authentication' | 'authenticating' | 'processing' | 'succeeded' | 'failed';
 
 const validTransitions: Record<PaymentStatus, PaymentStatus[]> = {
   created: ['requires_authentication', 'processing'],

@@ -143,13 +143,7 @@ export interface RateCard extends BaseModel, SoftDeletable {
  * Quote status type
  */
 export type QuoteStatus =
-  | 'draft'
-  | 'sent'
-  | 'viewed'
-  | 'accepted'
-  | 'declined'
-  | 'expired'
-  | 'converted';
+  'draft' | 'sent' | 'viewed' | 'accepted' | 'declined' | 'expired' | 'converted';
 
 /**
  * Quote type
@@ -235,14 +229,7 @@ export interface QuoteLineItem extends BaseModel {
 /**
  * Invoice status type
  */
-export type InvoiceStatus =
-  | 'draft'
-  | 'sent'
-  | 'viewed'
-  | 'partial'
-  | 'paid'
-  | 'overdue'
-  | 'voided';
+export type InvoiceStatus = 'draft' | 'sent' | 'viewed' | 'partial' | 'paid' | 'overdue' | 'voided';
 
 /**
  * Invoice type
@@ -316,12 +303,7 @@ export interface InvoiceLineItem extends BaseModel {
  * Payment status type
  */
 export type PaymentStatus =
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'refunded'
-  | 'partial_refund';
+  'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'partial_refund';
 
 /**
  * Payment type
@@ -330,7 +312,8 @@ export interface Payment extends BaseModel {
   invoiceId: string;
   amount: number;
   currency: string;
-  paymentMethod: 'card' | 'bank_transfer' | 'credit_card' | 'check' | 'cash' | 'paypal' | 'manual' | 'other';
+  paymentMethod:
+    'card' | 'bank_transfer' | 'credit_card' | 'check' | 'cash' | 'paypal' | 'manual' | 'other';
   status: PaymentStatus;
   stripePaymentIntentId: string | null;
   stripeChargeId: string | null;

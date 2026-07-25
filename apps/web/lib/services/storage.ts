@@ -58,10 +58,7 @@ function generateFilename(originalName: string): string {
 }
 
 // Local storage implementation
-async function uploadLocal(
-  buffer: Buffer,
-  options: UploadOptions
-): Promise<UploadResult> {
+async function uploadLocal(buffer: Buffer, options: UploadOptions): Promise<UploadResult> {
   const config = getStorageConfig();
   const filename = options.filename || generateFilename('upload');
   const folder = options.folder || 'files';
@@ -100,14 +97,11 @@ async function deleteLocal(key: string): Promise<void> {
 }
 
 // S3 storage implementation (stub — install @aws-sdk/client-s3 to enable)
-async function uploadS3(
-  buffer: Buffer,
-  options: UploadOptions
-): Promise<UploadResult> {
+async function uploadS3(buffer: Buffer, options: UploadOptions): Promise<UploadResult> {
   throw new Error(
     'S3 storage requires @aws-sdk/client-s3. ' +
-    'Install it with `pnpm add @aws-sdk/client-s3` and configure STORAGE_BUCKET, STORAGE_REGION, ' +
-    'and AWS credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) in your environment.'
+      'Install it with `pnpm add @aws-sdk/client-s3` and configure STORAGE_BUCKET, STORAGE_REGION, ' +
+      'and AWS credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) in your environment.'
   );
 }
 
@@ -124,14 +118,11 @@ async function deleteS3(key: string): Promise<void> {
 }
 
 // Cloudflare R2 implementation (stub — install @aws-sdk/client-s3 to enable)
-async function uploadCloudflare(
-  buffer: Buffer,
-  options: UploadOptions
-): Promise<UploadResult> {
+async function uploadCloudflare(buffer: Buffer, options: UploadOptions): Promise<UploadResult> {
   throw new Error(
     'Cloudflare R2 storage requires @aws-sdk/client-s3 with a Cloudflare endpoint. ' +
-    'Install it with `pnpm add @aws-sdk/client-s3` and configure STORAGE_BUCKET, ' +
-    'CLOUDFLARE_ACCOUNT_ID, and R2 credentials in your environment.'
+      'Install it with `pnpm add @aws-sdk/client-s3` and configure STORAGE_BUCKET, ' +
+      'CLOUDFLARE_ACCOUNT_ID, and R2 credentials in your environment.'
   );
 }
 
@@ -152,7 +143,11 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // Bug #153: Allowed MIME types for uploads
 const ALLOWED_CONTENT_TYPES = [
-  'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
   'application/pdf',
   'text/csv',
 ];
@@ -161,9 +156,9 @@ const ALLOWED_CONTENT_TYPES = [
 function sanitizeFilename(name: string): string {
   return name
     .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars with underscore
-    .replace(/_{2,}/g, '_')            // Collapse multiple underscores
-    .replace(/^\.+/, '')               // Remove leading dots
-    .slice(0, 200);                    // Limit length
+    .replace(/_{2,}/g, '_') // Collapse multiple underscores
+    .replace(/^\.+/, '') // Remove leading dots
+    .slice(0, 200); // Limit length
 }
 
 // Main storage functions
@@ -176,7 +171,9 @@ export async function uploadFile(
 
   // Bug #152: Enforce file size limit
   if (bufferData.length > MAX_FILE_SIZE) {
-    throw new Error(`File size (${Math.round(bufferData.length / 1024 / 1024)}MB) exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    throw new Error(
+      `File size (${Math.round(bufferData.length / 1024 / 1024)}MB) exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+    );
   }
 
   // Bug #153: Validate content type if provided
@@ -244,7 +241,8 @@ export async function uploadFromFile(
 ): Promise<UploadResult> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const contentType = file.type || 'application/octet-stream';
-  const filename = options.filename || (file instanceof File ? file.name : generateFilename('upload'));
+  const filename =
+    options.filename || (file instanceof File ? file.name : generateFilename('upload'));
 
   return uploadFile(buffer, {
     ...options,
@@ -278,10 +276,7 @@ export async function uploadLogo(
   });
 }
 
-export async function uploadSignature(
-  base64Data: string,
-  quoteId: string
-): Promise<UploadResult> {
+export async function uploadSignature(base64Data: string, quoteId: string): Promise<UploadResult> {
   return uploadFromBase64(base64Data, {
     filename: `signature-${quoteId}-${Date.now()}.png`,
     folder: 'signatures',
@@ -289,10 +284,7 @@ export async function uploadSignature(
   });
 }
 
-export async function uploadPdf(
-  buffer: Buffer,
-  filename: string
-): Promise<UploadResult> {
+export async function uploadPdf(buffer: Buffer, filename: string): Promise<UploadResult> {
   return uploadFile(buffer, {
     filename,
     folder: 'pdfs',

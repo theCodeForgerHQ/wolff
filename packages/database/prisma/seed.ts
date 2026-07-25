@@ -128,10 +128,12 @@ async function main() {
 
   // Comprehensive pre-seeding cleanup: delete ALL workspace data to prevent stale records
   console.log('Cleaning up all test workspace data for fresh seeding...');
-  const testClientIds = (await prisma.client.findMany({
-    where: { workspaceId: workspace.id },
-    select: { id: true },
-  })).map(c => c.id);
+  const testClientIds = (
+    await prisma.client.findMany({
+      where: { workspaceId: workspace.id },
+      select: { id: true },
+    })
+  ).map((c) => c.id);
   await prisma.quoteEvent.deleteMany({ where: { quote: { workspaceId: workspace.id } } });
   await prisma.invoiceEvent.deleteMany({ where: { invoice: { workspaceId: workspace.id } } });
   await prisma.quoteLineItem.deleteMany({ where: { quote: { workspaceId: workspace.id } } });
@@ -141,9 +143,15 @@ async function main() {
   await prisma.quote.deleteMany({ where: { workspaceId: workspace.id } });
   if (testClientIds.length > 0) {
     await prisma.quoteEvent.deleteMany({ where: { quote: { clientId: { in: testClientIds } } } });
-    await prisma.invoiceEvent.deleteMany({ where: { invoice: { clientId: { in: testClientIds } } } });
-    await prisma.quoteLineItem.deleteMany({ where: { quote: { clientId: { in: testClientIds } } } });
-    await prisma.invoiceLineItem.deleteMany({ where: { invoice: { clientId: { in: testClientIds } } } });
+    await prisma.invoiceEvent.deleteMany({
+      where: { invoice: { clientId: { in: testClientIds } } },
+    });
+    await prisma.quoteLineItem.deleteMany({
+      where: { quote: { clientId: { in: testClientIds } } },
+    });
+    await prisma.invoiceLineItem.deleteMany({
+      where: { invoice: { clientId: { in: testClientIds } } },
+    });
     await prisma.invoice.deleteMany({ where: { clientId: { in: testClientIds } } });
     await prisma.quote.deleteMany({ where: { clientId: { in: testClientIds } } });
     await prisma.project.deleteMany({ where: { clientId: { in: testClientIds } } });
@@ -172,7 +180,12 @@ async function main() {
 
     const client = await prisma.client.upsert({
       where: { id: clientId },
-      update: { name: clientData.name, email: clientData.email, company: clientData.company ?? null, deletedAt: null },
+      update: {
+        name: clientData.name,
+        email: clientData.email,
+        company: clientData.company ?? null,
+        deletedAt: null,
+      },
       create: {
         id: clientId,
         workspaceId: workspace.id,
@@ -244,9 +257,27 @@ async function main() {
 
   // Create test projects (BUG-017 fix)
   const testProjects = [
-    { id: 'test-project-1', clientId: createdClients[0]!.id, name: 'Acme Website Redesign', description: 'Full website overhaul for Acme Corp', isActive: true },
-    { id: 'test-project-2', clientId: createdClients[1]!.id, name: 'Doe Industries API', description: 'REST API development for backend services', isActive: true },
-    { id: 'test-project-3', clientId: createdClients[2]!.id, name: 'Smith LLC Dashboard', description: 'Analytics dashboard project', isActive: false },
+    {
+      id: 'test-project-1',
+      clientId: createdClients[0]!.id,
+      name: 'Acme Website Redesign',
+      description: 'Full website overhaul for Acme Corp',
+      isActive: true,
+    },
+    {
+      id: 'test-project-2',
+      clientId: createdClients[1]!.id,
+      name: 'Doe Industries API',
+      description: 'REST API development for backend services',
+      isActive: true,
+    },
+    {
+      id: 'test-project-3',
+      clientId: createdClients[2]!.id,
+      name: 'Smith LLC Dashboard',
+      description: 'Analytics dashboard project',
+      isActive: false,
+    },
   ];
   for (const proj of testProjects) {
     await prisma.project.upsert({
@@ -269,7 +300,8 @@ async function main() {
     {
       id: 'test-contract-1',
       name: 'Standard Service Agreement',
-      content: 'This Standard Service Agreement ("Agreement") is entered into between Test Business ("Provider") and the Client...\n\n1. SCOPE OF SERVICES\nProvider agrees to perform the services as described in the associated quote or proposal.\n\n2. PAYMENT TERMS\nClient agrees to pay Provider according to the payment schedule specified in the invoice.\n\n3. TERM AND TERMINATION\nThis Agreement begins on the effective date and continues until all services are completed.\n\n4. CONFIDENTIALITY\nBoth parties agree to maintain confidentiality of proprietary information.',
+      content:
+        'This Standard Service Agreement ("Agreement") is entered into between Test Business ("Provider") and the Client...\n\n1. SCOPE OF SERVICES\nProvider agrees to perform the services as described in the associated quote or proposal.\n\n2. PAYMENT TERMS\nClient agrees to pay Provider according to the payment schedule specified in the invoice.\n\n3. TERM AND TERMINATION\nThis Agreement begins on the effective date and continues until all services are completed.\n\n4. CONFIDENTIALITY\nBoth parties agree to maintain confidentiality of proprietary information.',
       isTemplate: true,
       variables: JSON.stringify([
         { key: 'clientName', label: 'Client Name', type: 'text' },
@@ -280,7 +312,8 @@ async function main() {
     {
       id: 'test-contract-2',
       name: 'Non-Disclosure Agreement',
-      content: 'This Non-Disclosure Agreement ("NDA") is entered into between Test Business and the receiving party...\n\n1. DEFINITION OF CONFIDENTIAL INFORMATION\nAll non-public information disclosed by either party.\n\n2. OBLIGATIONS\nThe receiving party shall protect confidential information with reasonable care.\n\n3. DURATION\nThis NDA remains in effect for two (2) years from the date of signing.',
+      content:
+        'This Non-Disclosure Agreement ("NDA") is entered into between Test Business and the receiving party...\n\n1. DEFINITION OF CONFIDENTIAL INFORMATION\nAll non-public information disclosed by either party.\n\n2. OBLIGATIONS\nThe receiving party shall protect confidential information with reasonable care.\n\n3. DURATION\nThis NDA remains in effect for two (2) years from the date of signing.',
       isTemplate: true,
       variables: JSON.stringify([
         { key: 'partyName', label: 'Party Name', type: 'text' },
@@ -343,22 +376,73 @@ async function main() {
 
   // Create sample quotes with different statuses and varied amounts
   const testQuotes = [
-    { status: 'draft', title: 'Website Revamp', subtotal: 2500, itemName: 'Frontend Development', qty: 25, rate: 100 },
-    { status: 'sent', title: 'API Integration Project', subtotal: 5750, itemName: 'Backend Development', qty: 23, rate: 250 },
-    { status: 'viewed', title: 'Mobile App Design', subtotal: 8400, itemName: 'UI/UX Design', qty: 56, rate: 150 },
-    { status: 'accepted', title: 'E-commerce Platform', subtotal: 15000, itemName: 'Full-Stack Development', qty: 100, rate: 150 },
-    { status: 'declined', title: 'Data Migration Service', subtotal: 3200, itemName: 'Data Engineering', qty: 16, rate: 200 },
-    { status: 'converted', title: 'SaaS Dashboard Build', subtotal: 12800, itemName: 'Product Development', qty: 64, rate: 200 },
+    {
+      status: 'draft',
+      title: 'Website Revamp',
+      subtotal: 2500,
+      itemName: 'Frontend Development',
+      qty: 25,
+      rate: 100,
+    },
+    {
+      status: 'sent',
+      title: 'API Integration Project',
+      subtotal: 5750,
+      itemName: 'Backend Development',
+      qty: 23,
+      rate: 250,
+    },
+    {
+      status: 'viewed',
+      title: 'Mobile App Design',
+      subtotal: 8400,
+      itemName: 'UI/UX Design',
+      qty: 56,
+      rate: 150,
+    },
+    {
+      status: 'accepted',
+      title: 'E-commerce Platform',
+      subtotal: 15000,
+      itemName: 'Full-Stack Development',
+      qty: 100,
+      rate: 150,
+    },
+    {
+      status: 'declined',
+      title: 'Data Migration Service',
+      subtotal: 3200,
+      itemName: 'Data Engineering',
+      qty: 16,
+      rate: 200,
+    },
+    {
+      status: 'converted',
+      title: 'SaaS Dashboard Build',
+      subtotal: 12800,
+      itemName: 'Product Development',
+      qty: 64,
+      rate: 200,
+    },
   ];
 
   // BUG-024/025/026 fix: Varied dates per quote status spread across 60 days
-  const quoteDateConfigs: Record<number, { issueDaysAgo: number; sentDaysAgo?: number; viewedDaysAgo?: number; acceptedDaysAgo?: number; declinedDaysAgo?: number }> = {
-    0: { issueDaysAgo: 3 },                                                              // Q-0001 draft
-    1: { issueDaysAgo: 10, sentDaysAgo: 8 },                                             // Q-0002 sent
-    2: { issueDaysAgo: 14, sentDaysAgo: 12, viewedDaysAgo: 7 },                          // Q-0003 viewed
-    3: { issueDaysAgo: 21, sentDaysAgo: 19, viewedDaysAgo: 15, acceptedDaysAgo: 10 },    // Q-0004 accepted
-    4: { issueDaysAgo: 25, sentDaysAgo: 23, viewedDaysAgo: 20, declinedDaysAgo: 18 },    // Q-0005 declined
-    5: { issueDaysAgo: 30, sentDaysAgo: 28, viewedDaysAgo: 25, acceptedDaysAgo: 22 },    // Q-0006 converted
+  const quoteDateConfigs: Record<
+    number,
+    {
+      issueDaysAgo: number;
+      sentDaysAgo?: number;
+      viewedDaysAgo?: number;
+      acceptedDaysAgo?: number;
+      declinedDaysAgo?: number;
+    }
+  > = {
+    0: { issueDaysAgo: 3 }, // Q-0001 draft
+    1: { issueDaysAgo: 10, sentDaysAgo: 8 }, // Q-0002 sent
+    2: { issueDaysAgo: 14, sentDaysAgo: 12, viewedDaysAgo: 7 }, // Q-0003 viewed
+    3: { issueDaysAgo: 21, sentDaysAgo: 19, viewedDaysAgo: 15, acceptedDaysAgo: 10 }, // Q-0004 accepted
+    4: { issueDaysAgo: 25, sentDaysAgo: 23, viewedDaysAgo: 20, declinedDaysAgo: 18 }, // Q-0005 declined
+    5: { issueDaysAgo: 30, sentDaysAgo: 28, viewedDaysAgo: 25, acceptedDaysAgo: 22 }, // Q-0006 converted
   };
 
   // Link quotes to projects (round-robin)
@@ -374,9 +458,15 @@ async function main() {
     const issueDate = new Date(Date.now() - dateCfg.issueDaysAgo * daysMs);
     const expirationDate = new Date(issueDate.getTime() + 30 * daysMs);
     const sentAt = dateCfg.sentDaysAgo ? new Date(Date.now() - dateCfg.sentDaysAgo * daysMs) : null;
-    const viewedAt = dateCfg.viewedDaysAgo ? new Date(Date.now() - dateCfg.viewedDaysAgo * daysMs) : null;
-    const acceptedAt = dateCfg.acceptedDaysAgo ? new Date(Date.now() - dateCfg.acceptedDaysAgo * daysMs) : null;
-    const declinedAt = dateCfg.declinedDaysAgo ? new Date(Date.now() - dateCfg.declinedDaysAgo * daysMs) : null;
+    const viewedAt = dateCfg.viewedDaysAgo
+      ? new Date(Date.now() - dateCfg.viewedDaysAgo * daysMs)
+      : null;
+    const acceptedAt = dateCfg.acceptedDaysAgo
+      ? new Date(Date.now() - dateCfg.acceptedDaysAgo * daysMs)
+      : null;
+    const declinedAt = dateCfg.declinedDaysAgo
+      ? new Date(Date.now() - dateCfg.declinedDaysAgo * daysMs)
+      : null;
 
     const quote = await prisma.quote.upsert({
       where: {
@@ -424,12 +514,18 @@ async function main() {
     const secondaryAmount = Math.round((q.subtotal - primaryAmount) * 100) / 100;
     const primaryQty = Math.max(1, Math.round(q.qty * 0.7));
     const secondaryQty = Math.max(1, q.qty - primaryQty);
-    const primaryRate = Math.round(primaryAmount / primaryQty * 100) / 100;
-    const secondaryRate = Math.round(secondaryAmount / secondaryQty * 100) / 100;
+    const primaryRate = Math.round((primaryAmount / primaryQty) * 100) / 100;
+    const secondaryRate = Math.round((secondaryAmount / secondaryQty) * 100) / 100;
 
     await prisma.quoteLineItem.upsert({
       where: { id: `quote-item-${quote.id}` },
-      update: { name: q.itemName, quantity: primaryQty, rate: primaryRate, amount: Math.round(primaryQty * primaryRate * 100) / 100, sortOrder: 0 },
+      update: {
+        name: q.itemName,
+        quantity: primaryQty,
+        rate: primaryRate,
+        amount: Math.round(primaryQty * primaryRate * 100) / 100,
+        sortOrder: 0,
+      },
       create: {
         id: `quote-item-${quote.id}`,
         quoteId: quote.id,
@@ -442,7 +538,13 @@ async function main() {
     });
     await prisma.quoteLineItem.upsert({
       where: { id: `quote-item-2-${quote.id}` },
-      update: { name: 'Project Management', quantity: secondaryQty, rate: secondaryRate, amount: Math.round(secondaryQty * secondaryRate * 100) / 100, sortOrder: 1 },
+      update: {
+        name: 'Project Management',
+        quantity: secondaryQty,
+        rate: secondaryRate,
+        amount: Math.round(secondaryQty * secondaryRate * 100) / 100,
+        sortOrder: 1,
+      },
       create: {
         id: `quote-item-2-${quote.id}`,
         quoteId: quote.id,
@@ -455,7 +557,8 @@ async function main() {
     });
 
     // Update totals to match actual line item sums
-    const actualTotal = Math.round((primaryQty * primaryRate + secondaryQty * secondaryRate) * 100) / 100;
+    const actualTotal =
+      Math.round((primaryQty * primaryRate + secondaryQty * secondaryRate) * 100) / 100;
     if (actualTotal !== q.subtotal) {
       await prisma.quote.update({
         where: { id: quote.id },
@@ -539,26 +642,73 @@ async function main() {
   // Create some additional invoices with different statuses and varied amounts
   // Note: amounts are derived from qty * rate to ensure math correctness (C01 fix)
   const testInvoices = [
-    { status: 'draft', title: 'Server Setup & Config', itemName: 'DevOps Services', qty: 8, rate: 150 },
+    {
+      status: 'draft',
+      title: 'Server Setup & Config',
+      itemName: 'DevOps Services',
+      qty: 8,
+      rate: 150,
+    },
     { status: 'sent', title: 'Q1 Consulting Retainer', itemName: 'Consulting', qty: 38, rate: 100 },
-    { status: 'viewed', title: 'Design System Delivery', itemName: 'Design Services', qty: 52, rate: 125 },
-    { status: 'paid', title: 'Landing Page Build', itemName: 'Web Development', qty: 24, rate: 175 },
-    { status: 'sent', title: 'Database Optimization', itemName: 'Performance Tuning', qty: 11, rate: 250 },
-    { status: 'voided', title: 'Cancelled Project Deposit', itemName: 'Project Deposit', qty: 1, rate: 950 },
+    {
+      status: 'viewed',
+      title: 'Design System Delivery',
+      itemName: 'Design Services',
+      qty: 52,
+      rate: 125,
+    },
+    {
+      status: 'paid',
+      title: 'Landing Page Build',
+      itemName: 'Web Development',
+      qty: 24,
+      rate: 175,
+    },
+    {
+      status: 'sent',
+      title: 'Database Optimization',
+      itemName: 'Performance Tuning',
+      qty: 11,
+      rate: 250,
+    },
+    {
+      status: 'voided',
+      title: 'Cancelled Project Deposit',
+      itemName: 'Project Deposit',
+      qty: 1,
+      rate: 950,
+    },
     { status: 'paid', title: 'SEO Audit & Report', itemName: 'SEO Consulting', qty: 10, rate: 200 },
-    { status: 'paid', title: 'Logo & Branding Package', itemName: 'Brand Design', qty: 1, rate: 3500 },
+    {
+      status: 'paid',
+      title: 'Logo & Branding Package',
+      itemName: 'Brand Design',
+      qty: 1,
+      rate: 3500,
+    },
   ];
 
   // BUG-024/025/026 fix: Varied dates per standalone invoice spread across 60 days
-  const invDateConfigs: Record<number, { issueDaysAgo: number; sentDaysAgo?: number; viewedDaysAgo?: number; paidDaysAgo?: number; voidedDaysAgo?: number; dueDaysFromNow?: number; dueDaysAgo?: number }> = {
-    0: { issueDaysAgo: 0, dueDaysFromNow: 30 },                                                                  // INV-0007 draft
-    1: { issueDaysAgo: 5, sentDaysAgo: 3, dueDaysFromNow: 25 },                                                  // INV-0008 sent
-    2: { issueDaysAgo: 12, sentDaysAgo: 10, viewedDaysAgo: 5, dueDaysFromNow: 18 },                              // INV-0009 viewed
-    3: { issueDaysAgo: 35, sentDaysAgo: 33, viewedDaysAgo: 28, paidDaysAgo: 20, dueDaysAgo: 5 },                 // INV-0010 paid
-    4: { issueDaysAgo: 45, sentDaysAgo: 43, viewedDaysAgo: 30, dueDaysAgo: 7 },                                  // INV-0011 overdue
-    5: { issueDaysAgo: 40, voidedDaysAgo: 30, dueDaysAgo: 10 },                                                  // INV-0012 voided
-    6: { issueDaysAgo: 50, sentDaysAgo: 48, viewedDaysAgo: 42, paidDaysAgo: 38, dueDaysAgo: 20 },                // INV-0013 paid
-    7: { issueDaysAgo: 55, sentDaysAgo: 53, viewedDaysAgo: 48, paidDaysAgo: 44, dueDaysAgo: 25 },                // INV-0014 paid
+  const invDateConfigs: Record<
+    number,
+    {
+      issueDaysAgo: number;
+      sentDaysAgo?: number;
+      viewedDaysAgo?: number;
+      paidDaysAgo?: number;
+      voidedDaysAgo?: number;
+      dueDaysFromNow?: number;
+      dueDaysAgo?: number;
+    }
+  > = {
+    0: { issueDaysAgo: 0, dueDaysFromNow: 30 }, // INV-0007 draft
+    1: { issueDaysAgo: 5, sentDaysAgo: 3, dueDaysFromNow: 25 }, // INV-0008 sent
+    2: { issueDaysAgo: 12, sentDaysAgo: 10, viewedDaysAgo: 5, dueDaysFromNow: 18 }, // INV-0009 viewed
+    3: { issueDaysAgo: 35, sentDaysAgo: 33, viewedDaysAgo: 28, paidDaysAgo: 20, dueDaysAgo: 5 }, // INV-0010 paid
+    4: { issueDaysAgo: 45, sentDaysAgo: 43, viewedDaysAgo: 30, dueDaysAgo: 7 }, // INV-0011 overdue
+    5: { issueDaysAgo: 40, voidedDaysAgo: 30, dueDaysAgo: 10 }, // INV-0012 voided
+    6: { issueDaysAgo: 50, sentDaysAgo: 48, viewedDaysAgo: 42, paidDaysAgo: 38, dueDaysAgo: 20 }, // INV-0013 paid
+    7: { issueDaysAgo: 55, sentDaysAgo: 53, viewedDaysAgo: 48, paidDaysAgo: 44, dueDaysAgo: 25 }, // INV-0014 paid
   };
 
   for (let i = 0; i < testInvoices.length; i++) {
@@ -574,10 +724,18 @@ async function main() {
     const invDueDate = invDates.dueDaysFromNow
       ? new Date(Date.now() + invDates.dueDaysFromNow * daysMs)
       : new Date(Date.now() - (invDates.dueDaysAgo ?? 0) * daysMs);
-    const invSentAt = invDates.sentDaysAgo ? new Date(Date.now() - invDates.sentDaysAgo * daysMs) : null;
-    const invViewedAt = invDates.viewedDaysAgo ? new Date(Date.now() - invDates.viewedDaysAgo * daysMs) : null;
-    const invPaidAt = invDates.paidDaysAgo ? new Date(Date.now() - invDates.paidDaysAgo * daysMs) : null;
-    const invVoidedAt = invDates.voidedDaysAgo ? new Date(Date.now() - invDates.voidedDaysAgo * daysMs) : null;
+    const invSentAt = invDates.sentDaysAgo
+      ? new Date(Date.now() - invDates.sentDaysAgo * daysMs)
+      : null;
+    const invViewedAt = invDates.viewedDaysAgo
+      ? new Date(Date.now() - invDates.viewedDaysAgo * daysMs)
+      : null;
+    const invPaidAt = invDates.paidDaysAgo
+      ? new Date(Date.now() - invDates.paidDaysAgo * daysMs)
+      : null;
+    const invVoidedAt = invDates.voidedDaysAgo
+      ? new Date(Date.now() - invDates.voidedDaysAgo * daysMs)
+      : null;
     const invAccessToken = crypto.randomUUID();
 
     const invoice = await prisma.invoice.upsert({
@@ -594,7 +752,7 @@ async function main() {
         subtotal,
         total: subtotal,
         amountPaid: inv.status === 'paid' ? subtotal : 0,
-        amountDue: (inv.status === 'paid' || inv.status === 'voided') ? 0 : subtotal,
+        amountDue: inv.status === 'paid' || inv.status === 'voided' ? 0 : subtotal,
         issueDate: invIssueDate,
         dueDate: invDueDate,
         sentAt: invSentAt,
@@ -616,7 +774,7 @@ async function main() {
         subtotal,
         total: subtotal,
         amountPaid: inv.status === 'paid' ? subtotal : 0,
-        amountDue: (inv.status === 'paid' || inv.status === 'voided') ? 0 : subtotal,
+        amountDue: inv.status === 'paid' || inv.status === 'voided' ? 0 : subtotal,
         sentAt: invSentAt,
         viewedAt: invViewedAt,
         paidAt: invPaidAt,
@@ -770,33 +928,106 @@ async function main() {
 
 /** Helper: Generate realistic multi-item line items for demo quotes */
 function getDemoQuoteLineItems(title: string, subtotal: number) {
-  const itemSets: Record<string, { name: string; description: string; qty: number; rate: number }[]> = {
+  const itemSets: Record<
+    string,
+    { name: string; description: string; qty: number; rate: number }[]
+  > = {
     'Website Redesign Proposal': [
-      { name: 'UI/UX Design', description: 'Homepage and key page wireframes & visual design', qty: 40, rate: 150 },
-      { name: 'Frontend Development', description: 'React/Next.js implementation with responsive layouts', qty: 60, rate: 175 },
-      { name: 'Content Migration', description: 'Migrating existing content to new design', qty: 12, rate: 100 },
+      {
+        name: 'UI/UX Design',
+        description: 'Homepage and key page wireframes & visual design',
+        qty: 40,
+        rate: 150,
+      },
+      {
+        name: 'Frontend Development',
+        description: 'React/Next.js implementation with responsive layouts',
+        qty: 60,
+        rate: 175,
+      },
+      {
+        name: 'Content Migration',
+        description: 'Migrating existing content to new design',
+        qty: 12,
+        rate: 100,
+      },
     ],
     'E-commerce Platform Design': [
-      { name: 'Product Page Design', description: 'Full product listing and detail page design', qty: 48, rate: 150 },
-      { name: 'Checkout Flow Design', description: 'Cart, checkout, and payment page UX', qty: 32, rate: 175 },
-      { name: 'Admin Dashboard Design', description: 'Inventory and order management interface', qty: 56, rate: 150 },
+      {
+        name: 'Product Page Design',
+        description: 'Full product listing and detail page design',
+        qty: 48,
+        rate: 150,
+      },
+      {
+        name: 'Checkout Flow Design',
+        description: 'Cart, checkout, and payment page UX',
+        qty: 32,
+        rate: 175,
+      },
+      {
+        name: 'Admin Dashboard Design',
+        description: 'Inventory and order management interface',
+        qty: 56,
+        rate: 150,
+      },
     ],
     'Brand Identity Package': [
-      { name: 'Logo Design', description: 'Primary logo with 3 concepts and revisions', qty: 1, rate: 3500 },
-      { name: 'Brand Guidelines', description: 'Typography, color palette, usage rules document', qty: 1, rate: 2000 },
-      { name: 'Collateral Design', description: 'Business card, letterhead, and email signature', qty: 1, rate: 1500 },
+      {
+        name: 'Logo Design',
+        description: 'Primary logo with 3 concepts and revisions',
+        qty: 1,
+        rate: 3500,
+      },
+      {
+        name: 'Brand Guidelines',
+        description: 'Typography, color palette, usage rules document',
+        qty: 1,
+        rate: 2000,
+      },
+      {
+        name: 'Collateral Design',
+        description: 'Business card, letterhead, and email signature',
+        qty: 1,
+        rate: 1500,
+      },
     ],
     'Mobile App UI Design': [
       { name: 'App UI Design', description: 'Screen designs for 20+ views', qty: 48, rate: 150 },
-      { name: 'Prototype & Testing', description: 'Interactive prototype with usability testing', qty: 24, rate: 200 },
+      {
+        name: 'Prototype & Testing',
+        description: 'Interactive prototype with usability testing',
+        qty: 24,
+        rate: 200,
+      },
     ],
     'Annual Retainer Package': [
-      { name: 'Monthly Design Support', description: '40 hours/month of on-demand design work', qty: 480, rate: 100 },
-      { name: 'Dedicated Project Manager', description: 'Coordination and communication', qty: 120, rate: 50 },
+      {
+        name: 'Monthly Design Support',
+        description: '40 hours/month of on-demand design work',
+        qty: 480,
+        rate: 100,
+      },
+      {
+        name: 'Dedicated Project Manager',
+        description: 'Coordination and communication',
+        qty: 120,
+        rate: 50,
+      },
     ],
     'SEO & Content Strategy': [
-      { name: 'SEO Audit & Optimization', description: 'Technical SEO audit and on-page optimization', qty: 30, rate: 200 },
-      { name: 'Content Strategy', description: 'Content calendar and keyword research', qty: 25, rate: 140 },
+      {
+        name: 'SEO Audit & Optimization',
+        description: 'Technical SEO audit and on-page optimization',
+        qty: 30,
+        rate: 200,
+      },
+      {
+        name: 'Content Strategy',
+        description: 'Content calendar and keyword research',
+        qty: 25,
+        rate: 140,
+      },
     ],
   };
 
@@ -809,8 +1040,18 @@ function getDemoQuoteLineItems(title: string, subtotal: number) {
   const secondaryRate = 100;
   const secondaryQty = Math.max(1, Math.round((subtotal * 0.3) / secondaryRate));
   return [
-    { name: 'Design Services', description: 'Visual design and prototyping', qty: primaryQty, rate: primaryRate },
-    { name: 'Project Management', description: 'Coordination and delivery', qty: secondaryQty, rate: secondaryRate },
+    {
+      name: 'Design Services',
+      description: 'Visual design and prototyping',
+      qty: primaryQty,
+      rate: primaryRate,
+    },
+    {
+      name: 'Project Management',
+      description: 'Coordination and delivery',
+      qty: secondaryQty,
+      rate: secondaryRate,
+    },
   ];
 }
 
@@ -889,23 +1130,33 @@ async function seedDemoWorkspace() {
   // Comprehensive pre-seeding cleanup: delete ALL demo workspace data to prevent stale records
   console.log('Cleaning up all demo workspace data for fresh seeding...');
   // Get all demo client IDs first, so we can clean up cross-workspace references
-  const demoClientIds = (await prisma.client.findMany({
-    where: { workspaceId: demoWorkspace.id },
-    select: { id: true },
-  })).map(c => c.id);
+  const demoClientIds = (
+    await prisma.client.findMany({
+      where: { workspaceId: demoWorkspace.id },
+      select: { id: true },
+    })
+  ).map((c) => c.id);
   await prisma.quoteEvent.deleteMany({ where: { quote: { workspaceId: demoWorkspace.id } } });
   await prisma.invoiceEvent.deleteMany({ where: { invoice: { workspaceId: demoWorkspace.id } } });
   await prisma.quoteLineItem.deleteMany({ where: { quote: { workspaceId: demoWorkspace.id } } });
-  await prisma.invoiceLineItem.deleteMany({ where: { invoice: { workspaceId: demoWorkspace.id } } });
+  await prisma.invoiceLineItem.deleteMany({
+    where: { invoice: { workspaceId: demoWorkspace.id } },
+  });
   await prisma.notification.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   await prisma.invoice.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   await prisma.quote.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   // Also clean up any cross-workspace references to demo clients
   if (demoClientIds.length > 0) {
     await prisma.quoteEvent.deleteMany({ where: { quote: { clientId: { in: demoClientIds } } } });
-    await prisma.invoiceEvent.deleteMany({ where: { invoice: { clientId: { in: demoClientIds } } } });
-    await prisma.quoteLineItem.deleteMany({ where: { quote: { clientId: { in: demoClientIds } } } });
-    await prisma.invoiceLineItem.deleteMany({ where: { invoice: { clientId: { in: demoClientIds } } } });
+    await prisma.invoiceEvent.deleteMany({
+      where: { invoice: { clientId: { in: demoClientIds } } },
+    });
+    await prisma.quoteLineItem.deleteMany({
+      where: { quote: { clientId: { in: demoClientIds } } },
+    });
+    await prisma.invoiceLineItem.deleteMany({
+      where: { invoice: { clientId: { in: demoClientIds } } },
+    });
     await prisma.invoice.deleteMany({ where: { clientId: { in: demoClientIds } } });
     await prisma.quote.deleteMany({ where: { clientId: { in: demoClientIds } } });
     await prisma.project.deleteMany({ where: { clientId: { in: demoClientIds } } });
@@ -986,17 +1237,51 @@ async function seedDemoWorkspace() {
 
   // Create demo clients
   const demoClients = [
-    { id: 'demo-client-1', name: 'TechStart Inc.', email: 'projects@techstart.demo', company: 'TechStart Inc.', phone: '+1 (555) 234-5678' },
-    { id: 'demo-client-2', name: 'Global Retail Co.', email: 'procurement@globalretail.demo', company: 'Global Retail Co.', phone: '+1 (555) 345-6789' },
-    { id: 'demo-client-3', name: 'Sarah Johnson', email: 'sarah.j@email.demo', phone: '+1 (555) 456-7890' },
-    { id: 'demo-client-4', name: 'Marcus Chen', email: 'marcus@chenventures.demo', company: 'Chen Ventures' },
-    { id: 'demo-client-5', name: 'Creative Agency LLC', email: 'hello@creativeagency.demo', company: 'Creative Agency LLC', phone: '+1 (555) 567-8901' },
+    {
+      id: 'demo-client-1',
+      name: 'TechStart Inc.',
+      email: 'projects@techstart.demo',
+      company: 'TechStart Inc.',
+      phone: '+1 (555) 234-5678',
+    },
+    {
+      id: 'demo-client-2',
+      name: 'Global Retail Co.',
+      email: 'procurement@globalretail.demo',
+      company: 'Global Retail Co.',
+      phone: '+1 (555) 345-6789',
+    },
+    {
+      id: 'demo-client-3',
+      name: 'Sarah Johnson',
+      email: 'sarah.j@email.demo',
+      phone: '+1 (555) 456-7890',
+    },
+    {
+      id: 'demo-client-4',
+      name: 'Marcus Chen',
+      email: 'marcus@chenventures.demo',
+      company: 'Chen Ventures',
+    },
+    {
+      id: 'demo-client-5',
+      name: 'Creative Agency LLC',
+      email: 'hello@creativeagency.demo',
+      company: 'Creative Agency LLC',
+      phone: '+1 (555) 567-8901',
+    },
   ];
 
   for (const clientData of demoClients) {
     await prisma.client.upsert({
       where: { id: clientData.id },
-      update: { workspaceId: demoWorkspace.id, name: clientData.name, email: clientData.email, company: clientData.company ?? null, deletedAt: null },
+      update: {
+        workspaceId: demoWorkspace.id,
+        name: clientData.name,
+        email: clientData.email,
+        company: clientData.company ?? null,
+        deletedAt: null,
+      },
       create: {
         id: clientData.id,
         workspaceId: demoWorkspace.id,
@@ -1042,12 +1327,54 @@ async function seedDemoWorkspace() {
 
   // Create demo rate cards
   const demoRateCards = [
-    { id: 'demo-rate-1', name: 'UI/UX Design', rate: 150, unit: 'hour', pricingType: 'hourly', categoryId: demoDesignCategory.id },
-    { id: 'demo-rate-2', name: 'Brand Identity', rate: 125, unit: 'hour', pricingType: 'hourly', categoryId: demoDesignCategory.id },
-    { id: 'demo-rate-3', name: 'Web Development', rate: 175, unit: 'hour', pricingType: 'hourly', categoryId: demoDevCategory.id },
-    { id: 'demo-rate-4', name: 'Logo Design Package', rate: 2500, unit: 'project', pricingType: 'fixed', categoryId: demoDesignCategory.id },
-    { id: 'demo-rate-5', name: 'Backend API Development', rate: 200, unit: 'hour', pricingType: 'hourly', categoryId: demoDevCategory.id },
-    { id: 'demo-rate-6', name: 'DevOps & Deployment', rate: 175, unit: 'hour', pricingType: 'hourly', categoryId: demoDevCategory.id },
+    {
+      id: 'demo-rate-1',
+      name: 'UI/UX Design',
+      rate: 150,
+      unit: 'hour',
+      pricingType: 'hourly',
+      categoryId: demoDesignCategory.id,
+    },
+    {
+      id: 'demo-rate-2',
+      name: 'Brand Identity',
+      rate: 125,
+      unit: 'hour',
+      pricingType: 'hourly',
+      categoryId: demoDesignCategory.id,
+    },
+    {
+      id: 'demo-rate-3',
+      name: 'Web Development',
+      rate: 175,
+      unit: 'hour',
+      pricingType: 'hourly',
+      categoryId: demoDevCategory.id,
+    },
+    {
+      id: 'demo-rate-4',
+      name: 'Logo Design Package',
+      rate: 2500,
+      unit: 'project',
+      pricingType: 'fixed',
+      categoryId: demoDesignCategory.id,
+    },
+    {
+      id: 'demo-rate-5',
+      name: 'Backend API Development',
+      rate: 200,
+      unit: 'hour',
+      pricingType: 'hourly',
+      categoryId: demoDevCategory.id,
+    },
+    {
+      id: 'demo-rate-6',
+      name: 'DevOps & Deployment',
+      rate: 175,
+      unit: 'hour',
+      pricingType: 'hourly',
+      categoryId: demoDevCategory.id,
+    },
   ];
 
   for (const rateCardData of demoRateCards) {
@@ -1376,10 +1703,24 @@ async function seedDemoWorkspace() {
     // Add line items matching the converted quote
     await prisma.invoiceLineItem.deleteMany({ where: { invoiceId: convertedInvoice.id } });
     await prisma.invoiceLineItem.create({
-      data: { invoiceId: convertedInvoice.id, name: 'SEO Audit & Optimization', quantity: 30, rate: 200, amount: 6000, sortOrder: 0 },
+      data: {
+        invoiceId: convertedInvoice.id,
+        name: 'SEO Audit & Optimization',
+        quantity: 30,
+        rate: 200,
+        amount: 6000,
+        sortOrder: 0,
+      },
     });
     await prisma.invoiceLineItem.create({
-      data: { invoiceId: convertedInvoice.id, name: 'Content Strategy', quantity: 25, rate: 140, amount: 3500, sortOrder: 1 },
+      data: {
+        invoiceId: convertedInvoice.id,
+        name: 'Content Strategy',
+        quantity: 25,
+        rate: 140,
+        amount: 3500,
+        sortOrder: 1,
+      },
     });
     console.log('Created/Updated converted quote invoice: INV-0008');
   }
@@ -1479,21 +1820,24 @@ async function seedDemoWorkspace() {
       id: 'demo-project-1',
       clientId: 'demo-client-1',
       name: 'Website Redesign 2024',
-      description: 'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
+      description:
+        'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
       isActive: true,
     },
     {
       id: 'demo-project-2',
       clientId: 'demo-client-2',
       name: 'E-commerce Platform',
-      description: 'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
+      description:
+        'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
       isActive: true,
     },
     {
       id: 'demo-project-3',
       clientId: 'demo-client-3',
       name: 'Brand Identity Package',
-      description: 'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
+      description:
+        'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
       isActive: true,
     },
     {
@@ -1592,7 +1936,9 @@ async function seedDemoWorkspace() {
   }
 
   // Seed activity events for demo invoices (H01/H03 fix: force recreate)
-  const allDemoInvoices = await prisma.invoice.findMany({ where: { workspaceId: demoWorkspace.id } });
+  const allDemoInvoices = await prisma.invoice.findMany({
+    where: { workspaceId: demoWorkspace.id },
+  });
   for (const invoice of allDemoInvoices) {
     await prisma.invoiceEvent.deleteMany({ where: { invoiceId: invoice.id } });
 

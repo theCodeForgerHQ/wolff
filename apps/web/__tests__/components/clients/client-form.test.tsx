@@ -25,20 +25,9 @@ describe('ClientForm', () => {
       }}
     >
       <label htmlFor="name">Name</label>
-      <input
-        id="name"
-        name="name"
-        defaultValue={initialData?.name}
-        required
-      />
+      <input id="name" name="name" defaultValue={initialData?.name} required />
       <label htmlFor="email">Email</label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        defaultValue={initialData?.email}
-        required
-      />
+      <input id="email" name="email" type="email" defaultValue={initialData?.email} required />
       <label htmlFor="type">Type</label>
       <select id="type" name="type" defaultValue={initialData?.type || 'individual'}>
         <option value="individual">Individual</option>

@@ -18,10 +18,12 @@ function formatCurrency(amount: number, currency: string): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 export function PortalLineItemsTable({
@@ -52,9 +54,7 @@ export function PortalLineItemsTable({
               <td className="px-4 py-3">
                 <p className="font-medium">{item.name}</p>
                 {item.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{item.description}</p>
                 )}
               </td>
               {showPrices && (

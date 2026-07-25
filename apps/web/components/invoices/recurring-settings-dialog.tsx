@@ -24,16 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import {
-  updateRecurringSettings,
-  getRecurringSettings,
-} from '@/lib/invoices/recurring';
+import { updateRecurringSettings, getRecurringSettings } from '@/lib/invoices/recurring';
 
 export interface RecurringSettings {
   enabled: boolean;
@@ -156,9 +149,7 @@ export function RecurringSettingsDialog({
 
       if (result.success) {
         toast.success(
-          settings.enabled
-            ? 'Recurring settings saved successfully'
-            : 'Recurring disabled'
+          settings.enabled ? 'Recurring settings saved successfully' : 'Recurring disabled'
         );
         onSave?.(settings);
         onOpenChange(false);
@@ -187,7 +178,7 @@ export function RecurringSettingsDialog({
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
           </div>
         ) : (
           <div className="grid gap-5 py-4">
@@ -195,7 +186,7 @@ export function RecurringSettingsDialog({
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-sm font-medium">Enable Recurring</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Automatically generate this invoice on schedule
                 </p>
               </div>
@@ -251,13 +242,16 @@ export function RecurringSettingsDialog({
                 {/* End Date */}
                 <div className="grid gap-2">
                   <Label>End Date</Label>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <Checkbox
                       id="no-end-date"
                       checked={noEndDate}
                       onCheckedChange={(checked) => setNoEndDate(!!checked)}
                     />
-                    <label htmlFor="no-end-date" className="text-sm text-muted-foreground cursor-pointer">
+                    <label
+                      htmlFor="no-end-date"
+                      className="text-muted-foreground cursor-pointer text-sm"
+                    >
                       No end date
                     </label>
                   </div>
@@ -292,7 +286,7 @@ export function RecurringSettingsDialog({
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-sm font-medium">Auto-send to Client</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       Automatically email the invoice when generated
                     </p>
                   </div>

@@ -65,13 +65,16 @@ export async function createSavedLineItem(data: {
   return { success: true, item: { ...item, price: Number(item.price) } };
 }
 
-export async function updateSavedLineItem(id: string, data: {
-  name?: string;
-  description?: string;
-  price?: number;
-  duration?: string;
-  taxable?: boolean;
-}) {
+export async function updateSavedLineItem(
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    price?: number;
+    duration?: string;
+    taxable?: boolean;
+  }
+) {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
   if (role === 'viewer') {

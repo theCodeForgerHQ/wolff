@@ -154,11 +154,40 @@ async function seedProductionDemo() {
 
   // Create demo clients
   const demoClients = [
-    { id: 'demo-client-1', name: 'TechStart Inc.', email: 'projects@techstart.demo', company: 'TechStart Inc.', phone: '+1 (555) 234-5678' },
-    { id: 'demo-client-2', name: 'Global Retail Co.', email: 'procurement@globalretail.demo', company: 'Global Retail Co.', phone: '+1 (555) 345-6789' },
-    { id: 'demo-client-3', name: 'Sarah Johnson', email: 'sarah.j@email.demo', company: 'Johnson Consulting', phone: '+1 (555) 456-7890' },
-    { id: 'demo-client-4', name: 'Marcus Chen', email: 'marcus@chenventures.demo', company: 'Chen Ventures' },
-    { id: 'demo-client-5', name: 'Creative Agency LLC', email: 'hello@creativeagency.demo', company: 'Creative Agency LLC', phone: '+1 (555) 567-8901' },
+    {
+      id: 'demo-client-1',
+      name: 'TechStart Inc.',
+      email: 'projects@techstart.demo',
+      company: 'TechStart Inc.',
+      phone: '+1 (555) 234-5678',
+    },
+    {
+      id: 'demo-client-2',
+      name: 'Global Retail Co.',
+      email: 'procurement@globalretail.demo',
+      company: 'Global Retail Co.',
+      phone: '+1 (555) 345-6789',
+    },
+    {
+      id: 'demo-client-3',
+      name: 'Sarah Johnson',
+      email: 'sarah.j@email.demo',
+      company: 'Johnson Consulting',
+      phone: '+1 (555) 456-7890',
+    },
+    {
+      id: 'demo-client-4',
+      name: 'Marcus Chen',
+      email: 'marcus@chenventures.demo',
+      company: 'Chen Ventures',
+    },
+    {
+      id: 'demo-client-5',
+      name: 'Creative Agency LLC',
+      email: 'hello@creativeagency.demo',
+      company: 'Creative Agency LLC',
+      phone: '+1 (555) 567-8901',
+    },
   ];
 
   for (const clientData of demoClients) {
@@ -198,7 +227,13 @@ async function seedProductionDemo() {
     { id: 'demo-rate-1', name: 'UI/UX Design', rate: 150, unit: 'hour', pricingType: 'hourly' },
     { id: 'demo-rate-2', name: 'Brand Identity', rate: 125, unit: 'hour', pricingType: 'hourly' },
     { id: 'demo-rate-3', name: 'Web Development', rate: 175, unit: 'hour', pricingType: 'hourly' },
-    { id: 'demo-rate-4', name: 'Logo Design Package', rate: 2500, unit: 'project', pricingType: 'fixed' },
+    {
+      id: 'demo-rate-4',
+      name: 'Logo Design Package',
+      rate: 2500,
+      unit: 'project',
+      pricingType: 'fixed',
+    },
   ];
 
   for (const rateCardData of demoRateCards) {
@@ -431,21 +466,24 @@ async function seedProductionDemo() {
       id: 'demo-project-1',
       clientId: 'demo-client-1',
       name: 'Website Redesign 2024',
-      description: 'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
+      description:
+        'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
       isActive: true,
     },
     {
       id: 'demo-project-2',
       clientId: 'demo-client-2',
       name: 'E-commerce Platform',
-      description: 'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
+      description:
+        'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
       isActive: true,
     },
     {
       id: 'demo-project-3',
       clientId: 'demo-client-3',
       name: 'Brand Identity Package',
-      description: 'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
+      description:
+        'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
       isActive: true,
     },
     {
@@ -514,7 +552,9 @@ async function seedProductionDemo() {
   console.log('✓ Linked invoices to projects');
 
   console.log('\n✅ Production demo data seeding completed!');
-  console.log(`\n📋 Demo account created. Credentials are set via DEMO_USER_EMAIL and DEMO_USER_PASSWORD env vars.`);
+  console.log(
+    `\n📋 Demo account created. Credentials are set via DEMO_USER_EMAIL and DEMO_USER_PASSWORD env vars.`
+  );
 }
 
 seedProductionDemo()

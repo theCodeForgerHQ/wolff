@@ -67,11 +67,7 @@ export const ERROR_PATTERNS = {
   ],
 
   // Rendered null values that indicate missing graceful fallbacks
-  RENDERED_NULL_PATTERNS: [
-    'undefined',
-    'null',
-    '[object Object]',
-  ],
+  RENDERED_NULL_PATTERNS: ['undefined', 'null', '[object Object]'],
 } as const;
 
 // ============================================================================
@@ -129,7 +125,9 @@ export const test = base.extend<EdgeCaseFixtures>({
           return data.quotes?.length > 0;
         }
 
-        console.warn('Edge case data not found. Run: SEED_EDGE_CASES=true npx tsx e2e/utils/seed-e2e-data.ts');
+        console.warn(
+          'Edge case data not found. Run: SEED_EDGE_CASES=true npx tsx e2e/utils/seed-e2e-data.ts'
+        );
         return false;
       } catch (error) {
         console.warn('Error verifying edge case data:', error);
@@ -144,7 +142,7 @@ export const test = base.extend<EdgeCaseFixtures>({
   assertNoServerError: async ({ page }, use) => {
     const assertNoError = async (context?: string) => {
       const pageContent = await page.content();
-      const bodyText = await page.locator('body').textContent() || '';
+      const bodyText = (await page.locator('body').textContent()) || '';
 
       // Check for server error patterns
       for (const pattern of ERROR_PATTERNS.SERVER_ERROR_TEXT) {
@@ -156,8 +154,8 @@ export const test = base.extend<EdgeCaseFixtures>({
           if (!isAllowed) {
             throw new Error(
               `Server error detected${context ? ` (${context})` : ''}: "${pattern}" found on page.\n` +
-              `URL: ${page.url()}\n` +
-              `Body excerpt: ${bodyText.substring(0, 500)}`
+                `URL: ${page.url()}\n` +
+                `Body excerpt: ${bodyText.substring(0, 500)}`
             );
           }
         }
@@ -168,7 +166,7 @@ export const test = base.extend<EdgeCaseFixtures>({
         if (pageContent.includes(pattern)) {
           throw new Error(
             `Null reference error detected${context ? ` (${context})` : ''}: "${pattern}" found in page content.\n` +
-            `URL: ${page.url()}`
+              `URL: ${page.url()}`
           );
         }
       }
@@ -181,7 +179,7 @@ export const test = base.extend<EdgeCaseFixtures>({
   assertNoRenderedNull: async ({ page }, use) => {
     const assertNoNull = async (selector?: string) => {
       const locator = selector ? page.locator(selector) : page.locator('body');
-      const text = await locator.textContent() || '';
+      const text = (await locator.textContent()) || '';
 
       // Skip if selector doesn't exist
       if (selector && !(await locator.count())) {
@@ -204,15 +202,13 @@ export const test = base.extend<EdgeCaseFixtures>({
             'not null',
           ];
           const textLower = text.toLowerCase();
-          const isAllowedContext = allowedContexts.some((ctx) =>
-            textLower.includes(ctx)
-          );
+          const isAllowedContext = allowedContexts.some((ctx) => textLower.includes(ctx));
 
           if (!isAllowedContext) {
             throw new Error(
               `Rendered null value detected: "${pattern}" found in ${selector || 'body'}.\n` +
-              `URL: ${page.url()}\n` +
-              `Text excerpt: ${text.substring(0, 300)}`
+                `URL: ${page.url()}\n` +
+                `Text excerpt: ${text.substring(0, 300)}`
             );
           }
         }
@@ -232,7 +228,7 @@ export const test = base.extend<EdgeCaseFixtures>({
         timeout: 5000,
       });
 
-      const text = await element.textContent() || '';
+      const text = (await element.textContent()) || '';
 
       // Check for null patterns
       for (const pattern of ERROR_PATTERNS.RENDERED_NULL_PATTERNS) {
@@ -240,7 +236,7 @@ export const test = base.extend<EdgeCaseFixtures>({
         if (regex.test(text)) {
           throw new Error(
             `Data integrity violation in ${selector}: Found "${pattern}" in rendered content.\n` +
-            `Content: ${text.substring(0, 200)}`
+              `Content: ${text.substring(0, 200)}`
           );
         }
       }
@@ -250,7 +246,7 @@ export const test = base.extend<EdgeCaseFixtures>({
         // Look for the field label or value
         const fieldExists =
           text.toLowerCase().includes(field.toLowerCase()) ||
-          await element.locator(`text="${field}"`).count() > 0;
+          (await element.locator(`text="${field}"`).count()) > 0;
 
         // This is informational, not a hard failure
         if (!fieldExists) {
@@ -273,7 +269,7 @@ export { expect };
  * Check if a page has any server component errors
  */
 export async function hasServerError(page: import('@playwright/test').Page): Promise<boolean> {
-  const bodyText = await page.locator('body').textContent() || '';
+  const bodyText = (await page.locator('body').textContent()) || '';
 
   for (const pattern of ERROR_PATTERNS.SERVER_ERROR_TEXT) {
     if (bodyText.includes(pattern)) {
@@ -287,10 +283,8 @@ export async function hasServerError(page: import('@playwright/test').Page): Pro
 /**
  * Get all visible null/undefined renders on a page
  */
-export async function findRenderedNulls(
-  page: import('@playwright/test').Page
-): Promise<string[]> {
-  const bodyText = await page.locator('body').textContent() || '';
+export async function findRenderedNulls(page: import('@playwright/test').Page): Promise<string[]> {
+  const bodyText = (await page.locator('body').textContent()) || '';
   const found: string[] = [];
 
   for (const pattern of ERROR_PATTERNS.RENDERED_NULL_PATTERNS) {

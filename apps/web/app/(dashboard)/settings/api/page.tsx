@@ -19,7 +19,7 @@ export default function ApiKeysPage() {
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-medium">API Keys</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Manage API keys for external integrations. Keys are shown only once when created.
         </p>
       </div>

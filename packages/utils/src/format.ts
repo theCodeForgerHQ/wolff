@@ -17,7 +17,24 @@ export function formatCurrency(
   }
 
   // Bug #146: Zero-decimal currencies (JPY, KRW, etc.) should not show decimal places
-  const ZERO_DECIMAL_CURRENCIES = ['BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF'];
+  const ZERO_DECIMAL_CURRENCIES = [
+    'BIF',
+    'CLP',
+    'DJF',
+    'GNF',
+    'JPY',
+    'KMF',
+    'KRW',
+    'MGA',
+    'PYG',
+    'RWF',
+    'UGX',
+    'VND',
+    'VUV',
+    'XAF',
+    'XOF',
+    'XPF',
+  ];
   const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase());
 
   return new Intl.NumberFormat(locale, {
@@ -31,10 +48,7 @@ export function formatCurrency(
 /**
  * Format a number with thousand separators
  */
-export function formatNumber(
-  value: number | string,
-  locale: string = 'en-US'
-): string {
+export function formatNumber(value: number | string, locale: string = 'en-US'): string {
   const numericValue = typeof value === 'string' ? parseFloat(value) : value;
 
   return new Intl.NumberFormat(locale).format(numericValue);
@@ -43,10 +57,7 @@ export function formatNumber(
 /**
  * Format a date string or Date object
  */
-export function formatDate(
-  date: string | Date,
-  formatString: string = 'MMM d, yyyy'
-): string {
+export function formatDate(date: string | Date, formatString: string = 'MMM d, yyyy'): string {
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
   return format(dateObj, formatString);
 }
@@ -62,10 +73,7 @@ export function formatRelativeTime(date: string | Date): string {
 /**
  * Format a percentage
  */
-export function formatPercentage(
-  value: number | string,
-  decimals: number = 0
-): string {
+export function formatPercentage(value: number | string, decimals: number = 0): string {
   const numericValue = typeof value === 'string' ? parseFloat(value) : value;
   if (!Number.isFinite(numericValue)) return '0%';
   return `${numericValue.toFixed(decimals)}%`;

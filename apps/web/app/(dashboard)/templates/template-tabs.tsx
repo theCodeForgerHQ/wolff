@@ -19,18 +19,17 @@ export function TemplateTabs() {
     <nav className="border-b">
       <div className="flex gap-6">
         {templateTabs.map((tab) => {
-          const isActive =
-            pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 
           return (
             <Link
               key={tab.href}
               href={tab.href}
               className={cn(
-                'pb-3 text-sm font-medium transition-colors border-b-2 -mb-px',
+                '-mb-px border-b-2 pb-3 text-sm font-medium transition-colors',
                 isActive
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
               )}
             >
               {tab.label}

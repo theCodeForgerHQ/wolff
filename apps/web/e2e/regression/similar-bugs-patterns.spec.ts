@@ -46,10 +46,7 @@ test.describe('Portal Page Accessibility', () => {
 
 test.describe('Dark Mode - Component Compliance', () => {
   test('settings pages should not use hardcoded bg-white', async ({ page }) => {
-    const settingsPages = [
-      '/settings',
-      '/settings/account',
-    ];
+    const settingsPages = ['/settings', '/settings/account'];
 
     for (const settingsPage of settingsPages) {
       await page.goto(settingsPage);
@@ -120,7 +117,9 @@ test.describe('Stub UI Detection', () => {
     }
   });
 
-  test('help page should not have disabled Coming Soon buttons for available features', async ({ page }) => {
+  test('help page should not have disabled Coming Soon buttons for available features', async ({
+    page,
+  }) => {
     await page.goto('/help');
     await page.waitForLoadState('networkidle');
 
@@ -192,7 +191,10 @@ test.describe('Error Feedback - All Forms', () => {
 
       // Name and email are required - should show errors
       const nameError = page.locator('[class*="text-destructive"]');
-      expect(await nameError.count(), 'Should show validation errors for required fields').toBeGreaterThan(0);
+      expect(
+        await nameError.count(),
+        'Should show validation errors for required fields'
+      ).toBeGreaterThan(0);
     }
   });
 });
@@ -242,7 +244,11 @@ test.describe('Table Actions Menu', () => {
     await page.goto('/quotes');
     await page.waitForLoadState('networkidle');
 
-    const actionBtn = page.locator('table tbody tr button[aria-label*="action" i], table tbody tr [data-testid="row-actions"]').first();
+    const actionBtn = page
+      .locator(
+        'table tbody tr button[aria-label*="action" i], table tbody tr [data-testid="row-actions"]'
+      )
+      .first();
     if (await actionBtn.isVisible()) {
       await actionBtn.click();
 
@@ -260,7 +266,11 @@ test.describe('Table Actions Menu', () => {
     await page.goto('/invoices');
     await page.waitForLoadState('networkidle');
 
-    const actionBtn = page.locator('table tbody tr button[aria-label*="action" i], table tbody tr [data-testid="row-actions"]').first();
+    const actionBtn = page
+      .locator(
+        'table tbody tr button[aria-label*="action" i], table tbody tr [data-testid="row-actions"]'
+      )
+      .first();
     if (await actionBtn.isVisible()) {
       await actionBtn.click();
 
@@ -289,6 +299,9 @@ test.describe('Empty State Handling', () => {
     const hasCreateBtn = await createBtn.isVisible().catch(() => false);
 
     // At least one of these should be present
-    expect(hasTable || hasEmptyState || hasCreateBtn, 'Page should show table, empty state, or create button').toBe(true);
+    expect(
+      hasTable || hasEmptyState || hasCreateBtn,
+      'Page should show table, empty state, or create button'
+    ).toBe(true);
   });
 });

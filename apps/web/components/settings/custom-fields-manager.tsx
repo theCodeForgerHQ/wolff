@@ -26,20 +26,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  createCustomField,
-  updateCustomField,
-  deleteCustomField,
-} from '@/lib/settings/actions';
-import type {
-  CustomFieldData,
-  CustomFieldType,
-  CustomFieldEntity,
-} from '@/lib/settings/types';
-import {
-  CUSTOM_FIELD_TYPE_LABELS,
-  CUSTOM_FIELD_ENTITY_LABELS,
-} from '@/lib/settings/types';
+import { createCustomField, updateCustomField, deleteCustomField } from '@/lib/settings/actions';
+import type { CustomFieldData, CustomFieldType, CustomFieldEntity } from '@/lib/settings/types';
+import { CUSTOM_FIELD_TYPE_LABELS, CUSTOM_FIELD_ENTITY_LABELS } from '@/lib/settings/types';
 import { toast } from 'sonner';
 
 interface CustomFieldsManagerProps {
@@ -159,9 +148,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
         await updateCustomField({ ...input, id: editingField.id });
         setFields((prev) =>
           prev.map((f) =>
-            f.id === editingField.id
-              ? { ...f, ...input, updatedAt: new Date() }
-              : f
+            f.id === editingField.id ? { ...f, ...input, updatedAt: new Date() } : f
           )
         );
         toast.success('Custom field updated');
@@ -237,9 +224,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
                     <Input
                       id="field-name"
                       value={editingField.name}
-                      onChange={(e) =>
-                        setEditingField({ ...editingField, name: e.target.value })
-                      }
+                      onChange={(e) => setEditingField({ ...editingField, name: e.target.value })}
                       placeholder="e.g., PO Number"
                     />
                   </div>
@@ -295,7 +280,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
                     <div className="space-y-2">
                       {editingField.options.map((option, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <GripVertical className="text-muted-foreground h-4 w-4" />
                           <span className="flex-1 rounded-md border px-3 py-2 text-sm">
                             {option}
                           </span>
@@ -303,7 +288,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive h-8 w-8"
                             onClick={() => handleRemoveOption(index)}
                           >
                             <X className="h-4 w-4" />
@@ -371,11 +356,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setEditingField(null)}
-                    disabled={isSaving}
-                  >
+                  <Button variant="ghost" onClick={() => setEditingField(null)} disabled={isSaving}>
                     <X className="mr-1 h-4 w-4" />
                     Cancel
                   </Button>
@@ -390,7 +371,7 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
 
           {/* Fields List */}
           {fields.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
+            <p className="text-muted-foreground py-8 text-center">
               No custom fields configured. Add one to get started.
             </p>
           ) : (
@@ -403,37 +384,27 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
                   }`}
                 >
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{field.name}</span>
-                      <Badge variant="secondary">
-                        {CUSTOM_FIELD_TYPE_LABELS[field.fieldType]}
-                      </Badge>
-                      {field.isRequired && (
-                        <Badge variant="default">Required</Badge>
-                      )}
-                      {!field.isActive && (
-                        <Badge variant="outline">Inactive</Badge>
-                      )}
+                      <Badge variant="secondary">{CUSTOM_FIELD_TYPE_LABELS[field.fieldType]}</Badge>
+                      {field.isRequired && <Badge variant="default">Required</Badge>}
+                      {!field.isActive && <Badge variant="outline">Inactive</Badge>}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {field.appliesTo.map((entity) => (
                         <Badge key={entity} variant="outline" className="text-xs">
                           {CUSTOM_FIELD_ENTITY_LABELS[entity]}
                         </Badge>
                       ))}
                       {hasOptions(field.fieldType) && field.options.length > 0 && (
-                        <span className="text-xs text-muted-foreground ml-1">
+                        <span className="text-muted-foreground ml-1 text-xs">
                           {field.options.length} option{field.options.length !== 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(field)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(field)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -458,8 +429,8 @@ export function CustomFieldsManager({ initialData }: CustomFieldsManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Custom Field</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this custom field? Any data stored in this
-              field on existing records will be lost. This action cannot be undone.
+              Are you sure you want to delete this custom field? Any data stored in this field on
+              existing records will be lost. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

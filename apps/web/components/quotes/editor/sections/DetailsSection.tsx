@@ -51,9 +51,7 @@ export function DetailsSection({
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Client</CardTitle>
-          <CardDescription>
-            Search and select a client for this quote
-          </CardDescription>
+          <CardDescription>Search and select a client for this quote</CardDescription>
         </CardHeader>
         <CardContent>
           <ClientSelector
@@ -72,9 +70,7 @@ export function DetailsSection({
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Project</CardTitle>
-          <CardDescription>
-            Optionally associate this quote with a project
-          </CardDescription>
+          <CardDescription>Optionally associate this quote with a project</CardDescription>
         </CardHeader>
         <CardContent>
           <ProjectSelector

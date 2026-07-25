@@ -11,12 +11,14 @@
 This plan addresses all gaps identified between specifications and current implementation. Work is organized into 8 phases, prioritized by business criticality and dependency order.
 
 ### Current State
+
 - **Database Schema:** 100% complete
 - **Product Features:** ~40% complete
 - **Technical Infrastructure:** ~60% complete
 - **UI/UX Components:** ~55% complete
 
 ### Target State
+
 - All specifications fully implemented
 - Production-ready MVP
 - Complete test coverage
@@ -30,37 +32,37 @@ This plan addresses all gaps identified between specifications and current imple
 
 ### 1.1 Missing UI Components
 
-| Task | Files to Create | Complexity |
-|------|-----------------|------------|
-| Table component | `components/ui/table.tsx` | Medium |
-| Toast notification system | `components/ui/toast.tsx`, `components/ui/toaster.tsx`, `hooks/use-toast.ts` | Medium |
-| Skeleton loaders | `components/ui/skeleton.tsx` | Low |
-| Progress bar | `components/ui/progress.tsx` | Low |
-| Alert/Banner component | `components/ui/alert.tsx` | Low |
-| Breadcrumb component | `components/ui/breadcrumb.tsx` | Low |
-| Pagination component | `components/ui/pagination.tsx` | Medium |
-| Date picker | `components/ui/date-picker.tsx` | Medium |
-| Color picker | `components/ui/color-picker.tsx` | Medium |
-| File upload | `components/ui/file-upload.tsx` | High |
+| Task                      | Files to Create                                                              | Complexity |
+| ------------------------- | ---------------------------------------------------------------------------- | ---------- |
+| Table component           | `components/ui/table.tsx`                                                    | Medium     |
+| Toast notification system | `components/ui/toast.tsx`, `components/ui/toaster.tsx`, `hooks/use-toast.ts` | Medium     |
+| Skeleton loaders          | `components/ui/skeleton.tsx`                                                 | Low        |
+| Progress bar              | `components/ui/progress.tsx`                                                 | Low        |
+| Alert/Banner component    | `components/ui/alert.tsx`                                                    | Low        |
+| Breadcrumb component      | `components/ui/breadcrumb.tsx`                                               | Low        |
+| Pagination component      | `components/ui/pagination.tsx`                                               | Medium     |
+| Date picker               | `components/ui/date-picker.tsx`                                              | Medium     |
+| Color picker              | `components/ui/color-picker.tsx`                                             | Medium     |
+| File upload               | `components/ui/file-upload.tsx`                                              | High       |
 
 ### 1.2 API Infrastructure
 
-| Task | Files to Create | Complexity |
-|------|-----------------|------------|
-| API response helpers | `lib/api/response.ts` | Low |
-| API error handling | `lib/api/errors.ts` | Low |
-| Rate limiting middleware | `lib/api/rate-limit.ts` | Medium |
-| Validation schemas (Zod) | `lib/validations/*.ts` | Medium |
+| Task                     | Files to Create         | Complexity |
+| ------------------------ | ----------------------- | ---------- |
+| API response helpers     | `lib/api/response.ts`   | Low        |
+| API error handling       | `lib/api/errors.ts`     | Low        |
+| Rate limiting middleware | `lib/api/rate-limit.ts` | Medium     |
+| Validation schemas (Zod) | `lib/validations/*.ts`  | Medium     |
 
 ### 1.3 External Service Setup
 
-| Task | Files to Create | Complexity |
-|------|-----------------|------------|
-| Stripe client setup | `lib/stripe/client.ts` | Medium |
-| Email service (Nodemailer/Resend) | `lib/email/client.ts` | Medium |
-| PDF generation (Puppeteer) | `lib/pdf/generator.ts` | High |
-| File storage (S3/Local) | `lib/storage/client.ts` | Medium |
-| Background jobs (BullMQ) | `lib/jobs/queue.ts` | High |
+| Task                              | Files to Create         | Complexity |
+| --------------------------------- | ----------------------- | ---------- |
+| Stripe client setup               | `lib/stripe/client.ts`  | Medium     |
+| Email service (Nodemailer/Resend) | `lib/email/client.ts`   | Medium     |
+| PDF generation (Puppeteer)        | `lib/pdf/generator.ts`  | High       |
+| File storage (S3/Local)           | `lib/storage/client.ts` | Medium     |
+| Background jobs (BullMQ)          | `lib/jobs/queue.ts`     | High       |
 
 ---
 
@@ -71,12 +73,12 @@ This plan addresses all gaps identified between specifications and current imple
 
 ### 2.1 Pages
 
-| Page | Route | Features |
-|------|-------|----------|
-| Client List | `/clients` | Table with search, filter, sort, pagination |
-| Client Detail | `/clients/[id]` | Profile, quotes, invoices, activity history |
-| New Client | `/clients/new` | Creation form with validation |
-| Edit Client | `/clients/[id]/edit` | Edit form with validation |
+| Page          | Route                | Features                                    |
+| ------------- | -------------------- | ------------------------------------------- |
+| Client List   | `/clients`           | Table with search, filter, sort, pagination |
+| Client Detail | `/clients/[id]`      | Profile, quotes, invoices, activity history |
+| New Client    | `/clients/new`       | Creation form with validation               |
+| Edit Client   | `/clients/[id]/edit` | Edit form with validation                   |
 
 ### 2.2 Components
 
@@ -96,14 +98,14 @@ components/clients/
 
 ```typescript
 // lib/clients/actions.ts
-- createClient(data)
-- updateClient(id, data)
-- deleteClient(id)           // Soft delete
-- getClient(id)
-- getClients(filters)
-- searchClients(query)
-- addClientTag(clientId, tagId)
-- removeClientTag(clientId, tagId)
+-createClient(data) -
+  updateClient(id, data) -
+  deleteClient(id) - // Soft delete
+  getClient(id) -
+  getClients(filters) -
+  searchClients(query) -
+  addClientTag(clientId, tagId) -
+  removeClientTag(clientId, tagId);
 ```
 
 ### 2.4 API Endpoints (if needed)
@@ -126,11 +128,11 @@ GET    /api/clients/search?q=
 
 ### 3.1 Pages
 
-| Page | Route | Features |
-|------|-------|----------|
-| Rate Card List | `/rate-cards` | Categories, items, search |
-| Rate Card Detail | `/rate-cards/[id]` | Items list, edit inline |
-| New Rate Card | `/rate-cards/new` | Category + items creation |
+| Page             | Route              | Features                  |
+| ---------------- | ------------------ | ------------------------- |
+| Rate Card List   | `/rate-cards`      | Categories, items, search |
+| Rate Card Detail | `/rate-cards/[id]` | Items list, edit inline   |
+| New Rate Card    | `/rate-cards/new`  | Category + items creation |
 
 ### 3.2 Components
 
@@ -180,16 +182,16 @@ components/quotes/builder/
 
 ### 4.1 Pages
 
-| Page | Route | Features |
-|------|-------|----------|
-| Settings Layout | `/settings` | Sidebar navigation |
-| Business Profile | `/settings/profile` | Company info, logo |
-| Branding | `/settings/branding` | Colors, fonts, logo |
-| Payment Settings | `/settings/payments` | Stripe Connect |
-| Tax Settings | `/settings/taxes` | Tax rates CRUD |
-| Email Templates | `/settings/emails` | Template customization |
-| Team Members | `/settings/team` | Invite, manage members |
-| Billing | `/settings/billing` | Subscription (future) |
+| Page             | Route                | Features               |
+| ---------------- | -------------------- | ---------------------- |
+| Settings Layout  | `/settings`          | Sidebar navigation     |
+| Business Profile | `/settings/profile`  | Company info, logo     |
+| Branding         | `/settings/branding` | Colors, fonts, logo    |
+| Payment Settings | `/settings/payments` | Stripe Connect         |
+| Tax Settings     | `/settings/taxes`    | Tax rates CRUD         |
+| Email Templates  | `/settings/emails`   | Template customization |
+| Team Members     | `/settings/team`     | Invite, manage members |
+| Billing          | `/settings/billing`  | Subscription (future)  |
 
 ### 4.2 Components
 
@@ -213,32 +215,32 @@ components/settings/
 
 ```typescript
 // lib/settings/actions.ts
-- getBusinessProfile()
-- updateBusinessProfile(data)
-- uploadLogo(file)
-- getBrandingSettings()
-- updateBrandingSettings(data)
-- getTaxRates()
-- createTaxRate(data)
-- updateTaxRate(id, data)
-- deleteTaxRate(id)
-- getEmailTemplates()
-- updateEmailTemplate(id, data)
-- previewEmailTemplate(id, sampleData)
-- getTeamMembers()
-- inviteTeamMember(email, role)
-- removeTeamMember(id)
-- updateMemberRole(id, role)
+-getBusinessProfile() -
+  updateBusinessProfile(data) -
+  uploadLogo(file) -
+  getBrandingSettings() -
+  updateBrandingSettings(data) -
+  getTaxRates() -
+  createTaxRate(data) -
+  updateTaxRate(id, data) -
+  deleteTaxRate(id) -
+  getEmailTemplates() -
+  updateEmailTemplate(id, data) -
+  previewEmailTemplate(id, sampleData) -
+  getTeamMembers() -
+  inviteTeamMember(email, role) -
+  removeTeamMember(id) -
+  updateMemberRole(id, role);
 ```
 
 ### 4.4 Stripe Connect Integration
 
 ```typescript
 // lib/stripe/connect.ts
-- createConnectAccount()
-- getConnectAccountLink()
-- handleConnectWebhook(event)
-- getConnectAccountStatus()
+-createConnectAccount() -
+  getConnectAccountLink() -
+  handleConnectWebhook(event) -
+  getConnectAccountStatus();
 ```
 
 ---
@@ -267,13 +269,13 @@ components/dashboard/
 
 ```typescript
 // lib/dashboard/actions.ts
-- getDashboardStats()
-- getRevenueByPeriod(startDate, endDate)
-- getQuotePipeline()
-- getRecentActivity(limit)
-- getUpcomingPayments(days)
-- getOverdueInvoices()
-- getCashFlowForecast(months)
+-getDashboardStats() -
+  getRevenueByPeriod(startDate, endDate) -
+  getQuotePipeline() -
+  getRecentActivity(limit) -
+  getUpcomingPayments(days) -
+  getOverdueInvoices() -
+  getCashFlowForecast(months);
 ```
 
 ### 5.3 Charts Integration
@@ -295,12 +297,12 @@ components/dashboard/
 
 ### 6.1 Pages
 
-| Page | Route | Features |
-|------|-------|----------|
-| Contract List | `/contracts` | Templates and instances |
-| Contract Editor | `/contracts/[id]/edit` | Rich text with variables |
-| Contract Preview | `/contracts/[id]/preview` | Rendered preview |
-| Contract Sign | `/c/[token]` | Public signing page |
+| Page             | Route                     | Features                 |
+| ---------------- | ------------------------- | ------------------------ |
+| Contract List    | `/contracts`              | Templates and instances  |
+| Contract Editor  | `/contracts/[id]/edit`    | Rich text with variables |
+| Contract Preview | `/contracts/[id]/preview` | Rendered preview         |
+| Contract Sign    | `/c/[token]`              | Public signing page      |
 
 ### 6.2 Components
 
@@ -319,32 +321,76 @@ components/contracts/
 
 ```typescript
 // lib/contracts/actions.ts
-- createContractTemplate(data)
-- updateContractTemplate(id, data)
-- deleteContractTemplate(id)
-- getContractTemplates()
-- createContractInstance(templateId, clientId, variables)
-- getContractInstance(id)
-- getContractByToken(token)
-- signContract(token, signature, signerInfo)
-- generateContractPDF(instanceId)
+-createContractTemplate(data) -
+  updateContractTemplate(id, data) -
+  deleteContractTemplate(id) -
+  getContractTemplates() -
+  createContractInstance(templateId, clientId, variables) -
+  getContractInstance(id) -
+  getContractByToken(token) -
+  signContract(token, signature, signerInfo) -
+  generateContractPDF(instanceId);
 ```
 
 ### 6.4 Variable System
 
 ```typescript
 // Supported merge variables
-{{client.name}}
-{{client.email}}
-{{client.company}}
-{{business.name}}
-{{business.address}}
-{{quote.total}}
-{{quote.number}}
-{{invoice.total}}
-{{invoice.number}}
-{{date.today}}
-{{date.custom}}
+{
+  {
+    client.name;
+  }
+}
+{
+  {
+    client.email;
+  }
+}
+{
+  {
+    client.company;
+  }
+}
+{
+  {
+    business.name;
+  }
+}
+{
+  {
+    business.address;
+  }
+}
+{
+  {
+    quote.total;
+  }
+}
+{
+  {
+    quote.number;
+  }
+}
+{
+  {
+    invoice.total;
+  }
+}
+{
+  {
+    invoice.number;
+  }
+}
+{
+  {
+    date.today;
+  }
+}
+{
+  {
+    date.custom;
+  }
+}
 ```
 
 ---
@@ -376,20 +422,20 @@ emails/
 
 ```typescript
 // lib/email/service.ts
-- sendEmail(to, template, data)
-- scheduleEmail(to, template, data, sendAt)
-- cancelScheduledEmail(id)
-- getEmailLogs(entityType, entityId)
+-sendEmail(to, template, data) -
+  scheduleEmail(to, template, data, sendAt) -
+  cancelScheduledEmail(id) -
+  getEmailLogs(entityType, entityId);
 ```
 
 ### 7.3 Background Jobs
 
 ```typescript
 // lib/jobs/email.ts
-- processEmailQueue()
-- sendScheduledEmails()
-- processQuoteExpirationReminders()
-- processInvoiceOverdueReminders()
+-processEmailQueue() -
+  sendScheduledEmails() -
+  processQuoteExpirationReminders() -
+  processInvoiceOverdueReminders();
 ```
 
 ---
@@ -417,12 +463,12 @@ lib/pdf/templates/
 
 ```typescript
 // lib/pdf/service.ts
-- generateQuotePDF(quoteId)
-- generateInvoicePDF(invoiceId)
-- generateContractPDF(contractId)
-- generateReceiptPDF(paymentId)
-- storePDF(buffer, entityType, entityId)
-- getPDFUrl(entityType, entityId)
+-generateQuotePDF(quoteId) -
+  generateInvoicePDF(invoiceId) -
+  generateContractPDF(contractId) -
+  generateReceiptPDF(paymentId) -
+  storePDF(buffer, entityType, entityId) -
+  getPDFUrl(entityType, entityId);
 ```
 
 ### 8.3 Download Endpoints
@@ -456,12 +502,12 @@ components/payments/
 
 ```typescript
 // lib/stripe/payments.ts
-- createPaymentIntent(invoiceId, amount)
-- confirmPayment(paymentIntentId)
-- createPaymentLink(invoiceId)
-- processRefund(paymentId, amount, reason)
-- getPaymentMethods(clientId)
-- savePaymentMethod(clientId, paymentMethodId)
+-createPaymentIntent(invoiceId, amount) -
+  confirmPayment(paymentIntentId) -
+  createPaymentLink(invoiceId) -
+  processRefund(paymentId, amount, reason) -
+  getPaymentMethods(clientId) -
+  savePaymentMethod(clientId, paymentMethodId);
 ```
 
 ### 9.3 Webhook Handler
@@ -500,10 +546,7 @@ components/onboarding/
 
 ```typescript
 // lib/onboarding/actions.ts
-- getOnboardingStatus()
-- updateOnboardingStep(step, data)
-- completeOnboarding()
-- skipOnboarding()
+-getOnboardingStatus() - updateOnboardingStep(step, data) - completeOnboarding() - skipOnboarding();
 ```
 
 ---
@@ -515,35 +558,35 @@ components/onboarding/
 
 ### 11.1 Accessibility Fixes
 
-| Task | Files | Notes |
-|------|-------|-------|
-| Add ARIA labels | All components | Screen reader support |
-| Keyboard shortcuts | `hooks/use-keyboard-shortcuts.ts` | ?, n, i, /, Cmd+S |
-| Skip links | `components/skip-link.tsx` | Skip to main content |
-| Focus management | All modals/dialogs | Trap focus, restore on close |
-| Motion preferences | `globals.css` | prefers-reduced-motion |
-| Touch targets | All buttons | Minimum 44px |
+| Task               | Files                             | Notes                        |
+| ------------------ | --------------------------------- | ---------------------------- |
+| Add ARIA labels    | All components                    | Screen reader support        |
+| Keyboard shortcuts | `hooks/use-keyboard-shortcuts.ts` | ?, n, i, /, Cmd+S            |
+| Skip links         | `components/skip-link.tsx`        | Skip to main content         |
+| Focus management   | All modals/dialogs                | Trap focus, restore on close |
+| Motion preferences | `globals.css`                     | prefers-reduced-motion       |
+| Touch targets      | All buttons                       | Minimum 44px                 |
 
 ### 11.2 Animations
 
-| Animation | Location | Type |
-|-----------|----------|------|
-| Page transitions | Layout components | Fade in/out |
-| Toast enter/exit | Toast component | Slide + fade |
-| Modal open/close | Dialog component | Scale + fade |
-| Skeleton pulse | Skeleton component | Pulse animation |
+| Animation            | Location            | Type               |
+| -------------------- | ------------------- | ------------------ |
+| Page transitions     | Layout components   | Fade in/out        |
+| Toast enter/exit     | Toast component     | Slide + fade       |
+| Modal open/close     | Dialog component    | Scale + fade       |
+| Skeleton pulse       | Skeleton component  | Pulse animation    |
 | Confetti celebration | First quote/invoice | Confetti particles |
-| Drag feedback | Quote builder | Scale + shadow |
+| Drag feedback        | Quote builder       | Scale + shadow     |
 
 ### 11.3 Mobile Responsiveness
 
-| Component | Mobile Behavior |
-|-----------|-----------------|
-| Sidebar | Hamburger menu + drawer |
-| Quote builder | Single panel mode |
-| Tables | Horizontal scroll or cards |
-| Forms | Single column |
-| Dialogs | Full screen |
+| Component     | Mobile Behavior            |
+| ------------- | -------------------------- |
+| Sidebar       | Hamburger menu + drawer    |
+| Quote builder | Single panel mode          |
+| Tables        | Horizontal scroll or cards |
+| Forms         | Single column              |
+| Dialogs       | Full screen                |
 
 ---
 
@@ -597,26 +640,32 @@ docs/
 ## Implementation Timeline
 
 ### Sprint 1 (Week 1-2): Foundation
+
 - [ ] Phase 1: Core Infrastructure
 - [ ] Phase 2: Clients Module
 
 ### Sprint 2 (Week 3-4): Revenue Features
+
 - [ ] Phase 3: Rate Cards Module
 - [ ] Phase 9: Payments & Stripe
 
 ### Sprint 3 (Week 5-6): Configuration
+
 - [ ] Phase 4: Settings Module
 - [ ] Phase 5: Dashboard & Analytics
 
 ### Sprint 4 (Week 7-8): Documents
+
 - [ ] Phase 6: Contract Templates
 - [ ] Phase 8: PDF Generation
 
 ### Sprint 5 (Week 9-10): Communications
+
 - [ ] Phase 7: Email & Notifications
 - [ ] Phase 10: Onboarding Flow
 
 ### Sprint 6 (Week 11-12): Polish
+
 - [ ] Phase 11: Accessibility & Polish
 - [ ] Phase 12: Testing & Documentation
 
@@ -625,6 +674,7 @@ docs/
 ## Success Criteria
 
 ### MVP Complete When:
+
 1. All P0 features implemented and tested
 2. Core user flows work end-to-end:
    - Create quote → Send → Client accepts → Convert to invoice → Client pays
@@ -634,6 +684,7 @@ docs/
 6. Mobile responsive
 
 ### Production Ready When:
+
 1. All P1 features implemented
 2. E2E tests pass
 3. Performance targets met (LCP < 2.5s)
@@ -644,14 +695,14 @@ docs/
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Stripe integration complexity | Start early, use test mode extensively |
-| PDF generation performance | Queue generation, cache results |
-| Email deliverability | Use reputable provider (Resend/SendGrid) |
-| Mobile responsiveness | Test continuously, not at end |
-| Scope creep | Stick to spec, defer P2 items |
+| Risk                          | Mitigation                               |
+| ----------------------------- | ---------------------------------------- |
+| Stripe integration complexity | Start early, use test mode extensively   |
+| PDF generation performance    | Queue generation, cache results          |
+| Email deliverability          | Use reputable provider (Resend/SendGrid) |
+| Mobile responsiveness         | Test continuously, not at end            |
+| Scope creep                   | Stick to spec, defer P2 items            |
 
 ---
 
-*This plan should be reviewed weekly and updated as implementation progresses.*
+_This plan should be reviewed weekly and updated as implementation progresses._

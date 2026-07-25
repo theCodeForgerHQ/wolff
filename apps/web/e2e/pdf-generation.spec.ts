@@ -24,7 +24,9 @@ test.describe('PDF Generation', () => {
         const downloadButton = page.getByRole('button', { name: /download.*pdf|pdf/i });
         if (await downloadButton.isVisible()) {
           // Listen for download event
-          const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 10000 })
+            .catch(() => null);
           await downloadButton.click();
 
           const download = await downloadPromise;
@@ -66,7 +68,9 @@ test.describe('PDF Generation', () => {
 
         const downloadButton = page.getByRole('button', { name: /download.*pdf/i });
         if (await downloadButton.isVisible()) {
-          const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 10000 })
+            .catch(() => null);
           await downloadButton.click();
 
           const download = await downloadPromise;
@@ -102,7 +106,9 @@ test.describe('PDF Generation', () => {
 
         const downloadButton = page.getByRole('button', { name: /download.*pdf|pdf/i });
         if (await downloadButton.isVisible()) {
-          const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 10000 })
+            .catch(() => null);
           await downloadButton.click();
 
           const download = await downloadPromise;
@@ -124,7 +130,9 @@ test.describe('PDF Generation', () => {
 
         const downloadButton = page.getByRole('button', { name: /download.*pdf/i });
         if (await downloadButton.isVisible()) {
-          const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 10000 })
+            .catch(() => null);
           await downloadButton.click();
 
           const download = await downloadPromise;
@@ -179,7 +187,9 @@ test.describe('PDF Generation', () => {
 
         const downloadButton = page.getByRole('button', { name: /download.*pdf/i });
         if (await downloadButton.isVisible()) {
-          const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
+          const downloadPromise = page
+            .waitForEvent('download', { timeout: 10000 })
+            .catch(() => null);
           await downloadButton.click();
 
           const download = await downloadPromise;
@@ -219,7 +229,7 @@ test.describe('PDF Generation', () => {
 
         // Line items should be visible (these will be in PDF)
         const lineItems = page.locator('table, [class*="line-item"], [class*="item"]');
-        if (await lineItems.count() > 0) {
+        if ((await lineItems.count()) > 0) {
           await expect(lineItems.first()).toBeVisible();
         }
       }
@@ -263,7 +273,9 @@ test.describe('PDF Generation', () => {
       if (await bulkAction.isVisible()) {
         await bulkAction.check();
 
-        const bulkDownload = page.getByRole('button', { name: /download.*selected|bulk.*download/i });
+        const bulkDownload = page.getByRole('button', {
+          name: /download.*selected|bulk.*download/i,
+        });
         if (await bulkDownload.isVisible()) {
           await expect(bulkDownload).toBeVisible();
         }
@@ -277,7 +289,9 @@ test.describe('PDF Generation', () => {
       if (await bulkAction.isVisible()) {
         await bulkAction.check();
 
-        const bulkDownload = page.getByRole('button', { name: /download.*selected|bulk.*download/i });
+        const bulkDownload = page.getByRole('button', {
+          name: /download.*selected|bulk.*download/i,
+        });
         if (await bulkDownload.isVisible()) {
           await expect(bulkDownload).toBeVisible();
         }

@@ -19,7 +19,10 @@ export async function GET(
 ) {
   try {
     // Rate limit PDF downloads
-    const clientIp = _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || _request.headers.get('x-real-ip') || 'unknown';
+    const clientIp =
+      _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      _request.headers.get('x-real-ip') ||
+      'unknown';
     const { checkRateLimit } = await import('@/lib/rate-limit');
     const rl = await checkRateLimit(`pdf-download:${clientIp}`, { limit: 10, windowMs: 60000 });
     if (rl.limited) return new NextResponse('Too many requests', { status: 429 });
@@ -71,17 +74,19 @@ export async function GET(
     const filename = `Quote-${data.quoteNumber.replace(/[^a-zA-Z0-9\-_]/g, '')}.pdf`;
 
     // Audit trail: log PDF download event
-    prisma.quoteEvent.create({
-      data: {
-        quoteId,
-        eventType: 'pdf_downloaded',
-        actorType,
-        actorId: actorId ?? 'anonymous',
-        metadata: { format: 'pdf', filename },
-        ipAddress: _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
-        userAgent: _request.headers.get('user-agent') || null,
-      },
-    }).catch(() => {}); // Fire and forget — don't block download
+    prisma.quoteEvent
+      .create({
+        data: {
+          quoteId,
+          eventType: 'pdf_downloaded',
+          actorType,
+          actorId: actorId ?? 'anonymous',
+          metadata: { format: 'pdf', filename },
+          ipAddress: _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+          userAgent: _request.headers.get('user-agent') || null,
+        },
+      })
+      .catch(() => {}); // Fire and forget — don't block download
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {

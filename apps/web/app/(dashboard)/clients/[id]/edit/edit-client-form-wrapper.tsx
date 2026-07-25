@@ -37,7 +37,7 @@ export function EditClientFormWrapper({ client }: EditClientFormWrapperProps) {
   return (
     <>
       {serverError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
           {serverError}
         </div>
       )}

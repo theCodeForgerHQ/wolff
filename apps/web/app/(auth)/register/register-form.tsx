@@ -104,9 +104,7 @@ export function RegisterForm() {
               disabled={isLoading}
               {...register('name')}
             />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -119,9 +117,7 @@ export function RegisterForm() {
               disabled={isLoading}
               {...register('email')}
             />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -134,7 +130,7 @@ export function RegisterForm() {
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
 
@@ -148,7 +144,7 @@ export function RegisterForm() {
               {...register('confirmPassword')}
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
             )}
           </div>
 
@@ -167,11 +163,11 @@ export function RegisterForm() {
               }}
             />
             <div className="grid gap-1.5 leading-none">
-              <Label htmlFor="termsAccepted" className="text-sm font-normal cursor-pointer">
+              <Label htmlFor="termsAccepted" className="cursor-pointer text-sm font-normal">
                 I agree to the Terms of Service and Privacy Policy
               </Label>
               {errors.termsAccepted && (
-                <p className="text-sm text-destructive">{errors.termsAccepted.message}</p>
+                <p className="text-destructive text-sm">{errors.termsAccepted.message}</p>
               )}
             </div>
           </div>
@@ -189,11 +185,11 @@ export function RegisterForm() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-card text-muted-foreground px-2">Or continue with</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 w-full">
+        <div className="grid w-full grid-cols-2 gap-4">
           <Button
             variant="outline"
             onClick={() => onOAuthSignIn('google')}

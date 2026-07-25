@@ -39,10 +39,7 @@ test.describe('Payment Security (Bugs #324-325)', () => {
           }),
         });
 
-      const [response1, response2] = await Promise.all([
-        makeRequest(),
-        makeRequest(),
-      ]);
+      const [response1, response2] = await Promise.all([makeRequest(), makeRequest()]);
 
       // Both should be rejected (invalid signature), confirming endpoint validates
       expect([400, 401, 403]).toContain(response1.status());

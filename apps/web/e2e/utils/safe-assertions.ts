@@ -39,8 +39,8 @@ export async function assertVisible(
   } catch (error) {
     throw new Error(
       `Visibility assertion failed: ${message}\n` +
-      `Locator: ${locator.toString()}\n` +
-      `Original error: ${error instanceof Error ? error.message : String(error)}`
+        `Locator: ${locator.toString()}\n` +
+        `Original error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
@@ -60,8 +60,8 @@ export async function assertNotVisible(
   } catch (error) {
     throw new Error(
       `Not-visible assertion failed: ${message}\n` +
-      `Locator: ${locator.toString()}\n` +
-      `Element was visible when it should not be`
+        `Locator: ${locator.toString()}\n` +
+        `Element was visible when it should not be`
     );
   }
 }
@@ -136,8 +136,8 @@ export async function assertMinCount(
   if (count < minCount) {
     throw new Error(
       `Count assertion failed: ${message}\n` +
-      `Expected at least ${minCount} elements, found ${count}\n` +
-      `Locator: ${locator.toString()}`
+        `Expected at least ${minCount} elements, found ${count}\n` +
+        `Locator: ${locator.toString()}`
     );
   }
 }
@@ -155,8 +155,8 @@ export async function assertExactCount(
   if (count !== expectedCount) {
     throw new Error(
       `Exact count assertion failed: ${message}\n` +
-      `Expected ${expectedCount} elements, found ${count}\n` +
-      `Locator: ${locator.toString()}`
+        `Expected ${expectedCount} elements, found ${count}\n` +
+        `Locator: ${locator.toString()}`
     );
   }
 }
@@ -175,8 +175,8 @@ export async function assertCountInRange(
   if (count < min || count > max) {
     throw new Error(
       `Count range assertion failed: ${message}\n` +
-      `Expected ${min}-${max} elements, found ${count}\n` +
-      `Locator: ${locator.toString()}`
+        `Expected ${min}-${max} elements, found ${count}\n` +
+        `Locator: ${locator.toString()}`
     );
   }
 }
@@ -189,14 +189,11 @@ export async function assertCountInRange(
  * Assert that data exists (not null/undefined)
  * Replaces patterns that silently skip when data is missing
  */
-export function requireData<T>(
-  data: T | null | undefined,
-  description: string
-): T {
+export function requireData<T>(data: T | null | undefined, description: string): T {
   if (data === null || data === undefined) {
     throw new Error(
       `Required data missing: ${description}\n` +
-      `Expected valid data but got ${data === null ? 'null' : 'undefined'}`
+        `Expected valid data but got ${data === null ? 'null' : 'undefined'}`
     );
   }
   return data;
@@ -259,24 +256,18 @@ export async function navigateAndAssert(
     if (!expectedStatuses.includes(status) && status >= 400) {
       throw new Error(
         `Navigation failed with status ${status}: ${url}\n` +
-        `Expected one of: ${expectedStatuses.join(', ')}`
+          `Expected one of: ${expectedStatuses.join(', ')}`
       );
     }
   }
 
   // Check for error indicators in page content
   const bodyText = await page.locator('body').textContent();
-  const errorPatterns = [
-    'Application error',
-    'Server Error',
-    'Internal Server Error',
-  ];
+  const errorPatterns = ['Application error', 'Server Error', 'Internal Server Error'];
 
   for (const pattern of errorPatterns) {
     if (bodyText?.includes(pattern)) {
-      throw new Error(
-        `Page error detected after navigation to ${url}: "${pattern}" found`
-      );
+      throw new Error(`Page error detected after navigation to ${url}: "${pattern}" found`);
     }
   }
 }
@@ -352,9 +343,9 @@ export async function assertDataOrEmptyState(
   if (dataCount === 0 && !emptyVisible) {
     throw new Error(
       `Neither data nor empty state found: ${config.context}\n` +
-      `Data selector: ${config.dataSelector}\n` +
-      `Empty state selector: ${config.emptyStateSelector}\n` +
-      `This may indicate a page crash or missing UI elements`
+        `Data selector: ${config.dataSelector}\n` +
+        `Empty state selector: ${config.emptyStateSelector}\n` +
+        `This may indicate a page crash or missing UI elements`
     );
   }
 
@@ -371,10 +362,7 @@ export async function assertDataOrEmptyState(
 /**
  * Assert no error boundary has been triggered
  */
-export async function assertNoErrorBoundary(
-  page: Page,
-  context?: string
-): Promise<void> {
+export async function assertNoErrorBoundary(page: Page, context?: string): Promise<void> {
   const errorIndicators = [
     page.locator('[data-testid="error-boundary"]'),
     page.locator('.error-boundary'),
@@ -387,8 +375,7 @@ export async function assertNoErrorBoundary(
     if (isVisible) {
       const errorText = await indicator.textContent();
       throw new Error(
-        `Error boundary triggered${context ? ` (${context})` : ''}\n` +
-        `Error text: ${errorText}`
+        `Error boundary triggered${context ? ` (${context})` : ''}\n` + `Error text: ${errorText}`
       );
     }
   }
@@ -428,10 +415,12 @@ export async function assertFormResult(
 
   // Wait for either success or error
   try {
-    await Promise.race([
-      successLocator.waitFor({ state: 'visible', timeout }),
-      errorLocator?.waitFor({ state: 'visible', timeout }),
-    ].filter(Boolean));
+    await Promise.race(
+      [
+        successLocator.waitFor({ state: 'visible', timeout }),
+        errorLocator?.waitFor({ state: 'visible', timeout }),
+      ].filter(Boolean)
+    );
 
     const isSuccess = await successLocator.isVisible();
 
@@ -448,7 +437,7 @@ export async function assertFormResult(
   } catch (error) {
     throw new Error(
       `Form submission result unclear\n` +
-      `Original error: ${error instanceof Error ? error.message : String(error)}`
+        `Original error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }

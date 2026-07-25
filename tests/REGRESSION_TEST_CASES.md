@@ -13,14 +13,14 @@ This document defines comprehensive regression tests for Phase 1 functionality t
 
 ### Test Distribution by Risk Area
 
-| Risk Area | Test Count | Impact Level |
-|-----------|------------|--------------|
-| Database Operations | 16 | HIGH |
-| Navigation | 8 | MEDIUM |
-| UI Components | 12 | MEDIUM |
-| Business Logic | 18 | HIGH |
-| API Endpoints | 14 | HIGH |
-| **TOTAL** | **68** | |
+| Risk Area           | Test Count | Impact Level |
+| ------------------- | ---------- | ------------ |
+| Database Operations | 16         | HIGH         |
+| Navigation          | 8          | MEDIUM       |
+| UI Components       | 12         | MEDIUM       |
+| Business Logic      | 18         | HIGH         |
+| API Endpoints       | 14         | HIGH         |
+| **TOTAL**           | **68**     |              |
 
 ### Key Regression Concerns
 
@@ -37,19 +37,19 @@ From the Compatibility Assessment, the following Phase 2 changes pose regression
 
 ### Phase 1 Feature to Regression Test Mapping
 
-| Phase 1 Feature | Impact Level | Regression Tests | Risk from Phase 2 |
-|-----------------|--------------|------------------|-------------------|
-| Quote CRUD Operations | HIGH | TC-REG-001 to TC-REG-008 | projectId addition |
-| Invoice CRUD Operations | HIGH | TC-REG-009 to TC-REG-016 | projectId addition |
-| Client Management | MEDIUM | TC-REG-017 to TC-REG-022 | Project relations |
-| Quote-to-Invoice Conversion | HIGH | TC-REG-023 to TC-REG-027 | Schema changes |
-| E-Signature Functionality | HIGH | TC-REG-028 to TC-REG-032 | Portal changes |
-| PDF Generation | HIGH | TC-REG-033 to TC-REG-038 | Template changes |
-| Payment Processing | HIGH | TC-REG-039 to TC-REG-044 | Invoice changes |
-| Sidebar Navigation | MEDIUM | TC-REG-045 to TC-REG-049 | Nav restructure |
-| Badge Rendering | MEDIUM | TC-REG-050 to TC-REG-054 | New variants |
-| Dashboard & Analytics | MEDIUM | TC-REG-055 to TC-REG-060 | New reports |
-| API Endpoints | HIGH | TC-REG-061 to TC-REG-068 | Response changes |
+| Phase 1 Feature             | Impact Level | Regression Tests         | Risk from Phase 2  |
+| --------------------------- | ------------ | ------------------------ | ------------------ |
+| Quote CRUD Operations       | HIGH         | TC-REG-001 to TC-REG-008 | projectId addition |
+| Invoice CRUD Operations     | HIGH         | TC-REG-009 to TC-REG-016 | projectId addition |
+| Client Management           | MEDIUM       | TC-REG-017 to TC-REG-022 | Project relations  |
+| Quote-to-Invoice Conversion | HIGH         | TC-REG-023 to TC-REG-027 | Schema changes     |
+| E-Signature Functionality   | HIGH         | TC-REG-028 to TC-REG-032 | Portal changes     |
+| PDF Generation              | HIGH         | TC-REG-033 to TC-REG-038 | Template changes   |
+| Payment Processing          | HIGH         | TC-REG-039 to TC-REG-044 | Invoice changes    |
+| Sidebar Navigation          | MEDIUM       | TC-REG-045 to TC-REG-049 | Nav restructure    |
+| Badge Rendering             | MEDIUM       | TC-REG-050 to TC-REG-054 | New variants       |
+| Dashboard & Analytics       | MEDIUM       | TC-REG-055 to TC-REG-060 | New reports        |
+| API Endpoints               | HIGH         | TC-REG-061 to TC-REG-068 | Response changes   |
 
 ---
 
@@ -70,26 +70,29 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - User is authenticated with valid workspace
 - At least one client exists in the workspace
 - Database has been migrated to include projectId column (nullable)
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `createQuote` server action with clientId but NO projectId | Action should execute without error |
-| 2 | Verify returned quote object | Quote should have valid id, clientId, and status='draft' |
-| 3 | Verify quote.projectId value | Should be null (not undefined or error) |
-| 4 | Query database directly for the quote | Quote record exists with project_id = NULL |
-| 5 | Call `getQuoteById` with the new quote id | Quote is retrievable with all fields intact |
+| Step | Action                                                          | Expected Result                                          |
+| ---- | --------------------------------------------------------------- | -------------------------------------------------------- |
+| 1    | Call `createQuote` server action with clientId but NO projectId | Action should execute without error                      |
+| 2    | Verify returned quote object                                    | Quote should have valid id, clientId, and status='draft' |
+| 3    | Verify quote.projectId value                                    | Should be null (not undefined or error)                  |
+| 4    | Query database directly for the quote                           | Quote record exists with project_id = NULL               |
+| 5    | Call `getQuoteById` with the new quote id                       | Quote is retrievable with all fields intact              |
 
 **Expected Results:**
+
 - Quote creation succeeds without projectId
 - Quote is saved to database with project_id = NULL
 - Quote is fully functional (can be edited, sent, converted)
 
 **Backward Compatibility Check:**
+
 - Existing code paths that do not pass projectId must continue working
 - No changes to required parameters in createQuote schema
 
@@ -102,25 +105,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists in database with projectId = NULL
 - User has access to the workspace containing the quote
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getQuotes()` with no project filter | All quotes returned including those with null projectId |
-| 2 | Verify quote list contains null-project quote | Quote appears in list without errors |
-| 3 | Call `getQuoteById(id)` for quote with null projectId | Quote object returned successfully |
-| 4 | Verify quote object structure | All fields present, projectId is null |
-| 5 | Render quote in QuoteList component | Quote displays correctly with no project column errors |
+| Step | Action                                                | Expected Result                                         |
+| ---- | ----------------------------------------------------- | ------------------------------------------------------- |
+| 1    | Call `getQuotes()` with no project filter             | All quotes returned including those with null projectId |
+| 2    | Verify quote list contains null-project quote         | Quote appears in list without errors                    |
+| 3    | Call `getQuoteById(id)` for quote with null projectId | Quote object returned successfully                      |
+| 4    | Verify quote object structure                         | All fields present, projectId is null                   |
+| 5    | Render quote in QuoteList component                   | Quote displays correctly with no project column errors  |
 
 **Expected Results:**
+
 - Quotes with null projectId appear in all query results
 - No null reference errors when displaying quotes without projects
 - Filter functionality works correctly with mixed null/non-null projectIds
 
 **Backward Compatibility Check:**
+
 - Quote listing pages must handle null projectId gracefully
 - No UI errors or blank displays for legacy quotes
 
@@ -133,25 +139,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists with projectId = NULL
 - Quote is in draft status
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `updateQuote` with title change, NO projectId in payload | Update succeeds |
-| 2 | Verify updated quote | Title is changed |
-| 3 | Verify projectId | Still NULL (not changed to undefined or default) |
-| 4 | Update quote notes and terms | Updates succeed |
-| 5 | Verify projectId remains NULL | No automatic project assignment |
+| Step | Action                                                        | Expected Result                                  |
+| ---- | ------------------------------------------------------------- | ------------------------------------------------ |
+| 1    | Call `updateQuote` with title change, NO projectId in payload | Update succeeds                                  |
+| 2    | Verify updated quote                                          | Title is changed                                 |
+| 3    | Verify projectId                                              | Still NULL (not changed to undefined or default) |
+| 4    | Update quote notes and terms                                  | Updates succeed                                  |
+| 5    | Verify projectId remains NULL                                 | No automatic project assignment                  |
 
 **Expected Results:**
+
 - Quote updates preserve null projectId
 - Partial updates do not affect unspecified fields
 - No forced project assignment during updates
 
 **Backward Compatibility Check:**
+
 - Update operations must not require projectId
 - Existing update flows continue without modification
 
@@ -164,25 +173,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists with projectId = NULL
 - User has delete permissions
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `deleteQuote(id)` for quote with null projectId | Delete succeeds |
-| 2 | Verify quote.deletedAt | Has timestamp value |
-| 3 | Call `getQuotes()` without showing deleted | Quote not in results |
-| 4 | Query database directly | Quote exists with deletedAt set |
-| 5 | Verify no cascade deletion errors | No orphan cleanup errors |
+| Step | Action                                               | Expected Result                 |
+| ---- | ---------------------------------------------------- | ------------------------------- |
+| 1    | Call `deleteQuote(id)` for quote with null projectId | Delete succeeds                 |
+| 2    | Verify quote.deletedAt                               | Has timestamp value             |
+| 3    | Call `getQuotes()` without showing deleted           | Quote not in results            |
+| 4    | Query database directly                              | Quote exists with deletedAt set |
+| 5    | Verify no cascade deletion errors                    | No orphan cleanup errors        |
 
 **Expected Results:**
+
 - Soft delete works regardless of projectId value
 - No foreign key constraint violations
 - Quote can be restored if needed
 
 **Backward Compatibility Check:**
+
 - Deletion logic must not check for projectId
 - No cascading project-related cleanup for null projectId
 
@@ -195,25 +207,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists with projectId = NULL
 - Quote has line items and blocks
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `duplicateQuote(id)` for quote with null projectId | Duplicate created |
-| 2 | Verify new quote exists | Has new id, same clientId |
-| 3 | Verify new quote projectId | Also NULL (not assigned) |
-| 4 | Verify line items duplicated | Same items, new ids |
-| 5 | Verify blocks duplicated | Same blocks, new ids |
+| Step | Action                                                  | Expected Result           |
+| ---- | ------------------------------------------------------- | ------------------------- |
+| 1    | Call `duplicateQuote(id)` for quote with null projectId | Duplicate created         |
+| 2    | Verify new quote exists                                 | Has new id, same clientId |
+| 3    | Verify new quote projectId                              | Also NULL (not assigned)  |
+| 4    | Verify line items duplicated                            | Same items, new ids       |
+| 5    | Verify blocks duplicated                                | Same blocks, new ids      |
 
 **Expected Results:**
+
 - Duplication preserves null projectId
 - All related data (line items, blocks) duplicated correctly
 - No project assignment during duplication
 
 **Backward Compatibility Check:**
+
 - Duplication must not require source quote to have projectId
 - Duplicated quote inherits same projectId (including null)
 
@@ -226,26 +241,29 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - User is authenticated with valid workspace
 - At least one client exists
 - Database has projectId column (nullable)
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `createInvoice` with clientId but NO projectId | Action succeeds |
-| 2 | Verify returned invoice object | Has valid id, clientId, status='draft' |
-| 3 | Verify invoice.projectId | Should be null |
-| 4 | Query database directly | Invoice exists with project_id = NULL |
-| 5 | Call `getInvoiceById` | Invoice retrievable |
+| Step | Action                                              | Expected Result                        |
+| ---- | --------------------------------------------------- | -------------------------------------- |
+| 1    | Call `createInvoice` with clientId but NO projectId | Action succeeds                        |
+| 2    | Verify returned invoice object                      | Has valid id, clientId, status='draft' |
+| 3    | Verify invoice.projectId                            | Should be null                         |
+| 4    | Query database directly                             | Invoice exists with project_id = NULL  |
+| 5    | Call `getInvoiceById`                               | Invoice retrievable                    |
 
 **Expected Results:**
+
 - Invoice creation succeeds without projectId
 - Invoice saved with project_id = NULL
 - Invoice is fully functional
 
 **Backward Compatibility Check:**
+
 - createInvoice must not require projectId parameter
 - Existing invoice creation flows work unchanged
 
@@ -258,24 +276,27 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists with projectId = NULL
 - User has workspace access
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getInvoices()` with no project filter | All invoices returned |
-| 2 | Verify invoice list includes null-project invoice | No errors |
-| 3 | Call `getInvoiceById(id)` | Invoice returned |
-| 4 | Verify invoice structure | All fields present |
-| 5 | Render in InvoiceList | Displays correctly |
+| Step | Action                                            | Expected Result       |
+| ---- | ------------------------------------------------- | --------------------- |
+| 1    | Call `getInvoices()` with no project filter       | All invoices returned |
+| 2    | Verify invoice list includes null-project invoice | No errors             |
+| 3    | Call `getInvoiceById(id)`                         | Invoice returned      |
+| 4    | Verify invoice structure                          | All fields present    |
+| 5    | Render in InvoiceList                             | Displays correctly    |
 
 **Expected Results:**
+
 - Invoices with null projectId included in queries
 - No display errors for legacy invoices
 
 **Backward Compatibility Check:**
+
 - Invoice listing handles null projectId
 - Filtering works with mixed values
 
@@ -288,23 +309,26 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists with projectId = NULL
 - Invoice is in draft status
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `updateInvoice` with amount change | Update succeeds |
-| 2 | Verify projectId | Still NULL |
-| 3 | Update invoice due date | Succeeds |
-| 4 | Verify projectId unchanged | Still NULL |
+| Step | Action                                  | Expected Result |
+| ---- | --------------------------------------- | --------------- |
+| 1    | Call `updateInvoice` with amount change | Update succeeds |
+| 2    | Verify projectId                        | Still NULL      |
+| 3    | Update invoice due date                 | Succeeds        |
+| 4    | Verify projectId unchanged              | Still NULL      |
 
 **Expected Results:**
+
 - Invoice updates preserve null projectId
 - No forced project assignment
 
 **Backward Compatibility Check:**
+
 - updateInvoice does not require projectId
 - Partial updates work correctly
 
@@ -317,25 +341,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists with projectId = NULL
 - Invoice has valid client with email
 - Invoice has line items
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `sendInvoice(id)` | Succeeds |
-| 2 | Verify invoice status | Changed to 'sent' |
-| 3 | Verify sentAt timestamp | Set |
-| 4 | Verify email sent | Email triggered |
-| 5 | Verify projectId unchanged | Still NULL |
+| Step | Action                     | Expected Result   |
+| ---- | -------------------------- | ----------------- |
+| 1    | Call `sendInvoice(id)`     | Succeeds          |
+| 2    | Verify invoice status      | Changed to 'sent' |
+| 3    | Verify sentAt timestamp    | Set               |
+| 4    | Verify email sent          | Email triggered   |
+| 5    | Verify projectId unchanged | Still NULL        |
 
 **Expected Results:**
+
 - Sending works regardless of projectId
 - All email templates render without project data
 
 **Backward Compatibility Check:**
+
 - Email templates must handle null project gracefully
 - No project-related fields in client-facing emails (unless explicitly added)
 
@@ -348,23 +375,26 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists with projectId = NULL
 - Invoice is in sent status
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `voidInvoice(id)` | Succeeds |
-| 2 | Verify invoice status | Changed to 'void' |
-| 3 | Verify projectId | Still NULL |
-| 4 | Verify no cascade errors | No related cleanup issues |
+| Step | Action                   | Expected Result           |
+| ---- | ------------------------ | ------------------------- |
+| 1    | Call `voidInvoice(id)`   | Succeeds                  |
+| 2    | Verify invoice status    | Changed to 'void'         |
+| 3    | Verify projectId         | Still NULL                |
+| 4    | Verify no cascade errors | No related cleanup issues |
 
 **Expected Results:**
+
 - Voiding works for invoices without project
 - Status change is recorded
 
 **Backward Compatibility Check:**
+
 - Void action does not check projectId
 - Audit trail works correctly
 
@@ -377,25 +407,28 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Client has multiple quotes
 - Some quotes have projectId = NULL
 - Some quotes have valid projectId
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getClientQuotes(clientId)` | All quotes returned |
-| 2 | Count quotes with null projectId | Included in results |
-| 3 | Count quotes with valid projectId | Included in results |
-| 4 | Render client detail page | All quotes display |
-| 5 | Verify no filtering by project | Both types visible |
+| Step | Action                            | Expected Result     |
+| ---- | --------------------------------- | ------------------- |
+| 1    | Call `getClientQuotes(clientId)`  | All quotes returned |
+| 2    | Count quotes with null projectId  | Included in results |
+| 3    | Count quotes with valid projectId | Included in results |
+| 4    | Render client detail page         | All quotes display  |
+| 5    | Verify no filtering by project    | Both types visible  |
 
 **Expected Results:**
+
 - Client quotes include all regardless of projectId
 - No accidental filtering of legacy quotes
 
 **Backward Compatibility Check:**
+
 - Client detail page shows complete history
 - No data loss in client views
 
@@ -408,21 +441,24 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Client has multiple invoices
 - Some invoices have projectId = NULL
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getClientInvoices(clientId)` | All invoices returned |
-| 2 | Verify null-project invoices included | Present in results |
-| 3 | Render client detail page | All invoices display |
+| Step | Action                                | Expected Result       |
+| ---- | ------------------------------------- | --------------------- |
+| 1    | Call `getClientInvoices(clientId)`    | All invoices returned |
+| 2    | Verify null-project invoices included | Present in results    |
+| 3    | Render client detail page             | All invoices display  |
 
 **Expected Results:**
+
 - All client invoices visible regardless of project
 
 **Backward Compatibility Check:**
+
 - Client invoice history is complete
 - Revenue calculations include all invoices
 
@@ -435,22 +471,25 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Workspace has quotes with and without projectId
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getDashboardStats()` | Returns stats |
-| 2 | Verify totalQuotes | Includes all quotes |
-| 3 | Compare with direct count | Numbers match |
-| 4 | Verify conversion rate | Calculated correctly |
+| Step | Action                     | Expected Result      |
+| ---- | -------------------------- | -------------------- |
+| 1    | Call `getDashboardStats()` | Returns stats        |
+| 2    | Verify totalQuotes         | Includes all quotes  |
+| 3    | Compare with direct count  | Numbers match        |
+| 4    | Verify conversion rate     | Calculated correctly |
 
 **Expected Results:**
+
 - Dashboard stats aggregate all quotes
 - No exclusion of legacy data
 
 **Backward Compatibility Check:**
+
 - Stats remain accurate after migration
 - No data loss in reporting
 
@@ -463,22 +502,25 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Workspace has invoices with and without projectId
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getDashboardStats()` | Returns stats |
-| 2 | Verify totalInvoices | Includes all invoices |
-| 3 | Verify totalRevenue | Calculated from all |
-| 4 | Verify overdue count | Includes null-project |
+| Step | Action                     | Expected Result       |
+| ---- | -------------------------- | --------------------- |
+| 1    | Call `getDashboardStats()` | Returns stats         |
+| 2    | Verify totalInvoices       | Includes all invoices |
+| 3    | Verify totalRevenue        | Calculated from all   |
+| 4    | Verify overdue count       | Includes null-project |
 
 **Expected Results:**
+
 - All invoice metrics include legacy data
 - Revenue reporting accurate
 
 **Backward Compatibility Check:**
+
 - Financial reports unchanged
 - No revenue loss in metrics
 
@@ -491,22 +533,25 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Quotes exist in various statuses, some with null projectId
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getQuoteStatusCounts()` | Returns counts |
-| 2 | Sum all status counts | Equals total quotes |
-| 3 | Verify draft count | Includes null-project drafts |
-| 4 | Verify accepted count | Includes null-project accepted |
+| Step | Action                        | Expected Result                |
+| ---- | ----------------------------- | ------------------------------ |
+| 1    | Call `getQuoteStatusCounts()` | Returns counts                 |
+| 2    | Sum all status counts         | Equals total quotes            |
+| 3    | Verify draft count            | Includes null-project drafts   |
+| 4    | Verify accepted count         | Includes null-project accepted |
 
 **Expected Results:**
+
 - All status counts accurate
 - No filtering by project
 
 **Backward Compatibility Check:**
+
 - Analytics accurate after migration
 - Historical data preserved
 
@@ -519,20 +564,23 @@ These tests verify that existing data operations continue to work when `projectI
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoices exist in various statuses
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getInvoiceStatusCounts()` | Returns counts |
-| 2 | Sum all status counts | Equals total invoices |
-| 3 | Verify paid count | Includes null-project paid |
+| Step | Action                          | Expected Result            |
+| ---- | ------------------------------- | -------------------------- |
+| 1    | Call `getInvoiceStatusCounts()` | Returns counts             |
+| 2    | Sum all status counts           | Equals total invoices      |
+| 3    | Verify paid count               | Includes null-project paid |
 
 **Expected Results:**
+
 - All invoice statuses counted correctly
 
 **Backward Compatibility Check:**
+
 - Payment analytics accurate
 - AR reporting correct
 
@@ -551,22 +599,25 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - User is authenticated
 - Has workspace access
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `createClient` with valid data | Client created |
-| 2 | Verify client object | All fields saved |
-| 3 | Verify no project auto-created | No default project |
+| Step | Action                              | Expected Result    |
+| ---- | ----------------------------------- | ------------------ |
+| 1    | Call `createClient` with valid data | Client created     |
+| 2    | Verify client object                | All fields saved   |
+| 3    | Verify no project auto-created      | No default project |
 
 **Expected Results:**
+
 - Client creation unchanged
 - No automatic project generation (unless explicitly designed)
 
 **Backward Compatibility Check:**
+
 - createClient API unchanged
 - Client form works as before
 
@@ -579,21 +630,24 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - Client exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `updateClient` with changes | Update succeeds |
-| 2 | Verify changes saved | Fields updated |
-| 3 | Verify related quotes/invoices | Unchanged |
+| Step | Action                           | Expected Result |
+| ---- | -------------------------------- | --------------- |
+| 1    | Call `updateClient` with changes | Update succeeds |
+| 2    | Verify changes saved             | Fields updated  |
+| 3    | Verify related quotes/invoices   | Unchanged       |
 
 **Expected Results:**
+
 - Client updates isolated
 - No cascade to quotes/invoices
 
 **Backward Compatibility Check:**
+
 - Client form unchanged
 - No new required fields
 
@@ -606,23 +660,26 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - Client exists with quotes and invoices
 - Quotes/invoices have null projectId
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `deleteClient(id)` | Soft delete succeeds |
-| 2 | Verify client.deletedAt | Timestamp set |
-| 3 | Verify related quotes | Still exist (orphaned) |
-| 4 | Verify related invoices | Still exist |
+| Step | Action                  | Expected Result        |
+| ---- | ----------------------- | ---------------------- |
+| 1    | Call `deleteClient(id)` | Soft delete succeeds   |
+| 2    | Verify client.deletedAt | Timestamp set          |
+| 3    | Verify related quotes   | Still exist (orphaned) |
+| 4    | Verify related invoices | Still exist            |
 
 **Expected Results:**
+
 - Client deletion unchanged
 - Related data handling unchanged
 
 **Backward Compatibility Check:**
+
 - Deletion behavior consistent
 - No new cascade rules
 
@@ -635,20 +692,23 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - Clients have quotes/invoices with various projectId values
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `getClients()` | Returns clients |
-| 2 | Verify quote count per client | Includes null-project quotes |
-| 3 | Verify invoice count per client | Includes all invoices |
+| Step | Action                          | Expected Result              |
+| ---- | ------------------------------- | ---------------------------- |
+| 1    | Call `getClients()`             | Returns clients              |
+| 2    | Verify quote count per client   | Includes null-project quotes |
+| 3    | Verify invoice count per client | Includes all invoices        |
 
 **Expected Results:**
+
 - Counts accurate including legacy data
 
 **Backward Compatibility Check:**
+
 - Client list displays unchanged
 - Counts not filtered by project
 
@@ -661,21 +721,24 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - Client has quotes, invoices, contracts
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/clients/[id]` | Page loads |
-| 2 | Verify quotes section | All quotes shown |
-| 3 | Verify invoices section | All invoices shown |
-| 4 | Verify total revenue | Calculated correctly |
+| Step | Action                      | Expected Result      |
+| ---- | --------------------------- | -------------------- |
+| 1    | Navigate to `/clients/[id]` | Page loads           |
+| 2    | Verify quotes section       | All quotes shown     |
+| 3    | Verify invoices section     | All invoices shown   |
+| 4    | Verify total revenue        | Calculated correctly |
 
 **Expected Results:**
+
 - Complete client history visible
 
 **Backward Compatibility Check:**
+
 - No data hidden by project filtering
 - Revenue calculations accurate
 
@@ -688,20 +751,23 @@ These tests verify client management continues working as projects are added as 
 **Priority:** P0
 
 **Preconditions:**
+
 - Multiple clients exist
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Search by client name | Results filtered |
-| 2 | Search by email | Results filtered |
-| 3 | Filter by status | Works correctly |
+| Step | Action                | Expected Result  |
+| ---- | --------------------- | ---------------- |
+| 1    | Search by client name | Results filtered |
+| 2    | Search by email       | Results filtered |
+| 3    | Filter by status      | Works correctly  |
 
 **Expected Results:**
+
 - Search functionality unchanged
 
 **Backward Compatibility Check:**
+
 - No new search parameters required
 - Results include all matching clients
 
@@ -720,27 +786,30 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists in 'accepted' status
 - Quote has line items
 - Quote has projectId = NULL
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `convertQuoteToInvoice(quoteId)` | Invoice created |
-| 2 | Verify invoice has quoteId link | Set to source quote |
-| 3 | Verify quote has convertedToInvoiceId | Set to new invoice |
-| 4 | Verify invoice line items | Copied from quote |
-| 5 | Verify invoice projectId | Matches quote (NULL) |
-| 6 | Verify invoice clientId | Matches quote |
+| Step | Action                                | Expected Result      |
+| ---- | ------------------------------------- | -------------------- |
+| 1    | Call `convertQuoteToInvoice(quoteId)` | Invoice created      |
+| 2    | Verify invoice has quoteId link       | Set to source quote  |
+| 3    | Verify quote has convertedToInvoiceId | Set to new invoice   |
+| 4    | Verify invoice line items             | Copied from quote    |
+| 5    | Verify invoice projectId              | Matches quote (NULL) |
+| 6    | Verify invoice clientId               | Matches quote        |
 
 **Expected Results:**
+
 - Conversion works for quotes without projects
 - Bidirectional link established
 - All data transferred correctly
 
 **Backward Compatibility Check:**
+
 - convertQuoteToInvoice API unchanged
 - No required projectId for conversion
 
@@ -753,25 +822,28 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote has rich content (multiple line items, blocks, notes, terms)
 - Quote has signature data
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Document quote totals before conversion | Subtotal, tax, total |
-| 2 | Convert quote to invoice | Succeeds |
-| 3 | Compare invoice totals | Match quote totals |
-| 4 | Verify line item details | Quantities, prices match |
-| 5 | Verify notes/terms | Copied correctly |
-| 6 | Verify signature reference | Linked or copied |
+| Step | Action                                  | Expected Result          |
+| ---- | --------------------------------------- | ------------------------ |
+| 1    | Document quote totals before conversion | Subtotal, tax, total     |
+| 2    | Convert quote to invoice                | Succeeds                 |
+| 3    | Compare invoice totals                  | Match quote totals       |
+| 4    | Verify line item details                | Quantities, prices match |
+| 5    | Verify notes/terms                      | Copied correctly         |
+| 6    | Verify signature reference              | Linked or copied         |
 
 **Expected Results:**
+
 - Zero data loss in conversion
 - Financial accuracy maintained
 
 **Backward Compatibility Check:**
+
 - Conversion logic unchanged
 - All fields mapped correctly
 
@@ -784,22 +856,25 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote in draft status
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Send quote (draft -> sent) | Status = 'sent', sentAt set |
-| 2 | Mark viewed (sent -> viewed) | Status = 'viewed', viewedAt set |
-| 3 | Accept quote (viewed -> accepted) | Status = 'accepted', acceptedAt set |
-| 4 | Verify status cannot go backward | draft -> accepted blocked |
+| Step | Action                            | Expected Result                     |
+| ---- | --------------------------------- | ----------------------------------- |
+| 1    | Send quote (draft -> sent)        | Status = 'sent', sentAt set         |
+| 2    | Mark viewed (sent -> viewed)      | Status = 'viewed', viewedAt set     |
+| 3    | Accept quote (viewed -> accepted) | Status = 'accepted', acceptedAt set |
+| 4    | Verify status cannot go backward  | draft -> accepted blocked           |
 
 **Expected Results:**
+
 - Status transitions work as defined
 - Timestamps recorded correctly
 
 **Backward Compatibility Check:**
+
 - State machine unchanged
 - No new statuses required
 
@@ -812,21 +887,24 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote has been sent and viewed
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `declineQuote(token, reason)` | Quote declined |
-| 2 | Verify status | 'declined' |
-| 3 | Verify decline reason saved | Stored correctly |
-| 4 | Verify declinedAt timestamp | Set |
+| Step | Action                             | Expected Result  |
+| ---- | ---------------------------------- | ---------------- |
+| 1    | Call `declineQuote(token, reason)` | Quote declined   |
+| 2    | Verify status                      | 'declined'       |
+| 3    | Verify decline reason saved        | Stored correctly |
+| 4    | Verify declinedAt timestamp        | Set              |
 
 **Expected Results:**
+
 - Decline flow works unchanged
 
 **Backward Compatibility Check:**
+
 - declineQuote API unchanged
 - Reason field handling consistent
 
@@ -839,20 +917,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote has validUntil date in the past
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Query quote | Status shows 'expired' or computed |
-| 2 | Attempt to accept expired quote | Blocked |
-| 3 | Client portal shows expiration | Message displayed |
+| Step | Action                          | Expected Result                    |
+| ---- | ------------------------------- | ---------------------------------- |
+| 1    | Query quote                     | Status shows 'expired' or computed |
+| 2    | Attempt to accept expired quote | Blocked                            |
+| 3    | Client portal shows expiration  | Message displayed                  |
 
 **Expected Results:**
+
 - Expiration logic unchanged
 
 **Backward Compatibility Check:**
+
 - Expiration calculation consistent
 - Portal behavior unchanged
 
@@ -865,25 +946,28 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote sent to client
 - Client has valid token
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/q/[token]` | Portal loads |
-| 2 | Click accept button | Signature dialog opens |
-| 3 | Draw signature on pad | Signature captured |
-| 4 | Submit signature | Quote accepted |
-| 5 | Verify signature data saved | Data stored correctly |
-| 6 | Verify audit trail | IP, timestamp, user agent |
+| Step | Action                      | Expected Result           |
+| ---- | --------------------------- | ------------------------- |
+| 1    | Navigate to `/q/[token]`    | Portal loads              |
+| 2    | Click accept button         | Signature dialog opens    |
+| 3    | Draw signature on pad       | Signature captured        |
+| 4    | Submit signature            | Quote accepted            |
+| 5    | Verify signature data saved | Data stored correctly     |
+| 6    | Verify audit trail          | IP, timestamp, user agent |
 
 **Expected Results:**
+
 - Signature capture works unchanged
 - Audit data recorded correctly
 
 **Backward Compatibility Check:**
+
 - SignaturePad component unchanged
 - Data format consistent
 
@@ -896,20 +980,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote has been accepted with signature
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | View quote in admin dashboard | Signature visible |
-| 2 | View quote in client portal | Signature visible |
-| 3 | Generate PDF | Signature included |
+| Step | Action                        | Expected Result    |
+| ---- | ----------------------------- | ------------------ |
+| 1    | View quote in admin dashboard | Signature visible  |
+| 2    | View quote in client portal   | Signature visible  |
+| 3    | Generate PDF                  | Signature included |
 
 **Expected Results:**
+
 - Signature renders correctly in all views
 
 **Backward Compatibility Check:**
+
 - Signature rendering unchanged
 - PDF includes signature
 
@@ -922,20 +1009,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote accepted with signature
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | View quote events | Signature event present |
-| 2 | Verify event data | IP address, timestamp, user agent |
-| 3 | Verify immutability | Cannot be modified |
+| Step | Action              | Expected Result                   |
+| ---- | ------------------- | --------------------------------- |
+| 1    | View quote events   | Signature event present           |
+| 2    | Verify event data   | IP address, timestamp, user agent |
+| 3    | Verify immutability | Cannot be modified                |
 
 **Expected Results:**
+
 - Complete audit trail preserved
 
 **Backward Compatibility Check:**
+
 - Audit data structure unchanged
 - Legal compliance maintained
 
@@ -948,20 +1038,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Contract instance sent to client
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/c/[token]` | Contract portal loads |
-| 2 | Sign contract | Signature captured |
-| 3 | Verify contract status | Updated to signed |
+| Step | Action                   | Expected Result       |
+| ---- | ------------------------ | --------------------- |
+| 1    | Navigate to `/c/[token]` | Contract portal loads |
+| 2    | Sign contract            | Signature captured    |
+| 3    | Verify contract status   | Updated to signed     |
 
 **Expected Results:**
+
 - Contract signing unchanged
 
 **Backward Compatibility Check:**
+
 - Contract workflow preserved
 - Signature handling consistent
 
@@ -974,21 +1067,24 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Signed documents exist
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Verify signature image stored | Base64 or file reference |
-| 2 | Verify timestamp in UTC | Correct format |
-| 3 | Verify IP address captured | Valid format |
-| 4 | Verify intent recorded | Accept action logged |
+| Step | Action                        | Expected Result          |
+| ---- | ----------------------------- | ------------------------ |
+| 1    | Verify signature image stored | Base64 or file reference |
+| 2    | Verify timestamp in UTC       | Correct format           |
+| 3    | Verify IP address captured    | Valid format             |
+| 4    | Verify intent recorded        | Accept action logged     |
 
 **Expected Results:**
+
 - Legal e-signature requirements met
 
 **Backward Compatibility Check:**
+
 - No changes to signature data model
 - Audit fields unchanged
 
@@ -1001,23 +1097,26 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists with projectId = NULL
 - Quote has line items and content
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `/api/pdf/quote/[quoteId]` | PDF generated |
-| 2 | Verify PDF contains quote data | All fields present |
-| 3 | Verify no project field errors | No null reference errors |
-| 4 | Verify PDF is valid | Opens in PDF reader |
+| Step | Action                          | Expected Result          |
+| ---- | ------------------------------- | ------------------------ |
+| 1    | Call `/api/pdf/quote/[quoteId]` | PDF generated            |
+| 2    | Verify PDF contains quote data  | All fields present       |
+| 3    | Verify no project field errors  | No null reference errors |
+| 4    | Verify PDF is valid             | Opens in PDF reader      |
 
 **Expected Results:**
+
 - PDF generation works for legacy quotes
 - No errors from missing project
 
 **Backward Compatibility Check:**
+
 - PDF template handles null project
 - No required project fields in output
 
@@ -1030,20 +1129,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists with projectId = NULL
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `/api/pdf/invoice/[invoiceId]` | PDF generated |
-| 2 | Verify PDF content | All invoice data present |
-| 3 | Verify no errors | Clean PDF output |
+| Step | Action                              | Expected Result          |
+| ---- | ----------------------------------- | ------------------------ |
+| 1    | Call `/api/pdf/invoice/[invoiceId]` | PDF generated            |
+| 2    | Verify PDF content                  | All invoice data present |
+| 3    | Verify no errors                    | Clean PDF output         |
 
 **Expected Results:**
+
 - Invoice PDF works without project
 
 **Backward Compatibility Check:**
+
 - PDF template handles null project
 - Invoice formatting unchanged
 
@@ -1056,20 +1158,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `/api/download/quote/[quoteId]` | File downloaded |
-| 2 | Verify content-disposition header | Correct filename |
-| 3 | Verify file size > 0 | Not empty |
+| Step | Action                               | Expected Result  |
+| ---- | ------------------------------------ | ---------------- |
+| 1    | Call `/api/download/quote/[quoteId]` | File downloaded  |
+| 2    | Verify content-disposition header    | Correct filename |
+| 3    | Verify file size > 0                 | Not empty        |
 
 **Expected Results:**
+
 - Download works unchanged
 
 **Backward Compatibility Check:**
+
 - API endpoint unchanged
 - Headers consistent
 
@@ -1082,19 +1187,22 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `/api/download/invoice/[invoiceId]` | File downloaded |
-| 2 | Verify correct filename | Contains invoice number |
+| Step | Action                                   | Expected Result         |
+| ---- | ---------------------------------------- | ----------------------- |
+| 1    | Call `/api/download/invoice/[invoiceId]` | File downloaded         |
+| 2    | Verify correct filename                  | Contains invoice number |
 
 **Expected Results:**
+
 - Download works unchanged
 
 **Backward Compatibility Check:**
+
 - API unchanged
 - File naming consistent
 
@@ -1107,20 +1215,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Workspace has branding configured (logo, colors)
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Generate quote PDF | Includes logo |
-| 2 | Verify brand colors | Applied correctly |
-| 3 | Verify business info | Name, address present |
+| Step | Action               | Expected Result       |
+| ---- | -------------------- | --------------------- |
+| 1    | Generate quote PDF   | Includes logo         |
+| 2    | Verify brand colors  | Applied correctly     |
+| 3    | Verify business info | Name, address present |
 
 **Expected Results:**
+
 - Branding preserved in PDFs
 
 **Backward Compatibility Check:**
+
 - Branding settings unchanged
 - PDF template uses same sources
 
@@ -1133,20 +1244,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote/Invoice has many line items
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Generate PDF for large document | Multiple pages |
-| 2 | Verify page breaks | Clean breaks |
-| 3 | Verify headers/footers | On each page |
+| Step | Action                          | Expected Result |
+| ---- | ------------------------------- | --------------- |
+| 1    | Generate PDF for large document | Multiple pages  |
+| 2    | Verify page breaks              | Clean breaks    |
+| 3    | Verify headers/footers          | On each page    |
 
 **Expected Results:**
+
 - Multi-page handling unchanged
 
 **Backward Compatibility Check:**
+
 - Page break logic consistent
 - No layout issues
 
@@ -1159,22 +1273,25 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists in 'sent' status
 - Invoice has projectId = NULL
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `recordPayment(invoiceId, amount, method)` | Payment recorded |
-| 2 | Verify payment object created | Has correct data |
-| 3 | Verify invoice.amountPaid | Updated correctly |
-| 4 | Verify invoice status | Updated if full payment |
+| Step | Action                                          | Expected Result         |
+| ---- | ----------------------------------------------- | ----------------------- |
+| 1    | Call `recordPayment(invoiceId, amount, method)` | Payment recorded        |
+| 2    | Verify payment object created                   | Has correct data        |
+| 3    | Verify invoice.amountPaid                       | Updated correctly       |
+| 4    | Verify invoice status                           | Updated if full payment |
 
 **Expected Results:**
+
 - Payment recording unchanged
 
 **Backward Compatibility Check:**
+
 - recordPayment API unchanged
 - Payment model unchanged
 
@@ -1187,23 +1304,26 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice total = $1000
 - No prior payments
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Record payment of $500 | Payment recorded |
-| 2 | Verify invoice status | 'partial' |
-| 3 | Verify amountPaid | $500 |
-| 4 | Record payment of $500 | Second payment |
-| 5 | Verify invoice status | 'paid' |
+| Step | Action                 | Expected Result  |
+| ---- | ---------------------- | ---------------- |
+| 1    | Record payment of $500 | Payment recorded |
+| 2    | Verify invoice status  | 'partial'        |
+| 3    | Verify amountPaid      | $500             |
+| 4    | Record payment of $500 | Second payment   |
+| 5    | Verify invoice status  | 'paid'           |
 
 **Expected Results:**
+
 - Partial payment logic unchanged
 
 **Backward Compatibility Check:**
+
 - Status transitions correct
 - Amount calculations accurate
 
@@ -1216,21 +1336,24 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Stripe is configured
 - Invoice is in valid status for payment
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call `/api/checkout/invoice/[invoiceId]` | Session created |
-| 2 | Verify checkout URL returned | Valid Stripe URL |
-| 3 | Verify session amount | Matches invoice |
+| Step | Action                                   | Expected Result  |
+| ---- | ---------------------------------------- | ---------------- |
+| 1    | Call `/api/checkout/invoice/[invoiceId]` | Session created  |
+| 2    | Verify checkout URL returned             | Valid Stripe URL |
+| 3    | Verify session amount                    | Matches invoice  |
 
 **Expected Results:**
+
 - Stripe integration unchanged
 
 **Backward Compatibility Check:**
+
 - Stripe service calls unchanged
 - Amount calculations consistent
 
@@ -1243,20 +1366,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice has pending Stripe session
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Receive webhook checkout.session.completed | Processed |
-| 2 | Verify payment recorded | Created automatically |
-| 3 | Verify invoice status | Updated to paid/partial |
+| Step | Action                                     | Expected Result         |
+| ---- | ------------------------------------------ | ----------------------- |
+| 1    | Receive webhook checkout.session.completed | Processed               |
+| 2    | Verify payment recorded                    | Created automatically   |
+| 3    | Verify invoice status                      | Updated to paid/partial |
 
 **Expected Results:**
+
 - Webhook handling unchanged
 
 **Backward Compatibility Check:**
+
 - Webhook signature verification intact
 - Payment creation logic consistent
 
@@ -1269,20 +1395,23 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Payment exists for invoice
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Receive refund webhook | Processed |
-| 2 | Verify payment status updated | Refunded |
-| 3 | Verify invoice amounts | Recalculated |
+| Step | Action                        | Expected Result |
+| ---- | ----------------------------- | --------------- |
+| 1    | Receive refund webhook        | Processed       |
+| 2    | Verify payment status updated | Refunded        |
+| 3    | Verify invoice amounts        | Recalculated    |
 
 **Expected Results:**
+
 - Refund handling unchanged
 
 **Backward Compatibility Check:**
+
 - Refund logic consistent
 - Amount recalculation correct
 
@@ -1295,23 +1424,26 @@ These tests verify critical business workflows continue functioning.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice sent to client
 - Client has valid token
 - Stripe configured
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/i/[token]` | Invoice portal loads |
-| 2 | Click pay button | Redirects to Stripe |
-| 3 | Complete payment | Returns to portal |
-| 4 | Verify payment recorded | Invoice updated |
+| Step | Action                   | Expected Result      |
+| ---- | ------------------------ | -------------------- |
+| 1    | Navigate to `/i/[token]` | Invoice portal loads |
+| 2    | Click pay button         | Redirects to Stripe  |
+| 3    | Complete payment         | Returns to portal    |
+| 4    | Verify payment recorded  | Invoice updated      |
 
 **Expected Results:**
+
 - Client payment flow unchanged
 
 **Backward Compatibility Check:**
+
 - Portal UX unchanged
 - Payment flow consistent
 
@@ -1330,20 +1462,23 @@ These tests verify existing navigation routes continue working after sidebar res
 **Priority:** P0
 
 **Preconditions:**
+
 - User is authenticated
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/dashboard` | Page loads |
-| 2 | Verify no 404 | Success response |
-| 3 | Verify dashboard content | Stats, charts visible |
+| Step | Action                   | Expected Result       |
+| ---- | ------------------------ | --------------------- |
+| 1    | Navigate to `/dashboard` | Page loads            |
+| 2    | Verify no 404            | Success response      |
+| 3    | Verify dashboard content | Stats, charts visible |
 
 **Expected Results:**
+
 - Dashboard route unchanged
 
 **Backward Compatibility Check:**
+
 - URL unchanged
 - Bookmarks work
 
@@ -1356,20 +1491,23 @@ These tests verify existing navigation routes continue working after sidebar res
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/quotes` | Page loads |
-| 2 | Verify quote list | Displays quotes |
-| 3 | Click new quote | Navigates correctly |
+| Step | Action                | Expected Result     |
+| ---- | --------------------- | ------------------- |
+| 1    | Navigate to `/quotes` | Page loads          |
+| 2    | Verify quote list     | Displays quotes     |
+| 3    | Click new quote       | Navigates correctly |
 
 **Expected Results:**
+
 - Quotes route unchanged
 
 **Backward Compatibility Check:**
+
 - URL unchanged
 - All sub-routes work
 
@@ -1382,19 +1520,22 @@ These tests verify existing navigation routes continue working after sidebar res
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/invoices` | Page loads |
-| 2 | Verify invoice list | Displays invoices |
+| Step | Action                  | Expected Result   |
+| ---- | ----------------------- | ----------------- |
+| 1    | Navigate to `/invoices` | Page loads        |
+| 2    | Verify invoice list     | Displays invoices |
 
 **Expected Results:**
+
 - Invoices route unchanged
 
 **Backward Compatibility Check:**
+
 - URL unchanged
 
 ---
@@ -1406,20 +1547,23 @@ These tests verify existing navigation routes continue working after sidebar res
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/clients` | Page loads |
-| 2 | Verify client list | Displays clients |
-| 3 | Navigate to client detail | Works correctly |
+| Step | Action                    | Expected Result  |
+| ---- | ------------------------- | ---------------- |
+| 1    | Navigate to `/clients`    | Page loads       |
+| 2    | Verify client list        | Displays clients |
+| 3    | Navigate to client detail | Works correctly  |
 
 **Expected Results:**
+
 - Clients routes unchanged
 
 **Backward Compatibility Check:**
+
 - All client URLs work
 
 ---
@@ -1431,22 +1575,25 @@ These tests verify existing navigation routes continue working after sidebar res
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated with admin role
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to `/settings` | Overview page |
-| 2 | Navigate to `/settings/business` | Business profile |
-| 3 | Navigate to `/settings/branding` | Branding settings |
-| 4 | Navigate to `/settings/payments` | Payment settings |
-| 5 | Navigate to `/settings/team` | Team members |
+| Step | Action                           | Expected Result   |
+| ---- | -------------------------------- | ----------------- |
+| 1    | Navigate to `/settings`          | Overview page     |
+| 2    | Navigate to `/settings/business` | Business profile  |
+| 3    | Navigate to `/settings/branding` | Branding settings |
+| 4    | Navigate to `/settings/payments` | Payment settings  |
+| 5    | Navigate to `/settings/team`     | Team members      |
 
 **Expected Results:**
+
 - All settings routes accessible
 
 **Backward Compatibility Check:**
+
 - No settings URLs changed
 - All settings forms work
 
@@ -1465,21 +1612,24 @@ These tests verify UI components render correctly with new badge variants and an
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote in draft status
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Render quote list | Draft badge visible |
-| 2 | Verify badge text | "Draft" |
-| 3 | Verify badge styling | Consistent with design |
-| 4 | Verify accessibility | Readable color contrast |
+| Step | Action               | Expected Result         |
+| ---- | -------------------- | ----------------------- |
+| 1    | Render quote list    | Draft badge visible     |
+| 2    | Verify badge text    | "Draft"                 |
+| 3    | Verify badge styling | Consistent with design  |
+| 4    | Verify accessibility | Readable color contrast |
 
 **Expected Results:**
+
 - Draft badge renders correctly
 
 **Backward Compatibility Check:**
+
 - Badge appearance acceptable
 - No broken styling
 
@@ -1492,23 +1642,26 @@ These tests verify UI components render correctly with new badge variants and an
 **Priority:** P0
 
 **Preconditions:**
+
 - Quotes in various statuses exist
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | View draft quote badge | Renders correctly |
-| 2 | View sent quote badge | Renders correctly |
-| 3 | View viewed quote badge | Renders correctly |
-| 4 | View accepted quote badge | Renders correctly |
-| 5 | View declined quote badge | Renders correctly |
-| 6 | View expired quote badge | Renders correctly |
+| Step | Action                    | Expected Result   |
+| ---- | ------------------------- | ----------------- |
+| 1    | View draft quote badge    | Renders correctly |
+| 2    | View sent quote badge     | Renders correctly |
+| 3    | View viewed quote badge   | Renders correctly |
+| 4    | View accepted quote badge | Renders correctly |
+| 5    | View declined quote badge | Renders correctly |
+| 6    | View expired quote badge  | Renders correctly |
 
 **Expected Results:**
+
 - All status badges render without errors
 
 **Backward Compatibility Check:**
+
 - Badge variants exist
 - No missing styles
 
@@ -1521,23 +1674,26 @@ These tests verify UI components render correctly with new badge variants and an
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoices in various statuses
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | View draft invoice badge | Renders correctly |
-| 2 | View sent invoice badge | Renders correctly |
-| 3 | View paid invoice badge | Renders correctly |
-| 4 | View partial invoice badge | Renders correctly |
-| 5 | View overdue invoice badge | Renders correctly |
-| 6 | View void invoice badge | Renders correctly |
+| Step | Action                     | Expected Result   |
+| ---- | -------------------------- | ----------------- |
+| 1    | View draft invoice badge   | Renders correctly |
+| 2    | View sent invoice badge    | Renders correctly |
+| 3    | View paid invoice badge    | Renders correctly |
+| 4    | View partial invoice badge | Renders correctly |
+| 5    | View overdue invoice badge | Renders correctly |
+| 6    | View void invoice badge    | Renders correctly |
 
 **Expected Results:**
+
 - All invoice badges render correctly
 
 **Backward Compatibility Check:**
+
 - Badge styling consistent
 - Colors distinguishable
 
@@ -1550,23 +1706,26 @@ These tests verify UI components render correctly with new badge variants and an
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Load dashboard | Sidebar visible |
-| 2 | Verify Dashboard link | Present and clickable |
-| 3 | Verify Quotes link | Present and clickable |
-| 4 | Verify Invoices link | Present and clickable |
-| 5 | Verify Clients link | Present and clickable |
-| 6 | Verify Settings link | Present and clickable |
+| Step | Action                | Expected Result       |
+| ---- | --------------------- | --------------------- |
+| 1    | Load dashboard        | Sidebar visible       |
+| 2    | Verify Dashboard link | Present and clickable |
+| 3    | Verify Quotes link    | Present and clickable |
+| 4    | Verify Invoices link  | Present and clickable |
+| 5    | Verify Clients link   | Present and clickable |
+| 6    | Verify Settings link  | Present and clickable |
 
 **Expected Results:**
+
 - All existing nav items accessible
 
 **Backward Compatibility Check:**
+
 - No navigation items removed
 - All links functional
 
@@ -1579,22 +1738,25 @@ These tests verify UI components render correctly with new badge variants and an
 **Priority:** P0
 
 **Preconditions:**
+
 - Sidebar visible
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click collapse toggle | Sidebar collapses |
-| 2 | Verify icon mode | Only icons visible |
-| 3 | Hover on icon | Tooltip shows label |
-| 4 | Click expand toggle | Sidebar expands |
-| 5 | Verify full mode | Labels visible |
+| Step | Action                | Expected Result     |
+| ---- | --------------------- | ------------------- |
+| 1    | Click collapse toggle | Sidebar collapses   |
+| 2    | Verify icon mode      | Only icons visible  |
+| 3    | Hover on icon         | Tooltip shows label |
+| 4    | Click expand toggle   | Sidebar expands     |
+| 5    | Verify full mode      | Labels visible      |
 
 **Expected Results:**
+
 - Collapse functionality unchanged
 
 **Backward Compatibility Check:**
+
 - Toggle behavior consistent
 - Tooltips work in icon mode
 
@@ -1613,22 +1775,25 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quotes exist in database
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | GET /api/quotes | 200 response |
-| 2 | Verify response is array | Array of quotes |
-| 3 | Verify quote object shape | Has id, title, status, clientId |
-| 4 | Verify projectId field | Present (may be null) |
+| Step | Action                    | Expected Result                 |
+| ---- | ------------------------- | ------------------------------- |
+| 1    | GET /api/quotes           | 200 response                    |
+| 2    | Verify response is array  | Array of quotes                 |
+| 3    | Verify quote object shape | Has id, title, status, clientId |
+| 4    | Verify projectId field    | Present (may be null)           |
 
 **Expected Results:**
+
 - API response format stable
 - New projectId field is additive, not breaking
 
 **Backward Compatibility Check:**
+
 - No removed fields
 - Type definitions compatible
 
@@ -1641,21 +1806,24 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Valid authentication
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | POST /api/quotes with clientId, title | 201 response |
-| 2 | Verify no projectId in request | Not required |
-| 3 | Verify quote created | Has id |
-| 4 | Verify projectId is null | In response |
+| Step | Action                                | Expected Result |
+| ---- | ------------------------------------- | --------------- |
+| 1    | POST /api/quotes with clientId, title | 201 response    |
+| 2    | Verify no projectId in request        | Not required    |
+| 3    | Verify quote created                  | Has id          |
+| 4    | Verify projectId is null              | In response     |
 
 **Expected Results:**
+
 - Quote creation without projectId works
 
 **Backward Compatibility Check:**
+
 - projectId not required
 - API backward compatible
 
@@ -1668,20 +1836,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoices exist
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | GET /api/invoices | 200 response |
-| 2 | Verify response array | Contains invoices |
-| 3 | Verify invoice shape | Expected fields |
+| Step | Action                | Expected Result   |
+| ---- | --------------------- | ----------------- |
+| 1    | GET /api/invoices     | 200 response      |
+| 2    | Verify response array | Contains invoices |
+| 3    | Verify invoice shape  | Expected fields   |
 
 **Expected Results:**
+
 - Invoices API format stable
 
 **Backward Compatibility Check:**
+
 - No breaking changes
 
 ---
@@ -1693,20 +1864,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote exists with projectId = NULL
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | GET /api/pdf/quote/[quoteId] | PDF returned |
-| 2 | Verify content-type | application/pdf |
-| 3 | Verify PDF valid | Opens correctly |
+| Step | Action                       | Expected Result |
+| ---- | ---------------------------- | --------------- |
+| 1    | GET /api/pdf/quote/[quoteId] | PDF returned    |
+| 2    | Verify content-type          | application/pdf |
+| 3    | Verify PDF valid             | Opens correctly |
 
 **Expected Results:**
+
 - PDF endpoint works for legacy quotes
 
 **Backward Compatibility Check:**
+
 - No template errors
 - PDF generation unchanged
 
@@ -1719,19 +1893,22 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | GET /api/pdf/invoice/[invoiceId] | PDF returned |
-| 2 | Verify content-type | application/pdf |
+| Step | Action                           | Expected Result |
+| ---- | -------------------------------- | --------------- |
+| 1    | GET /api/pdf/invoice/[invoiceId] | PDF returned    |
+| 2    | Verify content-type              | application/pdf |
 
 **Expected Results:**
+
 - Invoice PDF endpoint works
 
 **Backward Compatibility Check:**
+
 - PDF generation unchanged
 
 ---
@@ -1743,20 +1920,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice exists
 - Stripe configured
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | POST /api/checkout/invoice/[id] | Session created |
-| 2 | Verify checkout URL | Valid Stripe URL |
+| Step | Action                          | Expected Result  |
+| ---- | ------------------------------- | ---------------- |
+| 1    | POST /api/checkout/invoice/[id] | Session created  |
+| 2    | Verify checkout URL             | Valid Stripe URL |
 
 **Expected Results:**
+
 - Checkout endpoint unchanged
 
 **Backward Compatibility Check:**
+
 - Stripe integration stable
 
 ---
@@ -1768,19 +1948,22 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Valid Stripe webhook secret
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | POST valid webhook event | 200 response |
-| 2 | Verify event processed | Database updated |
+| Step | Action                   | Expected Result  |
+| ---- | ------------------------ | ---------------- |
+| 1    | POST valid webhook event | 200 response     |
+| 2    | Verify event processed   | Database updated |
 
 **Expected Results:**
+
 - Webhook processing unchanged
 
 **Backward Compatibility Check:**
+
 - Event handling consistent
 
 ---
@@ -1792,19 +1975,22 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Application running
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | GET /api/health | 200 response |
-| 2 | Verify response body | Status OK |
+| Step | Action               | Expected Result |
+| ---- | -------------------- | --------------- |
+| 1    | GET /api/health      | 200 response    |
+| 2    | Verify response body | Status OK       |
 
 **Expected Results:**
+
 - Health check works
 
 **Backward Compatibility Check:**
+
 - Endpoint unchanged
 
 ---
@@ -1820,22 +2006,25 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - User authenticated with data
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Navigate to /dashboard | Page loads |
-| 2 | Verify stats cards | Display correctly |
-| 3 | Verify recent quotes | List renders |
-| 4 | Verify recent invoices | List renders |
-| 5 | Verify activity feed | Renders |
+| Step | Action                 | Expected Result   |
+| ---- | ---------------------- | ----------------- |
+| 1    | Navigate to /dashboard | Page loads        |
+| 2    | Verify stats cards     | Display correctly |
+| 3    | Verify recent quotes   | List renders      |
+| 4    | Verify recent invoices | List renders      |
+| 5    | Verify activity feed   | Renders           |
 
 **Expected Results:**
+
 - Dashboard fully functional
 
 **Backward Compatibility Check:**
+
 - All widgets render
 - Data accurate
 
@@ -1848,20 +2037,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Historical data exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | View revenue chart | Renders |
-| 2 | View status charts | Render |
-| 3 | View conversion funnel | Renders |
+| Step | Action                 | Expected Result |
+| ---- | ---------------------- | --------------- |
+| 1    | View revenue chart     | Renders         |
+| 2    | View status charts     | Render          |
+| 3    | View conversion funnel | Renders         |
 
 **Expected Results:**
+
 - All charts functional
 
 **Backward Compatibility Check:**
+
 - Chart components unchanged
 - Data integration stable
 
@@ -1874,22 +2066,25 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Workspace has data
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call getDashboardStats() | Returns object |
-| 2 | Verify totalQuotes | Present, number |
-| 3 | Verify totalInvoices | Present, number |
-| 4 | Verify totalRevenue | Present, number |
-| 5 | Verify conversionRate | Present, number |
+| Step | Action                   | Expected Result |
+| ---- | ------------------------ | --------------- |
+| 1    | Call getDashboardStats() | Returns object  |
+| 2    | Verify totalQuotes       | Present, number |
+| 3    | Verify totalInvoices     | Present, number |
+| 4    | Verify totalRevenue      | Present, number |
+| 5    | Verify conversionRate    | Present, number |
 
 **Expected Results:**
+
 - All stats returned
 
 **Backward Compatibility Check:**
+
 - Response shape unchanged
 - No removed fields
 
@@ -1902,21 +2097,24 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Quote data exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call getConversionFunnelData() | Returns object |
-| 2 | Verify quotesCreated | Present |
-| 3 | Verify quotesSent | Present |
-| 4 | Verify quotesAccepted | Present |
+| Step | Action                         | Expected Result |
+| ---- | ------------------------------ | --------------- |
+| 1    | Call getConversionFunnelData() | Returns object  |
+| 2    | Verify quotesCreated           | Present         |
+| 3    | Verify quotesSent              | Present         |
+| 4    | Verify quotesAccepted          | Present         |
 
 **Expected Results:**
+
 - Funnel data complete
 
 **Backward Compatibility Check:**
+
 - Existing fields present
 - New fields additive only
 
@@ -1929,20 +2127,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Invoice data with various due dates
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call getPaymentAgingData() | Returns object |
-| 2 | Verify aging buckets | All present |
-| 3 | Verify totalOutstanding | Calculated |
+| Step | Action                     | Expected Result |
+| ---- | -------------------------- | --------------- |
+| 1    | Call getPaymentAgingData() | Returns object  |
+| 2    | Verify aging buckets       | All present     |
+| 3    | Verify totalOutstanding    | Calculated      |
 
 **Expected Results:**
+
 - Aging data accurate
 
 **Backward Compatibility Check:**
+
 - Bucket definitions unchanged
 
 ---
@@ -1954,20 +2155,23 @@ These tests verify API endpoints return expected response formats.
 **Priority:** P0
 
 **Preconditions:**
+
 - Payment history exists
 
 **Test Steps:**
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Call getRevenueData('monthly') | Returns array |
-| 2 | Verify data points | Have date, amount |
-| 3 | Verify period filter | Works correctly |
+| Step | Action                         | Expected Result   |
+| ---- | ------------------------------ | ----------------- |
+| 1    | Call getRevenueData('monthly') | Returns array     |
+| 2    | Verify data points             | Have date, amount |
+| 3    | Verify period filter           | Works correctly   |
 
 **Expected Results:**
+
 - Revenue data accurate
 
 **Backward Compatibility Check:**
+
 - Data format unchanged
 
 ---
@@ -1976,29 +2180,29 @@ These tests verify API endpoints return expected response formats.
 
 ### Requirements to Test Mapping
 
-| Phase 1 Requirement | Test Cases | Coverage |
-|---------------------|------------|----------|
-| Quote CRUD | TC-REG-001, 002, 003, 004, 005 | Complete |
-| Invoice CRUD | TC-REG-006, 007, 008, 009, 010 | Complete |
-| Client Management | TC-REG-017, 018, 019, 020, 021, 022 | Complete |
-| Quote-to-Invoice | TC-REG-023, 024, 025, 026, 027 | Complete |
-| E-Signature | TC-REG-028, 029, 030, 031, 032 | Complete |
-| PDF Generation | TC-REG-033, 034, 035, 036, 037, 038 | Complete |
-| Payments | TC-REG-039, 040, 041, 042, 043, 044 | Complete |
-| Navigation | TC-REG-045, 046, 047, 048, 049 | Complete |
-| UI Components | TC-REG-050, 051, 052, 053, 054 | Complete |
-| Dashboard/Analytics | TC-REG-055, 056, 057, 058, 059, 060 | Complete |
-| API Endpoints | TC-REG-061, 062, 063, 064, 065, 066, 067, 068 | Complete |
+| Phase 1 Requirement | Test Cases                                    | Coverage |
+| ------------------- | --------------------------------------------- | -------- |
+| Quote CRUD          | TC-REG-001, 002, 003, 004, 005                | Complete |
+| Invoice CRUD        | TC-REG-006, 007, 008, 009, 010                | Complete |
+| Client Management   | TC-REG-017, 018, 019, 020, 021, 022           | Complete |
+| Quote-to-Invoice    | TC-REG-023, 024, 025, 026, 027                | Complete |
+| E-Signature         | TC-REG-028, 029, 030, 031, 032                | Complete |
+| PDF Generation      | TC-REG-033, 034, 035, 036, 037, 038           | Complete |
+| Payments            | TC-REG-039, 040, 041, 042, 043, 044           | Complete |
+| Navigation          | TC-REG-045, 046, 047, 048, 049                | Complete |
+| UI Components       | TC-REG-050, 051, 052, 053, 054                | Complete |
+| Dashboard/Analytics | TC-REG-055, 056, 057, 058, 059, 060           | Complete |
+| API Endpoints       | TC-REG-061, 062, 063, 064, 065, 066, 067, 068 | Complete |
 
 ### Phase 2 Change to Test Mapping
 
-| Phase 2 Change | Impact Level | Regression Tests |
-|----------------|--------------|------------------|
-| Project entity (projectId) | HIGH | TC-REG-001-016, 023-024, 033-034 |
-| Sidebar restructure | MEDIUM | TC-REG-045-049, 053-054 |
-| Badge variant changes | MEDIUM | TC-REG-050-052 |
-| Analytics enhancements | LOW | TC-REG-055-060 |
-| New API endpoints | LOW | TC-REG-061-068 |
+| Phase 2 Change             | Impact Level | Regression Tests                 |
+| -------------------------- | ------------ | -------------------------------- |
+| Project entity (projectId) | HIGH         | TC-REG-001-016, 023-024, 033-034 |
+| Sidebar restructure        | MEDIUM       | TC-REG-045-049, 053-054          |
+| Badge variant changes      | MEDIUM       | TC-REG-050-052                   |
+| Analytics enhancements     | LOW          | TC-REG-055-060                   |
+| New API endpoints          | LOW          | TC-REG-061-068                   |
 
 ---
 
@@ -2045,6 +2249,7 @@ These manual test cases should be automated using Playwright for E2E tests. Key 
 This regression test suite covers 68 critical test cases organized across 6 risk areas. All tests are P0 priority and must pass before Phase 2 can be released to production.
 
 **Key areas of focus:**
+
 1. **Null projectId handling** - Ensuring legacy quotes/invoices work
 2. **Navigation stability** - All existing routes accessible
 3. **Business workflow continuity** - Quote-to-invoice, payments, signatures
@@ -2054,5 +2259,5 @@ The tests provide comprehensive coverage of Phase 1 functionality that could be 
 
 ---
 
-*Generated by Manual Test Generator*
-*Last updated: 2026-02-13*
+_Generated by Manual Test Generator_
+_Last updated: 2026-02-13_

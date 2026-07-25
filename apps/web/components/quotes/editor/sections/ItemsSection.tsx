@@ -6,11 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
   CommandEmpty,
@@ -27,20 +23,75 @@ import { createBlock } from '@/lib/quotes/types';
 // ─── Saved Line Items (from templates/invoice-items) ─────
 const savedLineItems = [
   { id: '1', name: 'Project Fee', description: 'Flat project fee for deliverables', price: 0 },
-  { id: '2', name: 'Web Design & Development', description: 'Full website design and development services', price: 150 },
-  { id: '3', name: 'Virtual Assistant Services', description: 'Remote administrative and support tasks', price: 0 },
+  {
+    id: '2',
+    name: 'Web Design & Development',
+    description: 'Full website design and development services',
+    price: 150,
+  },
+  {
+    id: '3',
+    name: 'Virtual Assistant Services',
+    description: 'Remote administrative and support tasks',
+    price: 0,
+  },
   { id: '4', name: 'Travel Fees', description: 'Travel and transportation costs', price: 300 },
-  { id: '5', name: 'Studio/Office Space Rental', description: 'Hourly rental of studio or office space', price: 100 },
+  {
+    id: '5',
+    name: 'Studio/Office Space Rental',
+    description: 'Hourly rental of studio or office space',
+    price: 100,
+  },
   { id: '6', name: 'Studio Time', description: 'Professional studio session time', price: 400 },
-  { id: '7', name: 'Software Development', description: 'Custom software and application development', price: 0 },
-  { id: '8', name: 'Social Media Management', description: 'Social media strategy and content management', price: 75 },
-  { id: '9', name: 'Search Engine Optimization (SEO)', description: 'SEO audits, keyword research, and optimization', price: 0 },
-  { id: '10', name: 'Consulting/Coaching Session', description: 'One-on-one consulting or coaching session', price: 50 },
-  { id: '11', name: 'Production Time', description: 'Video, audio, or content production time', price: 1000 },
-  { id: '12', name: 'Processing Fee', description: 'Administrative processing and handling fee', price: 15 },
-  { id: '13', name: 'Brand Strategy Session', description: 'Brand positioning, messaging, and identity planning', price: 250 },
+  {
+    id: '7',
+    name: 'Software Development',
+    description: 'Custom software and application development',
+    price: 0,
+  },
+  {
+    id: '8',
+    name: 'Social Media Management',
+    description: 'Social media strategy and content management',
+    price: 75,
+  },
+  {
+    id: '9',
+    name: 'Search Engine Optimization (SEO)',
+    description: 'SEO audits, keyword research, and optimization',
+    price: 0,
+  },
+  {
+    id: '10',
+    name: 'Consulting/Coaching Session',
+    description: 'One-on-one consulting or coaching session',
+    price: 50,
+  },
+  {
+    id: '11',
+    name: 'Production Time',
+    description: 'Video, audio, or content production time',
+    price: 1000,
+  },
+  {
+    id: '12',
+    name: 'Processing Fee',
+    description: 'Administrative processing and handling fee',
+    price: 15,
+  },
+  {
+    id: '13',
+    name: 'Brand Strategy Session',
+    description: 'Brand positioning, messaging, and identity planning',
+    price: 250,
+  },
   { id: '14', name: 'Photography', description: 'Professional photography services', price: 200 },
-  { id: '15', name: 'Content Writing', description: 'Blog posts, articles, and website copy', price: 85 },
+  {
+    id: '15',
+    name: 'Content Writing',
+    description: 'Blog posts, articles, and website copy',
+    price: 85,
+  },
 ];
 
 interface ItemsSectionProps {
@@ -61,16 +112,14 @@ export function ItemsSection({
   const [addItemOpen, setAddItemOpen] = useState(false);
 
   // Filter to only service items
-  const serviceItems = blocks.filter(
-    (b): b is ServiceItemBlock => b.type === 'service-item'
-  );
+  const serviceItems = blocks.filter((b): b is ServiceItemBlock => b.type === 'service-item');
 
   const handleAddItem = () => {
     const newBlock = createBlock('service-item');
     onAddBlock(newBlock);
   };
 
-  const handleAddSavedItem = (saved: typeof savedLineItems[number]) => {
+  const handleAddSavedItem = (saved: (typeof savedLineItems)[number]) => {
     const newBlock = createBlock<ServiceItemBlock>('service-item', {
       name: saved.name,
       description: saved.description,
@@ -97,7 +146,7 @@ export function ItemsSection({
       <CardContent>
         <div className="space-y-4">
           {/* Header */}
-          <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground">
+          <div className="text-muted-foreground grid grid-cols-12 gap-2 text-xs font-medium">
             <div className="col-span-1"></div>
             <div className="col-span-4">ITEM</div>
             <div className="col-span-2 text-right">RATE</div>
@@ -111,9 +160,9 @@ export function ItemsSection({
           {/* Items */}
           {serviceItems.length > 0 ? (
             serviceItems.map((item) => (
-              <div key={item.id} className="grid grid-cols-12 gap-2 items-start group">
+              <div key={item.id} className="group grid grid-cols-12 items-start gap-2">
                 <div className="col-span-1 flex items-center justify-center pt-2">
-                  <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab" />
+                  <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab opacity-0 group-hover:opacity-100" />
                 </div>
                 <div className="col-span-4">
                   <Input
@@ -136,7 +185,9 @@ export function ItemsSection({
                     placeholder="0.00"
                     className="text-right"
                     value={item.content.rate || ''}
-                    onChange={(e) => handleUpdateItem(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      handleUpdateItem(item.id, 'rate', parseFloat(e.target.value) || 0)
+                    }
                   />
                 </div>
                 <div className="col-span-2">
@@ -146,10 +197,12 @@ export function ItemsSection({
                     placeholder="1"
                     className="text-right"
                     value={item.content.quantity}
-                    onChange={(e) => handleUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      handleUpdateItem(item.id, 'quantity', parseInt(e.target.value) || 1)
+                    }
                   />
                 </div>
-                <div className="col-span-2 text-right py-2 font-medium">
+                <div className="col-span-2 py-2 text-right font-medium">
                   {formatCurrency(item.content.quantity * item.content.rate, currency)}
                 </div>
                 <div className="col-span-1 flex justify-end">
@@ -165,7 +218,7 @@ export function ItemsSection({
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-muted-foreground py-8 text-center">
               <p>No items added yet</p>
               <p className="text-sm">Click the button below to add your first item</p>
             </div>
@@ -197,7 +250,7 @@ export function ItemsSection({
                       }}
                       className="py-2.5"
                     >
-                      <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <Plus className="text-muted-foreground mr-2 h-4 w-4" />
                       <span className="font-medium">Blank Item</span>
                     </CommandItem>
                   </CommandGroup>
@@ -210,12 +263,14 @@ export function ItemsSection({
                         onSelect={() => handleAddSavedItem(saved)}
                         className="py-2.5"
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{saved.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{saved.description}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{saved.name}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {saved.description}
+                          </p>
                         </div>
                         {saved.price > 0 && (
-                          <span className="ml-3 shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
+                          <span className="text-muted-foreground ml-3 shrink-0 text-xs font-medium tabular-nums">
                             ${saved.price.toFixed(2)}
                           </span>
                         )}

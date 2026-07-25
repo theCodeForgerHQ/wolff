@@ -33,8 +33,8 @@ interface DeclineQuoteDialogProps {
 
 const DECLINE_REASONS = [
   { value: 'price', label: 'Price too high' },
-  { value: 'scope', label: 'Scope doesn\'t match my needs' },
-  { value: 'timing', label: 'Timeline doesn\'t work' },
+  { value: 'scope', label: "Scope doesn't match my needs" },
+  { value: 'timing', label: "Timeline doesn't work" },
   { value: 'competitor', label: 'Going with another provider' },
   { value: 'budget', label: 'Budget constraints' },
   { value: 'postponed', label: 'Project postponed' },
@@ -92,8 +92,8 @@ export function DeclineQuoteDialog({
             Decline Quote
           </DialogTitle>
           <DialogDescription>
-            Let {quote.business.name} know why you&apos;re declining. This
-            feedback helps them improve.
+            Let {quote.business.name} know why you&apos;re declining. This feedback helps them
+            improve.
           </DialogDescription>
         </DialogHeader>
 
@@ -133,11 +133,7 @@ export function DeclineQuoteDialog({
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
+          <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

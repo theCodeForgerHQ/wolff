@@ -3,7 +3,12 @@
  */
 
 import type { QuoteBlock, QuoteSettings, QuoteTotals, QuoteStatus } from '@/lib/quotes/types';
-import type { InvoiceLineItem, InvoiceSettings, InvoiceTotals, InvoiceStatus } from '@/lib/invoices/types';
+import type {
+  InvoiceLineItem,
+  InvoiceSettings,
+  InvoiceTotals,
+  InvoiceStatus,
+} from '@/lib/invoices/types';
 
 // ---- Shared ----
 

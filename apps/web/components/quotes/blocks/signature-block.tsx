@@ -17,7 +17,7 @@ export function SignatureBlockContent({ block }: SignatureBlockContentProps) {
   if (isSigned) {
     return (
       <div className="rounded-lg border bg-green-50 p-6">
-        <div className="flex items-center gap-2 text-green-700 mb-4">
+        <div className="mb-4 flex items-center gap-2 text-green-700">
           <Check className="h-5 w-5" />
           <span className="font-medium">Signed</span>
         </div>
@@ -25,17 +25,11 @@ export function SignatureBlockContent({ block }: SignatureBlockContentProps) {
           {block.content.signatureData && (
             <div className="border-b border-green-200 pb-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={block.content.signatureData}
-                alt="Signature"
-                className="max-h-16"
-              />
+              <img src={block.content.signatureData} alt="Signature" className="max-h-16" />
             </div>
           )}
           {block.content.signerName && (
-            <p className="text-sm font-medium text-green-800">
-              {block.content.signerName}
-            </p>
+            <p className="text-sm font-medium text-green-800">{block.content.signerName}</p>
           )}
           {block.content.signedAt && (
             <p className="text-xs text-green-600">
@@ -55,13 +49,11 @@ export function SignatureBlockContent({ block }: SignatureBlockContentProps) {
       )}
     >
       <div className="flex flex-col items-center justify-center text-center">
-        <PenTool className="h-8 w-8 text-muted-foreground mb-3" />
+        <PenTool className="text-muted-foreground mb-3 h-8 w-8" />
         <p className="font-medium">{block.content.label}</p>
-        {block.content.required && (
-          <p className="text-xs text-muted-foreground mt-1">Required</p>
-        )}
+        {block.content.required && <p className="text-muted-foreground mt-1 text-xs">Required</p>}
         {previewMode && (
-          <p className="text-sm text-muted-foreground mt-3 italic">
+          <p className="text-muted-foreground mt-3 text-sm italic">
             Signature will appear here when the client signs
           </p>
         )}

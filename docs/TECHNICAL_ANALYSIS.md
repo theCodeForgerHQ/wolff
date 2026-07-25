@@ -266,7 +266,7 @@ For mutations, prefer Server Actions over API routes:
 
 ```typescript
 // lib/actions/quotes.ts
-'use server'
+'use server';
 
 export async function createQuote(data: CreateQuoteInput) {}
 export async function updateQuote(id: string, data: UpdateQuoteInput) {}
@@ -321,17 +321,17 @@ export async function deleteClient(id: string) {}
 
 ### 3.2 Authorization Matrix
 
-| Resource | Owner | Admin | Member | Public |
-|----------|-------|-------|--------|--------|
-| Workspace Settings | ✅ | ✅ | ❌ | ❌ |
-| Create Quote | ✅ | ✅ | ✅ | ❌ |
-| Send Quote | ✅ | ✅ | ✅ | ❌ |
-| View Quote (internal) | ✅ | ✅ | ✅ | ❌ |
-| View Quote (portal) | - | - | - | ✅ (with token) |
-| Accept Quote | - | - | - | ✅ (with token) |
-| Process Payment | - | - | - | ✅ (with token) |
-| Delete Quote | ✅ | ✅ | ❌ | ❌ |
-| Manage Team | ✅ | ❌ | ❌ | ❌ |
+| Resource              | Owner | Admin | Member | Public          |
+| --------------------- | ----- | ----- | ------ | --------------- |
+| Workspace Settings    | ✅    | ✅    | ❌     | ❌              |
+| Create Quote          | ✅    | ✅    | ✅     | ❌              |
+| Send Quote            | ✅    | ✅    | ✅     | ❌              |
+| View Quote (internal) | ✅    | ✅    | ✅     | ❌              |
+| View Quote (portal)   | -     | -     | -      | ✅ (with token) |
+| Accept Quote          | -     | -     | -      | ✅ (with token) |
+| Process Payment       | -     | -     | -      | ✅ (with token) |
+| Delete Quote          | ✅    | ✅    | ❌     | ❌              |
+| Manage Team           | ✅    | ❌    | ❌     | ❌              |
 
 ### 3.3 Rate Limiting Strategy
 
@@ -367,11 +367,13 @@ export const createQuoteSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   expirationDate: z.coerce.date().optional(),
   lineItems: z.array(lineItemSchema).min(1),
-  deposit: z.object({
-    enabled: z.boolean(),
-    type: z.enum(['percentage', 'fixed']),
-    value: z.number().positive(),
-  }).optional(),
+  deposit: z
+    .object({
+      enabled: z.boolean(),
+      type: z.enum(['percentage', 'fixed']),
+      value: z.number().positive(),
+    })
+    .optional(),
   notes: z.string().max(5000).optional(),
   settings: quoteSettingsSchema.optional(),
 });
@@ -534,17 +536,27 @@ interface EmailProvider {
 }
 
 // Implementations
-class SMTPProvider implements EmailProvider { /* ... */ }
-class SendGridProvider implements EmailProvider { /* ... */ }
-class ResendProvider implements EmailProvider { /* ... */ }
+class SMTPProvider implements EmailProvider {
+  /* ... */
+}
+class SendGridProvider implements EmailProvider {
+  /* ... */
+}
+class ResendProvider implements EmailProvider {
+  /* ... */
+}
 
 // Factory
 function createEmailProvider(config: EmailConfig): EmailProvider {
   switch (config.provider) {
-    case 'smtp': return new SMTPProvider(config);
-    case 'sendgrid': return new SendGridProvider(config);
-    case 'resend': return new ResendProvider(config);
-    default: throw new Error(`Unknown provider: ${config.provider}`);
+    case 'smtp':
+      return new SMTPProvider(config);
+    case 'sendgrid':
+      return new SendGridProvider(config);
+    case 'resend':
+      return new ResendProvider(config);
+    default:
+      throw new Error(`Unknown provider: ${config.provider}`);
   }
 }
 ```
@@ -561,8 +573,12 @@ interface StorageProvider {
 }
 
 // Implementations
-class LocalStorageProvider implements StorageProvider { /* ... */ }
-class S3StorageProvider implements StorageProvider { /* ... */ }
+class LocalStorageProvider implements StorageProvider {
+  /* ... */
+}
+class S3StorageProvider implements StorageProvider {
+  /* ... */
+}
 
 // Self-hosted: LocalStorageProvider
 // Cloud: S3StorageProvider
@@ -728,7 +744,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - DATABASE_URL=postgresql://...
       - REDIS_URL=redis://redis:6379
@@ -754,8 +770,8 @@ services:
   traefik:
     image: traefik:v3.0
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik:/etc/traefik
@@ -796,6 +812,7 @@ services:
 ### 9.1 Metrics to Track
 
 **Application Metrics:**
+
 - Request latency (p50, p95, p99)
 - Error rate by endpoint
 - Active users (DAU, WAU, MAU)
@@ -803,6 +820,7 @@ services:
 - Payment success rate
 
 **Business Metrics:**
+
 - Quotes sent per day
 - Total quote value
 - Average quote value
@@ -810,6 +828,7 @@ services:
 - Days to payment (average)
 
 **Infrastructure Metrics:**
+
 - CPU/Memory usage
 - Database connections
 - Redis memory
@@ -827,19 +846,25 @@ const logger = pino({
 });
 
 // Log context
-logger.info({
-  workspaceId,
-  quoteId,
-  action: 'quote.sent',
-  clientEmail: '***@***.com' // Redact PII
-}, 'Quote sent successfully');
+logger.info(
+  {
+    workspaceId,
+    quoteId,
+    action: 'quote.sent',
+    clientEmail: '***@***.com', // Redact PII
+  },
+  'Quote sent successfully'
+);
 
 // Error logging
-logger.error({
-  err,
-  workspaceId,
-  requestId,
-}, 'Failed to process payment');
+logger.error(
+  {
+    err,
+    workspaceId,
+    requestId,
+  },
+  'Failed to process payment'
+);
 ```
 
 ---
@@ -853,8 +878,8 @@ For users migrating from other tools:
 ```typescript
 // CSV import format for clients
 interface ClientImport {
-  name: string;           // Required
-  email: string;          // Required
+  name: string; // Required
+  email: string; // Required
   company?: string;
   phone?: string;
   address_line1?: string;
@@ -867,11 +892,11 @@ interface ClientImport {
 
 // CSV import format for rate cards
 interface RateCardImport {
-  name: string;           // Required
+  name: string; // Required
   category?: string;
   description?: string;
   pricing_type: 'fixed' | 'hourly' | 'daily';
-  rate: number;           // Required
+  rate: number; // Required
   unit?: string;
 }
 ```
@@ -879,6 +904,7 @@ interface RateCardImport {
 ### 10.2 Export Format
 
 All data exportable in standard formats:
+
 - Clients: CSV
 - Rate Cards: CSV
 - Quotes: JSON, PDF

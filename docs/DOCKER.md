@@ -2,10 +2,10 @@
 
 Self-host Wolff using Docker. Two deployment options are available:
 
-| Option | File | What you get |
-|--------|------|-------------|
-| **Simple** | `docker-compose.simple.yml` | Web app + PostgreSQL on port 3000 |
-| **Production** | `docker-compose.prod.yml` | Web app + PostgreSQL + Traefik (auto SSL) |
+| Option         | File                        | What you get                              |
+| -------------- | --------------------------- | ----------------------------------------- |
+| **Simple**     | `docker-compose.simple.yml` | Web app + PostgreSQL on port 3000         |
+| **Production** | `docker-compose.prod.yml`   | Web app + PostgreSQL + Traefik (auto SSL) |
 
 ---
 
@@ -13,31 +13,31 @@ Self-host Wolff using Docker. Two deployment options are available:
 
 ### Supported Operating Systems
 
-| OS | Version | Notes |
-|----|---------|-------|
-| Ubuntu | 20.04+ (LTS recommended) | Best supported, recommended for production |
-| Debian | 11+ (Bullseye) | Fully supported |
-| CentOS / RHEL | 8+ | Use `dnf` instead of `apt` for package installation |
-| macOS | 12+ (Monterey) | Via Docker Desktop, good for local testing |
-| Windows | 10/11 Pro or Home | Via Docker Desktop with WSL 2 backend |
+| OS            | Version                  | Notes                                               |
+| ------------- | ------------------------ | --------------------------------------------------- |
+| Ubuntu        | 20.04+ (LTS recommended) | Best supported, recommended for production          |
+| Debian        | 11+ (Bullseye)           | Fully supported                                     |
+| CentOS / RHEL | 8+                       | Use `dnf` instead of `apt` for package installation |
+| macOS         | 12+ (Monterey)           | Via Docker Desktop, good for local testing          |
+| Windows       | 10/11 Pro or Home        | Via Docker Desktop with WSL 2 backend               |
 
 ### Software Requirements
 
-| Software | Minimum Version | Check with |
-|----------|----------------|------------|
-| Git | 2.0+ | `git --version` |
-| Docker Engine | 24.0+ | `docker --version` |
+| Software       | Minimum Version                    | Check with               |
+| -------------- | ---------------------------------- | ------------------------ |
+| Git            | 2.0+                               | `git --version`          |
+| Docker Engine  | 24.0+                              | `docker --version`       |
 | Docker Compose | **v2** (ships with Docker Desktop) | `docker compose version` |
 
 > **Compose v1 vs v2:** This guide uses `docker compose` (v2, with a space). If you see `docker-compose` (v1, with a hyphen) in older tutorials, it is deprecated. All commands in this guide use v2 syntax.
 
 ### Hardware Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| RAM | 2 GB (running) / 4 GB (building) | 4 GB+ |
-| Disk | 5 GB | 20 GB+ (room for database growth, backups, Docker cache) |
-| CPU | 1 core | 2+ cores |
+| Resource | Minimum                          | Recommended                                              |
+| -------- | -------------------------------- | -------------------------------------------------------- |
+| RAM      | 2 GB (running) / 4 GB (building) | 4 GB+                                                    |
+| Disk     | 5 GB                             | 20 GB+ (room for database growth, backups, Docker cache) |
+| CPU      | 1 core                           | 2+ cores                                                 |
 
 ---
 
@@ -51,7 +51,6 @@ Best for: local testing, small teams behind a VPN, or when you already have a re
 git clone https://github.com/theCodeForgerHQ/wolff.git
 cd wolff
 ```
-
 
 ### 2. Create your `.env` file
 
@@ -89,6 +88,7 @@ docker compose -f docker-compose.simple.yml up -d
 ```
 
 This will:
+
 - Build the Wolff image (~2-3 minutes on first run)
 - Start PostgreSQL 16
 - Wait for the database to be healthy
@@ -175,6 +175,7 @@ sudo firewall-cmd --reload
 ```
 
 **Do NOT expose:**
+
 - Port 5432 (PostgreSQL) — only accessible within the Docker network
 - Port 3000 (app) — Traefik handles external traffic on 80/443
 
@@ -202,6 +203,7 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 This starts:
+
 - **Web app** — behind Traefik, no exposed ports
 - **PostgreSQL** — internal only, with backup volume at `./backups`
 - **Traefik** — ports 80 (redirects to 443) and 443 (HTTPS with Let's Encrypt)
@@ -254,20 +256,20 @@ The production compose file includes a Traefik admin dashboard at `https://traef
 
 ## Environment Variables Reference
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `POSTGRES_PASSWORD` | Yes | — | Database password |
-| `POSTGRES_USER` | No | `wolff` | Database user |
-| `POSTGRES_DB` | No | `wolff` | Database name |
-| `NEXTAUTH_SECRET` | Yes | — | Auth encryption key — **must be at least 32 characters**. Generate with `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | No | `http://localhost:3000` | Public URL of your instance |
-| `AUTH_TRUST_HOST` | No | `true` (set in compose) | Trust the host header for auth |
-| `STRIPE_SECRET_KEY` | No | — | Stripe payments (optional) |
-| `STRIPE_WEBHOOK_SECRET` | No | — | Stripe webhooks (optional) |
-| `RESEND_API_KEY` | No | — | Email via Resend (optional) |
-| `REDIS_URL` | No | — | Redis for rate limiting (optional, falls back to in-memory) |
-| `DOMAIN` | Prod only | — | Your domain for Traefik SSL |
-| `ACME_EMAIL` | Prod only | — | Email for Let's Encrypt certificate expiry notifications |
+| Variable                | Required  | Default                 | Description                                                                                       |
+| ----------------------- | --------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`     | Yes       | —                       | Database password                                                                                 |
+| `POSTGRES_USER`         | No        | `wolff`                 | Database user                                                                                     |
+| `POSTGRES_DB`           | No        | `wolff`                 | Database name                                                                                     |
+| `NEXTAUTH_SECRET`       | Yes       | —                       | Auth encryption key — **must be at least 32 characters**. Generate with `openssl rand -base64 32` |
+| `NEXTAUTH_URL`          | No        | `http://localhost:3000` | Public URL of your instance                                                                       |
+| `AUTH_TRUST_HOST`       | No        | `true` (set in compose) | Trust the host header for auth                                                                    |
+| `STRIPE_SECRET_KEY`     | No        | —                       | Stripe payments (optional)                                                                        |
+| `STRIPE_WEBHOOK_SECRET` | No        | —                       | Stripe webhooks (optional)                                                                        |
+| `RESEND_API_KEY`        | No        | —                       | Email via Resend (optional)                                                                       |
+| `REDIS_URL`             | No        | —                       | Redis for rate limiting (optional, falls back to in-memory)                                       |
+| `DOMAIN`                | Prod only | —                       | Your domain for Traefik SSL                                                                       |
+| `ACME_EMAIL`            | Prod only | —                       | Email for Let's Encrypt certificate expiry notifications                                          |
 
 ---
 
@@ -602,6 +604,7 @@ pnpm dev
 ```
 
 This gives you:
+
 - PostgreSQL on `localhost:5432`
 - Mailpit UI on `localhost:8025` (email inbox)
 - Mailpit SMTP on `localhost:1025`
@@ -678,8 +681,8 @@ The final image runs as a non-root user (`nextjs:nodejs`) on port 3000.
 
 ### Compose files
 
-| File | Purpose | Services |
-|------|---------|----------|
-| `docker-compose.yml` | Local development | PostgreSQL + Mailpit |
-| `docker-compose.simple.yml` | Simple production | Web + PostgreSQL |
-| `docker-compose.prod.yml` | Full production | Web + PostgreSQL + Traefik (SSL) |
+| File                        | Purpose           | Services                         |
+| --------------------------- | ----------------- | -------------------------------- |
+| `docker-compose.yml`        | Local development | PostgreSQL + Mailpit             |
+| `docker-compose.simple.yml` | Simple production | Web + PostgreSQL                 |
+| `docker-compose.prod.yml`   | Full production   | Web + PostgreSQL + Traefik (SSL) |

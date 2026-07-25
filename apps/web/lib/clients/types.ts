@@ -1,7 +1,10 @@
 import type { Client, Quote, Invoice } from '@wolff/database';
 
 // Serialized versions with number instead of Decimal (for client components)
-type SerializedQuote = Omit<Quote, 'subtotal' | 'discountValue' | 'discountAmount' | 'taxTotal' | 'total'> & {
+type SerializedQuote = Omit<
+  Quote,
+  'subtotal' | 'discountValue' | 'discountAmount' | 'taxTotal' | 'total'
+> & {
   subtotal: number;
   discountValue: number;
   discountAmount: number;
@@ -9,7 +12,16 @@ type SerializedQuote = Omit<Quote, 'subtotal' | 'discountValue' | 'discountAmoun
   total: number;
 };
 
-type SerializedInvoice = Omit<Invoice, 'subtotal' | 'discountValue' | 'discountAmount' | 'taxTotal' | 'total' | 'amountPaid' | 'amountDue'> & {
+type SerializedInvoice = Omit<
+  Invoice,
+  | 'subtotal'
+  | 'discountValue'
+  | 'discountAmount'
+  | 'taxTotal'
+  | 'total'
+  | 'amountPaid'
+  | 'amountDue'
+> & {
   subtotal: number;
   discountValue: number;
   discountAmount: number;
@@ -63,10 +75,20 @@ export function safeParseAddress(raw: unknown): ClientAddress {
   if (!raw || typeof raw !== 'object') return {};
   const addr = raw as Record<string, unknown>;
   return {
-    street: typeof addr.street === 'string' ? addr.street : (typeof addr.line1 === 'string' ? addr.line1 : undefined),
+    street:
+      typeof addr.street === 'string'
+        ? addr.street
+        : typeof addr.line1 === 'string'
+          ? addr.line1
+          : undefined,
     city: typeof addr.city === 'string' ? addr.city : undefined,
     state: typeof addr.state === 'string' ? addr.state : undefined,
-    postalCode: typeof addr.postalCode === 'string' ? addr.postalCode : (typeof addr.zip === 'string' ? addr.zip : undefined),
+    postalCode:
+      typeof addr.postalCode === 'string'
+        ? addr.postalCode
+        : typeof addr.zip === 'string'
+          ? addr.zip
+          : undefined,
     country: typeof addr.country === 'string' ? addr.country : undefined,
   };
 }
@@ -78,13 +100,20 @@ export function safeParseMetadata(raw: unknown): ClientMetadata {
   if (!raw || typeof raw !== 'object') return { type: 'individual', tags: [], contacts: [] };
   const meta = raw as Record<string, unknown>;
   return {
-    type: (meta.type === 'company' || meta.type === 'individual') ? meta.type : 'individual',
+    type: meta.type === 'company' || meta.type === 'individual' ? meta.type : 'individual',
     website: typeof meta.website === 'string' ? meta.website : undefined,
-    tags: Array.isArray(meta.tags) ? meta.tags.filter((t): t is string => typeof t === 'string') : [],
+    tags: Array.isArray(meta.tags)
+      ? meta.tags.filter((t): t is string => typeof t === 'string')
+      : [],
     // Low #104: Validate each contact object's shape before casting
     contacts: Array.isArray(meta.contacts)
       ? (meta.contacts as unknown as ClientContact[]).filter(
-          (c) => c && typeof c === 'object' && typeof c.id === 'string' && typeof c.name === 'string' && typeof c.email === 'string'
+          (c) =>
+            c &&
+            typeof c === 'object' &&
+            typeof c.id === 'string' &&
+            typeof c.name === 'string' &&
+            typeof c.email === 'string'
         )
       : [],
   };
@@ -139,7 +168,15 @@ export interface ClientDetail {
 // Client activity item
 export interface ClientActivity {
   id: string;
-  type: 'quote_created' | 'quote_sent' | 'quote_accepted' | 'quote_declined' | 'invoice_created' | 'invoice_sent' | 'invoice_paid' | 'invoice_overdue';
+  type:
+    | 'quote_created'
+    | 'quote_sent'
+    | 'quote_accepted'
+    | 'quote_declined'
+    | 'invoice_created'
+    | 'invoice_sent'
+    | 'invoice_paid'
+    | 'invoice_overdue';
   title: string;
   description?: string;
   amount?: number;

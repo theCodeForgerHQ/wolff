@@ -24,7 +24,9 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@/lib/workspace/get-current-workspace', () => ({ getCurrentUserWorkspace: mockGetCurrentUserWorkspace }));
+vi.mock('@/lib/workspace/get-current-workspace', () => ({
+  getCurrentUserWorkspace: mockGetCurrentUserWorkspace,
+}));
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: {
@@ -34,8 +36,12 @@ vi.mock('@wolff/database', () => ({
     RateCardUpdateInput: {},
     Decimal: class MockDecimal {
       value: number;
-      constructor(v: number) { this.value = v; }
-      toNumber() { return this.value; }
+      constructor(v: number) {
+        this.value = v;
+      }
+      toNumber() {
+        return this.value;
+      }
     },
   },
 }));
@@ -66,10 +72,18 @@ describe('Rate Card Actions', () => {
     it('returns paginated rate cards', async () => {
       mockPrisma.rateCard.findMany.mockResolvedValue([
         {
-          id: 'rc-1', name: 'Standard Hourly', description: 'Default rates',
-          pricingType: 'hourly', rate: 150, unit: 'hour', isActive: true,
-          createdAt: new Date(), updatedAt: new Date(),
-          category: null, taxRate: null, _count: { quoteLineItems: 2, invoiceLineItems: 0 },
+          id: 'rc-1',
+          name: 'Standard Hourly',
+          description: 'Default rates',
+          pricingType: 'hourly',
+          rate: 150,
+          unit: 'hour',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: null,
+          taxRate: null,
+          _count: { quoteLineItems: 2, invoiceLineItems: 0 },
         },
       ]);
       mockPrisma.rateCard.count.mockResolvedValue(1);
@@ -134,7 +148,8 @@ describe('Rate Card Actions', () => {
   describe('updateRateCard', () => {
     it('updates rate card name and rate', async () => {
       mockPrisma.rateCard.findFirst.mockResolvedValue({
-        id: 'rc-1', workspaceId: WORKSPACE_ID,
+        id: 'rc-1',
+        workspaceId: WORKSPACE_ID,
       });
       mockPrisma.rateCard.update.mockResolvedValue({ id: 'rc-1' });
 
@@ -151,16 +166,17 @@ describe('Rate Card Actions', () => {
     it('throws when rate card not found', async () => {
       mockPrisma.rateCard.findFirst.mockResolvedValue(null);
 
-      await expect(
-        updateRateCard({ id: 'nonexistent', name: 'X' })
-      ).rejects.toThrow('Rate card not found');
+      await expect(updateRateCard({ id: 'nonexistent', name: 'X' })).rejects.toThrow(
+        'Rate card not found'
+      );
     });
   });
 
   describe('deleteRateCard', () => {
     it('soft deletes a rate card', async () => {
       mockPrisma.rateCard.findFirst.mockResolvedValue({
-        id: 'rc-1', workspaceId: WORKSPACE_ID,
+        id: 'rc-1',
+        workspaceId: WORKSPACE_ID,
       });
       mockPrisma.rateCard.update.mockResolvedValue({ id: 'rc-1', deletedAt: new Date() });
 
@@ -195,7 +211,9 @@ describe('Rate Card Actions', () => {
   describe('toggleRateCardActive', () => {
     it('toggles active status', async () => {
       mockPrisma.rateCard.findFirst.mockResolvedValue({
-        id: 'rc-1', workspaceId: WORKSPACE_ID, isActive: true,
+        id: 'rc-1',
+        workspaceId: WORKSPACE_ID,
+        isActive: true,
       });
       mockPrisma.rateCard.update.mockResolvedValue({ id: 'rc-1', isActive: false });
 

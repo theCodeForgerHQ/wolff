@@ -53,7 +53,7 @@ export function WorkspaceSwitcher({
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">{activeWorkspace.name}</span>
-            <span className="truncate text-xs text-muted-foreground capitalize">
+            <span className="text-muted-foreground truncate text-xs capitalize">
               {activeWorkspace.role}
             </span>
           </div>
@@ -66,9 +66,7 @@ export function WorkspaceSwitcher({
         side={isCollapsed ? 'right' : 'bottom'}
         sideOffset={4}
       >
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Workspaces
-        </DropdownMenuLabel>
+        <DropdownMenuLabel className="text-muted-foreground text-xs">Workspaces</DropdownMenuLabel>
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.id}
@@ -80,9 +78,7 @@ export function WorkspaceSwitcher({
               <Building2 className="size-4 shrink-0" />
             </div>
             <div className="flex-1 truncate">{workspace.name}</div>
-            {workspace.id === activeWorkspace.id && (
-              <Check className="size-4 text-primary" />
-            )}
+            {workspace.id === activeWorkspace.id && <Check className="text-primary size-4" />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
@@ -92,7 +88,7 @@ export function WorkspaceSwitcher({
               className="cursor-pointer gap-2 p-2"
               onSelect={(e) => e.preventDefault()}
             >
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+              <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                 <Plus className="size-4" />
               </div>
               <span className="text-muted-foreground">Add workspace</span>

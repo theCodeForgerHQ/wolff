@@ -1,9 +1,9 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-type DecimalLike = { toNumber: () => number }
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+type DecimalLike = { toNumber: () => number };
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -34,10 +34,12 @@ export function formatCurrency(
     maximumFractionDigits: 2,
   }).formatToParts(amount);
   // Insert space between currency symbol and number
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 /**
@@ -52,22 +54,19 @@ export function formatDate(
   },
   locale: string = 'en-US'
 ): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat(locale, options).format(d)
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat(locale, options).format(d);
 }
 
 /**
  * Format a date as relative time (e.g., "2 hours ago", "in 3 days")
  */
-export function formatRelativeTime(
-  date: string | Date,
-  locale: string = 'en-US'
-): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000)
+export function formatRelativeTime(date: string | Date, locale: string = 'en-US'): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - d.getTime()) / 1000);
 
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 
   // Define time intervals in seconds
   const intervals: { unit: Intl.RelativeTimeFormatUnit; seconds: number }[] = [
@@ -78,16 +77,16 @@ export function formatRelativeTime(
     { unit: 'hour', seconds: 3600 },
     { unit: 'minute', seconds: 60 },
     { unit: 'second', seconds: 1 },
-  ]
+  ];
 
   for (const interval of intervals) {
-    const count = Math.floor(Math.abs(diffInSeconds) / interval.seconds)
+    const count = Math.floor(Math.abs(diffInSeconds) / interval.seconds);
     if (count >= 1) {
-      return rtf.format(diffInSeconds > 0 ? -count : count, interval.unit)
+      return rtf.format(diffInSeconds > 0 ? -count : count, interval.unit);
     }
   }
 
-  return rtf.format(0, 'second')
+  return rtf.format(0, 'second');
 }
 
 /**

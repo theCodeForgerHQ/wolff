@@ -31,17 +31,18 @@ export default function VerifyEmailPage() {
   // Low #69: Removed min-h-screen — AuthLayout already handles centering
   return (
     <div className="flex items-center justify-center">
-      <div className="mx-auto max-w-md text-center space-y-6 p-8">
+      <div className="mx-auto max-w-md space-y-6 p-8 text-center">
         <div className="flex justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <Mail className="h-8 w-8 text-primary" />
+          <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-full">
+            <Mail className="text-primary h-8 w-8" />
           </div>
         </div>
 
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">Check your email</h1>
           <p className="text-muted-foreground">
-            We sent you a verification link. Please check your inbox and click the link to verify your email address.
+            We sent you a verification link. Please check your inbox and click the link to verify
+            your email address.
           </p>
         </div>
 
@@ -52,21 +53,15 @@ export default function VerifyEmailPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            <Button
-              variant="outline"
-              onClick={handleResend}
-              disabled={isResending}
-            >
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            <Button variant="outline" onClick={handleResend} disabled={isResending}>
               {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Resend verification email
             </Button>
           </div>
         )}
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           <Link href="/login" className="text-primary hover:underline">
             Back to login
           </Link>

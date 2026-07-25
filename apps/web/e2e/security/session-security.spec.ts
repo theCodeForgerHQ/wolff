@@ -20,16 +20,13 @@ test.describe('Session Security (Bug #326)', () => {
 
   test('should not access API routes without authentication', async ({ request }) => {
     // Try to access protected API routes without session cookies
-    const apiRoutes = [
-      '/api/quotes',
-      '/api/clients',
-    ];
+    const apiRoutes = ['/api/quotes', '/api/clients'];
 
     for (const route of apiRoutes) {
       const response = await request.get(route, {
         headers: {
           // No auth cookies
-          'cookie': '',
+          cookie: '',
         },
       });
 

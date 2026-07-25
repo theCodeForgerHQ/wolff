@@ -2,12 +2,7 @@
 
 import { useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartConfig,
   ChartContainer,
@@ -94,7 +89,11 @@ export function RevenueChart({
           existing.revenue += point.revenue;
           existing.invoiceCount += point.invoiceCount;
         } else {
-          monthly.set(monthKey, { date: `${monthKey}-01`, revenue: point.revenue, invoiceCount: point.invoiceCount });
+          monthly.set(monthKey, {
+            date: `${monthKey}-01`,
+            revenue: point.revenue,
+            invoiceCount: point.invoiceCount,
+          });
         }
       }
       return Array.from(monthly.values());
@@ -113,7 +112,11 @@ export function RevenueChart({
           existing.revenue += point.revenue;
           existing.invoiceCount += point.invoiceCount;
         } else {
-          weekly.set(weekKey, { date: weekKey, revenue: point.revenue, invoiceCount: point.invoiceCount });
+          weekly.set(weekKey, {
+            date: weekKey,
+            revenue: point.revenue,
+            invoiceCount: point.invoiceCount,
+          });
         }
       }
       return Array.from(weekly.values());
@@ -141,7 +144,7 @@ export function RevenueChart({
         <div>
           <CardTitle className="text-sm font-medium">Revenue</CardTitle>
           {!isEmpty && (
-            <p className="text-2xl font-semibold tracking-tight mt-1">
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               {formatFullCurrency(totalRevenue, currency)}
             </p>
           )}
@@ -164,7 +167,7 @@ export function RevenueChart({
       <CardContent className="pt-0">
         {isEmpty ? (
           <div className="flex h-[280px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">No revenue data for this period</p>
+            <p className="text-muted-foreground text-sm">No revenue data for this period</p>
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[280px] w-full">
@@ -195,10 +198,7 @@ export function RevenueChart({
                 width={65}
                 className="text-[11px]"
               />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent indicator="line" />}
-              />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
               <Area
                 type="natural"
                 dataKey="revenue"

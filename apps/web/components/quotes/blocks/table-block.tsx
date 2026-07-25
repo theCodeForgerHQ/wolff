@@ -25,9 +25,7 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
 
   const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
     const newRows = block.content.rows.map((row, rIdx) =>
-      rIdx === rowIndex
-        ? row.map((cell, cIdx) => (cIdx === colIndex ? value : cell))
-        : row
+      rIdx === rowIndex ? row.map((cell, cIdx) => (cIdx === colIndex ? value : cell)) : row
     );
     updateBlock(block.id, { rows: newRows });
   };
@@ -62,7 +60,7 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
 
   if (isEditing) {
     return (
-      <div className="rounded-lg border bg-card p-4 space-y-4">
+      <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -70,7 +68,9 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
               checked={block.content.striped}
               onCheckedChange={() => handleToggleOption('striped')}
             />
-            <Label htmlFor="striped" className="text-sm">Striped rows</Label>
+            <Label htmlFor="striped" className="text-sm">
+              Striped rows
+            </Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -78,7 +78,9 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
               checked={block.content.bordered}
               onCheckedChange={() => handleToggleOption('bordered')}
             />
-            <Label htmlFor="bordered" className="text-sm">Show borders</Label>
+            <Label htmlFor="bordered" className="text-sm">
+              Show borders
+            </Label>
           </div>
         </div>
 
@@ -108,7 +110,7 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
                     </div>
                   </th>
                 ))}
-                <th className="p-2 w-10">
+                <th className="w-10 p-2">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAddColumn}>
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -128,7 +130,7 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
                       />
                     </td>
                   ))}
-                  <td className="p-2 w-10">
+                  <td className="w-10 p-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -155,20 +157,15 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
 
   return (
     <div className="overflow-x-auto">
-      <table
-        className={cn(
-          'w-full text-sm',
-          block.content.bordered && 'border border-border'
-        )}
-      >
+      <table className={cn('w-full text-sm', block.content.bordered && 'border-border border')}>
         <thead>
-          <tr className={cn(block.content.bordered && 'border-b border-border')}>
+          <tr className={cn(block.content.bordered && 'border-border border-b')}>
             {block.content.headers.map((header, index) => (
               <th
                 key={`preview-header-${block.id}-${index}`}
                 className={cn(
-                  'p-3 text-left font-medium bg-muted/50',
-                  block.content.bordered && 'border border-border'
+                  'bg-muted/50 p-3 text-left font-medium',
+                  block.content.bordered && 'border-border border'
                 )}
               >
                 {header}
@@ -182,16 +179,13 @@ export function TableBlockContent({ block }: TableBlockContentProps) {
               key={`preview-row-${block.id}-${rowIndex}`}
               className={cn(
                 block.content.striped && rowIndex % 2 === 1 && 'bg-muted/30',
-                block.content.bordered && 'border-b border-border'
+                block.content.bordered && 'border-border border-b'
               )}
             >
               {row.map((cell, colIndex) => (
                 <td
                   key={`preview-cell-${block.id}-${rowIndex}-${colIndex}`}
-                  className={cn(
-                    'p-3',
-                    block.content.bordered && 'border border-border'
-                  )}
+                  className={cn('p-3', block.content.bordered && 'border-border border')}
                 >
                   {cell || <span className="text-muted-foreground">-</span>}
                 </td>

@@ -9,7 +9,6 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Data Table Controls', () => {
-
   test.describe('Page Size Selector', () => {
     const pageSizeTests = [
       { page: '/clients', label: 'Clients' },
@@ -24,13 +23,15 @@ test.describe('Data Table Controls', () => {
         await page.waitForLoadState('networkidle');
 
         // Look for page size selector (combobox near "Show" text or rows-per-page)
-        const pageSizeSelector = page.locator(
-          '[role="combobox"]:near(:text("Show")), ' +
-          'select:near(:text("Show")), ' +
-          '[role="combobox"]:near(:text("Rows")), ' +
-          'select:near(:text("rows")), ' +
-          'button:has-text("10")'
-        ).first();
+        const pageSizeSelector = page
+          .locator(
+            '[role="combobox"]:near(:text("Show")), ' +
+              'select:near(:text("Show")), ' +
+              '[role="combobox"]:near(:text("Rows")), ' +
+              'select:near(:text("rows")), ' +
+              'button:has-text("10")'
+          )
+          .first();
 
         if (!(await pageSizeSelector.isVisible().catch(() => false))) {
           // Page size selector may not exist if few items
@@ -74,11 +75,13 @@ test.describe('Data Table Controls', () => {
         await page.waitForLoadState('networkidle');
 
         // Find column settings button
-        const columnSettingsBtn = page.locator(
-          'button[aria-label="Column settings"], ' +
-          'button:has-text("Columns"), ' +
-          'button[aria-label*="column"]'
-        ).first();
+        const columnSettingsBtn = page
+          .locator(
+            'button[aria-label="Column settings"], ' +
+              'button:has-text("Columns"), ' +
+              'button[aria-label*="column"]'
+          )
+          .first();
 
         if (!(await columnSettingsBtn.isVisible().catch(() => false))) {
           test.skip();
@@ -92,10 +95,12 @@ test.describe('Data Table Controls', () => {
         await columnSettingsBtn.click();
 
         // A dropdown/popover should appear with column checkboxes
-        const dropdown = page.locator(
-          '[role="menu"], [role="dialog"], [role="listbox"], ' +
-          '[class*="popover"], [class*="dropdown"]'
-        ).first();
+        const dropdown = page
+          .locator(
+            '[role="menu"], [role="dialog"], [role="listbox"], ' +
+              '[class*="popover"], [class*="dropdown"]'
+          )
+          .first();
 
         if (await dropdown.isVisible().catch(() => false)) {
           await expect(dropdown).toBeVisible();
@@ -105,7 +110,7 @@ test.describe('Data Table Controls', () => {
             'input[type="checkbox"], [role="checkbox"], [role="menuitemcheckbox"]'
           );
 
-          if (await toggles.count() > 0) {
+          if ((await toggles.count()) > 0) {
             // Toggle the first option
             await toggles.first().click();
 
@@ -127,7 +132,9 @@ test.describe('Data Table Controls', () => {
       await page.waitForLoadState('networkidle');
 
       // Look for pagination area - page numbers are hidden on mobile (md:flex)
-      const paginationNav = page.locator('nav[aria-label="pagination"], [class*="pagination"]').first();
+      const paginationNav = page
+        .locator('nav[aria-label="pagination"], [class*="pagination"]')
+        .first();
 
       if (!(await paginationNav.isVisible().catch(() => false))) {
         // No pagination visible (not enough data for multiple pages)

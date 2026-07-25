@@ -99,8 +99,7 @@ const jsonLd = {
   name: 'Wolff',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web, Docker',
-  description:
-    'Open-source visual quote and invoice builder for freelancers and small businesses',
+  description: 'Open-source visual quote and invoice builder for freelancers and small businesses',
   url: getBaseUrl(),
   downloadUrl: process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/theCodeForgerHQ/wolff',
   offers: [
@@ -152,7 +151,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-hidden"
+          className="focus:z-100 focus:bg-primary focus:text-primary-foreground focus:outline-hidden sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded-md focus:px-4 focus:py-2"
         >
           Skip to main content
         </a>

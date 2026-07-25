@@ -43,10 +43,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const startOfMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
   const endOfMonth = startOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 1));
 
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   const [
     totalQuotes,
@@ -156,16 +153,36 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   // Sum with currency conversion
   const totalRevenue = paidInvoiceRows.reduce(
-    (sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+    (sum, inv) =>
+      sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+    0
   );
   const outstandingAmount = unpaidInvoiceRows.reduce(
-    (sum, inv) => sum + convertToBase(toNumber(inv.total) - toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+    (sum, inv) =>
+      sum +
+      convertToBase(
+        toNumber(inv.total) - toNumber(inv.amountPaid),
+        inv.currency || 'USD',
+        baseCurrency,
+        rates
+      ),
+    0
   );
   const overdueAmount = overdueInvoiceRows.reduce(
-    (sum, inv) => sum + convertToBase(toNumber(inv.total) - toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+    (sum, inv) =>
+      sum +
+      convertToBase(
+        toNumber(inv.total) - toNumber(inv.amountPaid),
+        inv.currency || 'USD',
+        baseCurrency,
+        rates
+      ),
+    0
   );
   const revenueThisMonth = paidThisMonthRows.reduce(
-    (sum, p) => sum + convertToBase(toNumber(p.amount), p.invoice?.currency || 'USD', baseCurrency, rates), 0
+    (sum, p) =>
+      sum + convertToBase(toNumber(p.amount), p.invoice?.currency || 'USD', baseCurrency, rates),
+    0
   );
 
   const conversionRate = sentQuotes > 0 ? (acceptedQuotes / sentQuotes) * 100 : 0;
@@ -176,10 +193,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   // Collection rate: paid / total billed (converted)
   const totalBilled = billedInvoiceRows.reduce(
-    (sum, inv) => sum + convertToBase(toNumber(inv.total), inv.currency || 'USD', baseCurrency, rates), 0
+    (sum, inv) =>
+      sum + convertToBase(toNumber(inv.total), inv.currency || 'USD', baseCurrency, rates),
+    0
   );
   const totalCollected = billedInvoiceRows.reduce(
-    (sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+    (sum, inv) =>
+      sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+    0
   );
   const collectionRate = totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 0;
 
@@ -250,10 +271,7 @@ export async function getRevenueData(period: DashboardPeriod = '30d'): Promise<R
   const { workspaceId } = await getCurrentUserWorkspace();
   const startDate = getPeriodStartDate(period);
 
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   // Query Payment records with invoice currency for conversion
   const payments = await prisma.payment.findMany({
@@ -277,7 +295,12 @@ export async function getRevenueData(period: DashboardPeriod = '30d'): Promise<R
     if (!payment.processedAt) return;
     const dateKey = format(payment.processedAt, 'yyyy-MM-dd');
     const existing = dataMap.get(dateKey) || { revenue: 0, count: 0 };
-    const converted = convertToBase(toNumber(payment.amount), payment.invoice?.currency || 'USD', baseCurrency, rates);
+    const converted = convertToBase(
+      toNumber(payment.amount),
+      payment.invoice?.currency || 'USD',
+      baseCurrency,
+      rates
+    );
     dataMap.set(dateKey, {
       revenue: existing.revenue + converted,
       count: existing.count + 1,
@@ -440,14 +463,12 @@ export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
         date: i.createdAt,
         relatedId: i.id,
         relatedType: 'invoice' as const,
-      })),
+      }))
     );
   }
 
   // Sort by date and limit
-  return activities
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, limit);
+  return activities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, limit);
 }
 
 function mapQuoteEventType(type: string): ActivityItem['type'] {
@@ -514,15 +535,14 @@ function getEventTitle(type: string, reference: string): string {
 // Get revenue sparkline (last 6 months of monthly revenue)
 export async function getRevenueSparkline(): Promise<RevenueSparklinePoint[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
   const now = new Date();
   const sixMonthsAgo = startOfDay(new Date(now.getFullYear(), now.getMonth() - 5, 1));
 
   // Query Payment records with currency for conversion
-  const revenueByMonth = await prisma.$queryRaw<Array<{ month_key: string; amount: number; currency: string }>>`
+  const revenueByMonth = await prisma.$queryRaw<
+    Array<{ month_key: string; amount: number; currency: string }>
+  >`
     SELECT to_char(p.processed_at, 'YYYY-MM') as month_key, p.amount::float as amount, COALESCE(i.currency, 'USD') as currency
     FROM payments p
     JOIN invoices i ON p.invoice_id = i.id
@@ -603,10 +623,7 @@ import type {
 // Get analytics stats (extended dashboard stats with previous month comparison)
 export async function getAnalyticsStats(): Promise<AnalyticsStats> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
   const now = new Date();
   const startOfCurrentMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
   const startOfPrevMonth = startOfDay(subMonths(startOfCurrentMonth, 1));
@@ -616,11 +633,7 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
   const baseStats = await getDashboardStats();
 
   // Get additional analytics-specific data with currency
-  const [
-    acceptedQuoteRows,
-    prevMonthPaymentRows,
-    prevMonthQuotesResult,
-  ] = await Promise.all([
+  const [acceptedQuoteRows, prevMonthPaymentRows, prevMonthQuotesResult] = await Promise.all([
     // Accepted quotes with currency for avg deal value
     prisma.quote.findMany({
       where: {
@@ -651,13 +664,16 @@ export async function getAnalyticsStats(): Promise<AnalyticsStats> {
 
   // Average deal value with conversion
   const totalDealValue = acceptedQuoteRows.reduce(
-    (sum, q) => sum + convertToBase(toNumber(q.total), q.currency || 'USD', baseCurrency, rates), 0
+    (sum, q) => sum + convertToBase(toNumber(q.total), q.currency || 'USD', baseCurrency, rates),
+    0
   );
   const avgDealValue = acceptedQuoteRows.length > 0 ? totalDealValue / acceptedQuoteRows.length : 0;
 
   // Previous month revenue with conversion
   const prevMonthRevenue = prevMonthPaymentRows.reduce(
-    (sum, p) => sum + convertToBase(toNumber(p.amount), p.invoice?.currency || 'USD', baseCurrency, rates), 0
+    (sum, p) =>
+      sum + convertToBase(toNumber(p.amount), p.invoice?.currency || 'USD', baseCurrency, rates),
+    0
   );
 
   return {
@@ -674,67 +690,59 @@ export async function getConversionFunnelData(
 ): Promise<ConversionFunnelData> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
-  const dateFilter = dateRange
-    ? { gte: dateRange.from, lte: dateRange.to }
-    : undefined;
+  const dateFilter = dateRange ? { gte: dateRange.from, lte: dateRange.to } : undefined;
 
-  const [
-    quotesCreated,
-    quotesSent,
-    quotesViewed,
-    quotesAccepted,
-    invoicesCreated,
-    invoicesPaid,
-  ] = await Promise.all([
-    prisma.quote.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        createdAt: dateFilter,
-      },
-    }),
-    prisma.quote.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        sentAt: dateFilter || { not: null },
-      },
-    }),
-    prisma.quote.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        viewedAt: dateFilter || { not: null },
-      },
-    }),
-    prisma.quote.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        status: { in: ['accepted', 'converted'] },
-        ...(dateFilter && { acceptedAt: dateFilter }),
-      },
-    }),
-    // Invoices created FROM accepted/converted quotes (part of the quote->invoice pipeline)
-    prisma.invoice.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        quoteId: { not: null },
-        quote: { status: { in: ['accepted', 'converted'] } },
-        createdAt: dateFilter,
-      },
-    }),
-    prisma.invoice.count({
-      where: {
-        workspaceId,
-        deletedAt: null,
-        status: 'paid',
-        quoteId: { not: null },
-        ...(dateFilter && { paidAt: dateFilter }),
-      },
-    }),
-  ]);
+  const [quotesCreated, quotesSent, quotesViewed, quotesAccepted, invoicesCreated, invoicesPaid] =
+    await Promise.all([
+      prisma.quote.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          createdAt: dateFilter,
+        },
+      }),
+      prisma.quote.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          sentAt: dateFilter || { not: null },
+        },
+      }),
+      prisma.quote.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          viewedAt: dateFilter || { not: null },
+        },
+      }),
+      prisma.quote.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          status: { in: ['accepted', 'converted'] },
+          ...(dateFilter && { acceptedAt: dateFilter }),
+        },
+      }),
+      // Invoices created FROM accepted/converted quotes (part of the quote->invoice pipeline)
+      prisma.invoice.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          quoteId: { not: null },
+          quote: { status: { in: ['accepted', 'converted'] } },
+          createdAt: dateFilter,
+        },
+      }),
+      prisma.invoice.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          status: 'paid',
+          quoteId: { not: null },
+          ...(dateFilter && { paidAt: dateFilter }),
+        },
+      }),
+    ]);
 
   return {
     quotesCreated,
@@ -751,10 +759,7 @@ export async function getPaymentAgingData(): Promise<PaymentAgingData> {
   const { workspaceId } = await getCurrentUserWorkspace();
   const now = new Date();
 
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   // Get all unpaid invoices with currency
   const unpaidInvoices = await prisma.invoice.findMany({
@@ -782,7 +787,12 @@ export async function getPaymentAgingData(): Promise<PaymentAgingData> {
 
   unpaidInvoices.forEach((invoice) => {
     const rawOutstanding = toNumber(invoice.total) - toNumber(invoice.amountPaid);
-    const outstanding = convertToBase(rawOutstanding, invoice.currency || 'USD', baseCurrency, rates);
+    const outstanding = convertToBase(
+      rawOutstanding,
+      invoice.currency || 'USD',
+      baseCurrency,
+      rates
+    );
     aging.totalOutstanding += outstanding;
 
     if (!invoice.dueDate) {
@@ -816,10 +826,7 @@ export async function getClientDistributionData(
 ): Promise<ClientDistributionData[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   // Get all clients with their addresses and invoice totals
   const clients = await prisma.client.findMany({
@@ -865,7 +872,8 @@ export async function getClientDistributionData(
     };
 
     const revenue = client.invoices.reduce(
-      (sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+      (sum, inv) =>
+        sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
       0
     );
 
@@ -894,12 +902,11 @@ export async function getMonthlyComparisonData(
   months: number = 12
 ): Promise<MonthlyComparisonData[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
   const now = new Date();
-  const rangeStart = startOfDay(new Date(subMonths(now, months - 1).getFullYear(), subMonths(now, months - 1).getMonth(), 1));
+  const rangeStart = startOfDay(
+    new Date(subMonths(now, months - 1).getFullYear(), subMonths(now, months - 1).getMonth(), 1)
+  );
 
   // Run all 4 grouped queries in parallel
   const [revenueRows, quotesByMonth, invoicesByMonth, clientsByMonth] = await Promise.all([
@@ -941,9 +948,9 @@ export async function getMonthlyComparisonData(
     const converted = convertToBase(Number(row.amount), row.currency, baseCurrency, rates);
     revenueMap.set(row.month_key, (revenueMap.get(row.month_key) ?? 0) + converted);
   }
-  const quotesMap = new Map(quotesByMonth.map(r => [r.month_key, Number(r.count)]));
-  const invoicesMap = new Map(invoicesByMonth.map(r => [r.month_key, Number(r.count)]));
-  const clientsMap = new Map(clientsByMonth.map(r => [r.month_key, Number(r.count)]));
+  const quotesMap = new Map(quotesByMonth.map((r) => [r.month_key, Number(r.count)]));
+  const invoicesMap = new Map(invoicesByMonth.map((r) => [r.month_key, Number(r.count)]));
+  const clientsMap = new Map(clientsByMonth.map((r) => [r.month_key, Number(r.count)]));
 
   // Build result for each month
   const result: MonthlyComparisonData[] = [];
@@ -968,10 +975,7 @@ export async function getTopClientsByRevenue(
   limit: number = 5
 ): Promise<{ name: string; revenue: number }[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   const clients = await prisma.client.findMany({
     where: {
@@ -998,7 +1002,9 @@ export async function getTopClientsByRevenue(
   const clientRevenues = clients.map((client) => ({
     name: client.company || client.name,
     revenue: client.invoices.reduce(
-      (sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+      (sum, inv) =>
+        sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+      0
     ),
   }));
 
@@ -1011,12 +1017,20 @@ export async function getTopClientsByRevenue(
 // Get client lifetime values
 export async function getClientLTVData(
   limit: number = 5
-): Promise<{ clients: { id: string; name: string; email?: string; ltv: number; growth?: number; isGrowing?: boolean }[]; averageLTV: number; totalClients: number }> {
+): Promise<{
+  clients: {
+    id: string;
+    name: string;
+    email?: string;
+    ltv: number;
+    growth?: number;
+    isGrowing?: boolean;
+  }[];
+  averageLTV: number;
+  totalClients: number;
+}> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
 
   const sixMonthsAgo = subMonths(new Date(), 6);
   const twelveMonthsAgo = subMonths(new Date(), 12);
@@ -1047,16 +1061,26 @@ export async function getClientLTVData(
 
   const clientLTVs = clients.map((client) => {
     const totalLtv = client.invoices.reduce(
-      (sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0
+      (sum, inv) =>
+        sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+      0
     );
 
     // Calculate growth: compare last 6 months revenue vs prior 6 months
     const recentRevenue = client.invoices
       .filter((inv) => inv.paidAt && inv.paidAt >= sixMonthsAgo)
-      .reduce((sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0);
+      .reduce(
+        (sum, inv) =>
+          sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+        0
+      );
     const olderRevenue = client.invoices
       .filter((inv) => inv.paidAt && inv.paidAt >= twelveMonthsAgo && inv.paidAt < sixMonthsAgo)
-      .reduce((sum, inv) => sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates), 0);
+      .reduce(
+        (sum, inv) =>
+          sum + convertToBase(toNumber(inv.amountPaid), inv.currency || 'USD', baseCurrency, rates),
+        0
+      );
 
     let growth: number | undefined;
     let isGrowing: boolean | undefined;
@@ -1095,16 +1119,21 @@ export async function getRevenueForecast(
   forecastMonths: number = 3
 ): Promise<ForecastDataPoint[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const [baseCurrency, rates] = await Promise.all([
-    getWorkspaceCurrency(),
-    getExchangeRates(),
-  ]);
+  const [baseCurrency, rates] = await Promise.all([getWorkspaceCurrency(), getExchangeRates()]);
   const now = new Date();
 
   // Get historical monthly revenue with currency for conversion
-  const rangeStart = startOfDay(new Date(subMonths(now, historicalMonths - 1).getFullYear(), subMonths(now, historicalMonths - 1).getMonth(), 1));
+  const rangeStart = startOfDay(
+    new Date(
+      subMonths(now, historicalMonths - 1).getFullYear(),
+      subMonths(now, historicalMonths - 1).getMonth(),
+      1
+    )
+  );
 
-  const revenueRows = await prisma.$queryRaw<Array<{ month_key: string; amount_paid: number; currency: string }>>`
+  const revenueRows = await prisma.$queryRaw<
+    Array<{ month_key: string; amount_paid: number; currency: string }>
+  >`
     SELECT to_char(i.paid_at, 'YYYY-MM') as month_key, i.amount_paid::float as amount_paid, COALESCE(i.currency, 'USD') as currency
     FROM invoices i
     WHERE i.workspace_id = ${workspaceId} AND i.deleted_at IS NULL
@@ -1140,7 +1169,10 @@ export async function getRevenueForecast(
   }
 
   // Calculate regression
-  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumXX = 0;
   for (let i = 0; i < n; i++) {
     const val = values[i] ?? 0;
     sumX += i;

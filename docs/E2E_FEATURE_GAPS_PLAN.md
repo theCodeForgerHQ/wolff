@@ -17,15 +17,15 @@ The test user's workspace had `onboardingCompleted: false`, causing redirect to 
 
 ## Gap Analysis Summary
 
-| Category | Failing Tests | Root Cause | Priority |
-|----------|---------------|------------|----------|
-| API Routes | 3 | No REST API endpoints | P0 |
-| Rate Card Integration | 3 | No rate card panel in quote builder | P1 |
-| Invoice Payments | 6 | UI wiring incomplete | P0 |
-| Invoice States | 8 | UI missing for state transitions | P0 |
-| PDF Branding | 3 | Branding not passed to PDF template | P2 |
-| Team/Billing Settings | 8 | Pages not implemented | P2 |
-| Auth Tests | 2 | Test-specific issues | P1 |
+| Category              | Failing Tests | Root Cause                          | Priority |
+| --------------------- | ------------- | ----------------------------------- | -------- |
+| API Routes            | 3             | No REST API endpoints               | P0       |
+| Rate Card Integration | 3             | No rate card panel in quote builder | P1       |
+| Invoice Payments      | 6             | UI wiring incomplete                | P0       |
+| Invoice States        | 8             | UI missing for state transitions    | P0       |
+| PDF Branding          | 3             | Branding not passed to PDF template | P2       |
+| Team/Billing Settings | 8             | Pages not implemented               | P2       |
+| Auth Tests            | 2             | Test-specific issues                | P1       |
 
 ---
 
@@ -59,6 +59,7 @@ The test user's workspace had `onboardingCompleted: false`, causing redirect to 
 ```
 
 **Implementation:**
+
 1. Create GET handler that calls existing `getQuotes()` action
 2. Transform response to match expected shape
 3. Add pagination support
@@ -120,9 +121,11 @@ The `RecordPaymentDialog` component exists at `apps/web/components/invoices/reco
 ### 2.2 Invoice State UI
 
 **Files to modify:**
+
 - `apps/web/components/invoices/invoice-detail.tsx`
 
 **Add:**
+
 - Void button (visible for non-paid invoices)
 - Status badge with proper styling for all states
 - Days overdue display when overdue
@@ -136,6 +139,7 @@ The `RecordPaymentDialog` component exists at `apps/web/components/invoices/reco
 **Location:** `apps/web/components/quotes/builder/rate-card-panel.tsx`
 
 **Features:**
+
 - List available rate cards from workspace
 - Display rate card items with name/rate
 - Click to add item as line item in quote
@@ -150,6 +154,7 @@ The `RecordPaymentDialog` component exists at `apps/web/components/invoices/reco
 - Copy rate value when adding (not reference)
 
 **Required data-testid:**
+
 - `data-testid="rate-card-panel"`
 - `data-testid="rate-card-item"` on each selectable item
 - `data-testid="quote-line-item"` on added line items
@@ -167,10 +172,11 @@ The `RecordPaymentDialog` component exists at `apps/web/components/invoices/reco
 3. Apply colors to template HTML
 
 **Branding fields:**
+
 ```typescript
 interface BrandingSettings {
-  primaryColor: string;    // Default: #3B82F6
-  accentColor: string;     // Default: #10B981
+  primaryColor: string; // Default: #3B82F6
+  accentColor: string; // Default: #10B981
   logoUrl?: string;
 }
 ```
@@ -178,6 +184,7 @@ interface BrandingSettings {
 ### 4.2 Update PDF Template
 
 **Template changes:**
+
 - Use `primaryColor` for headers, buttons
 - Use `accentColor` for highlights
 - Include logo image if available
@@ -191,6 +198,7 @@ interface BrandingSettings {
 **Location:** `apps/web/app/(dashboard)/settings/team/page.tsx`
 
 **Features:**
+
 - List workspace members with roles
 - Role selector (owner, admin, member, viewer)
 - Invite button with email input
@@ -198,6 +206,7 @@ interface BrandingSettings {
 - Permission: Owner can change any role, Admin can't promote to owner
 
 **Components needed:**
+
 - `TeamMemberList`
 - `InviteMemberDialog`
 - `RoleSelector`
@@ -207,6 +216,7 @@ interface BrandingSettings {
 **Location:** `apps/web/app/(dashboard)/settings/billing/page.tsx`
 
 **Features:**
+
 - Current subscription status
 - Plan comparison
 - Upgrade/downgrade buttons
@@ -220,6 +230,7 @@ interface BrandingSettings {
 **Location:** `apps/web/app/(dashboard)/settings/workspace/page.tsx`
 
 **Features:**
+
 - Workspace name/slug editing
 - Danger zone with delete workspace button
 - Transfer ownership option
@@ -289,25 +300,25 @@ npx playwright test e2e/regression/permission-matrix/
 
 ## Files to Create
 
-| File | Phase |
-|------|-------|
-| `apps/web/app/api/quotes/route.ts` | 1 |
-| `apps/web/app/api/invoices/route.ts` | 1 |
-| `apps/web/app/api/clients/route.ts` | 1 |
-| `apps/web/components/quotes/builder/rate-card-panel.tsx` | 3 |
-| `apps/web/app/(dashboard)/settings/team/page.tsx` | 5 |
-| `apps/web/app/(dashboard)/settings/billing/page.tsx` | 5 |
-| `apps/web/app/(dashboard)/settings/workspace/page.tsx` | 5 |
+| File                                                     | Phase |
+| -------------------------------------------------------- | ----- |
+| `apps/web/app/api/quotes/route.ts`                       | 1     |
+| `apps/web/app/api/invoices/route.ts`                     | 1     |
+| `apps/web/app/api/clients/route.ts`                      | 1     |
+| `apps/web/components/quotes/builder/rate-card-panel.tsx` | 3     |
+| `apps/web/app/(dashboard)/settings/team/page.tsx`        | 5     |
+| `apps/web/app/(dashboard)/settings/billing/page.tsx`     | 5     |
+| `apps/web/app/(dashboard)/settings/workspace/page.tsx`   | 5     |
 
 ## Files to Modify
 
-| File | Phase | Changes |
-|------|-------|---------|
-| `apps/web/app/(dashboard)/invoices/[id]/page.tsx` | 2 | Add payment button, status UI |
-| `apps/web/components/invoices/invoice-detail.tsx` | 2 | Add void button, overdue display |
-| `apps/web/components/quotes/builder/quote-builder.tsx` | 3 | Add rate card panel |
-| `apps/web/lib/services/pdf.ts` | 4 | Add branding to template |
-| `apps/web/app/(dashboard)/settings/layout.tsx` | 5 | Add team/billing nav items |
+| File                                                   | Phase | Changes                          |
+| ------------------------------------------------------ | ----- | -------------------------------- |
+| `apps/web/app/(dashboard)/invoices/[id]/page.tsx`      | 2     | Add payment button, status UI    |
+| `apps/web/components/invoices/invoice-detail.tsx`      | 2     | Add void button, overdue display |
+| `apps/web/components/quotes/builder/quote-builder.tsx` | 3     | Add rate card panel              |
+| `apps/web/lib/services/pdf.ts`                         | 4     | Add branding to template         |
+| `apps/web/app/(dashboard)/settings/layout.tsx`         | 5     | Add team/billing nav items       |
 
 ---
 

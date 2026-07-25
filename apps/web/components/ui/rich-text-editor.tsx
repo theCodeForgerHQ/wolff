@@ -52,7 +52,7 @@ function ToolbarButton({
       title={title}
       aria-label={title}
       className={cn(
-        'p-1.5 rounded-md transition-colors',
+        'rounded-md p-1.5 transition-colors',
         active
           ? 'bg-foreground text-background'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -64,7 +64,7 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-5 bg-border mx-0.5" />;
+  return <div className="bg-border mx-0.5 h-5 w-px" />;
 }
 
 export function RichTextEditor({
@@ -123,7 +123,9 @@ export function RichTextEditor({
       skipNextUpdate.current = true;
       editor.commands.setContent(value, false);
       // Reset flag after a tick to allow future user edits
-      requestAnimationFrame(() => { skipNextUpdate.current = false; });
+      requestAnimationFrame(() => {
+        skipNextUpdate.current = false;
+      });
     }
   }, [value, editor]);
 
@@ -146,12 +148,7 @@ export function RichTextEditor({
       return;
     }
 
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange('link')
-      .setLink({ href: url })
-      .run();
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }, [editor]);
 
   const addImage = useCallback(() => {
@@ -171,9 +168,9 @@ export function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className={cn('rounded-lg border bg-white dark:bg-background', className)}>
+    <div className={cn('dark:bg-background rounded-lg border bg-white', className)}>
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b flex-wrap">
+      <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         <ToolbarButton
           title="Bold"
           active={editor.isActive('bold')}
@@ -198,11 +195,7 @@ export function RichTextEditor({
           <UnderlineIcon className="h-4 w-4" />
         </ToolbarButton>
 
-        <ToolbarButton
-          title="Link"
-          active={editor.isActive('link')}
-          onClick={setLink}
-        >
+        <ToolbarButton title="Link" active={editor.isActive('link')} onClick={setLink}>
           <LinkIcon className="h-4 w-4" />
         </ToolbarButton>
 
@@ -260,10 +253,7 @@ export function RichTextEditor({
 
         <ToolbarDivider />
 
-        <ToolbarButton
-          title="Image"
-          onClick={addImage}
-        >
+        <ToolbarButton title="Image" onClick={addImage}>
           <ImageIcon className="h-4 w-4" />
         </ToolbarButton>
 
@@ -285,7 +275,7 @@ export function RichTextEditor({
           <button
             type="button"
             onClick={onAttachment}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
           >
             <Paperclip className="h-4 w-4" />
             Attachment

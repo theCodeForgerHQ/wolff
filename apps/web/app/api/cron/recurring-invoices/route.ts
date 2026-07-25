@@ -19,10 +19,7 @@ export async function GET(request: Request) {
 
   // Bug #3: Require CRON_SECRET in ALL environments to prevent unauthorized access
   if (!cronSecret) {
-    return NextResponse.json(
-      { error: 'CRON_SECRET not configured' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
   if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,7 +35,14 @@ export async function GET(request: Request) {
     // Find recurring invoices due for generation in batches to avoid memory issues
     const BATCH_SIZE = 50;
     let offset = 0;
-    let eligibleInvoices: Awaited<ReturnType<typeof prisma.invoice.findMany<{ where: any; include: { lineItems: { orderBy: { sortOrder: 'asc' } } } }>>> = [];
+    let eligibleInvoices: Awaited<
+      ReturnType<
+        typeof prisma.invoice.findMany<{
+          where: any;
+          include: { lineItems: { orderBy: { sortOrder: 'asc' } } };
+        }>
+      >
+    > = [];
     let totalFound = 0;
 
     // Paginate through all due invoices in batches of 50
@@ -76,7 +80,10 @@ export async function GET(request: Request) {
             where: { id: parent.id },
             data: { isRecurring: false, nextRecurringDate: null },
           });
-          logger.info({ invoiceNumber: parent.invoiceNumber }, '[Recurring Invoices] End date passed, disabled recurring');
+          logger.info(
+            { invoiceNumber: parent.invoiceNumber },
+            '[Recurring Invoices] End date passed, disabled recurring'
+          );
           continue;
         }
 
@@ -199,11 +206,17 @@ export async function GET(request: Request) {
         });
 
         generated++;
-        logger.info({ invoiceNumber, parentInvoiceNumber: parent.invoiceNumber }, '[Recurring Invoices] Generated invoice');
+        logger.info(
+          { invoiceNumber, parentInvoiceNumber: parent.invoiceNumber },
+          '[Recurring Invoices] Generated invoice'
+        );
       } catch (err) {
         failed++;
         errors.push(`${parent.invoiceNumber}: Failed to generate recurring invoice`);
-        logger.error({ err, parentInvoiceNumber: parent.invoiceNumber }, '[Recurring Invoices] Failed to generate');
+        logger.error(
+          { err, parentInvoiceNumber: parent.invoiceNumber },
+          '[Recurring Invoices] Failed to generate'
+        );
       }
     }
 

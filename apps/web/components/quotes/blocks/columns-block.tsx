@@ -50,13 +50,15 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
 
   if (isEditing) {
     return (
-      <div className="rounded-lg border bg-card p-4 space-y-4">
+      <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex gap-4">
           <div className="flex-1">
-            <Label className="text-xs text-muted-foreground">Column Ratio</Label>
+            <Label className="text-muted-foreground text-xs">Column Ratio</Label>
             <Select
               value={block.content.ratio}
-              onValueChange={(value) => handleChange('ratio', value as ColumnsBlock['content']['ratio'])}
+              onValueChange={(value) =>
+                handleChange('ratio', value as ColumnsBlock['content']['ratio'])
+              }
             >
               <SelectTrigger className="mt-1">
                 <SelectValue />
@@ -71,10 +73,12 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
             </Select>
           </div>
           <div className="flex-1">
-            <Label className="text-xs text-muted-foreground">Gap Size</Label>
+            <Label className="text-muted-foreground text-xs">Gap Size</Label>
             <Select
               value={block.content.gap}
-              onValueChange={(value) => handleChange('gap', value as ColumnsBlock['content']['gap'])}
+              onValueChange={(value) =>
+                handleChange('gap', value as ColumnsBlock['content']['gap'])
+              }
             >
               <SelectTrigger className="mt-1">
                 <SelectValue />
@@ -91,7 +95,7 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
         <div className={cn('flex', gap)}>
           <div
             className={cn(
-              'min-h-[100px] rounded-md border-2 border-dashed border-muted-foreground/30 p-4 flex items-center justify-center text-sm text-muted-foreground',
+              'border-muted-foreground/30 text-muted-foreground flex min-h-[100px] items-center justify-center rounded-md border-2 border-dashed p-4 text-sm',
               ratio.left
             )}
           >
@@ -102,7 +106,7 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
           </div>
           <div
             className={cn(
-              'min-h-[100px] rounded-md border-2 border-dashed border-muted-foreground/30 p-4 flex items-center justify-center text-sm text-muted-foreground',
+              'border-muted-foreground/30 text-muted-foreground flex min-h-[100px] items-center justify-center rounded-md border-2 border-dashed p-4 text-sm',
               ratio.right
             )}
           >
@@ -113,7 +117,7 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="text-muted-foreground text-center text-xs">
           Drag blocks into columns to add content (coming soon)
         </p>
       </div>
@@ -126,13 +130,13 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
         {block.content.leftContent.length > 0 ? (
           <div className="space-y-2">
             {block.content.leftContent.map((childBlock) => (
-              <div key={childBlock.id} className="rounded bg-muted/50 p-3 text-sm">
+              <div key={childBlock.id} className="bg-muted/50 rounded p-3 text-sm">
                 {childBlock.type}
               </div>
             ))}
           </div>
         ) : (
-          <div className="h-full min-h-[60px] rounded-md border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-sm text-muted-foreground">
+          <div className="border-muted-foreground/20 text-muted-foreground flex h-full min-h-[60px] items-center justify-center rounded-md border-2 border-dashed text-sm">
             Empty
           </div>
         )}
@@ -141,13 +145,13 @@ export function ColumnsBlockContent({ block }: ColumnsBlockContentProps) {
         {block.content.rightContent.length > 0 ? (
           <div className="space-y-2">
             {block.content.rightContent.map((childBlock) => (
-              <div key={childBlock.id} className="rounded bg-muted/50 p-3 text-sm">
+              <div key={childBlock.id} className="bg-muted/50 rounded p-3 text-sm">
                 {childBlock.type}
               </div>
             ))}
           </div>
         ) : (
-          <div className="h-full min-h-[60px] rounded-md border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-sm text-muted-foreground">
+          <div className="border-muted-foreground/20 text-muted-foreground flex h-full min-h-[60px] items-center justify-center rounded-md border-2 border-dashed text-sm">
             Empty
           </div>
         )}

@@ -7,13 +7,7 @@ import { Loader2, ExternalLink, CheckCircle, AlertCircle, CreditCard } from 'luc
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -58,7 +52,7 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
       // Clean up URL params
       window.history.replaceState({}, '', window.location.pathname);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Low #64: Added toast feedback on save
@@ -104,25 +98,24 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <CreditCard className="h-5 w-5 text-primary" />
+            <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+              <CreditCard className="text-primary h-5 w-5" />
             </div>
             <div>
               <CardTitle>Stripe Connect</CardTitle>
-              <CardDescription>
-                Accept credit card payments from your clients
-              </CardDescription>
+              <CardDescription>Accept credit card payments from your clients</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {!stripeEnabled ? (
             <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
               <div>
                 <p className="font-medium text-amber-900">Stripe Not Configured</p>
-                <p className="text-sm text-amber-700 mt-1">
-                  Stripe API keys are not configured. Please set STRIPE_SECRET_KEY in your environment variables to enable payment processing.
+                <p className="mt-1 text-sm text-amber-700">
+                  Stripe API keys are not configured. Please set STRIPE_SECRET_KEY in your
+                  environment variables to enable payment processing.
                 </p>
               </div>
             </div>
@@ -132,7 +125,7 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="font-medium">Connected to Stripe</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     You can accept card payments from clients
                   </p>
                 </div>
@@ -148,7 +141,7 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
                   <AlertCircle className="h-5 w-5 text-amber-600" />
                   <div>
                     <p className="font-medium">Onboarding Incomplete</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Complete your Stripe account setup to accept payments
                     </p>
                   </div>
@@ -163,11 +156,7 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
                   Continue Setup
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCheckStatus}
-                  disabled={isCheckingStatus}
-                >
+                <Button variant="outline" onClick={handleCheckStatus} disabled={isCheckingStatus}>
                   {isCheckingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Check Status
                 </Button>
@@ -176,7 +165,8 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
           ) : (
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Connect your Stripe account to accept credit card and other digital payments directly through invoices.
+                Connect your Stripe account to accept credit card and other digital payments
+                directly through invoices.
               </p>
               <Button onClick={handleStripeConnect} disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -192,15 +182,13 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
       <Card>
         <CardHeader>
           <CardTitle>Payment Options</CardTitle>
-          <CardDescription>
-            Configure how payments are processed for your invoices
-          </CardDescription>
+          <CardDescription>Configure how payments are processed for your invoices</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="passProcessingFees">Pass Processing Fees to Client</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Add Stripe processing fees (2.9% + $0.30) to the invoice total
               </p>
             </div>
@@ -233,7 +221,7 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
                 <SelectItem value="60">Net 60</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Default number of days until payment is due
             </p>
           </div>

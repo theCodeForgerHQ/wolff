@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 function LoginFormFallback() {
   return (
     <div className="flex items-center justify-center py-12">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
     </div>
   );
 }
@@ -30,18 +30,16 @@ export default async function LoginPage() {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email to sign in to your account
-        </p>
+        <p className="text-muted-foreground text-sm">Enter your email to sign in to your account</p>
       </div>
 
       <Suspense fallback={<LoginFormFallback />}>
         <LoginForm />
       </Suspense>
 
-      <p className="px-8 text-center text-sm text-muted-foreground">
+      <p className="text-muted-foreground px-8 text-center text-sm">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="underline underline-offset-4 hover:text-primary">
+        <Link href="/register" className="hover:text-primary underline underline-offset-4">
           Sign up
         </Link>
       </p>

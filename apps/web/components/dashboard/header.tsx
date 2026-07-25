@@ -40,7 +40,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     : user.email?.[0]?.toUpperCase() || 'U';
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-4">
+    <header className="bg-card flex h-16 items-center justify-between border-b px-4">
       {/* Mobile Nav + Search */}
       <div className="flex items-center gap-2 md:gap-4">
         {/* Mobile Navigation */}
@@ -48,10 +48,10 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         {/* Search */}
         {searchOpen ? (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="Search..."
-              className="w-40 sm:w-60 md:w-80 pl-9"
+              className="w-40 pl-9 sm:w-60 md:w-80"
               autoFocus
               onBlur={() => setSearchOpen(false)}
             />
@@ -60,7 +60,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
           <Button variant="ghost" size="sm" onClick={() => setSearchOpen(true)}>
             <Search className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Search</span>
-            <kbd className="ml-4 hidden rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground md:inline">
+            <kbd className="bg-muted text-muted-foreground ml-4 hidden rounded px-2 py-0.5 text-xs md:inline">
               ⌘K
             </kbd>
           </Button>
@@ -88,7 +88,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground h-auto p-0 text-xs"
                 disabled
               >
                 Mark all as read
@@ -97,9 +97,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-y-auto">
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Bell className="h-8 w-8 text-muted-foreground mb-2" />
+                <Bell className="text-muted-foreground mb-2 h-8 w-8" />
                 <p className="text-sm font-medium">No new notifications</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   We&apos;ll notify you when something arrives
                 </p>
               </div>
@@ -125,7 +125,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                <p className="text-muted-foreground text-xs leading-none">{user.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -1,15 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ChartCard } from './chart-card';
 import {
   CHART_COLORS,
@@ -114,11 +106,7 @@ export function MonthlyComparisonChart({
   return (
     <ChartCard
       title="Monthly Comparison"
-      description={
-        isEmpty
-          ? undefined
-          : `${data.length} months, Avg: ${formatValue(average)}`
-      }
+      description={isEmpty ? undefined : `${data.length} months, Avg: ${formatValue(average)}`}
       className={className}
       isLoading={isLoading}
       isEmpty={isEmpty}
@@ -127,10 +115,7 @@ export function MonthlyComparisonChart({
     >
       <div style={{ height }} data-testid="monthly-comparison-chart">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
-          >
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
             <XAxis
               dataKey="shortMonth"
@@ -155,13 +140,13 @@ export function MonthlyComparisonChart({
                 const item = payload[0].payload;
 
                 return (
-                  <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
-                    <p className="font-medium mb-1">{item.month}</p>
+                  <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
+                    <p className="mb-1 font-medium">{item.month}</p>
                     <p className="text-sm">
                       {currentMetric.label}:{' '}
                       <span className="font-medium">{formatValue(item.value)}</span>
                     </p>
-                    <div className="mt-1 pt-1 border-t text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-1 border-t pt-1 text-xs">
                       <p>Quotes: {item.quoteCount}</p>
                       <p>Invoices: {item.invoiceCount}</p>
                       <p>Clients: {item.clientCount}</p>

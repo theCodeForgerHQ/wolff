@@ -25,18 +25,39 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
-vi.mock('@/lib/services/email', () => ({ sendQuoteSentEmail: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/notifications/actions', () => ({ createNotification: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/routes', () => ({ ROUTES: { quotes: '/quotes', invoices: '/invoices', quoteDetail: (id: string) => `/quotes/${id}`, invoiceDetail: (id: string) => `/invoices/${id}` } }));
+vi.mock('@/lib/services/email', () => ({
+  sendQuoteSentEmail: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/lib/notifications/actions', () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/lib/routes', () => ({
+  ROUTES: {
+    quotes: '/quotes',
+    invoices: '/invoices',
+    quoteDetail: (id: string) => `/quotes/${id}`,
+    invoiceDetail: (id: string) => `/invoices/${id}`,
+  },
+}));
 vi.mock('@/lib/events/emitter', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('@/lib/workspace/get-current-workspace', () => ({ getCurrentUserWorkspace: mockGetCurrentUserWorkspace }));
+vi.mock('@/lib/workspace/get-current-workspace', () => ({
+  getCurrentUserWorkspace: mockGetCurrentUserWorkspace,
+}));
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
 }));
 
 // Import actual functions under test
-import { createQuote, updateQuote, getQuote, getQuotes, deleteQuote, duplicateQuote, updateQuoteStatus } from '@/lib/quotes/actions';
+import {
+  createQuote,
+  updateQuote,
+  getQuote,
+  getQuotes,
+  deleteQuote,
+  duplicateQuote,
+  updateQuoteStatus,
+} from '@/lib/quotes/actions';
 
 describe('Quote Actions', () => {
   const WORKSPACE_ID = 'ws-123';
@@ -124,7 +145,15 @@ describe('Quote Actions', () => {
       const result = await createQuote({
         title: 'Test Quote',
         clientId: 'client-1',
-        blocks: [{ type: 'malicious-script' as any, id: '1', content: { height: 'md' }, createdAt: '', updatedAt: '' } as any],
+        blocks: [
+          {
+            type: 'malicious-script' as any,
+            id: '1',
+            content: { height: 'md' },
+            createdAt: '',
+            updatedAt: '',
+          } as any,
+        ],
       });
 
       expect(result.success).toBe(false);
@@ -158,8 +187,19 @@ describe('Quote Actions', () => {
         clientId: 'client-1',
         blocks: [
           {
-            id: 'b1', type: 'service-item', createdAt: '', updatedAt: '',
-            content: { name: 'Dev', description: '', quantity: 2, rate: 100, unit: 'hour', taxRate: 10, rateCardId: null },
+            id: 'b1',
+            type: 'service-item',
+            createdAt: '',
+            updatedAt: '',
+            content: {
+              name: 'Dev',
+              description: '',
+              quantity: 2,
+              rate: 100,
+              unit: 'hour',
+              taxRate: 10,
+              rateCardId: null,
+            },
           },
         ],
       });
@@ -215,8 +255,19 @@ describe('Quote Actions', () => {
       const result = await updateQuote('quote-1', {
         blocks: [
           {
-            id: 'b1', type: 'service-item', createdAt: '', updatedAt: '',
-            content: { name: 'Bad', description: '', quantity: 1, rate: -50, unit: 'hour', taxRate: 0, rateCardId: null },
+            id: 'b1',
+            type: 'service-item',
+            createdAt: '',
+            updatedAt: '',
+            content: {
+              name: 'Bad',
+              description: '',
+              quantity: 1,
+              rate: -50,
+              unit: 'hour',
+              taxRate: 0,
+              rateCardId: null,
+            },
           },
         ],
       });
@@ -295,9 +346,18 @@ describe('Quote Actions', () => {
         settings: { blocks: [] }, // empty blocks
         lineItems: [
           {
-            id: 'li-1', name: 'Item 1', description: null, quantity: 1, rate: 100,
-            amount: 100, taxRate: null, taxAmount: 0, sortOrder: 0, rateCardId: null,
-            createdAt: now, updatedAt: now,
+            id: 'li-1',
+            name: 'Item 1',
+            description: null,
+            quantity: 1,
+            rate: 100,
+            amount: 100,
+            taxRate: null,
+            taxAmount: 0,
+            sortOrder: 0,
+            rateCardId: null,
+            createdAt: now,
+            updatedAt: now,
           },
         ],
         client: { id: 'client-1', name: 'Acme', email: 'a@b.com', company: null },
@@ -315,7 +375,17 @@ describe('Quote Actions', () => {
   describe('getQuotes', () => {
     it('returns paginated results', async () => {
       mockPrisma.quote.findMany.mockResolvedValue([
-        { id: 'q1', quoteNumber: 'QT-0001', title: 'Q1', status: 'draft', total: 100, issueDate: new Date(), expirationDate: null, client: null, createdAt: new Date() },
+        {
+          id: 'q1',
+          quoteNumber: 'QT-0001',
+          title: 'Q1',
+          status: 'draft',
+          total: 100,
+          issueDate: new Date(),
+          expirationDate: null,
+          client: null,
+          createdAt: new Date(),
+        },
       ]);
       mockPrisma.quote.count.mockResolvedValue(10);
 

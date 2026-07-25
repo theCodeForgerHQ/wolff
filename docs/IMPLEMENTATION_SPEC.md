@@ -4,17 +4,18 @@
 
 ### Phase 1: Foundation (Week 1-2)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| Monorepo setup with Turborepo | P0 | None | Lead |
-| Prisma schema implementation | P0 | Monorepo | Lead |
-| Docker development environment | P0 | Prisma | DevOps |
-| Shadcn UI + Tailwind setup | P0 | Monorepo | Frontend |
-| NextAuth configuration | P0 | Prisma | Full-stack |
-| Base layout components | P0 | Shadcn | Frontend |
-| CI/CD pipeline | P0 | Monorepo | DevOps |
+| Task                           | Priority | Dependencies | Owner      |
+| ------------------------------ | -------- | ------------ | ---------- |
+| Monorepo setup with Turborepo  | P0       | None         | Lead       |
+| Prisma schema implementation   | P0       | Monorepo     | Lead       |
+| Docker development environment | P0       | Prisma       | DevOps     |
+| Shadcn UI + Tailwind setup     | P0       | Monorepo     | Frontend   |
+| NextAuth configuration         | P0       | Prisma       | Full-stack |
+| Base layout components         | P0       | Shadcn       | Frontend   |
+| CI/CD pipeline                 | P0       | Monorepo     | DevOps     |
 
 **Deliverables:**
+
 - Running development environment
 - Database with initial migrations
 - Basic authentication working
@@ -22,87 +23,92 @@
 
 ### Phase 2: Core Entities (Week 3-4)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| Client CRUD operations | P0 | Auth | Full-stack 1 |
-| Client list/detail pages | P0 | Client CRUD | Full-stack 1 |
-| Rate card CRUD operations | P0 | Auth | Full-stack 2 |
-| Rate card list/editor pages | P0 | Rate card CRUD | Full-stack 2 |
-| Category management | P0 | Rate card CRUD | Full-stack 2 |
+| Task                        | Priority | Dependencies   | Owner        |
+| --------------------------- | -------- | -------------- | ------------ |
+| Client CRUD operations      | P0       | Auth           | Full-stack 1 |
+| Client list/detail pages    | P0       | Client CRUD    | Full-stack 1 |
+| Rate card CRUD operations   | P0       | Auth           | Full-stack 2 |
+| Rate card list/editor pages | P0       | Rate card CRUD | Full-stack 2 |
+| Category management         | P0       | Rate card CRUD | Full-stack 2 |
 
 **Deliverables:**
+
 - Fully functional client management
 - Rate card system with categories
 - Search and filtering working
 
 ### Phase 3: Quote System (Week 5-8)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| Quote data model operations | P0 | Clients, Rate cards | Lead |
-| Visual quote builder layout | P0 | Quote model | Frontend |
-| Block-based editor | P0 | Builder layout | Frontend |
-| Line items block | P0 | Editor | Frontend |
-| Rate card integration | P0 | Line items | Frontend |
-| Quote calculations | P0 | Line items | Frontend |
-| Properties panel | P0 | Editor | Frontend |
-| Template system | P0 | Builder | Frontend |
-| Auto-save functionality | P0 | Builder | Full-stack |
-| Quote list/management | P0 | Quote model | Full-stack |
-| Send quote flow | P0 | Quote, Email | Full-stack |
+| Task                        | Priority | Dependencies        | Owner      |
+| --------------------------- | -------- | ------------------- | ---------- |
+| Quote data model operations | P0       | Clients, Rate cards | Lead       |
+| Visual quote builder layout | P0       | Quote model         | Frontend   |
+| Block-based editor          | P0       | Builder layout      | Frontend   |
+| Line items block            | P0       | Editor              | Frontend   |
+| Rate card integration       | P0       | Line items          | Frontend   |
+| Quote calculations          | P0       | Line items          | Frontend   |
+| Properties panel            | P0       | Editor              | Frontend   |
+| Template system             | P0       | Builder             | Frontend   |
+| Auto-save functionality     | P0       | Builder             | Full-stack |
+| Quote list/management       | P0       | Quote model         | Full-stack |
+| Send quote flow             | P0       | Quote, Email        | Full-stack |
 
 **Deliverables:**
+
 - Visual quote builder (core differentiator)
 - Quote management interface
 - Quote sending via email
 
 ### Phase 4: Client Portal (Week 9-10)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| Public quote view page | P0 | Quotes | Full-stack |
-| View tracking | P0 | Public page | Full-stack |
-| Signature capture component | P0 | Public page | Frontend |
-| Quote acceptance flow | P0 | Signature | Full-stack |
-| Stripe Connect setup | P0 | None | Full-stack 2 |
-| Deposit payment flow | P0 | Stripe, Accept | Full-stack 2 |
-| Confirmation page | P0 | Payment | Frontend |
+| Task                        | Priority | Dependencies   | Owner        |
+| --------------------------- | -------- | -------------- | ------------ |
+| Public quote view page      | P0       | Quotes         | Full-stack   |
+| View tracking               | P0       | Public page    | Full-stack   |
+| Signature capture component | P0       | Public page    | Frontend     |
+| Quote acceptance flow       | P0       | Signature      | Full-stack   |
+| Stripe Connect setup        | P0       | None           | Full-stack 2 |
+| Deposit payment flow        | P0       | Stripe, Accept | Full-stack 2 |
+| Confirmation page           | P0       | Payment        | Frontend     |
 
 **Deliverables:**
+
 - Client-facing quote accept page
 - E-signature capture
 - Deposit payment processing
 
 ### Phase 5: Invoice System (Week 11-12)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| Quote-to-invoice conversion | P0 | Quotes | Full-stack |
-| Invoice editor | P0 | Conversion | Frontend |
-| Payment schedule builder | P0 | Invoice | Frontend |
-| Invoice list/management | P0 | Invoice model | Full-stack |
-| Public invoice pay page | P0 | Invoices | Full-stack |
-| Payment processing | P0 | Stripe | Full-stack |
-| Payment history | P0 | Payments | Full-stack |
-| Manual payment recording | P0 | Payments | Full-stack |
+| Task                        | Priority | Dependencies  | Owner      |
+| --------------------------- | -------- | ------------- | ---------- |
+| Quote-to-invoice conversion | P0       | Quotes        | Full-stack |
+| Invoice editor              | P0       | Conversion    | Frontend   |
+| Payment schedule builder    | P0       | Invoice       | Frontend   |
+| Invoice list/management     | P0       | Invoice model | Full-stack |
+| Public invoice pay page     | P0       | Invoices      | Full-stack |
+| Payment processing          | P0       | Stripe        | Full-stack |
+| Payment history             | P0       | Payments      | Full-stack |
+| Manual payment recording    | P0       | Payments      | Full-stack |
 
 **Deliverables:**
+
 - Invoice management system
 - Client payment portal
 - Payment tracking
 
 ### Phase 6: Supporting Features (Week 13-14)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| PDF generation service | P0 | Quotes, Invoices | Backend |
-| Email service + templates | P0 | Infrastructure | Backend |
-| Dashboard implementation | P0 | All entities | Full-stack |
-| Settings pages | P0 | Auth | Full-stack |
-| Onboarding flow | P0 | Settings | Frontend |
-| Payment reminders | P0 | Invoices, Email | Backend |
+| Task                      | Priority | Dependencies     | Owner      |
+| ------------------------- | -------- | ---------------- | ---------- |
+| PDF generation service    | P0       | Quotes, Invoices | Backend    |
+| Email service + templates | P0       | Infrastructure   | Backend    |
+| Dashboard implementation  | P0       | All entities     | Full-stack |
+| Settings pages            | P0       | Auth             | Full-stack |
+| Onboarding flow           | P0       | Settings         | Frontend   |
+| Payment reminders         | P0       | Invoices, Email  | Backend    |
 
 **Deliverables:**
+
 - PDF generation working
 - Email notifications
 - Dashboard with metrics
@@ -110,16 +116,17 @@
 
 ### Phase 7: Polish & Launch (Week 15)
 
-| Task | Priority | Dependencies | Owner |
-|------|----------|--------------|-------|
-| E2E testing | P0 | All features | QA |
-| Performance optimization | P0 | All features | Lead |
-| Security audit | P0 | All features | Lead |
-| Documentation | P0 | All features | All |
-| Landing page | P0 | None | Frontend |
-| Production deployment | P0 | All | DevOps |
+| Task                     | Priority | Dependencies | Owner    |
+| ------------------------ | -------- | ------------ | -------- |
+| E2E testing              | P0       | All features | QA       |
+| Performance optimization | P0       | All features | Lead     |
+| Security audit           | P0       | All features | Lead     |
+| Documentation            | P0       | All features | All      |
+| Landing page             | P0       | None         | Frontend |
+| Production deployment    | P0       | All          | DevOps   |
 
 **Deliverables:**
+
 - Production-ready application
 - Documentation complete
 - Landing page live
@@ -722,14 +729,14 @@ Settings
 
 ### 4.3 External Service Dependencies
 
-| Service | Purpose | Required For | Fallback |
-|---------|---------|--------------|----------|
-| PostgreSQL | Data storage | All features | None (required) |
-| Redis | Queue, cache | Background jobs | In-memory (dev only) |
-| Stripe | Payments | Deposits, invoices | Manual payments |
-| Email (SMTP/SendGrid) | Notifications | Quote/invoice send | Display link only |
-| Storage (S3/Local) | File uploads | Attachments, logos | Local filesystem |
-| Puppeteer | PDF generation | PDF downloads | HTML view only |
+| Service               | Purpose        | Required For       | Fallback             |
+| --------------------- | -------------- | ------------------ | -------------------- |
+| PostgreSQL            | Data storage   | All features       | None (required)      |
+| Redis                 | Queue, cache   | Background jobs    | In-memory (dev only) |
+| Stripe                | Payments       | Deposits, invoices | Manual payments      |
+| Email (SMTP/SendGrid) | Notifications  | Quote/invoice send | Display link only    |
+| Storage (S3/Local)    | File uploads   | Attachments, logos | Local filesystem     |
+| Puppeteer             | PDF generation | PDF downloads      | HTML view only       |
 
 ---
 
@@ -737,31 +744,32 @@ Settings
 
 ### 5.1 Data Model Consistency
 
-| Entity | Product Spec | Technical Spec | Database Schema | Status |
-|--------|--------------|----------------|-----------------|--------|
-| User | Defined | Defined | Implemented | ✅ |
-| Workspace | Defined | Defined | Implemented | ✅ |
-| Client | Defined | Defined | Implemented | ✅ |
-| Rate Card | Defined | Defined | Implemented | ✅ |
-| Quote | Defined | Defined | Implemented | ✅ |
-| Invoice | Defined | Defined | Implemented | ✅ |
-| Payment | Defined | Defined | Implemented | ✅ |
-| Contract | Defined (P1) | Defined (P1) | Implemented | ✅ |
+| Entity    | Product Spec | Technical Spec | Database Schema | Status |
+| --------- | ------------ | -------------- | --------------- | ------ |
+| User      | Defined      | Defined        | Implemented     | ✅     |
+| Workspace | Defined      | Defined        | Implemented     | ✅     |
+| Client    | Defined      | Defined        | Implemented     | ✅     |
+| Rate Card | Defined      | Defined        | Implemented     | ✅     |
+| Quote     | Defined      | Defined        | Implemented     | ✅     |
+| Invoice   | Defined      | Defined        | Implemented     | ✅     |
+| Payment   | Defined      | Defined        | Implemented     | ✅     |
+| Contract  | Defined (P1) | Defined (P1)   | Implemented     | ✅     |
 
 ### 5.2 Feature Consistency
 
-| Feature | Product Spec | UI/UX Spec | Technical Spec | Gap |
-|---------|--------------|------------|----------------|-----|
-| Quote Builder | Visual, block-based | Wireframes provided | Server actions defined | None |
-| E-Signature | Draw + Type | Component specs | Storage defined | None |
-| Stripe Connect | OAuth flow | Settings UI | Service layer | None |
-| PDF Generation | Puppeteer | Template designs | Queue job | None |
-| Email Templates | 4 core templates | Merge fields | React Email | None |
-| Dashboard Metrics | 6 key metrics | Card layouts | Query patterns | None |
+| Feature           | Product Spec        | UI/UX Spec          | Technical Spec         | Gap  |
+| ----------------- | ------------------- | ------------------- | ---------------------- | ---- |
+| Quote Builder     | Visual, block-based | Wireframes provided | Server actions defined | None |
+| E-Signature       | Draw + Type         | Component specs     | Storage defined        | None |
+| Stripe Connect    | OAuth flow          | Settings UI         | Service layer          | None |
+| PDF Generation    | Puppeteer           | Template designs    | Queue job              | None |
+| Email Templates   | 4 core templates    | Merge fields        | React Email            | None |
+| Dashboard Metrics | 6 key metrics       | Card layouts        | Query patterns         | None |
 
 ### 5.3 API Consistency
 
 All API endpoints defined in Technical Spec align with:
+
 - Data models in Database Schema
 - UI components in UI/UX Spec
 - User stories in Product Spec
@@ -783,36 +791,36 @@ All API endpoints defined in Technical Spec align with:
 
 ### 6.1 P0 Requirements Coverage
 
-| ID | Requirement | Implementation | Test Case |
-|----|-------------|----------------|-----------|
-| QT-001 | Navigate to quotes | /quotes route | Navigation test |
-| QT-002 | Toggle tabs | Tab component | UI test |
-| QT-003 | Search quotes | Search input + query | Search test |
-| QT-010 | Create quote < 10 min | Streamlined builder | E2E timing |
-| QT-011 | Add branding | Template + settings | Settings test |
-| QT-012 | Detailed line items | Line item block | Builder test |
-| QT-013 | Drag-and-drop | dnd-kit integration | DnD test |
-| QT-014 | Real-time preview | Instant update | Preview test |
-| QT-020 | View without login | Public route | Portal test |
-| QT-021 | E-signature | Signature component | Sign test |
-| QT-022 | Pay deposit | Stripe integration | Payment test |
-| IN-001 | View invoice list | /invoices route | List test |
-| IN-010 | Convert from quote | convertToInvoice() | Conversion test |
-| IN-020 | View and pay | Public portal | Portal test |
-| IN-021 | Payment methods | Stripe Elements | Payment test |
-| PM-001 | Auto record payments | Webhook handler | Webhook test |
-| PM-004 | Automated reminders | Queue + scheduler | Reminder test |
+| ID     | Requirement           | Implementation       | Test Case       |
+| ------ | --------------------- | -------------------- | --------------- |
+| QT-001 | Navigate to quotes    | /quotes route        | Navigation test |
+| QT-002 | Toggle tabs           | Tab component        | UI test         |
+| QT-003 | Search quotes         | Search input + query | Search test     |
+| QT-010 | Create quote < 10 min | Streamlined builder  | E2E timing      |
+| QT-011 | Add branding          | Template + settings  | Settings test   |
+| QT-012 | Detailed line items   | Line item block      | Builder test    |
+| QT-013 | Drag-and-drop         | dnd-kit integration  | DnD test        |
+| QT-014 | Real-time preview     | Instant update       | Preview test    |
+| QT-020 | View without login    | Public route         | Portal test     |
+| QT-021 | E-signature           | Signature component  | Sign test       |
+| QT-022 | Pay deposit           | Stripe integration   | Payment test    |
+| IN-001 | View invoice list     | /invoices route      | List test       |
+| IN-010 | Convert from quote    | convertToInvoice()   | Conversion test |
+| IN-020 | View and pay          | Public portal        | Portal test     |
+| IN-021 | Payment methods       | Stripe Elements      | Payment test    |
+| PM-001 | Auto record payments  | Webhook handler      | Webhook test    |
+| PM-004 | Automated reminders   | Queue + scheduler    | Reminder test   |
 
 ### 6.2 Non-Functional Requirements
 
-| Requirement | Target | Implementation | Verification |
-|-------------|--------|----------------|--------------|
-| Page Load | < 3s | RSC, code splitting | Lighthouse |
-| API Response | < 500ms | Prisma queries | Load testing |
-| PDF Generation | < 5s | Puppeteer + queue | Timer logs |
-| Accessibility | WCAG AA | Shadcn + ARIA | axe-core |
-| Mobile Support | Responsive | Tailwind breakpoints | Device testing |
-| Browser Support | Last 2 versions | Modern build | BrowserStack |
+| Requirement     | Target          | Implementation       | Verification   |
+| --------------- | --------------- | -------------------- | -------------- |
+| Page Load       | < 3s            | RSC, code splitting  | Lighthouse     |
+| API Response    | < 500ms         | Prisma queries       | Load testing   |
+| PDF Generation  | < 5s            | Puppeteer + queue    | Timer logs     |
+| Accessibility   | WCAG AA         | Shadcn + ARIA        | axe-core       |
+| Mobile Support  | Responsive      | Tailwind breakpoints | Device testing |
+| Browser Support | Last 2 versions | Modern build         | BrowserStack   |
 
 ---
 
@@ -820,15 +828,15 @@ All API endpoints defined in Technical Spec align with:
 
 ### 7.1 Development Milestones
 
-| Milestone | Target Date | Criteria |
-|-----------|-------------|----------|
-| M1: Foundation | Week 2 | Auth working, DB seeded |
-| M2: Core Entities | Week 4 | Clients + Rate Cards complete |
-| M3: Quote Builder | Week 8 | Quote creation to send |
-| M4: Client Portal | Week 10 | Accept + deposit payment |
-| M5: Invoices | Week 12 | Full invoice cycle |
-| M6: Beta | Week 14 | All features, testing |
-| M7: Launch | Week 15 | Production deployment |
+| Milestone         | Target Date | Criteria                      |
+| ----------------- | ----------- | ----------------------------- |
+| M1: Foundation    | Week 2      | Auth working, DB seeded       |
+| M2: Core Entities | Week 4      | Clients + Rate Cards complete |
+| M3: Quote Builder | Week 8      | Quote creation to send        |
+| M4: Client Portal | Week 10     | Accept + deposit payment      |
+| M5: Invoices      | Week 12     | Full invoice cycle            |
+| M6: Beta          | Week 14     | All features, testing         |
+| M7: Launch        | Week 15     | Production deployment         |
 
 ### 7.2 Beta Testing Plan
 

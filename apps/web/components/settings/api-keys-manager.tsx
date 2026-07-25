@@ -7,13 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -120,8 +114,8 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
         <CardContent>
           {keys.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Key className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">
+              <Key className="text-muted-foreground mb-3 h-10 w-10" />
+              <p className="text-muted-foreground text-sm">
                 No API keys yet. Create one to start using the API.
               </p>
             </div>
@@ -130,21 +124,15 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
               {keys.map((key) => (
                 <div
                   key={key.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
+                  className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="space-y-1">
-                    <p className="font-medium text-sm">{key.name}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <p className="text-sm font-medium">{key.name}</p>
+                    <div className="text-muted-foreground flex items-center gap-3 text-xs">
                       <span className="font-mono">{key.keyPrefix}...••••••</span>
                       <span>Created {formatDate(key.createdAt)}</span>
-                      {key.lastUsedAt && (
-                        <span>Last used {formatDate(key.lastUsedAt)}</span>
-                      )}
-                      {key.expiresAt && (
-                        <span>
-                          Expires {formatDate(key.expiresAt)}
-                        </span>
-                      )}
+                      {key.lastUsedAt && <span>Last used {formatDate(key.lastUsedAt)}</span>}
+                      {key.expiresAt && <span>Expires {formatDate(key.expiresAt)}</span>}
                     </div>
                   </div>
                   <Button
@@ -205,11 +193,7 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
           </DialogHeader>
           <div className="py-2">
             <div className="flex items-center gap-2">
-              <Input
-                value={newKey || ''}
-                readOnly
-                className="font-mono text-xs"
-              />
+              <Input value={newKey || ''} readOnly className="font-mono text-xs" />
               <Button variant="outline" size="icon" onClick={handleCopyKey}>
                 <Copy className="h-4 w-4" />
               </Button>
@@ -227,7 +211,8 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently disable this API key. Any integrations using it will stop working immediately.
+              This will permanently disable this API key. Any integrations using it will stop
+              working immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

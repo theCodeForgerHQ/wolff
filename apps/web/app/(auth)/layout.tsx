@@ -2,7 +2,7 @@ import { Logo } from '@/components/shared';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-muted/50">
+    <div className="bg-muted/50 flex min-h-screen flex-col">
       {/* Header with logo linking to homepage */}
       <header className="w-full py-6">
         <div className="container mx-auto px-4">

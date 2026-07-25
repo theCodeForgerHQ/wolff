@@ -105,9 +105,7 @@ export async function getBusinessProfile(): Promise<BusinessProfileData | null> 
 }
 
 // Update business profile
-export async function updateBusinessProfile(
-  input: UpdateBusinessProfileInput
-): Promise<void> {
+export async function updateBusinessProfile(input: UpdateBusinessProfileInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
   if (role === 'viewer' || role === 'editor') {
@@ -133,7 +131,9 @@ export async function updateBusinessProfile(
         ...(input.currency !== undefined && { currency: input.currency }),
         ...(input.timezone !== undefined && { timezone: input.timezone }),
         ...(input.socialLinks !== undefined && {
-          socialLinks: input.socialLinks ? (input.socialLinks as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+          socialLinks: input.socialLinks
+            ? (input.socialLinks as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         }),
       },
     });
@@ -146,7 +146,9 @@ export async function updateBusinessProfile(
         phone: input.phone || null,
         website: input.website || null,
         address: input.address ? (input.address as Prisma.InputJsonValue) : Prisma.JsonNull,
-        socialLinks: input.socialLinks ? (input.socialLinks as unknown as Prisma.InputJsonValue) : undefined,
+        socialLinks: input.socialLinks
+          ? (input.socialLinks as unknown as Prisma.InputJsonValue)
+          : undefined,
         taxId: input.taxId || null,
         currency: input.currency || 'USD',
         timezone: input.timezone || 'UTC',
@@ -212,9 +214,7 @@ export async function getEmailSettings(): Promise<EmailSettingsData | null> {
 }
 
 // Update email settings
-export async function updateEmailSettings(
-  input: UpdateEmailSettingsInput
-): Promise<void> {
+export async function updateEmailSettings(input: UpdateEmailSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
   if (role === 'viewer' || role === 'editor') {
     throw new Error('Only admins and owners can update email settings');
@@ -277,9 +277,7 @@ export async function getBrandingSettings(): Promise<BrandingSettingsData | null
 }
 
 // Update branding settings
-export async function updateBrandingSettings(
-  input: UpdateBrandingSettingsInput
-): Promise<void> {
+export async function updateBrandingSettings(input: UpdateBrandingSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
   if (role === 'viewer' || role === 'editor') {
     throw new Error('Only admins and owners can update branding settings');
@@ -350,9 +348,7 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
 }
 
 // Update payment settings
-export async function updatePaymentSettings(
-  input: UpdatePaymentSettingsInput
-): Promise<void> {
+export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
   if (role === 'viewer' || role === 'editor') {
     throw new Error('Only admins and owners can modify payment settings');
@@ -595,10 +591,7 @@ const numberSequenceSchema = z.object({
 });
 
 // Update number sequence
-export async function updateNumberSequence(
-  input: UpdateNumberSequenceInput
-): Promise<void> {
-
+export async function updateNumberSequence(input: UpdateNumberSequenceInput): Promise<void> {
   // Validate input with Zod
   const validated = numberSequenceSchema.parse(input);
 
@@ -711,7 +704,7 @@ export async function updateMemberRole(
 ): Promise<{ success: boolean; error?: string }> {
   // Validate role at runtime (TypeScript types are erased, server actions accept any value)
   const validRoles = ['viewer', 'member', 'admin', 'owner'] as const;
-  if (!validRoles.includes(newRole as typeof validRoles[number])) {
+  if (!validRoles.includes(newRole as (typeof validRoles)[number])) {
     return { success: false, error: 'Invalid role' };
   }
 
@@ -790,7 +783,17 @@ export async function updateMemberRole(
   });
 
   // Bug #74: Audit log for role changes
-  logger.info({ workspaceId, changedBy: userId, targetMemberId: memberId, targetUserId: targetMember.userId, oldRole, newRole }, '[AUDIT] Member role changed');
+  logger.info(
+    {
+      workspaceId,
+      changedBy: userId,
+      targetMemberId: memberId,
+      targetUserId: targetMember.userId,
+      oldRole,
+      newRole,
+    },
+    '[AUDIT] Member role changed'
+  );
 
   revalidatePath(ROUTES.settingsTeam);
 
@@ -811,7 +814,7 @@ export async function inviteMember(
 
   // Validate role at runtime (TypeScript types are erased, server actions accept any value)
   const validRoles = ['viewer', 'member', 'admin', 'owner'] as const;
-  if (!validRoles.includes(role as typeof validRoles[number])) {
+  if (!validRoles.includes(role as (typeof validRoles)[number])) {
     return { success: false, error: 'Invalid role' };
   }
 
@@ -1046,7 +1049,10 @@ export async function resendInvitation(
 
   // Rate limit to prevent email spam
   const { checkRateLimit } = await import('@/lib/rate-limit');
-  const rateLimitResult = await checkRateLimit(`resend-invite:${userId}`, { limit: 5, windowMs: 300000 });
+  const rateLimitResult = await checkRateLimit(`resend-invite:${userId}`, {
+    limit: 5,
+    windowMs: 300000,
+  });
   if (rateLimitResult.limited) {
     return { success: false, error: 'Too many resend attempts. Please try again later.' };
   }
@@ -1112,7 +1118,10 @@ export async function acceptInvitation(
 
   // Rate limit by user ID to prevent brute-force token enumeration
   const { checkRateLimit } = await import('@/lib/rate-limit');
-  const rateLimitResult = await checkRateLimit(`accept-invite:${session.user.id}`, { limit: 10, windowMs: 60000 });
+  const rateLimitResult = await checkRateLimit(`accept-invite:${session.user.id}`, {
+    limit: 10,
+    windowMs: 60000,
+  });
   if (rateLimitResult.limited) {
     return { success: false, error: 'Too many attempts. Please try again later.' };
   }
@@ -1250,9 +1259,10 @@ export async function getWorkspaceSettings(): Promise<WorkspaceSettings | null> 
 }
 
 // Update workspace settings
-export async function updateWorkspaceSettings(
-  input: { name?: string; slug?: string }
-): Promise<{ success: boolean; error?: string }> {
+export async function updateWorkspaceSettings(input: {
+  name?: string;
+  slug?: string;
+}): Promise<{ success: boolean; error?: string }> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   // Verify current user is owner
@@ -1264,11 +1274,36 @@ export async function updateWorkspaceSettings(
   // Bug #19: Validate slug against reserved system routes
   if (input.slug) {
     const reservedSlugs = [
-      'api', 'admin', 'auth', 'login', 'register', 'settings', 'dashboard',
-      'onboarding', 'quotes', 'invoices', 'clients', 'projects', 'analytics',
-      'help', 'templates', 'contracts', 'rate-cards', 'q', 'i', 'p', 'c',
-      'invite', 'verify-email', 'reset-password', 'forgot-password',
-      'public', 'static', 'assets', '_next', 'favicon.ico',
+      'api',
+      'admin',
+      'auth',
+      'login',
+      'register',
+      'settings',
+      'dashboard',
+      'onboarding',
+      'quotes',
+      'invoices',
+      'clients',
+      'projects',
+      'analytics',
+      'help',
+      'templates',
+      'contracts',
+      'rate-cards',
+      'q',
+      'i',
+      'p',
+      'c',
+      'invite',
+      'verify-email',
+      'reset-password',
+      'forgot-password',
+      'public',
+      'static',
+      'assets',
+      '_next',
+      'favicon.ico',
     ];
     if (reservedSlugs.includes(input.slug.toLowerCase())) {
       return { success: false, error: 'This slug is reserved and cannot be used' };
@@ -1301,9 +1336,13 @@ export async function updateWorkspaceSettings(
       // Bug #81: Clean up old slug history entries (keep last 90 days only)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 90);
-      await prisma.workspaceSlugHistory.deleteMany({
-        where: { workspaceId, changedAt: { lt: cutoff } },
-      }).catch(() => { /* non-critical cleanup */ });
+      await prisma.workspaceSlugHistory
+        .deleteMany({
+          where: { workspaceId, changedAt: { lt: cutoff } },
+        })
+        .catch(() => {
+          /* non-critical cleanup */
+        });
     }
   }
 
@@ -1349,7 +1388,10 @@ export async function deleteWorkspace(): Promise<{ success: boolean; error?: str
     },
   });
   if (activePayments > 0) {
-    return { success: false, error: 'Cannot delete workspace with pending payments. Please resolve all payments first.' };
+    return {
+      success: false,
+      error: 'Cannot delete workspace with pending payments. Please resolve all payments first.',
+    };
   }
 
   // Bug #87: Cascade soft-delete to all workspace entities
@@ -1563,7 +1605,8 @@ export async function getIntegrations(): Promise<IntegrationData[]> {
       id: 'webhooks',
       name: 'Webhooks',
       provider: 'webhooks',
-      description: 'Send real-time event notifications to any URL when actions occur in your workspace (e.g. quote accepted, invoice paid).',
+      description:
+        'Send real-time event notifications to any URL when actions occur in your workspace (e.g. quote accepted, invoice paid).',
       isConnected: false,
       isAvailable: true,
       connectedAt: null,
@@ -1573,7 +1616,8 @@ export async function getIntegrations(): Promise<IntegrationData[]> {
       id: 'zapier',
       name: 'Zapier',
       provider: 'zapier',
-      description: 'Connect Wolff to 5,000+ apps using Zapier. Set up a webhook in Wolff and use it as a Zapier trigger.',
+      description:
+        'Connect Wolff to 5,000+ apps using Zapier. Set up a webhook in Wolff and use it as a Zapier trigger.',
       isConnected: false,
       isAvailable: true,
       connectedAt: null,
@@ -1583,7 +1627,8 @@ export async function getIntegrations(): Promise<IntegrationData[]> {
       id: 'n8n',
       name: 'n8n',
       provider: 'n8n',
-      description: 'Build powerful self-hosted automations with n8n. Use Wolff webhooks as triggers in your n8n workflows.',
+      description:
+        'Build powerful self-hosted automations with n8n. Use Wolff webhooks as triggers in your n8n workflows.',
       isConnected: false,
       isAvailable: true,
       connectedAt: null,
@@ -1593,7 +1638,8 @@ export async function getIntegrations(): Promise<IntegrationData[]> {
       id: 'make',
       name: 'Make (Integromat)',
       provider: 'make',
-      description: 'Create visual automation scenarios with Make. Connect Wolff events to hundreds of services via webhooks.',
+      description:
+        'Create visual automation scenarios with Make. Connect Wolff events to hundreds of services via webhooks.',
       isConnected: false,
       isAvailable: true,
       connectedAt: null,
@@ -1747,14 +1793,13 @@ export async function deleteWebhook(id: string): Promise<void> {
 
 // Get all settings
 export async function getAllSettings(): Promise<AllSettings> {
-  const [businessProfile, branding, payment, taxRates, numberSequences] =
-    await Promise.all([
-      getBusinessProfile(),
-      getBrandingSettings(),
-      getPaymentSettings(),
-      getTaxRates(),
-      getNumberSequences(),
-    ]);
+  const [businessProfile, branding, payment, taxRates, numberSequences] = await Promise.all([
+    getBusinessProfile(),
+    getBrandingSettings(),
+    getPaymentSettings(),
+    getTaxRates(),
+    getNumberSequences(),
+  ]);
 
   return {
     businessProfile,

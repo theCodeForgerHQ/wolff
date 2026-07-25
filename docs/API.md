@@ -31,6 +31,7 @@ All authenticated endpoints require a valid session obtained through NextAuth.js
 ### Response Format
 
 #### Success Response
+
 ```json
 {
   "success": true,
@@ -45,6 +46,7 @@ All authenticated endpoints require a valid session obtained through NextAuth.js
 ```
 
 #### Error Response
+
 ```json
 {
   "success": false,
@@ -69,11 +71,11 @@ Wolff uses [NextAuth.js v5](https://authjs.dev/) for authentication with JWT ses
 
 ### Authentication Providers
 
-| Provider | Type | Configuration |
-|----------|------|---------------|
-| Credentials | Email/Password | Built-in bcrypt password hashing |
-| Google | OAuth 2.0 | Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` |
-| GitHub | OAuth 2.0 | Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` |
+| Provider    | Type           | Configuration                                          |
+| ----------- | -------------- | ------------------------------------------------------ |
+| Credentials | Email/Password | Built-in bcrypt password hashing                       |
+| Google      | OAuth 2.0      | Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` |
+| GitHub      | OAuth 2.0      | Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` |
 
 ### NextAuth.js Endpoints
 
@@ -101,6 +103,7 @@ GET /api/auth/session
 ```
 
 **Response:**
+
 ```json
 {
   "user": {
@@ -128,6 +131,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "John Doe",
@@ -137,11 +141,13 @@ Content-Type: application/json
 ```
 
 **Validation:**
+
 - `name`: Required, minimum 2 characters
 - `email`: Required, valid email format
 - `password`: Required, minimum 8 characters
 
 **Success Response (201):**
+
 ```json
 {
   "user": {
@@ -153,12 +159,14 @@ Content-Type: application/json
 ```
 
 **Error Responses:**
+
 - `400` - Validation error or email already exists
 - `500` - Server error
 
 ### Session Management
 
 Sessions are stored as JWTs with the following claims:
+
 - `id` - User ID
 - `email` - User email
 - `name` - User display name
@@ -167,6 +175,7 @@ Sessions are stored as JWTs with the following claims:
 ### Protected Routes
 
 The following route patterns are protected and require authentication:
+
 - `/dashboard/*` - All dashboard routes
 - `/quotes/*` - Quote management
 - `/invoices/*` - Invoice management
@@ -174,6 +183,7 @@ The following route patterns are protected and require authentication:
 - `/settings/*` - Settings pages
 
 Public routes (no authentication required):
+
 - `/login`, `/register` - Auth pages
 - `/q/[token]` - Public quote portal
 - `/i/[token]` - Public invoice portal
@@ -193,6 +203,7 @@ Check application and database health.
 **Authentication:** None required
 
 **Response (200):**
+
 ```json
 {
   "status": "healthy",
@@ -204,6 +215,7 @@ Check application and database health.
 ```
 
 **Response (503):**
+
 ```json
 {
   "status": "unhealthy",
@@ -226,13 +238,15 @@ Generate HTML for quote PDF rendering (used by Puppeteer).
 **Authentication:** Required (session-based)
 
 **Parameters:**
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| quoteId | string | Yes | Quote UUID |
+
+| Name    | Type   | Required | Description |
+| ------- | ------ | -------- | ----------- |
+| quoteId | string | Yes      | Quote UUID  |
 
 **Response (200):** HTML content with `Content-Type: text/html; charset=utf-8`
 
 **Error Responses:**
+
 - `404` - Quote not found
 - `500` - Internal server error
 
@@ -245,13 +259,15 @@ Generate HTML for invoice PDF rendering (used by Puppeteer).
 **Authentication:** Required (session-based)
 
 **Parameters:**
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| invoiceId | string | Yes | Invoice UUID |
+
+| Name      | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| invoiceId | string | Yes      | Invoice UUID |
 
 **Response (200):** HTML content with `Content-Type: text/html; charset=utf-8`
 
 **Error Responses:**
+
 - `404` - Invoice not found
 - `500` - Internal server error
 
@@ -266,15 +282,18 @@ Download quote as a PDF file.
 **Authentication:** Required (session-based)
 
 **Parameters:**
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| quoteId | string | Yes | Quote UUID |
+
+| Name    | Type   | Required | Description |
+| ------- | ------ | -------- | ----------- |
+| quoteId | string | Yes      | Quote UUID  |
 
 **Response (200):** PDF file with headers:
+
 - `Content-Type: application/pdf`
 - `Content-Disposition: attachment; filename="Quote-QT-0001.pdf"`
 
 **Error Responses:**
+
 - `404` - Quote not found
 - `500` - Failed to generate PDF
 
@@ -287,15 +306,18 @@ Download invoice as a PDF file.
 **Authentication:** Required (session-based)
 
 **Parameters:**
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| invoiceId | string | Yes | Invoice UUID |
+
+| Name      | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| invoiceId | string | Yes      | Invoice UUID |
 
 **Response (200):** PDF file with headers:
+
 - `Content-Type: application/pdf`
 - `Content-Disposition: attachment; filename="Invoice-INV-0001.pdf"`
 
 **Error Responses:**
+
 - `404` - Invoice not found
 - `500` - Failed to generate PDF
 
@@ -310,19 +332,23 @@ Create a Stripe payment intent for invoice checkout.
 **Authentication:** None required (public endpoint for client payments)
 
 **Parameters:**
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| invoiceId | string | Yes | Invoice UUID |
+
+| Name      | Type   | Required | Description  |
+| --------- | ------ | -------- | ------------ |
+| invoiceId | string | Yes      | Invoice UUID |
 
 **Request Body (optional):**
+
 ```json
 {
-  "amount": 500.00
+  "amount": 500.0
 }
 ```
+
 If `amount` is not provided, uses the full `amountDue` from the invoice.
 
 **Success Response (200):**
+
 ```json
 {
   "clientSecret": "pi_xxx_secret_xxx",
@@ -331,6 +357,7 @@ If `amount` is not provided, uses the full `amountDue` from the invoice.
 ```
 
 **Error Responses:**
+
 - `400` - Invalid request or invoice status
   ```json
   { "error": "Invoice is already paid" }
@@ -350,24 +377,27 @@ Handle Stripe payment webhook events.
 **Authentication:** Stripe signature verification
 
 **Headers Required:**
+
 - `stripe-signature` - Stripe webhook signature
 
 **Supported Events:**
 
-| Event Type | Description |
-|------------|-------------|
-| `payment_intent.succeeded` | Payment completed successfully |
-| `payment_intent.payment_failed` | Payment failed |
-| `account.updated` | Stripe Connect account status changed |
+| Event Type                      | Description                           |
+| ------------------------------- | ------------------------------------- |
+| `payment_intent.succeeded`      | Payment completed successfully        |
+| `payment_intent.payment_failed` | Payment failed                        |
+| `account.updated`               | Stripe Connect account status changed |
 
 **Request Body:** Raw Stripe event payload
 
 **Response (200):**
+
 ```json
 { "received": true }
 ```
 
 **Error Responses:**
+
 - `400` - Missing signature or invalid signature
 - `500` - Webhook processing failed
 - `501` - Stripe not configured
@@ -375,6 +405,7 @@ Handle Stripe payment webhook events.
 **Configuration:**
 
 Required environment variables:
+
 - `STRIPE_SECRET_KEY` - Stripe secret key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
 
@@ -397,7 +428,7 @@ async function createQuote(data: {
   title: string;
   clientId: string;
   blocks?: QuoteBlock[];
-}): Promise<{ success: true; quote: Quote }>
+}): Promise<{ success: true; quote: Quote }>;
 ```
 
 #### updateQuote
@@ -415,7 +446,7 @@ async function updateQuote(
     internalNotes?: string;
     settings?: Record<string, unknown>;
   }
-): Promise<{ success: true; quote: Quote }>
+): Promise<{ success: true; quote: Quote }>;
 ```
 
 #### getQuote
@@ -423,7 +454,7 @@ async function updateQuote(
 Get a single quote by ID.
 
 ```typescript
-async function getQuote(quoteId: string): Promise<QuoteDocument | null>
+async function getQuote(quoteId: string): Promise<QuoteDocument | null>;
 ```
 
 #### getQuotes
@@ -436,7 +467,7 @@ async function getQuotes(options?: {
   search?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ quotes: QuoteListItem[]; total: number }>
+}): Promise<{ quotes: QuoteListItem[]; total: number }>;
 ```
 
 #### deleteQuote
@@ -444,7 +475,7 @@ async function getQuotes(options?: {
 Soft delete a quote.
 
 ```typescript
-async function deleteQuote(quoteId: string): Promise<{ success: true }>
+async function deleteQuote(quoteId: string): Promise<{ success: true }>;
 ```
 
 #### duplicateQuote
@@ -452,7 +483,7 @@ async function deleteQuote(quoteId: string): Promise<{ success: true }>
 Create a copy of an existing quote.
 
 ```typescript
-async function duplicateQuote(quoteId: string): Promise<{ success: true; quoteId: string }>
+async function duplicateQuote(quoteId: string): Promise<{ success: true; quoteId: string }>;
 ```
 
 #### updateQuoteStatus
@@ -463,7 +494,7 @@ Update quote status.
 async function updateQuoteStatus(
   quoteId: string,
   status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'declined' | 'expired'
-): Promise<{ success: true }>
+): Promise<{ success: true }>;
 ```
 
 ---
@@ -481,13 +512,11 @@ Get public quote data by access token.
 ```typescript
 async function getQuoteByAccessToken(
   accessToken: string
-): Promise<
-  | { success: true; quote: PublicQuoteData }
-  | { success: false; error: string }
->
+): Promise<{ success: true; quote: PublicQuoteData } | { success: false; error: string }>;
 ```
 
 **PublicQuoteData Fields:**
+
 - `id`, `quoteNumber`, `status`, `title`
 - `issueDate`, `expirationDate`, `isExpired`
 - `blocks`, `lineItems`, `totals`
@@ -500,7 +529,7 @@ async function getQuoteByAccessToken(
 Track when a client views a quote.
 
 ```typescript
-async function trackQuoteView(accessToken: string): Promise<void>
+async function trackQuoteView(accessToken: string): Promise<void>;
 ```
 
 #### acceptQuote
@@ -513,7 +542,7 @@ async function acceptQuote(data: {
   signatureData: string;
   signerName: string;
   agreedToTerms: boolean;
-}): Promise<{ success: true } | { success: false; error: string }>
+}): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 #### declineQuote
@@ -525,7 +554,7 @@ async function declineQuote(data: {
   accessToken: string;
   reason?: string;
   comment?: string;
-}): Promise<{ success: true } | { success: false; error: string }>
+}): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 ---
@@ -539,10 +568,11 @@ async function declineQuote(data: {
 Create a new invoice.
 
 ```typescript
-async function createInvoice(data: CreateInvoiceData): Promise<{ success: true; invoice: Invoice }>
+async function createInvoice(data: CreateInvoiceData): Promise<{ success: true; invoice: Invoice }>;
 ```
 
 **CreateInvoiceData:**
+
 ```typescript
 {
   clientId: string;
@@ -568,7 +598,7 @@ Convert an accepted quote to an invoice.
 ```typescript
 async function createInvoiceFromQuote(
   quoteId: string
-): Promise<{ success: true; invoice: Invoice } | { success: false; error: string }>
+): Promise<{ success: true; invoice: Invoice } | { success: false; error: string }>;
 ```
 
 #### updateInvoice
@@ -579,7 +609,7 @@ Update an existing invoice (draft only).
 async function updateInvoice(
   invoiceId: string,
   data: UpdateInvoiceData
-): Promise<{ success: true; invoice: Invoice } | { success: false; error: string }>
+): Promise<{ success: true; invoice: Invoice } | { success: false; error: string }>;
 ```
 
 #### getInvoice
@@ -587,7 +617,7 @@ async function updateInvoice(
 Get a single invoice by ID.
 
 ```typescript
-async function getInvoice(invoiceId: string): Promise<InvoiceDocument | null>
+async function getInvoice(invoiceId: string): Promise<InvoiceDocument | null>;
 ```
 
 #### getInvoices
@@ -599,10 +629,11 @@ async function getInvoices(filters?: {
   status?: InvoiceStatus;
   clientId?: string;
   search?: string;
-}): Promise<InvoiceListItem[]>
+}): Promise<InvoiceListItem[]>;
 ```
 
 **InvoiceStatus Values:**
+
 - `draft`, `sent`, `viewed`, `partial`, `paid`, `overdue`, `voided`
 
 #### updateInvoiceStatus
@@ -613,7 +644,7 @@ Update invoice status.
 async function updateInvoiceStatus(
   invoiceId: string,
   status: InvoiceStatus
-): Promise<{ success: true } | { success: false; error: string }>
+): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 #### sendInvoice
@@ -621,7 +652,9 @@ async function updateInvoiceStatus(
 Send invoice to client via email.
 
 ```typescript
-async function sendInvoice(invoiceId: string): Promise<{ success: true } | { success: false; error: string }>
+async function sendInvoice(
+  invoiceId: string
+): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 #### deleteInvoice
@@ -629,7 +662,9 @@ async function sendInvoice(invoiceId: string): Promise<{ success: true } | { suc
 Soft delete a draft invoice.
 
 ```typescript
-async function deleteInvoice(invoiceId: string): Promise<{ success: true } | { success: false; error: string }>
+async function deleteInvoice(
+  invoiceId: string
+): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 #### recordPayment
@@ -645,7 +680,7 @@ async function recordPayment(
     referenceNumber?: string;
     notes?: string;
   }
-): Promise<{ success: true } | { success: false; error: string }>
+): Promise<{ success: true } | { success: false; error: string }>;
 ```
 
 ---
@@ -661,13 +696,11 @@ Get public invoice data by access token.
 ```typescript
 async function getInvoiceByAccessToken(
   accessToken: string
-): Promise<
-  | { success: true; invoice: PublicInvoiceData }
-  | { success: false; error: string }
->
+): Promise<{ success: true; invoice: PublicInvoiceData } | { success: false; error: string }>;
 ```
 
 **PublicInvoiceData Fields:**
+
 - `id`, `invoiceNumber`, `status`, `title`
 - `issueDate`, `dueDate`, `isOverdue`, `daysOverdue`
 - `lineItems`, `totals` (including amountPaid, amountDue)
@@ -680,7 +713,7 @@ async function getInvoiceByAccessToken(
 Track when a client views an invoice.
 
 ```typescript
-async function trackInvoiceView(accessToken: string): Promise<void>
+async function trackInvoiceView(accessToken: string): Promise<void>;
 ```
 
 ---
@@ -694,10 +727,11 @@ async function trackInvoiceView(accessToken: string): Promise<void>
 Get paginated clients with filtering.
 
 ```typescript
-async function getClients(filter?: ClientFilter): Promise<PaginatedClients>
+async function getClients(filter?: ClientFilter): Promise<PaginatedClients>;
 ```
 
 **ClientFilter:**
+
 ```typescript
 {
   search?: string;
@@ -713,7 +747,7 @@ async function getClients(filter?: ClientFilter): Promise<PaginatedClients>
 Get client details by ID.
 
 ```typescript
-async function getClientById(id: string): Promise<ClientDetail>
+async function getClientById(id: string): Promise<ClientDetail>;
 ```
 
 #### getClientActivity
@@ -721,7 +755,7 @@ async function getClientById(id: string): Promise<ClientDetail>
 Get client activity history (quotes, invoices, payments).
 
 ```typescript
-async function getClientActivity(clientId: string): Promise<ClientActivity[]>
+async function getClientActivity(clientId: string): Promise<ClientActivity[]>;
 ```
 
 #### createClient
@@ -729,10 +763,11 @@ async function getClientActivity(clientId: string): Promise<ClientActivity[]>
 Create a new client.
 
 ```typescript
-async function createClient(input: CreateClientInput): Promise<{ id: string }>
+async function createClient(input: CreateClientInput): Promise<{ id: string }>;
 ```
 
 **CreateClientInput:**
+
 ```typescript
 {
   name: string;
@@ -755,7 +790,7 @@ async function createClient(input: CreateClientInput): Promise<{ id: string }>
 Update an existing client.
 
 ```typescript
-async function updateClient(input: UpdateClientInput): Promise<{ id: string }>
+async function updateClient(input: UpdateClientInput): Promise<{ id: string }>;
 ```
 
 #### deleteClient
@@ -763,7 +798,7 @@ async function updateClient(input: UpdateClientInput): Promise<{ id: string }>
 Soft delete a client.
 
 ```typescript
-async function deleteClient(id: string): Promise<void>
+async function deleteClient(id: string): Promise<void>;
 ```
 
 #### deleteClients
@@ -771,7 +806,7 @@ async function deleteClient(id: string): Promise<void>
 Bulk soft delete clients.
 
 ```typescript
-async function deleteClients(ids: string[]): Promise<{ deleted: number }>
+async function deleteClients(ids: string[]): Promise<{ deleted: number }>;
 ```
 
 #### getClientStats
@@ -779,10 +814,11 @@ async function deleteClients(ids: string[]): Promise<{ deleted: number }>
 Get client statistics.
 
 ```typescript
-async function getClientStats(): Promise<ClientStats>
+async function getClientStats(): Promise<ClientStats>;
 ```
 
 **ClientStats:**
+
 ```typescript
 {
   total: number;
@@ -811,7 +847,7 @@ async function importClients(
     country?: string;
   }>,
   skipDuplicates?: boolean
-): Promise<ClientImportResult>
+): Promise<ClientImportResult>;
 ```
 
 #### searchClients
@@ -822,7 +858,7 @@ Search clients for autocomplete.
 async function searchClients(
   query: string,
   limit?: number
-): Promise<Array<{ id: string; name: string; email: string; company: string | null }>>
+): Promise<Array<{ id: string; name: string; email: string; company: string | null }>>;
 ```
 
 ---
@@ -836,10 +872,11 @@ async function searchClients(
 Get rate cards with pagination and filtering.
 
 ```typescript
-async function getRateCards(filter?: RateCardFilter): Promise<PaginatedRateCards>
+async function getRateCards(filter?: RateCardFilter): Promise<PaginatedRateCards>;
 ```
 
 **RateCardFilter:**
+
 ```typescript
 {
   search?: string;
@@ -860,7 +897,7 @@ async function getRateCards(filter?: RateCardFilter): Promise<PaginatedRateCards
 Get rate card details.
 
 ```typescript
-async function getRateCardById(id: string): Promise<RateCardDetail>
+async function getRateCardById(id: string): Promise<RateCardDetail>;
 ```
 
 #### createRateCard
@@ -868,10 +905,11 @@ async function getRateCardById(id: string): Promise<RateCardDetail>
 Create a new rate card.
 
 ```typescript
-async function createRateCard(input: CreateRateCardInput): Promise<{ id: string }>
+async function createRateCard(input: CreateRateCardInput): Promise<{ id: string }>;
 ```
 
 **CreateRateCardInput:**
+
 ```typescript
 {
   name: string;
@@ -890,7 +928,7 @@ async function createRateCard(input: CreateRateCardInput): Promise<{ id: string 
 Update a rate card.
 
 ```typescript
-async function updateRateCard(input: UpdateRateCardInput): Promise<{ id: string }>
+async function updateRateCard(input: UpdateRateCardInput): Promise<{ id: string }>;
 ```
 
 #### deleteRateCard
@@ -898,7 +936,7 @@ async function updateRateCard(input: UpdateRateCardInput): Promise<{ id: string 
 Soft delete a rate card.
 
 ```typescript
-async function deleteRateCard(id: string): Promise<void>
+async function deleteRateCard(id: string): Promise<void>;
 ```
 
 #### bulkDeleteRateCards
@@ -906,7 +944,7 @@ async function deleteRateCard(id: string): Promise<void>
 Bulk delete rate cards.
 
 ```typescript
-async function bulkDeleteRateCards(ids: string[]): Promise<{ deleted: number }>
+async function bulkDeleteRateCards(ids: string[]): Promise<{ deleted: number }>;
 ```
 
 #### toggleRateCardActive
@@ -914,7 +952,7 @@ async function bulkDeleteRateCards(ids: string[]): Promise<{ deleted: number }>
 Toggle rate card active status.
 
 ```typescript
-async function toggleRateCardActive(id: string): Promise<{ isActive: boolean }>
+async function toggleRateCardActive(id: string): Promise<{ isActive: boolean }>;
 ```
 
 #### duplicateRateCard
@@ -922,7 +960,7 @@ async function toggleRateCardActive(id: string): Promise<{ isActive: boolean }>
 Duplicate a rate card.
 
 ```typescript
-async function duplicateRateCard(id: string, newName?: string): Promise<{ id: string }>
+async function duplicateRateCard(id: string, newName?: string): Promise<{ id: string }>;
 ```
 
 #### getRateCardsForSelection
@@ -930,7 +968,7 @@ async function duplicateRateCard(id: string, newName?: string): Promise<{ id: st
 Get rate cards formatted for quote builder selection.
 
 ```typescript
-async function getRateCardsForSelection(categoryId?: string): Promise<RateCardSelection[]>
+async function getRateCardsForSelection(categoryId?: string): Promise<RateCardSelection[]>;
 ```
 
 #### getRateCardStats
@@ -938,7 +976,7 @@ async function getRateCardsForSelection(categoryId?: string): Promise<RateCardSe
 Get rate card statistics.
 
 ```typescript
-async function getRateCardStats(): Promise<RateCardStats>
+async function getRateCardStats(): Promise<RateCardStats>;
 ```
 
 ---
@@ -952,7 +990,7 @@ async function getRateCardStats(): Promise<RateCardStats>
 Get all rate card categories.
 
 ```typescript
-async function getCategories(): Promise<CategoryListItem[]>
+async function getCategories(): Promise<CategoryListItem[]>;
 ```
 
 #### createCategory
@@ -960,7 +998,7 @@ async function getCategories(): Promise<CategoryListItem[]>
 Create a new category.
 
 ```typescript
-async function createCategory(input: CreateCategoryInput): Promise<{ id: string }>
+async function createCategory(input: CreateCategoryInput): Promise<{ id: string }>;
 ```
 
 #### updateCategory
@@ -968,7 +1006,7 @@ async function createCategory(input: CreateCategoryInput): Promise<{ id: string 
 Update a category.
 
 ```typescript
-async function updateCategory(input: UpdateCategoryInput): Promise<{ id: string }>
+async function updateCategory(input: UpdateCategoryInput): Promise<{ id: string }>;
 ```
 
 #### deleteCategory
@@ -976,7 +1014,7 @@ async function updateCategory(input: UpdateCategoryInput): Promise<{ id: string 
 Delete a category (fails if has rate cards).
 
 ```typescript
-async function deleteCategory(id: string): Promise<void>
+async function deleteCategory(id: string): Promise<void>;
 ```
 
 #### reorderCategories
@@ -984,7 +1022,7 @@ async function deleteCategory(id: string): Promise<void>
 Reorder categories by sort order.
 
 ```typescript
-async function reorderCategories(categoryIds: string[]): Promise<void>
+async function reorderCategories(categoryIds: string[]): Promise<void>;
 ```
 
 ---
@@ -998,10 +1036,11 @@ async function reorderCategories(categoryIds: string[]): Promise<void>
 Get all dashboard data in a single call.
 
 ```typescript
-async function getDashboardData(): Promise<DashboardData>
+async function getDashboardData(): Promise<DashboardData>;
 ```
 
 **DashboardData:**
+
 ```typescript
 {
   stats: DashboardStats;
@@ -1019,10 +1058,11 @@ async function getDashboardData(): Promise<DashboardData>
 Get key business metrics.
 
 ```typescript
-async function getDashboardStats(): Promise<DashboardStats>
+async function getDashboardStats(): Promise<DashboardStats>;
 ```
 
 **DashboardStats:**
+
 ```typescript
 {
   totalQuotes: number;
@@ -1043,7 +1083,7 @@ async function getDashboardStats(): Promise<DashboardStats>
 Get quote counts by status.
 
 ```typescript
-async function getQuoteStatusCounts(): Promise<QuoteStatusCounts>
+async function getQuoteStatusCounts(): Promise<QuoteStatusCounts>;
 ```
 
 #### getInvoiceStatusCounts
@@ -1051,7 +1091,7 @@ async function getQuoteStatusCounts(): Promise<QuoteStatusCounts>
 Get invoice counts by status.
 
 ```typescript
-async function getInvoiceStatusCounts(): Promise<InvoiceStatusCounts>
+async function getInvoiceStatusCounts(): Promise<InvoiceStatusCounts>;
 ```
 
 #### getRevenueData
@@ -1059,7 +1099,7 @@ async function getInvoiceStatusCounts(): Promise<InvoiceStatusCounts>
 Get revenue over time.
 
 ```typescript
-async function getRevenueData(period?: DashboardPeriod): Promise<RevenueDataPoint[]>
+async function getRevenueData(period?: DashboardPeriod): Promise<RevenueDataPoint[]>;
 ```
 
 **DashboardPeriod:** `'7d' | '30d' | '90d' | '12m' | 'all'`
@@ -1069,7 +1109,7 @@ async function getRevenueData(period?: DashboardPeriod): Promise<RevenueDataPoin
 Get recent quotes.
 
 ```typescript
-async function getRecentQuotes(limit?: number): Promise<RecentQuote[]>
+async function getRecentQuotes(limit?: number): Promise<RecentQuote[]>;
 ```
 
 #### getRecentInvoices
@@ -1077,7 +1117,7 @@ async function getRecentQuotes(limit?: number): Promise<RecentQuote[]>
 Get recent invoices.
 
 ```typescript
-async function getRecentInvoices(limit?: number): Promise<RecentInvoice[]>
+async function getRecentInvoices(limit?: number): Promise<RecentInvoice[]>;
 ```
 
 #### getRecentActivity
@@ -1085,7 +1125,7 @@ async function getRecentInvoices(limit?: number): Promise<RecentInvoice[]>
 Get recent activity feed.
 
 ```typescript
-async function getRecentActivity(limit?: number): Promise<ActivityItem[]>
+async function getRecentActivity(limit?: number): Promise<ActivityItem[]>;
 ```
 
 ---
@@ -1097,52 +1137,52 @@ async function getRecentActivity(limit?: number): Promise<ActivityItem[]>
 #### Workspace
 
 ```typescript
-async function getWorkspace(): Promise<WorkspaceData>
-async function updateWorkspaceName(name: string): Promise<void>
+async function getWorkspace(): Promise<WorkspaceData>;
+async function updateWorkspaceName(name: string): Promise<void>;
 ```
 
 #### Business Profile
 
 ```typescript
-async function getBusinessProfile(): Promise<BusinessProfileData | null>
-async function updateBusinessProfile(input: UpdateBusinessProfileInput): Promise<void>
-async function updateBusinessLogo(logoUrl: string | null): Promise<void>
+async function getBusinessProfile(): Promise<BusinessProfileData | null>;
+async function updateBusinessProfile(input: UpdateBusinessProfileInput): Promise<void>;
+async function updateBusinessLogo(logoUrl: string | null): Promise<void>;
 ```
 
 #### Branding Settings
 
 ```typescript
-async function getBrandingSettings(): Promise<BrandingSettingsData | null>
-async function updateBrandingSettings(input: UpdateBrandingSettingsInput): Promise<void>
+async function getBrandingSettings(): Promise<BrandingSettingsData | null>;
+async function updateBrandingSettings(input: UpdateBrandingSettingsInput): Promise<void>;
 ```
 
 #### Payment Settings
 
 ```typescript
-async function getPaymentSettings(): Promise<PaymentSettingsData | null>
-async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<void>
+async function getPaymentSettings(): Promise<PaymentSettingsData | null>;
+async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<void>;
 ```
 
 #### Tax Rates
 
 ```typescript
-async function getTaxRates(): Promise<TaxRateData[]>
-async function createTaxRate(input: CreateTaxRateInput): Promise<{ id: string }>
-async function updateTaxRate(input: UpdateTaxRateInput): Promise<void>
-async function deleteTaxRate(id: string): Promise<void>
+async function getTaxRates(): Promise<TaxRateData[]>;
+async function createTaxRate(input: CreateTaxRateInput): Promise<{ id: string }>;
+async function updateTaxRate(input: UpdateTaxRateInput): Promise<void>;
+async function deleteTaxRate(id: string): Promise<void>;
 ```
 
 #### Number Sequences
 
 ```typescript
-async function getNumberSequences(): Promise<NumberSequenceData[]>
-async function updateNumberSequence(input: UpdateNumberSequenceInput): Promise<void>
+async function getNumberSequences(): Promise<NumberSequenceData[]>;
+async function updateNumberSequence(input: UpdateNumberSequenceInput): Promise<void>;
 ```
 
 #### Combined
 
 ```typescript
-async function getAllSettings(): Promise<AllSettings>
+async function getAllSettings(): Promise<AllSettings>;
 ```
 
 ---
@@ -1156,7 +1196,7 @@ async function getAllSettings(): Promise<AllSettings>
 Get workspace payment settings.
 
 ```typescript
-async function getPaymentSettings(): Promise<PaymentSettingsData | null>
+async function getPaymentSettings(): Promise<PaymentSettingsData | null>;
 ```
 
 #### updatePaymentSettings
@@ -1168,7 +1208,7 @@ async function updatePaymentSettings(data: {
   enabledPaymentMethods?: string[];
   passProcessingFees?: boolean;
   defaultPaymentTerms?: number;
-}): Promise<{ success: boolean; error?: string }>
+}): Promise<{ success: boolean; error?: string }>;
 ```
 
 #### createStripeOnboardingLink
@@ -1176,10 +1216,11 @@ async function updatePaymentSettings(data: {
 Create Stripe Connect onboarding URL.
 
 ```typescript
-async function createStripeOnboardingLink(): Promise<StripeOnboardingResult>
+async function createStripeOnboardingLink(): Promise<StripeOnboardingResult>;
 ```
 
 **StripeOnboardingResult:**
+
 ```typescript
 { success: true; url: string } | { success: false; error: string }
 ```
@@ -1194,7 +1235,7 @@ async function checkStripeAccountStatus(): Promise<{
   status: string | null;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
-}>
+}>;
 ```
 
 #### createInvoicePaymentIntent
@@ -1205,7 +1246,7 @@ Create payment intent for invoice (used by checkout endpoint).
 async function createInvoicePaymentIntent(
   invoiceId: string,
   amount?: number
-): Promise<PaymentIntentResult>
+): Promise<PaymentIntentResult>;
 ```
 
 #### getPayments
@@ -1217,7 +1258,7 @@ async function getPayments(filter?: {
   invoiceId?: string;
   status?: string;
   limit?: number;
-}): Promise<PaymentListItem[]>
+}): Promise<PaymentListItem[]>;
 ```
 
 #### getPaymentById
@@ -1225,7 +1266,7 @@ async function getPayments(filter?: {
 Get payment details.
 
 ```typescript
-async function getPaymentById(paymentId: string): Promise<PaymentDetail | null>
+async function getPaymentById(paymentId: string): Promise<PaymentDetail | null>;
 ```
 
 #### processPaymentWebhook
@@ -1238,7 +1279,7 @@ async function processPaymentWebhook(
   status: 'succeeded' | 'failed',
   chargeId?: string,
   receiptUrl?: string
-): Promise<{ success: boolean }>
+): Promise<{ success: boolean }>;
 ```
 
 ---
@@ -1252,6 +1293,7 @@ These routes are accessible without authentication using secure access tokens.
 **URL:** `/q/[token]`
 
 Displays a public view of a quote where clients can:
+
 - View quote details, line items, and totals
 - Accept the quote with e-signature
 - Decline the quote with optional reason
@@ -1266,6 +1308,7 @@ Displays a public view of a quote where clients can:
 **URL:** `/i/[token]`
 
 Displays a public view of an invoice where clients can:
+
 - View invoice details, line items, and totals
 - See payment history
 - Make payments via Stripe
@@ -1280,6 +1323,7 @@ Displays a public view of an invoice where clients can:
 **URL:** `/c/[token]`
 
 Displays a public view of a contract where clients can:
+
 - View contract terms
 - Sign with e-signature
 - Download signed contract as PDF
@@ -1292,14 +1336,14 @@ Displays a public view of a contract where clients can:
 
 ### Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `UNAUTHORIZED` | 401 | Not authenticated |
-| `FORBIDDEN` | 403 | Not authorized to access resource |
-| `NOT_FOUND` | 404 | Resource not found |
-| `VALIDATION_ERROR` | 400 | Invalid input data |
-| `CONFLICT` | 409 | Resource already exists |
-| `INTERNAL_ERROR` | 500 | Server error |
+| Code               | HTTP Status | Description                       |
+| ------------------ | ----------- | --------------------------------- |
+| `UNAUTHORIZED`     | 401         | Not authenticated                 |
+| `FORBIDDEN`        | 403         | Not authorized to access resource |
+| `NOT_FOUND`        | 404         | Resource not found                |
+| `VALIDATION_ERROR` | 400         | Invalid input data                |
+| `CONFLICT`         | 409         | Resource already exists           |
+| `INTERNAL_ERROR`   | 500         | Server error                      |
 
 ### Error Response Format
 
@@ -1319,30 +1363,34 @@ Displays a public view of a contract where clients can:
 ### Common Errors
 
 #### Unauthorized
+
 ```json
 {
   "error": "Unauthorized"
 }
 ```
+
 Session is missing or expired. Re-authenticate.
 
 #### Not Found
+
 ```json
 {
   "error": "Quote not found"
 }
 ```
+
 The requested resource doesn't exist or belongs to a different workspace.
 
 #### Validation Error
+
 ```json
 {
   "error": "Invalid request data",
-  "details": [
-    { "path": ["email"], "message": "Invalid email" }
-  ]
+  "details": [{ "path": ["email"], "message": "Invalid email" }]
 }
 ```
+
 Request body failed Zod schema validation.
 
 ---
@@ -1353,13 +1401,13 @@ Wolff currently does not implement application-level rate limiting. It is recomm
 
 ### Recommended Limits
 
-| Endpoint Type | Recommended Limit |
-|---------------|-------------------|
-| Authentication | 10 requests/minute per IP |
-| API endpoints | 100 requests/minute per user |
-| Webhooks | 1000 requests/minute per IP |
-| PDF generation | 20 requests/minute per user |
-| Public portal | 60 requests/minute per token |
+| Endpoint Type  | Recommended Limit            |
+| -------------- | ---------------------------- |
+| Authentication | 10 requests/minute per IP    |
+| API endpoints  | 100 requests/minute per user |
+| Webhooks       | 1000 requests/minute per IP  |
+| PDF generation | 20 requests/minute per user  |
+| Public portal  | 60 requests/minute per token |
 
 ### Traefik Configuration Example
 
@@ -1380,6 +1428,7 @@ http:
 Wolff does not currently provide official SDK libraries. However, since all Server Actions are type-safe TypeScript functions, you can:
 
 1. **Use directly in React components:**
+
    ```tsx
    import { getQuotes } from '@/lib/quotes/actions';
 
@@ -1411,6 +1460,7 @@ Wolff does not currently provide official SDK libraries. However, since all Serv
 ## Changelog
 
 ### v1.0.0 (January 2026)
+
 - Initial API documentation
 - Authentication (NextAuth.js with Credentials, Google, GitHub)
 - Quote management APIs
@@ -1424,4 +1474,4 @@ Wolff does not currently provide official SDK libraries. However, since all Serv
 
 ---
 
-*Last updated: January 30, 2026*
+_Last updated: January 30, 2026_

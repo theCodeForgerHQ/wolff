@@ -11,9 +11,10 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   // Bug #56/#59: Apply rate limiting
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                   request.headers.get('x-real-ip') ||
-                   'unknown';
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
   const rateLimitResult = await checkRateLimit(`clients:${clientIp}`, defaultRateLimitOptions);
   const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
 
@@ -30,13 +31,19 @@ export async function GET(request: NextRequest) {
       const result = await getCurrentUserWorkspace();
       workspaceId = result.workspaceId;
     } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: rateLimitHeaders });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: rateLimitHeaders }
+      );
     }
 
     // Parse query params
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20)
+    );
     const rawSearch = searchParams.get('search');
     const search = rawSearch ? rawSearch.slice(0, 200) : null;
 

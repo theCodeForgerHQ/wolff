@@ -15,7 +15,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await checkRateLimit(`reset-password:${clientIp}`, { limit: 5, windowMs: 300000 }); // 5 requests per 5 minutes
+    const rateLimitResult = await checkRateLimit(`reset-password:${clientIp}`, {
+      limit: 5,
+      windowMs: 300000,
+    }); // 5 requests per 5 minutes
     if (rateLimitResult.limited) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -27,17 +30,11 @@ export async function POST(request: NextRequest) {
     const { token, password } = body;
 
     if (!token || typeof token !== 'string') {
-      return NextResponse.json(
-        { error: 'Token is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
     if (!password || typeof password !== 'string') {
-      return NextResponse.json(
-        { error: 'Password is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
     }
 
     // Validate password strength using shared schema
@@ -53,9 +50,11 @@ export async function POST(request: NextRequest) {
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
     // Bug #84: Clean up expired tokens on each request (lazy cleanup)
-    await prisma.passwordResetToken.deleteMany({
-      where: { expiresAt: { lt: new Date() } },
-    }).catch(() => {}); // Don't block if cleanup fails
+    await prisma.passwordResetToken
+      .deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      })
+      .catch(() => {}); // Don't block if cleanup fails
 
     // Find the token
     const resetToken = await prisma.passwordResetToken.findUnique({
@@ -64,10 +63,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!resetToken) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
     }
 
     // Check if token is expired
@@ -77,18 +73,12 @@ export async function POST(request: NextRequest) {
         where: { id: resetToken.id },
       });
 
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
     }
 
     // Check if token was already used
     if (resetToken.usedAt) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
     }
 
     // Hash the new password
@@ -117,9 +107,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error({ err: error }, 'Reset password error');
-    return NextResponse.json(
-      { error: 'Something went wrong' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

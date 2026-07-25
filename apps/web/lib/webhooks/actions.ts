@@ -30,10 +30,7 @@ function generateSecret(): string {
 /**
  * Create a webhook endpoint for the current workspace.
  */
-export async function createWebhookEndpoint(data: {
-  url: string;
-  events: string[];
-}) {
+export async function createWebhookEndpoint(data: { url: string; events: string[] }) {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
   if (role === 'viewer') {
@@ -51,9 +48,7 @@ export async function createWebhookEndpoint(data: {
   }
 
   // Validate events
-  const validEvents = data.events.filter((e) =>
-    VALID_EVENT_TYPES.includes(e as DomainEventType)
-  );
+  const validEvents = data.events.filter((e) => VALID_EVENT_TYPES.includes(e as DomainEventType));
   if (validEvents.length === 0) {
     return { success: false, error: 'At least one valid event type is required' };
   }
@@ -115,9 +110,7 @@ export async function updateWebhookEndpoint(
 
   // Validate events if provided
   if (data.events) {
-    const validEvents = data.events.filter((e) =>
-      VALID_EVENT_TYPES.includes(e as DomainEventType)
-    );
+    const validEvents = data.events.filter((e) => VALID_EVENT_TYPES.includes(e as DomainEventType));
     if (validEvents.length === 0) {
       return { success: false, error: 'At least one valid event type is required' };
     }
@@ -222,4 +215,3 @@ export async function getWebhookDeliveries(endpointId: string, limit = 20) {
     createdAt: d.createdAt.toISOString(),
   }));
 }
-

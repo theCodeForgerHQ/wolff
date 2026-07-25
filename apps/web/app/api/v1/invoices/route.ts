@@ -106,7 +106,13 @@ export async function POST(request: NextRequest) {
     projectId?: string;
     currency?: string;
     dueDate?: string;
-    lineItems?: Array<{ name: string; description?: string; quantity: number; rate: number; taxRate?: number }>;
+    lineItems?: Array<{
+      name: string;
+      description?: string;
+      quantity: number;
+      rate: number;
+      taxRate?: number;
+    }>;
     notes?: string;
     terms?: string;
   };
@@ -133,18 +139,23 @@ export async function POST(request: NextRequest) {
 
   // Bug #34: Validate projectId belongs to workspace
   if (projectId) {
-    const project = await prisma.project.findFirst({ where: { id: projectId, workspaceId, deletedAt: null } });
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, workspaceId, deletedAt: null },
+    });
     if (!project) return apiError('Project not found', 404);
   }
 
   // Generate invoice number in a serializable transaction to prevent duplicates
-  const seq = await prisma.$transaction(async (tx) => {
-    return tx.numberSequence.upsert({
-      where: { workspaceId_type: { workspaceId, type: 'invoice' } },
-      update: { currentValue: { increment: 1 } },
-      create: { workspaceId, type: 'invoice', prefix: 'INV-', currentValue: 1, padding: 4 },
-    });
-  }, { isolationLevel: 'Serializable' });
+  const seq = await prisma.$transaction(
+    async (tx) => {
+      return tx.numberSequence.upsert({
+        where: { workspaceId_type: { workspaceId, type: 'invoice' } },
+        update: { currentValue: { increment: 1 } },
+        create: { workspaceId, type: 'invoice', prefix: 'INV-', currentValue: 1, padding: 4 },
+      });
+    },
+    { isolationLevel: 'Serializable' }
+  );
   const invoiceNumber = `${seq.prefix || 'INV-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
 
   const items = lineItems || [];
@@ -164,7 +175,8 @@ export async function POST(request: NextRequest) {
     if (item.quantity < 0) return apiError('Line item quantity cannot be negative', 400);
     if (item.rate < 0) return apiError('Line item rate cannot be negative', 400);
     // Bug #40: Upper bound on rate and quantity
-    if (item.quantity > 1_000_000) return apiError('Line item quantity must be at most 1,000,000', 400);
+    if (item.quantity > 1_000_000)
+      return apiError('Line item quantity must be at most 1,000,000', 400);
     if (item.rate > 1_000_000) return apiError('Line item rate must be at most 1,000,000', 400);
     if (item.taxRate !== undefined && item.taxRate !== null && !Number.isFinite(item.taxRate)) {
       return apiError('Line item taxRate must be a valid number', 400);
@@ -199,7 +211,15 @@ export async function POST(request: NextRequest) {
       projectId: projectId || null,
       invoiceNumber,
       title,
-      currency: currency || (await prisma.businessProfile.findUnique({ where: { workspaceId }, select: { currency: true } }))?.currency || 'USD',
+      currency:
+        currency ||
+        (
+          await prisma.businessProfile.findUnique({
+            where: { workspaceId },
+            select: { currency: true },
+          })
+        )?.currency ||
+        'USD',
       dueDate: parsedDueDate,
       subtotal,
       taxTotal,
@@ -216,27 +236,30 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return apiSuccess({
-    id: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    title: invoice.title,
-    status: invoice.status,
-    client: invoice.client,
-    currency: invoice.currency,
-    dueDate: invoice.dueDate,
-    subtotal: toNumber(invoice.subtotal),
-    taxTotal: toNumber(invoice.taxTotal),
-    total: toNumber(invoice.total),
-    amountPaid: 0,
-    amountDue: toNumber(invoice.amountDue),
-    lineItems: invoice.lineItems.map((li) => ({
-      id: li.id,
-      name: li.name,
-      description: li.description,
-      quantity: toNumber(li.quantity),
-      rate: toNumber(li.rate),
-      amount: toNumber(li.amount),
-    })),
-    createdAt: invoice.createdAt,
-  }, 201);
+  return apiSuccess(
+    {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      title: invoice.title,
+      status: invoice.status,
+      client: invoice.client,
+      currency: invoice.currency,
+      dueDate: invoice.dueDate,
+      subtotal: toNumber(invoice.subtotal),
+      taxTotal: toNumber(invoice.taxTotal),
+      total: toNumber(invoice.total),
+      amountPaid: 0,
+      amountDue: toNumber(invoice.amountDue),
+      lineItems: invoice.lineItems.map((li) => ({
+        id: li.id,
+        name: li.name,
+        description: li.description,
+        quantity: toNumber(li.quantity),
+        rate: toNumber(li.rate),
+        amount: toNumber(li.amount),
+      })),
+      createdAt: invoice.createdAt,
+    },
+    201
+  );
 }

@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 async function testSortColumn(
   page: import('@playwright/test').Page,
   pageUrl: string,
-  columnName: string,
+  columnName: string
 ) {
   await page.goto(pageUrl);
   await page.waitForLoadState('networkidle');
@@ -24,9 +24,7 @@ async function testSortColumn(
 
   // The header might be a button itself or contain a button
   const sortButton = header.locator('button').first();
-  const clickTarget = (await sortButton.isVisible().catch(() => false))
-    ? sortButton
-    : header;
+  const clickTarget = (await sortButton.isVisible().catch(() => false)) ? sortButton : header;
 
   if (!(await clickTarget.isVisible().catch(() => false))) {
     // Column might not be visible in current viewport or data is empty
@@ -40,7 +38,7 @@ async function testSortColumn(
 
   // Verify sort indicator: either aria-sort attribute or a sort icon
   const hasAriaSort = await header.getAttribute('aria-sort');
-  const hasSortIcon = await header.locator('svg, [class*="sort"], [data-sort]').count() > 0;
+  const hasSortIcon = (await header.locator('svg, [class*="sort"], [data-sort]').count()) > 0;
   const tableRows = page.locator('tbody tr');
   const rowCount = await tableRows.count();
 
@@ -55,16 +53,14 @@ async function testSortColumn(
 async function testSortToggle(
   page: import('@playwright/test').Page,
   pageUrl: string,
-  columnName: string,
+  columnName: string
 ) {
   await page.goto(pageUrl);
   await page.waitForLoadState('networkidle');
 
   const header = page.locator('th').filter({ hasText: new RegExp(`^${columnName}$`, 'i') });
   const sortButton = header.locator('button').first();
-  const clickTarget = (await sortButton.isVisible().catch(() => false))
-    ? sortButton
-    : header;
+  const clickTarget = (await sortButton.isVisible().catch(() => false)) ? sortButton : header;
 
   if (!(await clickTarget.isVisible().catch(() => false))) {
     test.skip();
@@ -88,9 +84,11 @@ async function testSortToggle(
   await page.waitForLoadState('domcontentloaded');
 
   // Verify ascending sort was applied (icon or aria-sort)
-  const firstSortIcon = await header.locator('svg').first().evaluate(
-    (el) => el.classList.toString()
-  ).catch(() => '');
+  const firstSortIcon = await header
+    .locator('svg')
+    .first()
+    .evaluate((el) => el.classList.toString())
+    .catch(() => '');
 
   // Second click - open dropdown again
   await clickTarget.click();
@@ -105,9 +103,11 @@ async function testSortToggle(
   }
 
   // Verify the sort icon changed (ArrowDown icon for desc vs ArrowUp for asc)
-  const secondSortIcon = await header.locator('svg').first().evaluate(
-    (el) => el.classList.toString()
-  ).catch(() => '');
+  const secondSortIcon = await header
+    .locator('svg')
+    .first()
+    .evaluate((el) => el.classList.toString())
+    .catch(() => '');
 
   // The sort icon class should differ between asc and desc
   // At minimum, selecting both options should not cause errors
@@ -115,7 +115,6 @@ async function testSortToggle(
 }
 
 test.describe('Data Table Sort Columns', () => {
-
   test.describe('Clients Sort', () => {
     test('should sort by Contact column', async ({ page }) => {
       await testSortColumn(page, '/clients', 'Contact');

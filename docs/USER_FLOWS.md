@@ -1614,4 +1614,4 @@
 
 ---
 
-*This User Flows document serves as a comprehensive reference for all user interactions in Wolff. Implementation should follow these flows to ensure consistent user experience.*
+_This User Flows document serves as a comprehensive reference for all user interactions in Wolff. Implementation should follow these flows to ensure consistent user experience._

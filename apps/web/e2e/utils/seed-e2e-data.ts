@@ -136,7 +136,12 @@ async function seedE2ETestData() {
 
   // Create test clients
   const testClients = [
-    { id: 'e2e-client-1', name: 'E2E Test Client', email: 'client@e2e-test.dev', company: 'E2E Corp' },
+    {
+      id: 'e2e-client-1',
+      name: 'E2E Test Client',
+      email: 'client@e2e-test.dev',
+      company: 'E2E Corp',
+    },
     { id: 'e2e-client-2', name: 'John Doe', email: 'john@e2e-test.dev', company: 'Doe Industries' },
     { id: 'e2e-client-3', name: 'Jane Smith', email: 'jane@e2e-test.dev', company: 'Smith LLC' },
   ];
@@ -223,9 +228,14 @@ async function seedE2ETestData() {
         subtotal: 1000,
         total: 1000,
         sentAt: status !== 'draft' ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) : null,
-        viewedAt: ['viewed', 'accepted', 'declined', 'converted'].includes(status) ? new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) : null,
-        acceptedAt: ['accepted', 'converted'].includes(status) ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) : null,
-        declinedAt: status === 'declined' ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) : null,
+        viewedAt: ['viewed', 'accepted', 'declined', 'converted'].includes(status)
+          ? new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
+          : null,
+        acceptedAt: ['accepted', 'converted'].includes(status)
+          ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+          : null,
+        declinedAt:
+          status === 'declined' ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) : null,
       },
     });
 
@@ -268,15 +278,18 @@ async function seedE2ETestData() {
         status,
         title: `E2E Test Invoice - ${status}`,
         issueDate: now,
-        dueDate: status === 'overdue'
-          ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        dueDate:
+          status === 'overdue'
+            ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         subtotal: 500,
         total: 500,
         amountPaid: status === 'paid' ? 500 : status === 'partial' ? 250 : 0,
         amountDue: status === 'paid' ? 0 : status === 'partial' ? 250 : 500,
         sentAt: status !== 'draft' ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) : null,
-        viewedAt: ['viewed', 'partial', 'paid', 'overdue'].includes(status) ? new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) : null,
+        viewedAt: ['viewed', 'partial', 'paid', 'overdue'].includes(status)
+          ? new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
+          : null,
         paidAt: status === 'paid' ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) : null,
         voidedAt: status === 'voided' ? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) : null,
       },
@@ -350,10 +363,7 @@ async function cleanupE2ETestData() {
   });
   await prisma.quote.deleteMany({
     where: {
-      OR: [
-        { id: { startsWith: 'e2e-' } },
-        { quoteNumber: { startsWith: 'Q-02' } },
-      ],
+      OR: [{ id: { startsWith: 'e2e-' } }, { quoteNumber: { startsWith: 'Q-02' } }],
     },
   });
 
@@ -363,10 +373,7 @@ async function cleanupE2ETestData() {
   });
   await prisma.invoice.deleteMany({
     where: {
-      OR: [
-        { id: { startsWith: 'e2e-' } },
-        { invoiceNumber: { startsWith: 'INV-02' } },
-      ],
+      OR: [{ id: { startsWith: 'e2e-' } }, { invoiceNumber: { startsWith: 'INV-02' } }],
     },
   });
 

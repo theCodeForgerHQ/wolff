@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 
 // Support multiple environment variable names for flexibility
-const baseURL = process.env.BASE_URL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
+const baseURL =
+  process.env.BASE_URL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
 
 // Skip local webServer when testing against external URLs (production/staging)
 const isExternalUrl = !baseURL.includes('localhost');
@@ -152,12 +153,14 @@ export default defineConfig({
   ],
 
   // Only start local dev server when testing localhost
-  ...(isExternalUrl ? {} : {
-    webServer: {
-      command: 'pnpm run dev',
-      url: baseURL,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-  }),
+  ...(isExternalUrl
+    ? {}
+    : {
+        webServer: {
+          command: 'pnpm run dev',
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+      }),
 });

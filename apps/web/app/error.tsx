@@ -18,18 +18,16 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="max-w-md text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-          <AlertTriangle className="h-6 w-6 text-destructive" />
+    <div className="bg-background flex min-h-screen items-center justify-center p-6">
+      <div className="max-w-md space-y-4 text-center">
+        <div className="bg-destructive/10 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+          <AlertTriangle className="text-destructive h-6 w-6" />
         </div>
         <h1 className="text-xl font-semibold">Something went wrong</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           An unexpected error occurred. Please try again.
         </p>
-        {error.digest && (
-          <p className="text-xs text-muted-foreground">Error ID: {error.digest}</p>
-        )}
+        {error.digest && <p className="text-muted-foreground text-xs">Error ID: {error.digest}</p>}
         <div className="flex justify-center gap-2 pt-2">
           <Button variant="outline" asChild>
             <a href="/">Go Home</a>

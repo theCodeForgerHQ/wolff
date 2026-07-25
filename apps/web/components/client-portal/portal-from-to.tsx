@@ -17,20 +17,24 @@ export function PortalFromTo({
     <div className="grid gap-6 sm:grid-cols-2">
       {/* From */}
       <div>
-        <p className="mb-1 text-sm text-muted-foreground">{fromLabel}</p>
+        <p className="text-muted-foreground mb-1 text-sm">{fromLabel}</p>
         <div className="space-y-0.5">
           <p className="font-medium">{business.name}</p>
-          {business.email && (
-            <p className="text-sm text-muted-foreground">{business.email}</p>
-          )}
-          {business.phone && (
-            <p className="text-sm text-muted-foreground">{business.phone}</p>
-          )}
+          {business.email && <p className="text-muted-foreground text-sm">{business.email}</p>}
+          {business.phone && <p className="text-muted-foreground text-sm">{business.phone}</p>}
           {business.address && (
-            <p className="whitespace-pre-line text-sm text-muted-foreground">
+            <p className="text-muted-foreground whitespace-pre-line text-sm">
               {typeof business.address === 'string'
                 ? business.address
-                : [business.address.street, business.address.city, business.address.state, business.address.postalCode, business.address.country].filter(Boolean).join(', ')}
+                : [
+                    business.address.street,
+                    business.address.city,
+                    business.address.state,
+                    business.address.postalCode,
+                    business.address.country,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
             </p>
           )}
         </div>
@@ -38,19 +42,13 @@ export function PortalFromTo({
 
       {/* To */}
       <div>
-        <p className="mb-1 text-sm text-muted-foreground">{toLabel}</p>
+        <p className="text-muted-foreground mb-1 text-sm">{toLabel}</p>
         <div className="space-y-0.5">
           <p className="font-medium">{client.name}</p>
-          {client.company && (
-            <p className="text-sm text-muted-foreground">{client.company}</p>
-          )}
-          {client.email && (
-            <p className="text-sm text-muted-foreground">{client.email}</p>
-          )}
+          {client.company && <p className="text-muted-foreground text-sm">{client.company}</p>}
+          {client.email && <p className="text-muted-foreground text-sm">{client.email}</p>}
           {client.address && (
-            <p className="whitespace-pre-line text-sm text-muted-foreground">
-              {client.address}
-            </p>
+            <p className="text-muted-foreground whitespace-pre-line text-sm">{client.address}</p>
           )}
         </div>
       </div>

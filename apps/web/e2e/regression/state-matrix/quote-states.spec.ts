@@ -18,7 +18,9 @@ async function createDraftQuote(page: import('@playwright/test').Page, title: st
   await page.waitForLoadState('networkidle');
 
   // Fill title using various possible selectors
-  const titleInput = page.locator('#title, input[name="title"], [data-testid="quote-title"]').first();
+  const titleInput = page
+    .locator('#title, input[name="title"], [data-testid="quote-title"]')
+    .first();
   if (await titleInput.isVisible().catch(() => false)) {
     await titleInput.fill(title);
   }
@@ -47,7 +49,9 @@ async function createDraftQuote(page: import('@playwright/test').Page, title: st
     await nameInput.fill('Test Service');
   }
 
-  const qtyInput = page.locator('input[name="lineItems.0.quantity"], input[name*="quantity"]').first();
+  const qtyInput = page
+    .locator('input[name="lineItems.0.quantity"], input[name*="quantity"]')
+    .first();
   if (await qtyInput.isVisible().catch(() => false)) {
     await qtyInput.fill('1');
   }
@@ -92,7 +96,9 @@ test.describe('Quote State Matrix Tests', () => {
       }
 
       // Check for status indicator
-      const statusBadge = page.locator('[data-testid="quote-status"], .badge, [class*="status"]').first();
+      const statusBadge = page
+        .locator('[data-testid="quote-status"], .badge, [class*="status"]')
+        .first();
       if (await statusBadge.isVisible()) {
         const statusText = await statusBadge.textContent();
         expect(statusText?.toLowerCase()).toMatch(/draft|sent|accepted/i);
@@ -100,7 +106,7 @@ test.describe('Quote State Matrix Tests', () => {
 
       // Try to send quote if send button exists
       const sendButton = page.getByRole('button', { name: /send/i });
-      if (await sendButton.isVisible() && await sendButton.isEnabled()) {
+      if ((await sendButton.isVisible()) && (await sendButton.isEnabled())) {
         await sendButton.click();
 
         const sendDialog = page.getByRole('dialog');
@@ -166,7 +172,7 @@ test.describe('Quote State Matrix Tests', () => {
 
         // Look for convert to invoice button
         const convertButton = page.getByRole('button', { name: /convert|invoice/i });
-        if (await convertButton.isVisible() && await convertButton.isEnabled()) {
+        if ((await convertButton.isVisible()) && (await convertButton.isEnabled())) {
           await expect(convertButton).toBeVisible();
         }
       }
@@ -270,7 +276,9 @@ test.describe('Quote State Matrix Tests', () => {
       if (await quoteLink.isVisible()) {
         await quoteLink.click();
 
-        const statusElement = page.locator('[data-testid="quote-status"], .badge, [class*="status"]').first();
+        const statusElement = page
+          .locator('[data-testid="quote-status"], .badge, [class*="status"]')
+          .first();
         if (await statusElement.isVisible()) {
           const statusBefore = await statusElement.textContent();
 
@@ -294,7 +302,9 @@ test.describe('Quote State Matrix Tests', () => {
         await quoteLink.click();
 
         // Get current state
-        const statusElement = page.locator('[data-testid="quote-status"], .badge, [class*="status"]').first();
+        const statusElement = page
+          .locator('[data-testid="quote-status"], .badge, [class*="status"]')
+          .first();
         if (await statusElement.isVisible()) {
           const statusBefore = await statusElement.textContent();
 
@@ -340,7 +350,9 @@ test.describe('Quote State Matrix Tests', () => {
         if (await activityTab.isVisible()) {
           await activityTab.click();
           // Look for any date/time content
-          const dateContent = page.getByText(/\d{1,2}[\/\-]\d{1,2}|\d{4}|ago|today|yesterday/i).first();
+          const dateContent = page
+            .getByText(/\d{1,2}[\/\-]\d{1,2}|\d{4}|ago|today|yesterday/i)
+            .first();
           if (await dateContent.isVisible()) {
             await expect(dateContent).toBeVisible();
           }

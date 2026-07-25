@@ -28,13 +28,15 @@ const businessProfileSchema = z.object({
   taxId: z.string().max(100).optional(),
   currency: z.string().length(3).default('USD'),
   timezone: z.string().default('UTC'),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    postalCode: z.string().optional(),
-    country: z.string().optional(),
-  }).optional(),
+  address: z
+    .object({
+      street: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      postalCode: z.string().optional(),
+      country: z.string().optional(),
+    })
+    .optional(),
 });
 
 type BusinessProfileFormValues = z.infer<typeof businessProfileSchema>;
@@ -99,7 +101,7 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
               placeholder="Your Business Name"
             />
             {form.formState.errors.businessName && (
-              <p className="text-sm text-destructive">
+              <p className="text-destructive text-sm">
                 {form.formState.errors.businessName.message}
               </p>
             )}
@@ -118,31 +120,19 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                {...form.register('phone')}
-                placeholder="+1 (555) 000-0000"
-              />
+              <Input id="phone" {...form.register('phone')} placeholder="+1 (555) 000-0000" />
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                {...form.register('website')}
-                placeholder="https://example.com"
-              />
+              <Input id="website" {...form.register('website')} placeholder="https://example.com" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="taxId">Tax ID / VAT Number</Label>
-              <Input
-                id="taxId"
-                {...form.register('taxId')}
-                placeholder="XX-XXXXXXX"
-              />
+              <Input id="taxId" {...form.register('taxId')} placeholder="XX-XXXXXXX" />
             </div>
           </div>
         </CardContent>
@@ -151,9 +141,7 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Address</CardTitle>
-          <CardDescription>
-            Your business address for invoices.
-          </CardDescription>
+          <CardDescription>Your business address for invoices.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -168,40 +156,24 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                {...form.register('address.city')}
-                placeholder="City"
-              />
+              <Input id="city" {...form.register('address.city')} placeholder="City" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="state">State / Province</Label>
-              <Input
-                id="state"
-                {...form.register('address.state')}
-                placeholder="State"
-              />
+              <Input id="state" {...form.register('address.state')} placeholder="State" />
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="postalCode">Postal Code</Label>
-              <Input
-                id="postalCode"
-                {...form.register('address.postalCode')}
-                placeholder="12345"
-              />
+              <Input id="postalCode" {...form.register('address.postalCode')} placeholder="12345" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                {...form.register('address.country')}
-                placeholder="Country"
-              />
+              <Input id="country" {...form.register('address.country')} placeholder="Country" />
             </div>
           </div>
         </CardContent>
@@ -210,9 +182,7 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Regional Settings</CardTitle>
-          <CardDescription>
-            Configure your default currency and timezone.
-          </CardDescription>
+          <CardDescription>Configure your default currency and timezone.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">

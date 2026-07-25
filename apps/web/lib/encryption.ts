@@ -15,7 +15,9 @@ function getKey(): Buffer | null {
   const hex = process.env.ENCRYPTION_KEY;
   if (!hex) {
     if (process.env.NODE_ENV === 'production') {
-      logger.warn('ENCRYPTION_KEY not set in production — secrets stored in plaintext. Set a 64-char hex key.');
+      logger.warn(
+        'ENCRYPTION_KEY not set in production — secrets stored in plaintext. Set a 64-char hex key.'
+      );
     }
     return null;
   }

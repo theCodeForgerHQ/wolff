@@ -13,17 +13,25 @@ const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 function validateImageMagicBytes(buffer: Buffer): string | null {
   if (buffer.length < 4) return null;
   // PNG: 89 50 4E 47
-  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
     return 'image/png';
   }
   // JPEG: FF D8 FF
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return 'image/jpeg';
   }
   // WebP: RIFF....WEBP
-  if (buffer.length >= 12 &&
-    buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+  if (
+    buffer.length >= 12 &&
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
     return 'image/webp';
   }
   return null;
@@ -41,7 +49,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limit: 20 uploads per minute per user
-  const rateLimitResult = await checkRateLimit(`upload:${session.user.id}`, { limit: 20, windowMs: 60000 });
+  const rateLimitResult = await checkRateLimit(`upload:${session.user.id}`, {
+    limit: 20,
+    windowMs: 60000,
+  });
   if (rateLimitResult.limited) {
     return NextResponse.json(
       { error: 'Too many uploads. Please try again later.' },
@@ -68,10 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: 'File too large. Maximum size is 2MB' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'File too large. Maximum size is 2MB' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -87,7 +95,10 @@ export async function POST(request: NextRequest) {
 
     // Derive extension from validated MIME type, not user-provided filename
     const MIME_TO_EXT: Record<string, string> = {
-      'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/webp': 'webp',
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/webp': 'webp',
     };
     const ext = MIME_TO_EXT[detectedType] || 'png';
     const timestamp = Date.now();
@@ -107,23 +118,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Bug #73: Audit log for file uploads
-    logger.info({ userId: session.user.id, filename: result.key, size: result.size, contentType: detectedType, purpose: purpose || 'general' }, '[AUDIT] File uploaded');
+    logger.info(
+      {
+        userId: session.user.id,
+        filename: result.key,
+        size: result.size,
+        contentType: detectedType,
+        purpose: purpose || 'general',
+      },
+      '[AUDIT] File uploaded'
+    );
 
     // Bug #93: Return response with security headers for served content
-    return NextResponse.json({
-      url: result.url,
-      key: result.key,
-      size: result.size,
-    }, {
-      headers: {
-        'X-Content-Type-Options': 'nosniff',
+    return NextResponse.json(
+      {
+        url: result.url,
+        key: result.key,
+        size: result.size,
       },
-    });
+      {
+        headers: {
+          'X-Content-Type-Options': 'nosniff',
+        },
+      }
+    );
   } catch (error) {
     logger.error({ err: error }, 'Upload error');
-    return NextResponse.json(
-      { error: 'Failed to upload file' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
   }
 }

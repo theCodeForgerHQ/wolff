@@ -32,7 +32,7 @@ test.describe('Search & Filtering', () => {
 
         // Should show results from multiple categories
         const results = page.locator('[class*="search-result"], [class*="result"]');
-        if (await results.count() > 0) {
+        if ((await results.count()) > 0) {
           await expect(results.first()).toBeVisible();
         }
       }
@@ -46,7 +46,7 @@ test.describe('Search & Filtering', () => {
         await searchInput.fill('a');
 
         const categories = page.getByText(/quotes|invoices|clients/i);
-        if (await categories.count() > 0) {
+        if ((await categories.count()) > 0) {
           await expect(categories.first()).toBeVisible();
         }
       }
@@ -139,7 +139,6 @@ test.describe('Search & Filtering', () => {
         const draftOption = page.getByRole('option', { name: /draft/i });
         if (await draftOption.isVisible()) {
           await draftOption.click();
-
         }
       }
     });
@@ -179,7 +178,7 @@ test.describe('Search & Filtering', () => {
       const minAmount = page.getByLabel(/min.*amount|from.*amount/i);
       const maxAmount = page.getByLabel(/max.*amount|to.*amount/i);
 
-      if (await minAmount.isVisible() && await maxAmount.isVisible()) {
+      if ((await minAmount.isVisible()) && (await maxAmount.isVisible())) {
         await minAmount.fill('100');
         await maxAmount.fill('1000');
       }
@@ -201,7 +200,6 @@ test.describe('Search & Filtering', () => {
           await option.click();
         }
       }
-
     });
 
     test('should clear all filters', async ({ page }) => {
@@ -386,7 +384,7 @@ test.describe('Search & Filtering', () => {
       await page.goto('/quotes');
 
       const sortIndicator = page.locator('[class*="sort"], [aria-sort]');
-      if (await sortIndicator.count() > 0) {
+      if ((await sortIndicator.count()) > 0) {
         await expect(sortIndicator.first()).toBeAttached();
       }
     });
@@ -406,7 +404,7 @@ test.describe('Search & Filtering', () => {
       await page.goto('/quotes');
 
       const nextButton = page.getByRole('button', { name: /next|›/i });
-      if (await nextButton.isVisible() && await nextButton.isEnabled()) {
+      if ((await nextButton.isVisible()) && (await nextButton.isEnabled())) {
         await nextButton.click();
 
         const url = page.url();
@@ -418,7 +416,7 @@ test.describe('Search & Filtering', () => {
       await page.goto('/quotes?page=2');
 
       const prevButton = page.getByRole('button', { name: /prev|‹/i });
-      if (await prevButton.isVisible() && await prevButton.isEnabled()) {
+      if ((await prevButton.isVisible()) && (await prevButton.isEnabled())) {
         await prevButton.click();
       }
     });
@@ -427,7 +425,7 @@ test.describe('Search & Filtering', () => {
       await page.goto('/quotes');
 
       const pageNumbers = page.locator('[class*="pagination"] button, [class*="pagination"] a');
-      if (await pageNumbers.count() > 0) {
+      if ((await pageNumbers.count()) > 0) {
         await expect(pageNumbers.first()).toBeVisible();
       }
     });
@@ -553,7 +551,7 @@ test.describe('Search & Filtering Accessibility', () => {
     await page.goto('/quotes');
 
     const filterControls = page.locator('select, [role="combobox"]');
-    if (await filterControls.count() > 0) {
+    if ((await filterControls.count()) > 0) {
       await expect(filterControls.first()).toBeVisible();
     }
   });
@@ -563,7 +561,7 @@ test.describe('Search & Filtering Accessibility', () => {
 
     // Results count should be announced
     const resultsAnnouncement = page.locator('[aria-live], [role="status"]');
-    if (await resultsAnnouncement.count() > 0) {
+    if ((await resultsAnnouncement.count()) > 0) {
       await expect(resultsAnnouncement.first()).toBeAttached();
     }
   });

@@ -78,14 +78,14 @@ Quick-action buttons at the top of the sidebar let you create a new quote or inv
 
 At the top of the dashboard, six summary cards display your key performance indicators:
 
-| Card | What It Shows |
-|------|---------------|
-| Total Revenue | Cumulative paid invoice revenue |
-| Outstanding | Total unpaid invoice amounts |
-| Overdue | Total overdue invoice amounts |
-| Quotes This Month | Number of quotes created in the current month |
-| Invoices This Month | Number of invoices created in the current month |
-| Conversion Rate | Percentage of sent quotes that converted to invoices |
+| Card                | What It Shows                                        |
+| ------------------- | ---------------------------------------------------- |
+| Total Revenue       | Cumulative paid invoice revenue                      |
+| Outstanding         | Total unpaid invoice amounts                         |
+| Overdue             | Total overdue invoice amounts                        |
+| Quotes This Month   | Number of quotes created in the current month        |
+| Invoices This Month | Number of invoices created in the current month      |
+| Conversion Rate     | Percentage of sent quotes that converted to invoices |
 
 ### Analytics Charts
 
@@ -191,6 +191,7 @@ The quote editor uses a split-view layout: the editing form is on the left, and 
 The editor is organized into collapsible sections:
 
 **Details Section**
+
 - **Title** -- A descriptive title for the quote (e.g., "Website Redesign Proposal").
 - **Client** -- Select or change the client.
 - **Project** -- Optionally link the quote to a project.
@@ -215,6 +216,7 @@ A rich text editor where you can write the terms and conditions that appear on t
 
 **Notes Section**
 Two note fields:
+
 - **Client Notes** -- Visible to the client on the quote and in the client portal.
 - **Internal Notes** -- Visible only to you and your team, never shown to the client.
 
@@ -229,18 +231,18 @@ For more visually rich quotes, switch to the visual builder. The builder workspa
 
 **Available Block Types:**
 
-| Block | Description |
-|-------|-------------|
-| Header | Title and subtitle for sections of your quote |
-| Text | Rich text content with formatting |
-| Divider | A horizontal line to separate sections |
-| Spacer | Adjustable vertical space between blocks |
-| Image | Upload or reference an image |
-| Service Item | A single priced line item (name, description, quantity, rate) |
-| Service Group | A group of related service items with a subtotal |
-| Signature | An e-signature capture area for the client |
-| Columns | Side-by-side column layout |
-| Table | Tabular data display |
+| Block         | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| Header        | Title and subtitle for sections of your quote                 |
+| Text          | Rich text content with formatting                             |
+| Divider       | A horizontal line to separate sections                        |
+| Spacer        | Adjustable vertical space between blocks                      |
+| Image         | Upload or reference an image                                  |
+| Service Item  | A single priced line item (name, description, quantity, rate) |
+| Service Group | A group of related service items with a subtotal              |
+| Signature     | An e-signature capture area for the client                    |
+| Columns       | Side-by-side column layout                                    |
+| Table         | Tabular data display                                          |
 
 To add a block, drag it from the blocks panel onto the canvas, or click the "+" button between existing blocks. Select a block to edit its properties in the right panel.
 
@@ -253,15 +255,15 @@ To add a block, drag it from the blocks panel onto the canvas, or click the "+" 
 
 ### Quote Status Lifecycle
 
-| Status | Meaning |
-|--------|---------|
-| Draft | Work in progress; fully editable |
-| Sent | Emailed to the client; waiting for response |
-| Viewed | The client has opened the portal link |
-| Accepted | The client accepted and signed the quote |
-| Declined | The client declined the quote |
-| Expired | The expiration date has passed without a response |
-| Converted | The quote has been converted to an invoice |
+| Status    | Meaning                                           |
+| --------- | ------------------------------------------------- |
+| Draft     | Work in progress; fully editable                  |
+| Sent      | Emailed to the client; waiting for response       |
+| Viewed    | The client has opened the portal link             |
+| Accepted  | The client accepted and signed the quote          |
+| Declined  | The client declined the quote                     |
+| Expired   | The expiration date has passed without a response |
+| Converted | The quote has been converted to an invoice        |
 
 ### Quote Detail Page
 
@@ -329,15 +331,15 @@ To record a payment manually:
 
 ### Invoice Status Lifecycle
 
-| Status | Meaning |
-|--------|---------|
-| Draft | Work in progress; editable |
-| Sent | Emailed to the client |
-| Viewed | The client has opened the portal link |
-| Partial | Some payment has been received |
-| Paid | Fully paid |
+| Status  | Meaning                                      |
+| ------- | -------------------------------------------- |
+| Draft   | Work in progress; editable                   |
+| Sent    | Emailed to the client                        |
+| Viewed  | The client has opened the portal link        |
+| Partial | Some payment has been received               |
+| Paid    | Fully paid                                   |
 | Overdue | The due date has passed without full payment |
-| Voided | The invoice has been cancelled |
+| Voided  | The invoice has been cancelled               |
 
 Note: "Overdue" is computed at runtime. An unpaid or partially paid invoice with a due date in the past is automatically shown as overdue.
 
@@ -776,12 +778,12 @@ If you are running a self-hosted deployment, set up regular PostgreSQL database 
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Ctrl/Cmd + Z | Undo (in the visual builder) |
-| Ctrl/Cmd + Shift + Z | Redo (in the visual builder) |
-| Delete/Backspace | Delete selected block (in the visual builder) |
-| Ctrl/Cmd + S | Save current document |
+| Shortcut             | Action                                        |
+| -------------------- | --------------------------------------------- |
+| Ctrl/Cmd + Z         | Undo (in the visual builder)                  |
+| Ctrl/Cmd + Shift + Z | Redo (in the visual builder)                  |
+| Delete/Backspace     | Delete selected block (in the visual builder) |
+| Ctrl/Cmd + S         | Save current document                         |
 
 ---
 
@@ -795,4 +797,4 @@ If you need assistance:
 
 ---
 
-*Wolff is open source. Contributions, bug reports, and feature requests are welcome on GitHub.*
+_Wolff is open source. Contributions, bug reports, and feature requests are welcome on GitHub._

@@ -64,9 +64,7 @@ export function InviteMemberButton() {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
-            <DialogDescription>
-              Invite someone to join your workspace
-            </DialogDescription>
+            <DialogDescription>Invite someone to join your workspace</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -96,9 +94,7 @@ export function InviteMemberButton() {
               </Select>
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
 
           <DialogFooter>

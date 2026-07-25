@@ -209,9 +209,7 @@ describe('PDF Generation Integration', () => {
     it('shows partial payment history', () => {
       const invoiceWithPayments = {
         ...mockInvoice,
-        payments: [
-          { amount: 500, date: '2024-01-25', method: 'credit_card' },
-        ],
+        payments: [{ amount: 500, date: '2024-01-25', method: 'credit_card' }],
         amountPaid: 500,
         amountDue: 580,
       };
@@ -275,7 +273,8 @@ describe('PDF Generation Integration', () => {
 
     it('includes header and footer', () => {
       const headerTemplate = '<div>Company Name</div>';
-      const footerTemplate = '<div>Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>';
+      const footerTemplate =
+        '<div>Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>';
 
       expect(headerTemplate).toContain('Company Name');
       expect(footerTemplate).toContain('pageNumber');
@@ -317,11 +316,7 @@ describe('PDF Generation Integration', () => {
         await page.close();
       };
 
-      await Promise.all([
-        generatePDF(),
-        generatePDF(),
-        generatePDF(),
-      ]);
+      await Promise.all([generatePDF(), generatePDF(), generatePDF()]);
 
       expect(mockBrowser.newPage).toHaveBeenCalledTimes(3);
     });

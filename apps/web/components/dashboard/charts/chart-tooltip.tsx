@@ -42,12 +42,9 @@ export function ChartTooltip({
   };
 
   return (
-    <div
-      className="rounded-lg border bg-background px-3 py-2 shadow-md"
-      role="tooltip"
-    >
+    <div className="bg-background rounded-lg border px-3 py-2 shadow-md" role="tooltip">
       {formattedLabel && (
-        <p className="mb-1 text-sm font-medium text-foreground">{formattedLabel}</p>
+        <p className="text-foreground mb-1 text-sm font-medium">{formattedLabel}</p>
       )}
       <div className="space-y-1">
         {payload.map((entry, index) => (
@@ -71,10 +68,11 @@ export function RevenueTooltip({ active, payload, label }: ChartTooltipProps) {
     return null;
   }
 
-  const data = payload[0]?.payload as { date?: string; revenue?: number; invoiceCount?: number } | undefined;
+  const data = payload[0]?.payload as
+    { date?: string; revenue?: number; invoiceCount?: number } | undefined;
 
   return (
-    <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
+    <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
       <p className="mb-1 text-sm font-medium">{label}</p>
       <div className="space-y-1 text-sm">
         <div className="flex items-center justify-between gap-4">
@@ -105,12 +103,9 @@ export function StatusTooltip({ active, payload }: ChartTooltipProps) {
   const percentage = total > 0 ? ((data.value / total) * 100).toFixed(1) : '0';
 
   return (
-    <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
+    <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
       <div className="flex items-center gap-2">
-        <span
-          className="h-3 w-3 rounded-full"
-          style={{ backgroundColor: data.fill }}
-        />
+        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: data.fill }} />
         <span className="font-medium">{data.name}</span>
       </div>
       <div className="mt-1 space-y-0.5 text-sm">
@@ -134,16 +129,13 @@ export function AgingTooltip({ active, payload, label }: ChartTooltipProps) {
   }
 
   return (
-    <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
+    <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
       <p className="mb-1 text-sm font-medium">{label}</p>
       <div className="space-y-1 text-sm">
         {payload.map((entry, index) => (
           <div key={index} className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: entry.fill }}
-              />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.fill }} />
               <span className="text-muted-foreground">{entry.name}:</span>
             </div>
             <span className="font-medium">{formatFullCurrency(entry.value)}</span>

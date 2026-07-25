@@ -61,11 +61,11 @@ export function EmailSettingsForm() {
         {[1, 2, 3].map((i) => (
           <Card key={i}>
             <CardHeader>
-              <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-64 animate-pulse rounded bg-muted" />
+              <div className="bg-muted h-5 w-32 animate-pulse rounded" />
+              <div className="bg-muted h-4 w-64 animate-pulse rounded" />
             </CardHeader>
             <CardContent>
-              <div className="h-24 animate-pulse rounded bg-muted" />
+              <div className="bg-muted h-24 animate-pulse rounded" />
             </CardContent>
           </Card>
         ))}
@@ -121,15 +121,16 @@ export function EmailSettingsForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Mail className="h-5 w-5 text-primary" />
+              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                <Mail className="text-primary h-5 w-5" />
               </div>
               <div>
                 <p className="text-sm font-medium">Current sending email</p>
-                <p className="text-sm text-muted-foreground">
-                  {clientEmail || 'No email configured — emails will be sent from the default system address.'}
+                <p className="text-muted-foreground text-sm">
+                  {clientEmail ||
+                    'No email configured — emails will be sent from the default system address.'}
                 </p>
               </div>
             </div>
@@ -145,11 +146,16 @@ export function EmailSettingsForm() {
                 type="email"
                 className="flex-1"
               />
-              <Button type="button" variant="outline" disabled title="Email verification coming soon">
+              <Button
+                type="button"
+                variant="outline"
+                disabled
+                title="Email verification coming soon"
+              >
                 Verify
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Clients will see this address as the sender on all emails from your workspace.
             </p>
           </div>

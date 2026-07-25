@@ -731,41 +731,49 @@ export const pdfQueue = new Queue('pdf', { connection });
 export const reminderQueue = new Queue('reminder', { connection });
 
 // Email worker
-const emailWorker = new Worker('email', async (job) => {
-  const { type, to, data } = job.data;
+const emailWorker = new Worker(
+  'email',
+  async (job) => {
+    const { type, to, data } = job.data;
 
-  switch (type) {
-    case 'quote_sent':
-      await sendQuoteSentEmail(to, data);
-      break;
-    case 'invoice_sent':
-      await sendInvoiceSentEmail(to, data);
-      break;
-    case 'payment_received':
-      await sendPaymentReceivedEmail(to, data);
-      break;
-    case 'payment_reminder':
-      await sendPaymentReminderEmail(to, data);
-      break;
-  }
-}, { connection });
+    switch (type) {
+      case 'quote_sent':
+        await sendQuoteSentEmail(to, data);
+        break;
+      case 'invoice_sent':
+        await sendInvoiceSentEmail(to, data);
+        break;
+      case 'payment_received':
+        await sendPaymentReceivedEmail(to, data);
+        break;
+      case 'payment_reminder':
+        await sendPaymentReminderEmail(to, data);
+        break;
+    }
+  },
+  { connection }
+);
 
 // PDF worker
-const pdfWorker = new Worker('pdf', async (job) => {
-  const { type, id } = job.data;
+const pdfWorker = new Worker(
+  'pdf',
+  async (job) => {
+    const { type, id } = job.data;
 
-  switch (type) {
-    case 'quote':
-      await generateQuotePdf(id);
-      break;
-    case 'invoice':
-      await generateInvoicePdf(id);
-      break;
-    case 'receipt':
-      await generateReceiptPdf(id);
-      break;
-  }
-}, { connection });
+    switch (type) {
+      case 'quote':
+        await generateQuotePdf(id);
+        break;
+      case 'invoice':
+        await generateInvoicePdf(id);
+        break;
+      case 'receipt':
+        await generateReceiptPdf(id);
+        break;
+    }
+  },
+  { connection }
+);
 
 // Reminder scheduler (runs every hour)
 export async function scheduleReminders() {
@@ -980,12 +988,12 @@ export default auth((req) => {
   const { nextUrl, auth } = req;
 
   const isLoggedIn = !!auth?.user;
-  const isAuthPage = nextUrl.pathname.startsWith('/login') ||
-                     nextUrl.pathname.startsWith('/register');
-  const isDashboard = nextUrl.pathname.startsWith('/dashboard') ||
-                      nextUrl.pathname.match(/^\/(quotes|invoices|clients|settings)/);
-  const isPublicPage = nextUrl.pathname.startsWith('/q/') ||
-                       nextUrl.pathname.startsWith('/i/');
+  const isAuthPage =
+    nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register');
+  const isDashboard =
+    nextUrl.pathname.startsWith('/dashboard') ||
+    nextUrl.pathname.match(/^\/(quotes|invoices|clients|settings)/);
+  const isPublicPage = nextUrl.pathname.startsWith('/q/') || nextUrl.pathname.startsWith('/i/');
 
   // Public pages are always accessible
   if (isPublicPage) {
@@ -1007,9 +1015,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|public).*)'],
 };
 ```
 
@@ -1104,45 +1110,57 @@ export function handleError(error: unknown): NextResponse {
 
   // Zod validation errors
   if (error instanceof ZodError) {
-    return NextResponse.json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input',
-        details: error.flatten().fieldErrors,
+    return NextResponse.json(
+      {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input',
+          details: error.flatten().fieldErrors,
+        },
       },
-    }, { status: 400 });
+      { status: 400 }
+    );
   }
 
   // Prisma errors
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
-      return NextResponse.json({
-        error: {
-          code: 'CONFLICT',
-          message: 'Resource already exists',
+      return NextResponse.json(
+        {
+          error: {
+            code: 'CONFLICT',
+            message: 'Resource already exists',
+          },
         },
-      }, { status: 409 });
+        { status: 409 }
+      );
     }
 
     if (error.code === 'P2025') {
-      return NextResponse.json({
-        error: {
-          code: 'NOT_FOUND',
-          message: 'Resource not found',
+      return NextResponse.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Resource not found',
+          },
         },
-      }, { status: 404 });
+        { status: 404 }
+      );
     }
   }
 
   // Unknown errors - don't leak details in production
   const isDev = process.env.NODE_ENV === 'development';
 
-  return NextResponse.json({
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: isDev && error instanceof Error ? error.message : 'Something went wrong',
+  return NextResponse.json(
+    {
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: isDev && error instanceof Error ? error.message : 'Something went wrong',
+      },
     },
-  }, { status: 500 });
+    { status: 500 }
+  );
 }
 ```
 
@@ -1238,10 +1256,10 @@ services:
       redis:
         condition: service_healthy
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.app.tls=true"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.app.rule=Host(`${DOMAIN}`)'
+      - 'traefik.http.routers.app.tls=true'
+      - 'traefik.http.routers.app.tls.certresolver=letsencrypt'
     networks:
       - internal
       - web
@@ -1257,7 +1275,7 @@ services:
       - POSTGRES_USER=wolff
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wolff"]
+      test: ['CMD-SHELL', 'pg_isready -U wolff']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1271,7 +1289,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1282,8 +1300,8 @@ services:
     image: traefik:v3.0
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro

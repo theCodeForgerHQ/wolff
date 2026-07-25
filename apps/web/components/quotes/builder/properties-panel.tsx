@@ -40,23 +40,23 @@ export function PropertiesPanel() {
 
   if (!selectedBlock) {
     return (
-      <div className="absolute md:relative right-0 top-0 z-20 flex h-full w-72 flex-col border-l bg-card shadow-lg md:shadow-none">
+      <div className="bg-card absolute right-0 top-0 z-20 flex h-full w-72 flex-col border-l shadow-lg md:relative md:shadow-none">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
             <h2 className="font-semibold">Properties</h2>
-            <p className="text-xs text-muted-foreground">Document Settings</p>
+            <p className="text-muted-foreground text-xs">Document Settings</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden h-8 w-8"
+            className="h-8 w-8 md:hidden"
             onClick={togglePropertiesPanel}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
+          <div className="space-y-4 p-4">
             <DocumentSettingsPanel contractTemplates={contractTemplates} />
           </div>
         </ScrollArea>
@@ -65,18 +65,18 @@ export function PropertiesPanel() {
   }
 
   return (
-    <div className="absolute md:relative right-0 top-0 z-20 flex h-full w-72 flex-col border-l bg-card shadow-lg md:shadow-none">
+    <div className="bg-card absolute right-0 top-0 z-20 flex h-full w-72 flex-col border-l shadow-lg md:relative md:shadow-none">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <h2 className="font-semibold">Properties</h2>
-          <p className="text-xs text-muted-foreground capitalize">
+          <p className="text-muted-foreground text-xs capitalize">
             {selectedBlock.type.replace('-', ' ')} Block
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden h-8 w-8"
+          className="h-8 w-8 md:hidden"
           onClick={togglePropertiesPanel}
         >
           <X className="h-4 w-4" />
@@ -84,7 +84,7 @@ export function PropertiesPanel() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <BlockProperties block={selectedBlock} onUpdate={updateBlock} />
         </div>
       </ScrollArea>
@@ -94,7 +94,11 @@ export function PropertiesPanel() {
 
 // Document Settings Panel (shown when no block is selected)
 // CR #26: All hooks called before conditional return (Rules of Hooks)
-function DocumentSettingsPanel({ contractTemplates }: { contractTemplates: { id: string; name: string }[] }) {
+function DocumentSettingsPanel({
+  contractTemplates,
+}: {
+  contractTemplates: { id: string; name: string }[];
+}) {
   const { document, updateSettings, markDirty } = useQuoteBuilderStore();
 
   if (!document) return null;
@@ -115,7 +119,7 @@ function DocumentSettingsPanel({ contractTemplates }: { contractTemplates: { id:
       {/* Contract Template */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <FileText className="text-muted-foreground h-4 w-4" />
           <Label className="text-sm font-medium">Contract</Label>
         </div>
         <Select value={contractTemplateId || 'none'} onValueChange={handleContractChange}>
@@ -132,14 +136,14 @@ function DocumentSettingsPanel({ contractTemplates }: { contractTemplates: { id:
           </SelectContent>
         </Select>
         {selectedTemplate && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             This contract will be attached to the quote when sent.
           </p>
         )}
       </div>
 
       {!selectedTemplate && (
-        <p className="text-center text-xs text-muted-foreground pt-4">
+        <p className="text-muted-foreground pt-4 text-center text-xs">
           Click on a block in the canvas to edit its properties.
         </p>
       )}
@@ -180,7 +184,7 @@ function BlockProperties({ block, onUpdate }: BlockPropertiesProps) {
       return <ServiceGroupProperties block={block} onUpdate={handleUpdate} />;
     default:
       return (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           No properties available for this block type.
         </p>
       );
@@ -225,7 +229,9 @@ function HeaderProperties({
 
       <AlignmentSelector
         value={block.content.alignment}
-        onChange={(alignment) => onUpdate({ alignment: alignment as typeof block.content.alignment })}
+        onChange={(alignment) =>
+          onUpdate({ alignment: alignment as typeof block.content.alignment })
+        }
         options={['left', 'center', 'right']}
       />
     </>
@@ -244,14 +250,14 @@ function TextProperties({
     <>
       <div className="space-y-2">
         <Label>Content</Label>
-        <p className="text-xs text-muted-foreground">
-          Edit text directly in the canvas
-        </p>
+        <p className="text-muted-foreground text-xs">Edit text directly in the canvas</p>
       </div>
 
       <AlignmentSelector
         value={block.content.alignment}
-        onChange={(alignment) => onUpdate({ alignment: alignment as typeof block.content.alignment })}
+        onChange={(alignment) =>
+          onUpdate({ alignment: alignment as typeof block.content.alignment })
+        }
         options={['left', 'center', 'right', 'justify']}
       />
     </>
@@ -313,10 +319,7 @@ function ServiceItemProperties({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Unit</Label>
-          <Select
-            value={block.content.unit}
-            onValueChange={(value) => onUpdate({ unit: value })}
-          >
+          <Select value={block.content.unit} onValueChange={(value) => onUpdate({ unit: value })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -346,11 +349,14 @@ function ServiceItemProperties({
         </div>
       </div>
 
-      <div className="pt-2 border-t">
+      <div className="border-t pt-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Line Total</span>
           <span className="font-semibold">
-            {formatCurrency(block.content.quantity * block.content.rate, document?.settings?.currency ?? 'USD')}
+            {formatCurrency(
+              block.content.quantity * block.content.rate,
+              document?.settings?.currency ?? 'USD'
+            )}
           </span>
         </div>
       </div>
@@ -372,9 +378,7 @@ function DividerProperties({
         <Label>Style</Label>
         <Select
           value={block.content.style}
-          onValueChange={(value) =>
-            onUpdate({ style: value as 'solid' | 'dashed' | 'dotted' })
-          }
+          onValueChange={(value) => onUpdate({ style: value as 'solid' | 'dashed' | 'dotted' })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -411,7 +415,7 @@ function DividerProperties({
             type="color"
             value={block.content.color}
             onChange={(e) => onUpdate({ color: e.target.value })}
-            className="w-12 h-9 p-1 cursor-pointer"
+            className="h-9 w-12 cursor-pointer p-1"
           />
           <Input
             value={block.content.color}
@@ -438,9 +442,7 @@ function SpacerProperties({
       <Label>Height</Label>
       <Select
         value={block.content.height}
-        onValueChange={(value) =>
-          onUpdate({ height: value as 'sm' | 'md' | 'lg' | 'xl' })
-        }
+        onValueChange={(value) => onUpdate({ height: value as 'sm' | 'md' | 'lg' | 'xl' })}
       >
         <SelectTrigger>
           <SelectValue />
@@ -497,9 +499,7 @@ function ImageProperties({
         <Label>Width</Label>
         <Select
           value={block.content.width === 'full' ? 'full' : 'custom'}
-          onValueChange={(value) =>
-            onUpdate({ width: value === 'full' ? 'full' : 400 })
-          }
+          onValueChange={(value) => onUpdate({ width: value === 'full' ? 'full' : 400 })}
         >
           <SelectTrigger>
             <SelectValue />
@@ -523,7 +523,9 @@ function ImageProperties({
 
       <AlignmentSelector
         value={block.content.alignment}
-        onChange={(alignment) => onUpdate({ alignment: alignment as typeof block.content.alignment })}
+        onChange={(alignment) =>
+          onUpdate({ alignment: alignment as typeof block.content.alignment })
+        }
         options={['left', 'center', 'right']}
       />
     </>
@@ -569,16 +571,14 @@ function SignatureProperties({
       </div>
 
       {block.content.signatureData && (
-        <div className="space-y-2 pt-2 border-t">
+        <div className="space-y-2 border-t pt-2">
           <Label>Status</Label>
           <p className="text-sm text-green-600">Signed</p>
           {block.content.signerName && (
-            <p className="text-sm text-muted-foreground">
-              By: {block.content.signerName}
-            </p>
+            <p className="text-muted-foreground text-sm">By: {block.content.signerName}</p>
           )}
           {block.content.signedAt && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               On: {new Date(block.content.signedAt).toLocaleDateString()}
             </p>
           )}
@@ -586,9 +586,7 @@ function SignatureProperties({
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={() =>
-              onUpdate({ signatureData: null, signedAt: null, signerName: null })
-            }
+            onClick={() => onUpdate({ signatureData: null, signedAt: null, signerName: null })}
           >
             Clear Signature
           </Button>
@@ -634,7 +632,13 @@ function TableProperties({
       <div className="space-y-2">
         <Label>Columns ({block.content.headers.length})</Label>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={removeColumn} disabled={block.content.headers.length <= 1}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={removeColumn}
+            disabled={block.content.headers.length <= 1}
+          >
             Remove
           </Button>
           <Button variant="outline" size="sm" className="flex-1" onClick={addColumn}>
@@ -646,7 +650,13 @@ function TableProperties({
       <div className="space-y-2">
         <Label>Rows ({block.content.rows.length})</Label>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1" onClick={removeRow} disabled={block.content.rows.length <= 1}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={removeRow}
+            disabled={block.content.rows.length <= 1}
+          >
             Remove
           </Button>
           <Button variant="outline" size="sm" className="flex-1" onClick={addRow}>
@@ -720,7 +730,7 @@ function ColumnsProperties({
         </Select>
       </div>
 
-      <p className="text-xs text-muted-foreground pt-2">
+      <p className="text-muted-foreground pt-2 text-xs">
         Edit column contents directly in the canvas.
       </p>
     </>
@@ -763,10 +773,10 @@ function ServiceGroupProperties({
         />
       </div>
 
-      <div className="pt-2 border-t">
-        <p className="text-xs text-muted-foreground">
-          {block.content.items.length} item{block.content.items.length !== 1 ? 's' : ''} in this group.
-          Add service items inside the group on the canvas.
+      <div className="border-t pt-2">
+        <p className="text-muted-foreground text-xs">
+          {block.content.items.length} item{block.content.items.length !== 1 ? 's' : ''} in this
+          group. Add service items inside the group on the canvas.
         </p>
       </div>
     </>

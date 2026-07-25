@@ -142,7 +142,7 @@ describe('Invoice Checkout API Route', () => {
     });
 
     it('converts amounts to cents for Stripe', () => {
-      const dollarAmount = 100.50;
+      const dollarAmount = 100.5;
       const centAmount = Math.round(dollarAmount * 100);
 
       expect(centAmount).toBe(10050);
@@ -169,13 +169,9 @@ describe('Invoice Checkout API Route', () => {
     });
 
     it('handles Stripe API errors gracefully', async () => {
-      mockStripe.checkout.sessions.create.mockRejectedValue(
-        new Error('Card declined')
-      );
+      mockStripe.checkout.sessions.create.mockRejectedValue(new Error('Card declined'));
 
-      await expect(
-        mockStripe.checkout.sessions.create({})
-      ).rejects.toThrow('Card declined');
+      await expect(mockStripe.checkout.sessions.create({})).rejects.toThrow('Card declined');
     });
 
     it('logs checkout initiation event', async () => {

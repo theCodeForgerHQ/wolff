@@ -46,19 +46,17 @@ export function DangerZone() {
   return (
     <Card className="border-destructive">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-destructive">
+        <CardTitle className="text-destructive flex items-center gap-2">
           <AlertTriangle className="h-5 w-5" />
           Danger Zone
         </CardTitle>
-        <CardDescription>
-          Irreversible and destructive actions
-        </CardDescription>
+        <CardDescription>Irreversible and destructive actions</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium">Delete Workspace</h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Permanently delete this workspace and all its data
             </p>
           </div>
@@ -69,16 +67,16 @@ export function DangerZone() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <AlertTriangle className="text-destructive h-5 w-5" />
                   Delete Workspace
                 </DialogTitle>
                 <DialogDescription>
-                  This action cannot be undone. This will permanently delete your
-                  workspace and remove all associated data including:
+                  This action cannot be undone. This will permanently delete your workspace and
+                  remove all associated data including:
                 </DialogDescription>
               </DialogHeader>
 
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 my-4">
+              <ul className="text-muted-foreground my-4 list-inside list-disc space-y-1 text-sm">
                 <li>All quotes and invoices</li>
                 <li>All clients</li>
                 <li>All rate cards and templates</li>
@@ -97,16 +95,10 @@ export function DangerZone() {
                 />
               </div>
 
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-destructive text-sm">{error}</p>}
 
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                  disabled={isDeleting}
-                >
+                <Button variant="outline" onClick={() => setOpen(false)} disabled={isDeleting}>
                   Cancel
                 </Button>
                 <Button

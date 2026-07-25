@@ -25,9 +25,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
   if (!invitation) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="mx-auto max-w-md text-center space-y-4 p-8">
-          <h1 className="text-2xl font-bold text-destructive">Invalid Invitation</h1>
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-md space-y-4 p-8 text-center">
+          <h1 className="text-destructive text-2xl font-bold">Invalid Invitation</h1>
           <p className="text-muted-foreground">
             This invitation link is invalid or has been removed.
           </p>
@@ -38,9 +38,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
   if (invitation.cancelledAt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="mx-auto max-w-md text-center space-y-4 p-8">
-          <h1 className="text-2xl font-bold text-destructive">Invitation Cancelled</h1>
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-md space-y-4 p-8 text-center">
+          <h1 className="text-destructive text-2xl font-bold">Invitation Cancelled</h1>
           <p className="text-muted-foreground">
             This invitation has been cancelled. Please ask the workspace owner to send a new one.
           </p>
@@ -51,12 +51,10 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
   if (invitation.acceptedAt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="mx-auto max-w-md text-center space-y-4 p-8">
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-md space-y-4 p-8 text-center">
           <h1 className="text-2xl font-bold">Already Accepted</h1>
-          <p className="text-muted-foreground">
-            This invitation has already been accepted.
-          </p>
+          <p className="text-muted-foreground">This invitation has already been accepted.</p>
           <a href="/dashboard" className="text-primary hover:underline">
             Go to Dashboard
           </a>
@@ -67,9 +65,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
   if (new Date() > invitation.expiresAt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="mx-auto max-w-md text-center space-y-4 p-8">
-          <h1 className="text-2xl font-bold text-destructive">Invitation Expired</h1>
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-md space-y-4 p-8 text-center">
+          <h1 className="text-destructive text-2xl font-bold">Invitation Expired</h1>
           <p className="text-muted-foreground">
             This invitation has expired. Please ask the workspace owner to send a new one.
           </p>
@@ -92,9 +90,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
   const emailMatch = session.user.email?.toLowerCase() === invitation.email.toLowerCase();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="bg-background flex min-h-screen items-center justify-center">
       <div className="mx-auto max-w-md space-y-6 p-8">
-        <div className="text-center space-y-2">
+        <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold">Workspace Invitation</h1>
           <p className="text-muted-foreground">
             {invitation.invitedBy.name || 'A team member'} has invited you to join{' '}
@@ -103,8 +101,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
         </div>
 
         {!emailMatch ? (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">
+          <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-4 text-center">
+            <p className="text-destructive text-sm">
               This invitation was sent to <strong>{invitation.email}</strong>, but you&apos;re
               logged in as <strong>{session.user.email}</strong>. Please log in with the correct
               account.

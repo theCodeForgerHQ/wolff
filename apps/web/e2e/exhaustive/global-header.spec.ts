@@ -14,7 +14,6 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Global Header & Navigation', () => {
-
   test('should navigate to Help & Support page', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
@@ -26,7 +25,7 @@ test.describe('Global Header & Navigation', () => {
       // The help link may need sidebar scrolling to become visible
       const sidebar = page.locator('aside [data-sidebar="content"], aside').first();
       if (await sidebar.isVisible().catch(() => false)) {
-        await sidebar.evaluate((el) => el.scrollTop = el.scrollHeight);
+        await sidebar.evaluate((el) => (el.scrollTop = el.scrollHeight));
         await helpLink.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
       }
     }
@@ -37,10 +36,7 @@ test.describe('Global Header & Navigation', () => {
     }
 
     // Use Promise.all to click and wait for navigation simultaneously
-    await Promise.all([
-      page.waitForURL('**/help', { timeout: 15000 }),
-      helpLink.click(),
-    ]);
+    await Promise.all([page.waitForURL('**/help', { timeout: 15000 }), helpLink.click()]);
 
     await expect(page).toHaveURL(/\/help/);
 
@@ -55,13 +51,15 @@ test.describe('Global Header & Navigation', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const userAvatar = page.locator(
-      'button[aria-label="User menu"], ' +
-      'header button:has(img[alt*="avatar"]), ' +
-      'header button:has(span[role="img"]), ' +
-      'button:has-text("TU"), ' + // Test User initials
-      '[data-testid="user-menu"]'
-    ).first();
+    const userAvatar = page
+      .locator(
+        'button[aria-label="User menu"], ' +
+          'header button:has(img[alt*="avatar"]), ' +
+          'header button:has(span[role="img"]), ' +
+          'button:has-text("TU"), ' + // Test User initials
+          '[data-testid="user-menu"]'
+      )
+      .first();
 
     if (!(await userAvatar.isVisible().catch(() => false))) {
       test.skip();
@@ -71,12 +69,12 @@ test.describe('Global Header & Navigation', () => {
     await userAvatar.click();
 
     // A dropdown menu should appear with profile options
-    const dropdown = page.locator(
-      '[role="menu"], [role="dialog"], ' +
-      '[class*="dropdown"], [class*="popover"]'
-    ).filter({
-      has: page.locator('a, button'),
-    }).first();
+    const dropdown = page
+      .locator('[role="menu"], [role="dialog"], ' + '[class*="dropdown"], [class*="popover"]')
+      .filter({
+        has: page.locator('a, button'),
+      })
+      .first();
 
     await expect(dropdown).toBeVisible({ timeout: 3000 });
 
@@ -90,11 +88,13 @@ test.describe('Global Header & Navigation', () => {
     await page.goto('/clients');
     await page.waitForLoadState('networkidle');
 
-    const breadcrumb = page.locator(
-      'nav[aria-label="Breadcrumb"], ' +
-      'nav[aria-label="breadcrumb"], ' +
-      '[class*="breadcrumb"]'
-    ).first();
+    const breadcrumb = page
+      .locator(
+        'nav[aria-label="Breadcrumb"], ' +
+          'nav[aria-label="breadcrumb"], ' +
+          '[class*="breadcrumb"]'
+      )
+      .first();
 
     if (!(await breadcrumb.isVisible().catch(() => false))) {
       test.skip();
@@ -116,7 +116,9 @@ test.describe('Global Header & Navigation', () => {
 
     // Should have navigated to the breadcrumb link target
     if (href) {
-      await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 10000 });
+      await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
+        timeout: 10000,
+      });
     }
   });
 
@@ -124,12 +126,14 @@ test.describe('Global Header & Navigation', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const profileButton = page.locator(
-      'aside button:has-text("user"), ' +
-      'aside footer button, ' +
-      '[data-testid="sidebar-profile"], ' +
-      'aside button:has-text("Test")'
-    ).first();
+    const profileButton = page
+      .locator(
+        'aside button:has-text("user"), ' +
+          'aside footer button, ' +
+          '[data-testid="sidebar-profile"], ' +
+          'aside button:has-text("Test")'
+      )
+      .first();
 
     if (!(await profileButton.isVisible().catch(() => false))) {
       test.skip();
@@ -139,10 +143,18 @@ test.describe('Global Header & Navigation', () => {
     await profileButton.click();
 
     // Wait for menu to appear or navigation to occur
-    await page.locator('[role="menu"], [class*="popover"], [class*="dropdown"]').first().waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
+    await page
+      .locator('[role="menu"], [class*="popover"], [class*="dropdown"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 1000 })
+      .catch(() => {});
 
     // Should open a menu or navigate to profile
-    const hasMenu = await page.locator('[role="menu"], [class*="popover"], [class*="dropdown"]').first().isVisible().catch(() => false);
+    const hasMenu = await page
+      .locator('[role="menu"], [class*="popover"], [class*="dropdown"]')
+      .first()
+      .isVisible()
+      .catch(() => false);
     const navigated = page.url().includes('/settings') || page.url().includes('/profile');
 
     expect(hasMenu || navigated).toBe(true);

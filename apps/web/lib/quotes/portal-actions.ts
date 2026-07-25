@@ -141,7 +141,8 @@ export async function getQuoteByAccessToken(
     // Bug #19: Limit access to accepted quotes after 90 days
     if (quote.status === 'accepted') {
       const acceptedDate = quote.acceptedAt || quote.updatedAt;
-      const daysSinceAccepted = (Date.now() - new Date(acceptedDate).getTime()) / (1000 * 60 * 60 * 24);
+      const daysSinceAccepted =
+        (Date.now() - new Date(acceptedDate).getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceAccepted > 90) {
         return { success: false, error: 'This quote has expired' };
       }
@@ -149,8 +150,7 @@ export async function getQuoteByAccessToken(
 
     // Check if quote is expired
     const now = new Date();
-    const isExpired =
-      quote.expirationDate !== null && new Date(quote.expirationDate) < now;
+    const isExpired = quote.expirationDate !== null && new Date(quote.expirationDate) < now;
 
     // Reject access if quote expired more than 30 days ago (grace period for reference)
     if (isExpired) {
@@ -186,7 +186,9 @@ export async function getQuoteByAccessToken(
             signerName: (sigData.signerName as string) || 'Unknown',
             signedAt: (sigData.signedAt as string) || quote.signedAt.toISOString(),
           });
-          documentIntegrity = verifyDocumentHash(recomputedHash, storedHash) ? 'verified' : 'tampered';
+          documentIntegrity = verifyDocumentHash(recomputedHash, storedHash)
+            ? 'verified'
+            : 'tampered';
         }
       } catch (err) {
         logger.error({ err }, 'Document hash verification failed');
@@ -234,7 +236,8 @@ export async function getQuoteByAccessToken(
         email: quote.workspace.businessProfile?.email || null,
         phone: quote.workspace.businessProfile?.phone || null,
         logoUrl: quote.workspace.businessProfile?.logoUrl || null,
-        address: (quote.workspace.businessProfile?.address as string | Record<string, string>) || null,
+        address:
+          (quote.workspace.businessProfile?.address as string | Record<string, string>) || null,
       },
       branding: quote.workspace.brandingSettings
         ? {
@@ -334,13 +337,19 @@ export async function acceptQuote(data: {
   signerName: string;
   agreedToTerms: boolean;
   otpCode?: string;
-}): Promise<{ success: true; depositRequired?: boolean; depositAmount?: number; invoicePayUrl?: string } | { success: false; error: string }> {
+}): Promise<
+  | { success: true; depositRequired?: boolean; depositAmount?: number; invoicePayUrl?: string }
+  | { success: false; error: string }
+> {
   try {
     const { ipAddress, userAgent } = await getRequestMetadata();
 
     // Rate limit by IP to prevent abuse on unauthenticated endpoint
     const { checkRateLimit } = await import('@/lib/rate-limit');
-    const rateLimitResult = await checkRateLimit(`quote-action:${ipAddress}`, { limit: 10, windowMs: 60000 });
+    const rateLimitResult = await checkRateLimit(`quote-action:${ipAddress}`, {
+      limit: 10,
+      windowMs: 60000,
+    });
     if (rateLimitResult.limited) {
       return { success: false, error: 'Too many attempts. Please try again later.' };
     }
@@ -372,7 +381,10 @@ export async function acceptQuote(data: {
         // OTP is required but not provided — check if already verified in a prior step
         const alreadyVerified = await isSigningVerified(otpKey);
         if (!alreadyVerified) {
-          return { success: false, error: 'Identity verification is required. Please complete the OTP step.' };
+          return {
+            success: false,
+            error: 'Identity verification is required. Please complete the OTP step.',
+          };
         }
       }
     }
@@ -398,7 +410,10 @@ export async function acceptQuote(data: {
       if (isDrawn) {
         const signatureBase64 = data.signatureData.replace('data:image/png;base64,', '');
         if (signatureBase64.length < 1000) {
-          return { success: false, error: 'Signature is too simple. Please provide a full signature.' };
+          return {
+            success: false,
+            error: 'Signature is too simple. Please provide a full signature.',
+          };
         }
       }
       if (isTyped) {
@@ -503,7 +518,10 @@ export async function acceptQuote(data: {
     });
 
     if (acceptResult.count === 0) {
-      return { success: false, error: 'This quote has already been accepted or is no longer available' };
+      return {
+        success: false,
+        error: 'This quote has already been accepted or is no longer available',
+      };
     }
 
     // Create event and notifications (side effects — safe to run after atomic update)
@@ -559,9 +577,10 @@ export async function acceptQuote(data: {
       const depositType = (quoteSettings.depositType as 'percentage' | 'fixed') ?? 'percentage';
       const depositValue = (quoteSettings.depositValue as number) ?? 50;
       const total = toNumber(quote.total);
-      const depositAmount = depositType === 'percentage'
-        ? Math.round(total * (depositValue / 100) * 100) / 100
-        : Math.min(depositValue, total);
+      const depositAmount =
+        depositType === 'percentage'
+          ? Math.round(total * (depositValue / 100) * 100) / 100
+          : Math.min(depositValue, total);
 
       try {
         await prisma.paymentSchedule.create({
@@ -607,7 +626,10 @@ export async function declineQuote(data: {
 
     // Rate limit by IP to prevent abuse on unauthenticated endpoint
     const { checkRateLimit } = await import('@/lib/rate-limit');
-    const rateLimitResult = await checkRateLimit(`quote-action:${ipAddress}`, { limit: 10, windowMs: 60000 });
+    const rateLimitResult = await checkRateLimit(`quote-action:${ipAddress}`, {
+      limit: 10,
+      windowMs: 60000,
+    });
     if (rateLimitResult.limited) {
       return { success: false, error: 'Too many attempts. Please try again later.' };
     }

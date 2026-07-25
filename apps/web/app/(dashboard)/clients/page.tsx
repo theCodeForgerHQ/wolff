@@ -14,7 +14,6 @@ export const metadata = {
 };
 
 export default async function ClientsPage() {
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -63,7 +62,7 @@ function ListLoading() {
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1 max-w-sm" />
+        <Skeleton className="h-10 max-w-sm flex-1" />
         <Skeleton className="h-10 w-32" />
       </div>
       <div className="rounded-md border">

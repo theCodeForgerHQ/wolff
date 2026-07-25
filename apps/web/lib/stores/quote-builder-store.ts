@@ -263,7 +263,11 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
               if (block) {
                 // Bug #182: Clamp negative quantity and rate at input time
                 const updated = { ...content } as Record<string, unknown>;
-                if ('quantity' in updated && typeof updated.quantity === 'number' && updated.quantity < 0) {
+                if (
+                  'quantity' in updated &&
+                  typeof updated.quantity === 'number' &&
+                  updated.quantity < 0
+                ) {
                   updated.quantity = 0;
                 }
                 if ('rate' in updated && typeof updated.rate === 'number' && updated.rate < 0) {
@@ -316,7 +320,7 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
               if (index !== -1) {
                 const original = state.document.blocks[index]!;
                 const duplicate: QuoteBlock = {
-                  ...structuredClone(original) as QuoteBlock,
+                  ...(structuredClone(original) as QuoteBlock),
                   id: crypto.randomUUID(),
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
@@ -487,10 +491,7 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
 
             // Apply discount (with bounds: percentage 0-100%, fixed 0-subtotal)
             let discountAmount = 0;
-            if (
-              state.document.totals.discountType &&
-              state.document.totals.discountValue
-            ) {
+            if (state.document.totals.discountType && state.document.totals.discountValue) {
               const discountValue = Math.max(0, state.document.totals.discountValue);
               if (state.document.totals.discountType === 'percentage') {
                 discountAmount = subtotal * (Math.min(100, discountValue) / 100);
@@ -534,7 +535,11 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
               // Check if URL contains a quote ID that differs from persisted doc
               const urlMatch = window.location.pathname.match(/\/quotes\/([^/]+)/);
               const urlQuoteId = urlMatch?.[1];
-              if (urlQuoteId && urlQuoteId !== state.document.id && !state.document.id.startsWith('temp-')) {
+              if (
+                urlQuoteId &&
+                urlQuoteId !== state.document.id &&
+                !state.document.id.startsWith('temp-')
+              ) {
                 // Reset persisted state - the page will call initDocument with correct data
                 state.document = null;
                 state.isDirty = false;

@@ -23,7 +23,9 @@ test.describe('Offline & Network', () => {
 
       await context.setOffline(true);
 
-      const offlineBanner = page.locator('[class*="offline"], [class*="banner"]:has-text("offline")');
+      const offlineBanner = page.locator(
+        '[class*="offline"], [class*="banner"]:has-text("offline")'
+      );
       if (await offlineBanner.isVisible()) {
         await expect(offlineBanner).toBeVisible();
       }
@@ -279,7 +281,7 @@ test.describe('Offline & Network', () => {
 
       // Sync indicator
       const syncStatus = page.locator('[class*="sync"], [aria-label*="sync"]');
-      if (await syncStatus.count() > 0) {
+      if ((await syncStatus.count()) > 0) {
         await expect(syncStatus.first()).toBeAttached();
       }
     });
@@ -340,8 +342,10 @@ test.describe('Offline & Network', () => {
       await page.goto('/quotes');
 
       // Should show skeleton/placeholder
-      const skeleton = page.locator('[class*="skeleton"], [class*="placeholder"], [class*="shimmer"]');
-      if (await skeleton.count() > 0) {
+      const skeleton = page.locator(
+        '[class*="skeleton"], [class*="placeholder"], [class*="shimmer"]'
+      );
+      if ((await skeleton.count()) > 0) {
         await expect(skeleton.first()).toBeVisible();
       }
     });
@@ -364,8 +368,10 @@ test.describe('Offline & Network', () => {
     test('should show connection status in UI', async ({ page }) => {
       await page.goto('/dashboard');
 
-      const connectionIndicator = page.locator('[class*="connection"], [class*="status-indicator"]');
-      if (await connectionIndicator.count() > 0) {
+      const connectionIndicator = page.locator(
+        '[class*="connection"], [class*="status-indicator"]'
+      );
+      if ((await connectionIndicator.count()) > 0) {
         await expect(connectionIndicator.first()).toBeAttached();
       }
     });
@@ -380,7 +386,7 @@ test.describe('Offline & Network', () => {
       await page.waitForLoadState('domcontentloaded').catch(() => {});
 
       // Indicator should reflect offline state
-      if (await indicator.count() > 0) {
+      if ((await indicator.count()) > 0) {
         // Visual change expected
       }
 
@@ -407,7 +413,7 @@ test.describe('Offline Accessibility', () => {
 
     // Status should be announced
     const liveRegion = page.locator('[aria-live], [role="status"], [role="alert"]');
-    if (await liveRegion.count() > 0) {
+    if ((await liveRegion.count()) > 0) {
       await expect(liveRegion.first()).toBeAttached();
     }
 
@@ -421,7 +427,7 @@ test.describe('Offline Accessibility', () => {
 
     // Error messages should be accessible
     const errorMessage = page.locator('[role="alert"], [aria-live="polite"]');
-    if (await errorMessage.count() > 0) {
+    if ((await errorMessage.count()) > 0) {
       await expect(errorMessage.first()).toBeAttached();
     }
 

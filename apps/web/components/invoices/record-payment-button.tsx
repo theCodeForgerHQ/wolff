@@ -11,7 +11,11 @@ interface RecordPaymentButtonProps {
   currency?: string;
 }
 
-export function RecordPaymentButton({ invoiceId, amountDue, currency = 'USD' }: RecordPaymentButtonProps) {
+export function RecordPaymentButton({
+  invoiceId,
+  amountDue,
+  currency = 'USD',
+}: RecordPaymentButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (

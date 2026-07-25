@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (recipients) {
       if (recipients.length > 10) return apiError('Maximum 10 recipients allowed', 400);
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const invalid = recipients.filter(e => !emailRegex.test(e));
+      const invalid = recipients.filter((e) => !emailRegex.test(e));
       if (invalid.length > 0) return apiError('One or more email addresses are invalid', 400);
     }
 
@@ -104,14 +104,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create event
-    await prisma.invoiceEvent.create({
-      data: {
-        invoiceId: id,
-        eventType: emailSent ? 'sent' : 'send_failed',
-        actorType: 'system',
-        metadata: { via: 'api', emailSent },
-      },
-    }).catch(() => {});
+    await prisma.invoiceEvent
+      .create({
+        data: {
+          invoiceId: id,
+          eventType: emailSent ? 'sent' : 'send_failed',
+          actorType: 'system',
+          metadata: { via: 'api', emailSent },
+        },
+      })
+      .catch(() => {});
 
     if (!emailSent) {
       return apiError('Invoice email could not be sent. Status unchanged.', 502);

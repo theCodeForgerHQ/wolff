@@ -17,14 +17,12 @@ export default function AuthError({
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-6">
-      <div className="max-w-md text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-          <AlertTriangle className="h-6 w-6 text-destructive" />
+      <div className="max-w-md space-y-4 text-center">
+        <div className="bg-destructive/10 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+          <AlertTriangle className="text-destructive h-6 w-6" />
         </div>
         <h2 className="text-lg font-semibold">Authentication Error</h2>
-        <p className="text-sm text-muted-foreground">
-          Something went wrong. Please try again.
-        </p>
+        <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
         <div className="flex justify-center gap-2 pt-2">
           <Button variant="outline" asChild>
             <a href="/login">Back to Login</a>

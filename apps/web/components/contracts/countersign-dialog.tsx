@@ -60,27 +60,27 @@ export function CountersignDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[600px]! max-h-[85vh]! p-0! gap-0! flex! flex-col! overflow-hidden">
-        <div className="p-6 pb-3 shrink-0">
+        <div className="shrink-0 p-6 pb-3">
           <DialogHeader>
             <DialogTitle>Countersign Contract</DialogTitle>
             <DialogDescription>
-              Apply your business signature to &quot;{contractName}&quot;.
-              The client has already signed this contract.
+              Apply your business signature to &quot;{contractName}&quot;. The client has already
+              signed this contract.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4 min-h-0">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-4">
           <SignaturePad onSignatureChange={setSignature} />
 
-          <p className="text-xs text-muted-foreground">
-            By countersigning, you confirm that you have reviewed and agree to the terms
-            of this contract. Your signature will be recorded along with a timestamp
-            for verification purposes.
+          <p className="text-muted-foreground text-xs">
+            By countersigning, you confirm that you have reviewed and agree to the terms of this
+            contract. Your signature will be recorded along with a timestamp for verification
+            purposes.
           </p>
         </div>
 
-        <div className="shrink-0 border-t p-4 bg-background">
+        <div className="bg-background shrink-0 border-t p-4">
           <DialogFooter>
             <Button
               type="button"
@@ -90,10 +90,7 @@ export function CountersignDialog({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !signature}
-            >
+            <Button onClick={handleSubmit} disabled={isSubmitting || !signature}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <PenLine className="mr-2 h-4 w-4" />
               Countersign

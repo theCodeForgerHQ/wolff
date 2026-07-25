@@ -22,8 +22,14 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
   const [resolvedParams, setResolvedParams] = React.useState<{ id: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const [clients, setClients] = React.useState<Array<{ id: string; name: string; company: string | null }>>([]);
-  const [project, setProject] = React.useState<{ name: string; description: string | null; clientId: string } | null>(null);
+  const [clients, setClients] = React.useState<
+    Array<{ id: string; name: string; company: string | null }>
+  >([]);
+  const [project, setProject] = React.useState<{
+    name: string;
+    description: string | null;
+    clientId: string;
+  } | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -83,7 +89,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
           </div>
         </div>
         <Card>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="space-y-4 p-6">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-24 w-full" />
@@ -112,7 +118,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
       </div>
 
       {serverError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
           {serverError}
         </div>
       )}

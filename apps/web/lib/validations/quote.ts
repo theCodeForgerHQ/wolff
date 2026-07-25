@@ -46,37 +46,41 @@ export const quoteBlockSchema = z.object({
 });
 
 // Bug #134: Quote document settings schema (embedded in quote JSON)
-export const quoteDocumentSettingsSchema = z.object({
-  requireSignature: z.boolean().default(true),
-  autoConvertToInvoice: z.boolean().default(false),
-  depositRequired: z.boolean().default(false),
-  depositType: z.enum(['percentage', 'fixed']).default('percentage'),
-  depositValue: z.number().min(0).max(999999999).default(0),
-  showLineItemPrices: z.boolean().default(true),
-  currency: z.string().length(3).default('USD'),
-  taxInclusive: z.boolean().default(false),
-}).partial().superRefine((data, ctx) => {
-  // Validate depositValue based on depositType
-  if (data.depositType === 'percentage' && data.depositValue !== undefined && data.depositValue > 100) {
-    ctx.addIssue({
-      code: 'too_big',
-      maximum: 100,
-      origin: 'number',
-      inclusive: true,
-      message: 'Deposit percentage cannot exceed 100%',
-      path: ['depositValue'],
-    });
-  }
-});
+export const quoteDocumentSettingsSchema = z
+  .object({
+    requireSignature: z.boolean().default(true),
+    autoConvertToInvoice: z.boolean().default(false),
+    depositRequired: z.boolean().default(false),
+    depositType: z.enum(['percentage', 'fixed']).default('percentage'),
+    depositValue: z.number().min(0).max(999999999).default(0),
+    showLineItemPrices: z.boolean().default(true),
+    currency: z.string().length(3).default('USD'),
+    taxInclusive: z.boolean().default(false),
+  })
+  .partial()
+  .superRefine((data, ctx) => {
+    // Validate depositValue based on depositType
+    if (
+      data.depositType === 'percentage' &&
+      data.depositValue !== undefined &&
+      data.depositValue > 100
+    ) {
+      ctx.addIssue({
+        code: 'too_big',
+        maximum: 100,
+        origin: 'number',
+        inclusive: true,
+        message: 'Deposit percentage cannot exceed 100%',
+        path: ['depositValue'],
+      });
+    }
+  });
 export type QuoteDocumentSettings = z.infer<typeof quoteDocumentSettingsSchema>;
 
 // Create quote schema
 export const createQuoteSchema = z.object({
   clientId: idSchema,
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(200, 'Title must be less than 200 characters'),
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().max(5000).optional(),
   validUntil: z.coerce.date().optional(),
   currency: z.string().length(3).default('USD'),

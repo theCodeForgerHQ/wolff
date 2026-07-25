@@ -26,10 +26,12 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
       style: 'currency',
       currency: quote.currency,
     }).formatToParts(amount);
-    return parts.map((p, i) => {
-      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-      return p.value;
-    }).join('');
+    return parts
+      .map((p, i) => {
+        if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+        return p.value;
+      })
+      .join('');
   };
 
   switch (block.type) {
@@ -58,7 +60,7 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
       return (
         <div
           className={cn(
-            'prose prose-sm max-w-none dark:prose-invert',
+            'prose prose-sm dark:prose-invert max-w-none',
             block.content.alignment === 'center' && 'text-center',
             block.content.alignment === 'right' && 'text-right'
           )}
@@ -72,14 +74,12 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
           <div className="flex-1">
             <p className="font-medium">{block.content.name}</p>
             {block.content.description && (
-              <p className="text-sm text-muted-foreground">
-                {block.content.description}
-              </p>
+              <p className="text-muted-foreground text-sm">{block.content.description}</p>
             )}
           </div>
           {quote.settings.showLineItemPrices && (
             <div className="ml-4 text-right">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {block.content.quantity} x {formatCurrency(block.content.rate)}
               </p>
               <p className="font-semibold">
@@ -93,12 +93,10 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
     case 'service-group':
       return (
         <div className="space-y-2">
-          <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="bg-muted/30 rounded-lg border p-4">
             <h3 className="font-semibold">{block.content.title || (block.content as any).name}</h3>
             {block.content.description && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                {block.content.description}
-              </p>
+              <p className="text-muted-foreground mt-1 text-sm">{block.content.description}</p>
             )}
           </div>
           {block.content.items && block.content.items.length > 0 && (
@@ -111,14 +109,12 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.content?.name}</p>
                     {item.content?.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {item.content.description}
-                      </p>
+                      <p className="text-muted-foreground text-xs">{item.content.description}</p>
                     )}
                   </div>
                   {quote.settings.showLineItemPrices && (
                     <div className="ml-4 text-right">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {item.content.quantity} x {formatCurrency(item.content.rate)}
                       </p>
                       <p className="text-sm font-semibold">
@@ -139,21 +135,26 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                {block.content.headers && block.content.headers.map((header: string, i: number) => (
-                  <TableHead key={i} className="font-semibold">
-                    {header}
-                  </TableHead>
-                ))}
+                {block.content.headers &&
+                  block.content.headers.map((header: string, i: number) => (
+                    <TableHead key={i} className="font-semibold">
+                      {header}
+                    </TableHead>
+                  ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {block.content.rows && block.content.rows.map((row: string[], rowIndex: number) => (
-                <TableRow key={rowIndex} className={block.content.striped && rowIndex % 2 === 1 ? 'bg-muted/20' : ''}>
-                  {row.map((cell: string, cellIndex: number) => (
-                    <TableCell key={cellIndex}>{cell || '-'}</TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {block.content.rows &&
+                block.content.rows.map((row: string[], rowIndex: number) => (
+                  <TableRow
+                    key={rowIndex}
+                    className={block.content.striped && rowIndex % 2 === 1 ? 'bg-muted/20' : ''}
+                  >
+                    {row.map((cell: string, cellIndex: number) => (
+                      <TableCell key={cellIndex}>{cell || '-'}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>
@@ -219,7 +220,11 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
         lg: '64px',
         xl: '96px',
       };
-      return <div style={{ height: spacerHeights[block.content.height as keyof typeof spacerHeights] }} />;
+      return (
+        <div
+          style={{ height: spacerHeights[block.content.height as keyof typeof spacerHeights] }}
+        />
+      );
     }
 
     case 'image': {
@@ -261,11 +266,7 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
           <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/50">
             <p className="mb-2 text-sm font-medium text-green-800 dark:text-green-200">Signed</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={block.content.signatureData}
-              alt="Signature"
-              className="max-h-16"
-            />
+            <img src={block.content.signatureData} alt="Signature" className="max-h-16" />
             {block.content.signerName && (
               <p className="mt-2 text-sm text-green-700 dark:text-green-300">
                 {block.content.signerName}
@@ -275,11 +276,9 @@ export function QuoteBlockRenderer({ block: rawBlock, quote }: QuoteBlockRendere
         );
       }
       return (
-        <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-6 text-center">
-          <p className="font-medium text-primary">{block.content.label}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Signature required upon acceptance
-          </p>
+        <div className="border-primary/30 bg-primary/5 rounded-lg border-2 border-dashed p-6 text-center">
+          <p className="text-primary font-medium">{block.content.label}</p>
+          <p className="text-muted-foreground mt-1 text-sm">Signature required upon acceptance</p>
         </div>
       );
 

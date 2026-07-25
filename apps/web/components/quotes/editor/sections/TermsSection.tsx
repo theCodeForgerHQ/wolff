@@ -32,9 +32,7 @@ export function TermsSection({ terms, onTermsChange }: TermsSectionProps) {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base">Terms & Conditions</CardTitle>
-            <CardDescription>
-              These terms will appear on the quote
-            </CardDescription>
+            <CardDescription>These terms will appear on the quote</CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={handleUseDefault}>
             <FileText className="mr-2 h-4 w-4" />
@@ -44,7 +42,9 @@ export function TermsSection({ terms, onTermsChange }: TermsSectionProps) {
       </CardHeader>
       <CardContent>
         <div>
-          <Label htmlFor="terms" className="sr-only">Terms & Conditions</Label>
+          <Label htmlFor="terms" className="sr-only">
+            Terms & Conditions
+          </Label>
           <Textarea
             id="terms"
             placeholder="Enter your terms and conditions..."
@@ -53,7 +53,7 @@ export function TermsSection({ terms, onTermsChange }: TermsSectionProps) {
             rows={12}
             className="resize-none"
           />
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-xs">
             Tip: You can save default terms in Settings → Quote Settings
           </p>
         </div>

@@ -94,13 +94,20 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'quote': return <FileText className="mr-2 h-4 w-4" />;
-      case 'invoice': return <Receipt className="mr-2 h-4 w-4" />;
-      case 'client': return <Users className="mr-2 h-4 w-4" />;
-      case 'contract': return <ScrollText className="mr-2 h-4 w-4" />;
-      case 'project': return <FolderKanban className="mr-2 h-4 w-4" />;
-      case 'email-template': return <Mail className="mr-2 h-4 w-4" />;
-      default: return null;
+      case 'quote':
+        return <FileText className="mr-2 h-4 w-4" />;
+      case 'invoice':
+        return <Receipt className="mr-2 h-4 w-4" />;
+      case 'client':
+        return <Users className="mr-2 h-4 w-4" />;
+      case 'contract':
+        return <ScrollText className="mr-2 h-4 w-4" />;
+      case 'project':
+        return <FolderKanban className="mr-2 h-4 w-4" />;
+      case 'email-template':
+        return <Mail className="mr-2 h-4 w-4" />;
+      default:
+        return null;
     }
   };
 
@@ -142,7 +149,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -160,7 +167,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -178,7 +185,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -196,7 +203,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -214,7 +221,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -232,7 +239,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
                 {getIcon(result.type)}
                 <div className="flex flex-col">
                   <span>{result.title}</span>
-                  <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                  <span className="text-muted-foreground text-xs">{result.subtitle}</span>
                 </div>
               </CommandItem>
             ))}
@@ -288,7 +295,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
             <Mail className="mr-2 h-4 w-4" />
             <span>Email Templates</span>
           </CommandItem>
-<CommandItem onSelect={() => runCommand(() => router.push('/analytics'))}>
+          <CommandItem onSelect={() => runCommand(() => router.push('/analytics'))}>
             <BarChart3 className="mr-2 h-4 w-4" />
             <span>Analytics</span>
           </CommandItem>

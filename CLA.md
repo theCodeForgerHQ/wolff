@@ -19,6 +19,7 @@ submits code, documentation, bug fixes, design assets, or any other material
 ## 2. You Own What You're Giving Us
 
 You confirm that:
+
 - You wrote the Contribution yourself, OR have the legal right to submit it.
 - It does not violate any third-party intellectual property rights.
 - If your employer owns your work, you have their permission to submit it.
@@ -26,8 +27,10 @@ You confirm that:
 ## 3. What You're Granting WisdmLabs
 
 ### 3.1 Copyright Licence
+
 By submitting a Contribution, you grant WisdmLabs a perpetual, worldwide,
 royalty-free, irrevocable, non-exclusive licence to:
+
 - Use, copy, modify, and distribute your Contribution.
 - Incorporate it into Wolff under any licence WisdmLabs chooses, including
   commercial licences.
@@ -38,6 +41,7 @@ You retain ownership of your Contribution. You are not transferring
 copyright, only granting WisdmLabs the rights listed above.
 
 ### 3.2 Patent Licence
+
 You grant WisdmLabs a perpetual, worldwide, royalty-free, irrevocable,
 non-exclusive patent licence to make, have made, use, sell, offer to sell,
 import, and otherwise transfer your Contribution, where such licence applies
@@ -80,6 +84,7 @@ Wolff repository. When you open your first Pull Request, the bot will prompt
 you to review and accept this CLA via a click-through agreement.
 
 Alternative methods:
+
 - Comment "I have read and agree to the Wolff CLA" on your first Pull
   Request.
 - Sign the CLA digitally if WisdmLabs requests it via email.

@@ -27,7 +27,9 @@ test.describe('Rate Cards Module', () => {
       const emptyState = page.getByText(/no rate cards found/i);
       if (await emptyState.isVisible()) {
         await expect(emptyState).toBeVisible();
-        await expect(page.getByRole('link', { name: /create your first rate card/i })).toBeVisible();
+        await expect(
+          page.getByRole('link', { name: /create your first rate card/i })
+        ).toBeVisible();
       }
     });
 
@@ -73,7 +75,7 @@ test.describe('Rate Cards Module', () => {
       const noRateCards = page.getByText(/no rate cards found/i);
 
       const hasStats = await totalRateCards.isVisible().catch(() => false);
-      const hasCards = await rateCardLinks.count() > 1;  // > 1 because "Add Rate Card" link exists
+      const hasCards = (await rateCardLinks.count()) > 1; // > 1 because "Add Rate Card" link exists
       const hasEmpty = await noRateCards.isVisible().catch(() => false);
 
       expect(hasStats || hasCards || hasEmpty).toBeTruthy();

@@ -96,7 +96,7 @@ describe('Stripe Integration', () => {
     });
 
     it('converts dollar amounts to cents', () => {
-      const dollarAmount = 100.50;
+      const dollarAmount = 100.5;
       const centAmount = Math.round(dollarAmount * 100);
 
       expect(centAmount).toBe(10050);
@@ -110,9 +110,7 @@ describe('Stripe Integration', () => {
         amount: 10000,
         status: 'succeeded',
         charges: {
-          data: [
-            { id: 'ch_test_123', receipt_url: 'https://pay.stripe.com/receipts/...' },
-          ],
+          data: [{ id: 'ch_test_123', receipt_url: 'https://pay.stripe.com/receipts/...' }],
         },
       });
 
@@ -287,9 +285,7 @@ describe('Stripe Integration', () => {
         message: 'Your card was declined.',
       });
 
-      await expect(
-        mockStripe.paymentIntents.create({ amount: 10000 })
-      ).rejects.toMatchObject({
+      await expect(mockStripe.paymentIntents.create({ amount: 10000 })).rejects.toMatchObject({
         code: 'card_declined',
       });
     });
@@ -300,21 +296,15 @@ describe('Stripe Integration', () => {
         message: 'Too many requests',
       });
 
-      await expect(
-        mockStripe.checkout.sessions.create({})
-      ).rejects.toMatchObject({
+      await expect(mockStripe.checkout.sessions.create({})).rejects.toMatchObject({
         type: 'StripeRateLimitError',
       });
     });
 
     it('handles network errors', async () => {
-      mockStripe.paymentIntents.retrieve.mockRejectedValue(
-        new Error('Network error')
-      );
+      mockStripe.paymentIntents.retrieve.mockRejectedValue(new Error('Network error'));
 
-      await expect(
-        mockStripe.paymentIntents.retrieve('pi_test')
-      ).rejects.toThrow('Network error');
+      await expect(mockStripe.paymentIntents.retrieve('pi_test')).rejects.toThrow('Network error');
     });
   });
 

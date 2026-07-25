@@ -16,21 +16,21 @@ import {
   SquareActivityIcon,
   TwitterIcon,
   Undo2Icon,
-  UsersIcon
-} from 'lucide-react'
+  UsersIcon,
+} from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Card, CardContent } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator
-} from '@/components/ui/breadcrumb'
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   Sidebar,
   SidebarContent,
@@ -42,15 +42,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger
-} from '@/components/ui/sidebar'
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
-import LanguageDropdown from '@/components/shadcn-studio/blocks/dropdown-language'
-import ProfileDropdown from '@/components/shadcn-studio/blocks/dropdown-profile'
+import LanguageDropdown from '@/components/shadcn-studio/blocks/dropdown-language';
+import ProfileDropdown from '@/components/shadcn-studio/blocks/dropdown-profile';
 
 const ApplicationShell = () => {
   return (
-    <div className='flex min-h-dvh w-full'>
+    <div className="flex min-h-dvh w-full">
       <SidebarProvider>
         <Sidebar collapsible="icon">
           <SidebarContent>
@@ -59,12 +59,12 @@ const ApplicationShell = () => {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <ChartNoAxesCombinedIcon />
                         <span>Dashboard</span>
                       </a>
                     </SidebarMenuButton>
-                    <SidebarMenuBadge className='bg-primary/10 rounded-full'>5</SidebarMenuBadge>
+                    <SidebarMenuBadge className="bg-primary/10 rounded-full">5</SidebarMenuBadge>
                   </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -75,7 +75,7 @@ const ApplicationShell = () => {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <ChartSplineIcon />
                         <span>Content Performance</span>
                       </a>
@@ -83,7 +83,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <UsersIcon />
                         <span>Audience Insight</span>
                       </a>
@@ -91,7 +91,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <ChartPieIcon />
                         <span>Engagement Metrics</span>
                       </a>
@@ -99,16 +99,16 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <HashIcon />
                         <span>Hashtag Performance</span>
                       </a>
                     </SidebarMenuButton>
-                    <SidebarMenuBadge className='bg-primary/10 rounded-full'>3</SidebarMenuBadge>
+                    <SidebarMenuBadge className="bg-primary/10 rounded-full">3</SidebarMenuBadge>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <ArrowRightLeftIcon />
                         <span>Competitor Analysis</span>
                       </a>
@@ -116,7 +116,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <Clock9Icon />
                         <span>Campaign Tracking</span>
                       </a>
@@ -124,7 +124,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <ClipboardListIcon />
                         <span>Sentiment Tracking</span>
                       </a>
@@ -132,7 +132,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <CrownIcon />
                         <span>Influencer</span>
                       </a>
@@ -147,7 +147,7 @@ const ApplicationShell = () => {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <SquareActivityIcon />
                         <span>Real Time Monitoring</span>
                       </a>
@@ -155,7 +155,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <CalendarClockIcon />
                         <span>Schedule Post & Calendar</span>
                       </a>
@@ -163,7 +163,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <Undo2Icon />
                         <span>Report & Export</span>
                       </a>
@@ -171,7 +171,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <SettingsIcon />
                         <span>Settings & Integrations</span>
                       </a>
@@ -179,7 +179,7 @@ const ApplicationShell = () => {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <a href='#'>
+                      <a href="#">
                         <UsersIcon />
                         <span>User Management</span>
                       </a>
@@ -190,20 +190,20 @@ const ApplicationShell = () => {
             </SidebarGroup>
           </SidebarContent>
         </Sidebar>
-        <div className='flex flex-1 flex-col'>
-          <header className='bg-card sticky top-0 z-50 border-b'>
-            <div className='mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2 sm:px-6'>
-              <div className='flex items-center gap-4'>
-                <SidebarTrigger className='[&_svg]:size-5!' />
-                <Separator orientation='vertical' className='hidden h-4! sm:block' />
-                <Breadcrumb className='hidden sm:block'>
+        <div className="flex flex-1 flex-col">
+          <header className="bg-card sticky top-0 z-50 border-b">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2 sm:px-6">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="[&_svg]:size-5!" />
+                <Separator orientation="vertical" className="h-4! hidden sm:block" />
+                <Breadcrumb className="hidden sm:block">
                   <BreadcrumbList>
                     <BreadcrumbItem>
-                      <BreadcrumbLink href='#'>Home</BreadcrumbLink>
+                      <BreadcrumbLink href="#">Home</BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                      <BreadcrumbLink href='#'>Dashboard</BreadcrumbLink>
+                      <BreadcrumbLink href="#">Dashboard</BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
@@ -212,19 +212,19 @@ const ApplicationShell = () => {
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
-              <div className='flex items-center gap-1.5'>
+              <div className="flex items-center gap-1.5">
                 <LanguageDropdown
                   trigger={
-                    <Button variant='ghost' size='icon'>
+                    <Button variant="ghost" size="icon">
                       <LanguagesIcon />
                     </Button>
                   }
                 />
                 <ProfileDropdown
                   trigger={
-                    <Button variant='ghost' size='icon' className='size-9.5'>
-                      <Avatar className='size-9.5 rounded-md'>
-                        <AvatarImage src='https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-1.png' />
+                    <Button variant="ghost" size="icon" className="size-9.5">
+                      <Avatar className="size-9.5 rounded-md">
+                        <AvatarImage src="https://cdn.shadcnstudio.com/ss-assets/avatar/avatar-1.png" />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
                     </Button>
@@ -233,34 +233,34 @@ const ApplicationShell = () => {
               </div>
             </div>
           </header>
-          <main className='mx-auto size-full max-w-7xl flex-1 px-4 py-6 sm:px-6'>
-            <Card className='h-250'>
-              <CardContent className='h-full'>
-                <div className='h-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_1px,var(--card)_2px,var(--card)_15px)]' />
+          <main className="mx-auto size-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+            <Card className="h-250">
+              <CardContent className="h-full">
+                <div className="h-full rounded-md border bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_1px,var(--card)_2px,var(--card)_15px)]" />
               </CardContent>
             </Card>
           </main>
           <footer>
-            <div className='text-muted-foreground mx-auto flex size-full max-w-7xl items-center justify-between gap-3 px-4 py-3 max-sm:flex-col sm:gap-6 sm:px-6'>
-              <p className='text-sm text-balance max-sm:text-center'>
+            <div className="text-muted-foreground mx-auto flex size-full max-w-7xl items-center justify-between gap-3 px-4 py-3 max-sm:flex-col sm:gap-6 sm:px-6">
+              <p className="text-balance text-sm max-sm:text-center">
                 {`©${new Date().getFullYear()}`}{' '}
-                <a href='#' className='text-primary'>
+                <a href="#" className="text-primary">
                   shadcn/studio
                 </a>
                 , Made for better web design
               </p>
-              <div className='flex items-center gap-5'>
-                <a href='#'>
-                  <FacebookIcon className='size-4' />
+              <div className="flex items-center gap-5">
+                <a href="#">
+                  <FacebookIcon className="size-4" />
                 </a>
-                <a href='#'>
-                  <InstagramIcon className='size-4' />
+                <a href="#">
+                  <InstagramIcon className="size-4" />
                 </a>
-                <a href='#'>
-                  <LinkedinIcon className='size-4' />
+                <a href="#">
+                  <LinkedinIcon className="size-4" />
                 </a>
-                <a href='#'>
-                  <TwitterIcon className='size-4' />
+                <a href="#">
+                  <TwitterIcon className="size-4" />
                 </a>
               </div>
             </div>
@@ -268,7 +268,7 @@ const ApplicationShell = () => {
         </div>
       </SidebarProvider>
     </div>
-  )
-}
+  );
+};
 
-export default ApplicationShell
+export default ApplicationShell;

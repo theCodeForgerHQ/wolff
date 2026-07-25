@@ -48,9 +48,7 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
       cell: ({ row }) => {
         const client = row.original;
         const displayName = client.company || client.name;
@@ -63,12 +61,12 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
 
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
               {initials}
             </div>
             <div>
-              <div className="font-medium text-primary">{displayName}</div>
-              <div className="text-sm text-muted-foreground">{client.email}</div>
+              <div className="text-primary font-medium">{displayName}</div>
+              <div className="text-muted-foreground text-sm">{client.email}</div>
             </div>
           </div>
         );
@@ -85,9 +83,7 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
     },
     {
       accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Type" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
       cell: ({ row }) => {
         const type = row.getValue('type') as string;
         return (
@@ -103,14 +99,10 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
     {
       id: 'revenue',
       accessorKey: 'totalRevenue',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Revenue" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Revenue" />,
       cell: ({ row }) => {
         const revenue = row.original.totalRevenue as number;
-        return (
-          <div className="font-medium">{formatCurrency(revenue, currency)}</div>
-        );
+        return <div className="font-medium">{formatCurrency(revenue, currency)}</div>;
       },
     },
     {
@@ -122,11 +114,48 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
             row={row.original}
             showQuickActions={false}
             actions={[
-              ...(onView ? [{ label: 'View Details', icon: <User className="mr-2 h-4 w-4" />, onClick: onView }] : []),
-              ...(onEdit ? [{ label: 'Edit', icon: <Pencil className="mr-2 h-4 w-4" />, onClick: onEdit }] : []),
-              ...(onCreateQuote ? [{ label: 'Create Quote', icon: <FileText className="mr-2 h-4 w-4" />, onClick: onCreateQuote, separator: true }] : []),
-              ...(onCreateInvoice ? [{ label: 'Create Invoice', icon: <Receipt className="mr-2 h-4 w-4" />, onClick: onCreateInvoice }] : []),
-              ...(onDelete ? [{ label: 'Delete', icon: <Trash2 className="mr-2 h-4 w-4" />, onClick: onDelete, variant: 'destructive' as const, separator: true }] : []),
+              ...(onView
+                ? [
+                    {
+                      label: 'View Details',
+                      icon: <User className="mr-2 h-4 w-4" />,
+                      onClick: onView,
+                    },
+                  ]
+                : []),
+              ...(onEdit
+                ? [{ label: 'Edit', icon: <Pencil className="mr-2 h-4 w-4" />, onClick: onEdit }]
+                : []),
+              ...(onCreateQuote
+                ? [
+                    {
+                      label: 'Create Quote',
+                      icon: <FileText className="mr-2 h-4 w-4" />,
+                      onClick: onCreateQuote,
+                      separator: true,
+                    },
+                  ]
+                : []),
+              ...(onCreateInvoice
+                ? [
+                    {
+                      label: 'Create Invoice',
+                      icon: <Receipt className="mr-2 h-4 w-4" />,
+                      onClick: onCreateInvoice,
+                    },
+                  ]
+                : []),
+              ...(onDelete
+                ? [
+                    {
+                      label: 'Delete',
+                      icon: <Trash2 className="mr-2 h-4 w-4" />,
+                      onClick: onDelete,
+                      variant: 'destructive' as const,
+                      separator: true,
+                    },
+                  ]
+                : []),
             ]}
           />
         );

@@ -13,13 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Switch } from '@/components/ui/switch';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -35,15 +29,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  createEmailTemplate,
-  updateEmailTemplate,
-} from '@/lib/email/actions';
-import {
-  EMAIL_TEMPLATE_TYPES,
-  getTemplateTypeName,
-  DEFAULT_TEMPLATES,
-} from '@/lib/email/types';
+import { createEmailTemplate, updateEmailTemplate } from '@/lib/email/actions';
+import { EMAIL_TEMPLATE_TYPES, getTemplateTypeName, DEFAULT_TEMPLATES } from '@/lib/email/types';
 import type { EmailTemplateDetail, EmailTemplateType } from '@/lib/email/types';
 
 const emailTemplateSchema = z.object({
@@ -131,11 +118,17 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
     .replace(/{{quoteNumber}}/g, 'QT-0001')
     .replace(/{{quoteUrl}}/g, '#')
     .replace(/{{quoteTotal}}/g, '$5,000.00')
-    .replace(/{{quoteValidUntil}}/g, new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-US'))
+    .replace(
+      /{{quoteValidUntil}}/g,
+      new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-US')
+    )
     .replace(/{{invoiceNumber}}/g, 'INV-0001')
     .replace(/{{invoiceUrl}}/g, '#')
     .replace(/{{invoiceTotal}}/g, '$5,000.00')
-    .replace(/{{invoiceDueDate}}/g, new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US'))
+    .replace(
+      /{{invoiceDueDate}}/g,
+      new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US')
+    )
     .replace(/{{amountPaid}}/g, '$5,000.00')
     .replace(/{{amountDue}}/g, '$5,000.00')
     .replace(/{{daysOverdue}}/g, '7')
@@ -149,9 +142,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>{template ? 'Edit Template' : 'Create Template'}</CardTitle>
-          <CardDescription>
-            Customize email templates sent to your clients.
-          </CardDescription>
+          <CardDescription>Customize email templates sent to your clients.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -159,9 +150,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
               <Label htmlFor="type">Template Type</Label>
               <Select
                 value={selectedType}
-                onValueChange={(value) =>
-                  setValue('type', value as EmailTemplateType)
-                }
+                onValueChange={(value) => setValue('type', value as EmailTemplateType)}
                 disabled={!!template}
               >
                 <SelectTrigger id="type">
@@ -179,14 +168,8 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="name">Template Name</Label>
-              <Input
-                id="name"
-                {...register('name')}
-                placeholder="e.g., Quote Sent - Custom"
-              />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
-              )}
+              <Input id="name" {...register('name')} placeholder="e.g., Quote Sent - Custom" />
+              {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
             </div>
           </div>
 
@@ -203,10 +186,8 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
               {...register('subject')}
               placeholder="e.g., Quote: {{quoteName}} from {{businessName}}"
             />
-            {errors.subject && (
-              <p className="text-sm text-destructive">{errors.subject.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
+            {errors.subject && <p className="text-destructive text-sm">{errors.subject.message}</p>}
+            <p className="text-muted-foreground text-xs">
               Use variables like {'{{clientName}}'}, {'{{quoteName}}'}, etc.
             </p>
           </div>
@@ -221,16 +202,15 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
                     Preview
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+                <DialogContent className="max-h-[80vh] max-w-2xl overflow-auto">
                   <DialogHeader>
                     <DialogTitle>Email Preview</DialogTitle>
-                    <DialogDescription>
-                      Preview with sample data
-                    </DialogDescription>
+                    <DialogDescription>Preview with sample data</DialogDescription>
                   </DialogHeader>
-                  <div className="border rounded-lg p-4 bg-card">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      <strong>Subject:</strong> {subject
+                  <div className="bg-card rounded-lg border p-4">
+                    <p className="text-muted-foreground mb-2 text-sm">
+                      <strong>Subject:</strong>{' '}
+                      {subject
                         .replace(/{{businessName}}/g, 'Acme Corp')
                         .replace(/{{quoteName}}/g, 'Website Redesign')
                         .replace(/{{quoteTotal}}/g, '$5,000.00')
@@ -252,14 +232,12 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
               onChange={(val) => setValue('body', val, { shouldValidate: true })}
               placeholder="Hi {{clientName}}, ..."
             />
-            {errors.body && (
-              <p className="text-sm text-destructive">{errors.body.message}</p>
-            )}
+            {errors.body && <p className="text-destructive text-sm">{errors.body.message}</p>}
           </div>
 
           <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm font-medium mb-2">Available Variables:</p>
-            <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
+            <p className="mb-2 text-sm font-medium">Available Variables:</p>
+            <div className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
               <code>{'{{businessName}}'}</code>
               <code>{'{{clientName}}'}</code>
               <code>{'{{clientEmail}}'}</code>
@@ -279,7 +257,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
               <code>{'{{contractUrl}}'}</code>
               <code>{'{{message}}'}</code>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-2 text-xs">
               Conditional: {'{{#if message}}...{{/if}}'}
             </p>
           </div>

@@ -1,12 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type {
   QuoteStatusCounts,
   InvoiceStatusCounts,
@@ -101,10 +96,8 @@ export function WinRateCard({ data, className }: WinRateCardProps) {
         />
         <div className="min-w-0">
           <p className="text-sm font-medium">Win Rate</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {total > 0
-              ? `${accepted} of ${total} decided`
-              : 'No decided quotes yet'}
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {total > 0 ? `${accepted} of ${total} decided` : 'No decided quotes yet'}
           </p>
         </div>
       </CardContent>
@@ -138,10 +131,8 @@ export function CollectionRateCard({ data, className }: CollectionRateCardProps)
         />
         <div className="min-w-0">
           <p className="text-sm font-medium">Collection Rate</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {billable > 0
-              ? `${paid} of ${billable} collected`
-              : 'No billed invoices yet'}
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {billable > 0 ? `${paid} of ${billable} collected` : 'No billed invoices yet'}
           </p>
         </div>
       </CardContent>
@@ -189,20 +180,20 @@ export function PipelineCard({ data, className }: PipelineCardProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="pb-2 p-5">
+      <CardHeader className="p-5 pb-2">
         <div className="flex items-baseline justify-between">
           <CardTitle className="text-sm font-medium">Pipeline</CardTitle>
           {!isEmpty && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {overallConversion.toFixed(0)}% end-to-end
             </span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0 px-5 pb-5">
+      <CardContent className="px-5 pb-5 pt-0">
         {isEmpty ? (
           <div className="flex h-[100px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">No pipeline data</p>
+            <p className="text-muted-foreground text-sm">No pipeline data</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -212,7 +203,7 @@ export function PipelineCard({ data, className }: PipelineCardProps) {
                   <span className="text-muted-foreground">{stage.label}</span>
                   <span className="font-medium tabular-nums">{stage.value}</span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--primary-100) dark:bg-(--primary-950)">
+                <div className="bg-(--primary-100) dark:bg-(--primary-950) h-1.5 w-full overflow-hidden rounded-full">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{

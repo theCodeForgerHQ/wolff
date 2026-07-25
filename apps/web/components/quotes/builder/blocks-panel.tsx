@@ -56,16 +56,16 @@ export function BlocksPanel() {
   const { toggleBlocksPanel } = useQuoteBuilderStore();
 
   return (
-    <div className="absolute md:relative left-0 top-0 z-20 flex h-full w-64 flex-col border-r bg-card shadow-lg md:shadow-none">
+    <div className="bg-card absolute left-0 top-0 z-20 flex h-full w-64 flex-col border-r shadow-lg md:relative md:shadow-none">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <h2 className="font-semibold">Blocks</h2>
-          <p className="text-xs text-muted-foreground">Drag blocks to the canvas</p>
+          <p className="text-muted-foreground text-xs">Drag blocks to the canvas</p>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden h-8 w-8"
+          className="h-8 w-8 md:hidden"
           onClick={toggleBlocksPanel}
         >
           <X className="h-4 w-4" />
@@ -73,19 +73,17 @@ export function BlocksPanel() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
+        <div className="space-y-6 p-4">
           {BLOCK_CATEGORIES.map((category) => (
             <div key={category.name}>
-              <h3 className="mb-2 text-xs font-medium uppercase text-muted-foreground">
+              <h3 className="text-muted-foreground mb-2 text-xs font-medium uppercase">
                 {category.name}
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {category.types.map((type) => {
                   const template = BLOCK_TEMPLATES.find((t) => t.type === type);
                   if (!template) return null;
-                  return (
-                    <DraggableBlock key={type} type={type} template={template} />
-                  );
+                  return <DraggableBlock key={type} type={type} template={template} />;
                 })}
               </div>
             </div>
@@ -118,11 +116,11 @@ function DraggableBlock({ type, template }: DraggableBlockProps) {
       {...listeners}
       {...attributes}
       className={cn(
-        'flex cursor-grab flex-col items-center justify-center gap-1 rounded-lg border bg-background p-3 text-center transition-all hover:border-primary hover:shadow-sm active:cursor-grabbing',
-        isDragging && 'opacity-50 ring-2 ring-primary'
+        'bg-background hover:border-primary flex cursor-grab flex-col items-center justify-center gap-1 rounded-lg border p-3 text-center transition-all hover:shadow-sm active:cursor-grabbing',
+        isDragging && 'ring-primary opacity-50 ring-2'
       )}
     >
-      <Icon className="h-5 w-5 text-muted-foreground" />
+      <Icon className="text-muted-foreground h-5 w-5" />
       <span className="text-xs font-medium">{template.label}</span>
     </div>
   );

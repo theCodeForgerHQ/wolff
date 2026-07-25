@@ -25,13 +25,13 @@ This guide provides comprehensive documentation for developers working on Wolff,
 
 Ensure you have the following installed:
 
-| Tool | Minimum Version | Purpose |
-|------|-----------------|---------|
-| Node.js | 20.x LTS | Runtime environment |
-| pnpm | 9.x | Package manager |
-| Docker | 24.x | Container runtime |
-| Docker Compose | 2.x | Container orchestration |
-| Git | 2.x | Version control |
+| Tool           | Minimum Version | Purpose                 |
+| -------------- | --------------- | ----------------------- |
+| Node.js        | 20.x LTS        | Runtime environment     |
+| pnpm           | 9.x             | Package manager         |
+| Docker         | 24.x            | Container runtime       |
+| Docker Compose | 2.x             | Container orchestration |
+| Git            | 2.x             | Version control         |
 
 ### 1.2 Installation Steps
 
@@ -86,6 +86,7 @@ docker-compose up -d
 ```
 
 This starts:
+
 - PostgreSQL (port 5432)
 - Redis (port 6379)
 - Mailpit for email testing (Web UI: 8025, SMTP: 1025)
@@ -171,12 +172,12 @@ wolff/
 
 ### 2.2 Package Responsibilities
 
-| Package | Purpose | Path |
-|---------|---------|------|
-| `@wolff/database` | Prisma schema, client, migrations, seeds | `packages/database/` |
-| `@wolff/types` | Shared TypeScript type definitions | `packages/types/` |
-| `@wolff/utils` | Shared utility functions (formatting, validation) | `packages/utils/` |
-| `@wolff/email-templates` | React Email templates | `packages/email-templates/` |
+| Package                  | Purpose                                           | Path                        |
+| ------------------------ | ------------------------------------------------- | --------------------------- |
+| `@wolff/database`        | Prisma schema, client, migrations, seeds          | `packages/database/`        |
+| `@wolff/types`           | Shared TypeScript type definitions                | `packages/types/`           |
+| `@wolff/utils`           | Shared utility functions (formatting, validation) | `packages/utils/`           |
+| `@wolff/email-templates` | React Email templates                             | `packages/email-templates/` |
 
 ### 2.3 Application Architecture
 
@@ -333,15 +334,15 @@ export function QuoteCard({ quote, onEdit, className }: QuoteCardProps) {
 
 ### 3.3 Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Components | PascalCase | `QuoteBuilder.tsx` |
-| Hooks | camelCase with `use` prefix | `useAutoSave.ts` |
-| Utilities | camelCase | `formatCurrency.ts` |
-| Constants | UPPER_SNAKE_CASE | `MAX_LINE_ITEMS` |
-| Types/Interfaces | PascalCase | `QuoteFilter` |
-| Server Actions | camelCase with verb | `createQuote`, `updateClient` |
-| Database tables | snake_case (via @@map) | `quote_line_items` |
+| Element          | Convention                  | Example                       |
+| ---------------- | --------------------------- | ----------------------------- |
+| Components       | PascalCase                  | `QuoteBuilder.tsx`            |
+| Hooks            | camelCase with `use` prefix | `useAutoSave.ts`              |
+| Utilities        | camelCase                   | `formatCurrency.ts`           |
+| Constants        | UPPER_SNAKE_CASE            | `MAX_LINE_ITEMS`              |
+| Types/Interfaces | PascalCase                  | `QuoteFilter`                 |
+| Server Actions   | camelCase with verb         | `createQuote`, `updateClient` |
+| Database tables  | snake_case (via @@map)      | `quote_line_items`            |
 
 ### 3.4 File Organization
 
@@ -443,6 +444,7 @@ pnpm db:migrate
 ```
 
 This runs `prisma migrate dev` which:
+
 1. Creates a new migration file
 2. Applies the migration to the database
 3. Regenerates the Prisma client
@@ -655,9 +657,7 @@ export async function createQuote(input: unknown) {
 
 ```typescript
 // Consistent response shape
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 export async function createQuote(input: unknown): Promise<ActionResult<Quote>> {
   try {
@@ -727,16 +727,16 @@ export function CreateQuoteButton() {
 
 ### 5.4 Existing Server Actions Reference
 
-| Domain | File | Key Actions |
-|--------|------|-------------|
-| Quotes | `lib/quotes/actions.ts` | `createQuote`, `updateQuote`, `deleteQuote`, `sendQuote`, `duplicateQuote` |
-| Invoices | `lib/invoices/actions.ts` | `createInvoice`, `updateInvoice`, `sendInvoice`, `markAsPaid`, `voidInvoice` |
-| Clients | `lib/clients/actions.ts` | `createClient`, `updateClient`, `deleteClient`, `getClientStats` |
-| Rate Cards | `lib/rate-cards/actions.ts` | `createRateCard`, `updateRateCard`, `deleteRateCard`, `getCategories` |
-| Contracts | `lib/contracts/actions.ts` | `createContractTemplate`, `createContractInstance`, `signContract` |
-| Settings | `lib/settings/actions.ts` | `updateBusinessProfile`, `updateBrandingSettings`, `updateTaxRates` |
-| Payments | `lib/payments/actions.ts` | `createPaymentIntent`, `processPaymentWebhook` |
-| Dashboard | `lib/dashboard/actions.ts` | `getDashboardStats`, `getRevenueData`, `getRecentActivity` |
+| Domain     | File                        | Key Actions                                                                  |
+| ---------- | --------------------------- | ---------------------------------------------------------------------------- |
+| Quotes     | `lib/quotes/actions.ts`     | `createQuote`, `updateQuote`, `deleteQuote`, `sendQuote`, `duplicateQuote`   |
+| Invoices   | `lib/invoices/actions.ts`   | `createInvoice`, `updateInvoice`, `sendInvoice`, `markAsPaid`, `voidInvoice` |
+| Clients    | `lib/clients/actions.ts`    | `createClient`, `updateClient`, `deleteClient`, `getClientStats`             |
+| Rate Cards | `lib/rate-cards/actions.ts` | `createRateCard`, `updateRateCard`, `deleteRateCard`, `getCategories`        |
+| Contracts  | `lib/contracts/actions.ts`  | `createContractTemplate`, `createContractInstance`, `signContract`           |
+| Settings   | `lib/settings/actions.ts`   | `updateBusinessProfile`, `updateBrandingSettings`, `updateTaxRates`          |
+| Payments   | `lib/payments/actions.ts`   | `createPaymentIntent`, `processPaymentWebhook`                               |
+| Dashboard  | `lib/dashboard/actions.ts`  | `getDashboardStats`, `getRevenueData`, `getRecentActivity`                   |
 
 ---
 
@@ -754,10 +754,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@wolff/database';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -776,10 +773,7 @@ export async function GET(
     return NextResponse.json({ success: true, data: quote });
   } catch (error) {
     console.error('Error fetching quote:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 ```
@@ -830,15 +824,15 @@ export async function POST(request: NextRequest) {
 
 ### 6.3 Existing API Routes
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/auth/[...nextauth]` | GET, POST | NextAuth authentication |
-| `/api/auth/register` | POST | User registration |
-| `/api/webhooks/stripe` | POST | Stripe payment webhooks |
-| `/api/pdf/quote/[quoteId]` | GET | Generate quote PDF HTML |
-| `/api/pdf/invoice/[invoiceId]` | GET | Generate invoice PDF HTML |
-| `/api/checkout/invoice/[invoiceId]` | POST | Create payment intent |
-| `/api/health` | GET | Health check endpoint |
+| Route                               | Method    | Purpose                   |
+| ----------------------------------- | --------- | ------------------------- |
+| `/api/auth/[...nextauth]`           | GET, POST | NextAuth authentication   |
+| `/api/auth/register`                | POST      | User registration         |
+| `/api/webhooks/stripe`              | POST      | Stripe payment webhooks   |
+| `/api/pdf/quote/[quoteId]`          | GET       | Generate quote PDF HTML   |
+| `/api/pdf/invoice/[invoiceId]`      | GET       | Generate invoice PDF HTML |
+| `/api/checkout/invoice/[invoiceId]` | POST      | Create payment intent     |
+| `/api/health`                       | GET       | Health check endpoint     |
 
 ---
 
@@ -881,13 +875,13 @@ The quote builder uses a block-based system for content:
 
 **Block Types**
 
-| Type | Component | Purpose |
-|------|-----------|---------|
-| `text` | `TextBlock` | Rich text content (Tiptap) |
+| Type           | Component        | Purpose                        |
+| -------------- | ---------------- | ------------------------------ |
+| `text`         | `TextBlock`      | Rich text content (Tiptap)     |
 | `service-item` | `LineItemsBlock` | Services/products with pricing |
-| `image` | `ImageBlock` | Image content |
-| `divider` | `DividerBlock` | Visual separator |
-| `signature` | `SignatureBlock` | E-signature capture |
+| `image`        | `ImageBlock`     | Image content                  |
+| `divider`      | `DividerBlock`   | Visual separator               |
+| `signature`    | `SignatureBlock` | E-signature capture            |
 
 **Block Interface**
 
@@ -980,16 +974,17 @@ export function QuoteList({ quotes }) {
 
 **Colors**
 
-| Name | Value | Usage |
-|------|-------|-------|
-| Primary | #3B82F6 (Blue-500) | Buttons, links, focus states |
-| Secondary | #8B5CF6 (Violet-500) | Secondary actions |
-| Accent | #F59E0B (Amber-500) | Highlights, badges |
-| Destructive | #EF4444 (Red-500) | Delete actions, errors |
+| Name        | Value                | Usage                        |
+| ----------- | -------------------- | ---------------------------- |
+| Primary     | #3B82F6 (Blue-500)   | Buttons, links, focus states |
+| Secondary   | #8B5CF6 (Violet-500) | Secondary actions            |
+| Accent      | #F59E0B (Amber-500)  | Highlights, badges           |
+| Destructive | #EF4444 (Red-500)    | Delete actions, errors       |
 
 **Spacing**
 
 Use Tailwind's spacing scale consistently:
+
 - `p-4` for card padding
 - `gap-4` for flex/grid gaps
 - `space-y-4` for vertical stacking
@@ -1005,11 +1000,11 @@ Use Tailwind's spacing scale consistently:
 
 ### 8.1 Test Stack
 
-| Tool | Purpose |
-|------|---------|
-| Vitest | Unit and integration tests |
-| React Testing Library | Component testing |
-| Playwright | End-to-end tests |
+| Tool                  | Purpose                    |
+| --------------------- | -------------------------- |
+| Vitest                | Unit and integration tests |
+| React Testing Library | Component testing          |
+| Playwright            | End-to-end tests           |
 
 ### 8.2 Running Tests
 
@@ -1128,10 +1123,12 @@ describe('createQuote', () => {
   it('throws error when not authenticated', async () => {
     vi.mocked(auth).mockResolvedValue(null);
 
-    await expect(createQuote({
-      title: 'Test',
-      clientId: 'client-123',
-    })).rejects.toThrow('Unauthorized');
+    await expect(
+      createQuote({
+        title: 'Test',
+        clientId: 'client-123',
+      })
+    ).rejects.toThrow('Unauthorized');
   });
 });
 ```
@@ -1313,9 +1310,7 @@ it('updates quote notes', async () => {
 ```typescript
 // packages/database/src/client.ts
 export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'error', 'warn']
-    : ['error'],
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 ```
 
@@ -1438,40 +1433,40 @@ docker-compose up -d
 
 ### A. Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start development server |
-| `pnpm build` | Build for production |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint |
-| `pnpm lint:fix` | Fix ESLint errors |
-| `pnpm format` | Format code with Prettier |
-| `pnpm type-check` | Run TypeScript type checking |
-| `pnpm test` | Run unit tests |
-| `pnpm test:e2e` | Run E2E tests |
-| `pnpm db:generate` | Generate Prisma client |
-| `pnpm db:migrate` | Run database migrations |
-| `pnpm db:push` | Push schema changes (no migration) |
-| `pnpm db:studio` | Open Prisma Studio |
-| `pnpm db:seed` | Seed database |
-| `pnpm clean` | Clean build artifacts |
+| Script             | Description                        |
+| ------------------ | ---------------------------------- |
+| `pnpm dev`         | Start development server           |
+| `pnpm build`       | Build for production               |
+| `pnpm start`       | Start production server            |
+| `pnpm lint`        | Run ESLint                         |
+| `pnpm lint:fix`    | Fix ESLint errors                  |
+| `pnpm format`      | Format code with Prettier          |
+| `pnpm type-check`  | Run TypeScript type checking       |
+| `pnpm test`        | Run unit tests                     |
+| `pnpm test:e2e`    | Run E2E tests                      |
+| `pnpm db:generate` | Generate Prisma client             |
+| `pnpm db:migrate`  | Run database migrations            |
+| `pnpm db:push`     | Push schema changes (no migration) |
+| `pnpm db:studio`   | Open Prisma Studio                 |
+| `pnpm db:seed`     | Seed database                      |
+| `pnpm clean`       | Clean build artifacts              |
 
 ### B. Environment Variables Reference
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `REDIS_URL` | Yes | Redis connection string |
-| `NEXTAUTH_URL` | Yes | Application URL |
-| `NEXTAUTH_SECRET` | Yes | NextAuth session secret |
-| `STRIPE_SECRET_KEY` | No | Stripe API secret key |
-| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook signing secret |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key |
-| `RESEND_API_KEY` | No | Resend API key for emails |
-| `EMAIL_FROM` | No | Default "from" email address |
-| `STORAGE_PROVIDER` | No | File storage provider (local, s3) |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| Variable                             | Required | Description                       |
+| ------------------------------------ | -------- | --------------------------------- |
+| `DATABASE_URL`                       | Yes      | PostgreSQL connection string      |
+| `REDIS_URL`                          | Yes      | Redis connection string           |
+| `NEXTAUTH_URL`                       | Yes      | Application URL                   |
+| `NEXTAUTH_SECRET`                    | Yes      | NextAuth session secret           |
+| `STRIPE_SECRET_KEY`                  | No       | Stripe API secret key             |
+| `STRIPE_WEBHOOK_SECRET`              | No       | Stripe webhook signing secret     |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | No       | Stripe publishable key            |
+| `RESEND_API_KEY`                     | No       | Resend API key for emails         |
+| `EMAIL_FROM`                         | No       | Default "from" email address      |
+| `STORAGE_PROVIDER`                   | No       | File storage provider (local, s3) |
+| `GOOGLE_CLIENT_ID`                   | No       | Google OAuth client ID            |
+| `GOOGLE_CLIENT_SECRET`               | No       | Google OAuth client secret        |
 
 ### C. Useful Links
 
@@ -1487,4 +1482,4 @@ docker-compose up -d
 
 ---
 
-*Last updated: 2026-01-30*
+_Last updated: 2026-01-30_

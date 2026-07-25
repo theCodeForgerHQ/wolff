@@ -24,11 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { recordPayment } from '@/lib/invoices/actions';
 
@@ -65,10 +61,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 export function RecordPaymentDialog({
@@ -143,8 +141,8 @@ export function RecordPaymentDialog({
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
             <DialogDescription>
-              Record a payment received for this invoice.
-              Amount due: {formatCurrency(amountDue, currency)}
+              Record a payment received for this invoice. Amount due:{' '}
+              {formatCurrency(amountDue, currency)}
             </DialogDescription>
           </DialogHeader>
 
@@ -153,7 +151,7 @@ export function RecordPaymentDialog({
             <div className="grid gap-2">
               <Label htmlFor="payment-amount">Amount</Label>
               <div className="relative">
-                <Banknote className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Banknote className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="payment-amount"
                   type="number"
@@ -257,9 +255,7 @@ export function RecordPaymentDialog({
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
 
           <DialogFooter>

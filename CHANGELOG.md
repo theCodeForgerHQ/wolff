@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A comprehensive project management system to organize quotes, invoices, and contracts by client projects.
 
 **Features:**
+
 - **Project CRUD Operations** - Create, read, update, and delete projects with full workspace isolation
 - **Client Association** - Projects are linked to clients for better organization
 - **Project Statistics Dashboard** - Summary cards showing total projects, active projects, quotes, and invoices
@@ -24,12 +25,14 @@ A comprehensive project management system to organize quotes, invoices, and cont
 - **Hierarchical Navigation** - Sidebar updated with Projects as parent of Quotes, Invoices, and Contracts
 
 **Components:**
+
 - `ProjectList` - DataTable with search, filters, bulk actions, and pagination
 - `ProjectDetail` - Comprehensive detail view with tabs and action buttons
 - `ProjectForm` - Reusable form for create/edit with Zod validation
 - `ProjectSelector` - Dropdown selector for use in other forms (quotes, invoices)
 
 **Server Actions:**
+
 - `createProject` - Create new project with client validation
 - `getProjects` - List projects with filtering, search, and pagination
 - `getProject` - Get single project with related data (quotes, invoices)
@@ -41,12 +44,14 @@ A comprehensive project management system to organize quotes, invoices, and cont
 - `getProjectSummaryStats` - Optimized aggregate stats for dashboard
 
 **API Design:**
+
 - All operations use Server Actions (no REST API endpoints needed)
 - Workspace isolation enforced on all queries
 - Soft deletes with `deletedAt` field
 - Demo mode protection with `assertNotDemo()`
 
 **Database:**
+
 - Uses existing `Project` model in Prisma schema
 - Relations: Project belongs to Client, has many Quotes, Invoices, ContractInstances
 

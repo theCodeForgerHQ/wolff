@@ -75,9 +75,9 @@ export function ContractEditor({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-lg border">
       {editable && (
-        <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/30">
+        <div className="bg-muted/30 flex flex-wrap items-center gap-1 border-b p-2">
           <Button
             type="button"
             variant="ghost"
@@ -198,17 +198,14 @@ export function ContractEditor({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   {variables.map((variable) => (
-                    <DropdownMenuItem
-                      key={variable.key}
-                      onClick={() => insertVariable(variable)}
-                    >
+                    <DropdownMenuItem key={variable.key} onClick={() => insertVariable(variable)}>
                       <Code className="mr-2 h-4 w-4" />
                       <span className="font-mono text-sm">
-                        {'{{'}{variable.key}{'}}'}
+                        {'{{'}
+                        {variable.key}
+                        {'}}'}
                       </span>
-                      <span className="ml-2 text-muted-foreground">
-                        - {variable.label}
-                      </span>
+                      <span className="text-muted-foreground ml-2">- {variable.label}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

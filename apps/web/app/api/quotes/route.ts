@@ -10,9 +10,10 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   // Apply rate limiting
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                   request.headers.get('x-real-ip') ||
-                   'unknown';
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
   const rateLimitResult = await checkRateLimit(`quotes:${clientIp}`, defaultRateLimitOptions);
   const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
 
@@ -26,7 +27,10 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: rateLimitHeaders });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: rateLimitHeaders }
+      );
     }
 
     // Get user's workspace
@@ -42,9 +46,20 @@ export async function GET(request: NextRequest) {
     // Parse query params
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10) || 20)
+    );
     const statusParam = searchParams.get('status');
-    const validQuoteStatuses = ['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'converted'];
+    const validQuoteStatuses = [
+      'draft',
+      'sent',
+      'viewed',
+      'accepted',
+      'declined',
+      'expired',
+      'converted',
+    ];
     const status = statusParam && validQuoteStatuses.includes(statusParam) ? statusParam : null;
     const rawSearch = searchParams.get('search');
     const search = rawSearch ? rawSearch.slice(0, 200) : null;

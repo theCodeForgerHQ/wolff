@@ -54,9 +54,7 @@ function StatusBadge({ status, statusCode }: { status: string; statusCode: numbe
       <Badge variant={variant}>
         {isSuccess(status) ? 'Delivered' : status === 'failed' ? 'Failed' : 'Pending'}
       </Badge>
-      {statusCode && (
-        <span className="text-xs text-muted-foreground font-mono">{statusCode}</span>
-      )}
+      {statusCode && <span className="text-muted-foreground font-mono text-xs">{statusCode}</span>}
     </div>
   );
 }
@@ -92,21 +90,19 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
 
   return (
     <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Delivery Log</DialogTitle>
-          <DialogDescription>
-            Recent webhook delivery attempts for this endpoint.
-          </DialogDescription>
+          <DialogDescription>Recent webhook delivery attempts for this endpoint.</DialogDescription>
         </DialogHeader>
 
         <div className="py-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
           ) : deliveries.length === 0 ? (
-            <p className="py-12 text-center text-muted-foreground">
+            <p className="text-muted-foreground py-12 text-center">
               No deliveries yet. Webhooks will appear here once events are triggered.
             </p>
           ) : (
@@ -130,10 +126,8 @@ export function WebhookDeliveryLog({ endpointId, onClose }: WebhookDeliveryLogPr
                     <TableCell>
                       <StatusBadge status={delivery.status} statusCode={delivery.statusCode} />
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {delivery.attempts}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm">{delivery.attempts}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
                       {formatDate(delivery.createdAt)}
                     </TableCell>
                   </TableRow>

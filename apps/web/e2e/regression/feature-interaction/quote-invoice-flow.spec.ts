@@ -104,7 +104,7 @@ test.describe('Feature Interaction - Quote to Invoice Conversion', () => {
 
       // Look for convert button
       const convertButton = page.getByRole('button', { name: /convert|invoice/i });
-      if (await convertButton.isVisible() && await convertButton.isEnabled()) {
+      if ((await convertButton.isVisible()) && (await convertButton.isEnabled())) {
         await convertButton.click();
 
         // Handle confirmation dialog
@@ -206,9 +206,11 @@ test.describe('Feature Interaction - Client Data Propagation', () => {
       await page.waitForLoadState('networkidle');
 
       // Try to find an actions menu (various possible button names)
-      const actionsButton = page.locator(
-        'button:has-text("Actions"), button:has-text("More"), button[aria-label*="menu"], button[aria-label*="action"], [data-testid="actions-menu"]'
-      ).first();
+      const actionsButton = page
+        .locator(
+          'button:has-text("Actions"), button:has-text("More"), button[aria-label*="menu"], button[aria-label*="action"], [data-testid="actions-menu"]'
+        )
+        .first();
 
       const actionsVisible = await actionsButton.isVisible().catch(() => false);
 
@@ -386,7 +388,9 @@ test.describe('Feature Interaction - PDF Generation with Branding', () => {
       await quoteLink.click();
 
       // Get current status
-      const statusBadge = page.locator('[data-testid="quote-status"], .badge, [class*="status"]').first();
+      const statusBadge = page
+        .locator('[data-testid="quote-status"], .badge, [class*="status"]')
+        .first();
       if (await statusBadge.isVisible()) {
         const status = await statusBadge.textContent();
         expect(status).toBeTruthy();

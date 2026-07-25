@@ -27,7 +27,8 @@ export default function NewClientPage() {
       if (error instanceof Error) {
         // Server action errors may be sanitized; check for demo mode keywords
         if (error.message.includes('demo') || error.message.includes('Demo')) {
-          errorMessage = 'This action is not available in demo mode. Create an account to save your changes.';
+          errorMessage =
+            'This action is not available in demo mode. Create an account to save your changes.';
         } else {
           errorMessage = error.message;
         }
@@ -54,7 +55,7 @@ export default function NewClientPage() {
       </div>
 
       {serverError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
           {serverError}
         </div>
       )}

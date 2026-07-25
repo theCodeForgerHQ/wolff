@@ -6,7 +6,11 @@ test.describe('Payment Flow', () => {
       await page.goto('/invoices');
 
       // Find an unpaid invoice
-      const unpaidInvoice = page.locator('a[href^="/invoices/"]:has-text("sent"), a[href^="/invoices/"]:has-text("overdue")').first();
+      const unpaidInvoice = page
+        .locator(
+          'a[href^="/invoices/"]:has-text("sent"), a[href^="/invoices/"]:has-text("overdue")'
+        )
+        .first();
       if (await unpaidInvoice.isVisible()) {
         await unpaidInvoice.click();
 
@@ -228,7 +232,9 @@ test.describe('Payment Flow', () => {
       if (await unpaidInvoice.isVisible()) {
         await unpaidInvoice.click();
 
-        const sendLinkButton = page.getByRole('button', { name: /send payment link|share payment/i });
+        const sendLinkButton = page.getByRole('button', {
+          name: /send payment link|share payment/i,
+        });
         if (await sendLinkButton.isVisible()) {
           await expect(sendLinkButton).toBeVisible();
         }

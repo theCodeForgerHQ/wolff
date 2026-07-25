@@ -8,13 +8,13 @@
 
 ## Document Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| **Document ID** | UI-P2-001 |
-| **Project** | Wolff - Phase 2 |
-| **Based On** | UI_REFERENCES.md, IMAGE_ANNOTATIONS.md, DESIGN_DISCOVERY.md, PHASE2_SPECIFICATION.md |
-| **Design System** | Shadcn UI + Custom Extensions |
-| **Approvers** | TBD |
+| Attribute         | Value                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| **Document ID**   | UI-P2-001                                                                            |
+| **Project**       | Wolff - Phase 2                                                                      |
+| **Based On**      | UI_REFERENCES.md, IMAGE_ANNOTATIONS.md, DESIGN_DISCOVERY.md, PHASE2_SPECIFICATION.md |
+| **Design System** | Shadcn UI + Custom Extensions                                                        |
+| **Approvers**     | TBD                                                                                  |
 
 ---
 
@@ -42,35 +42,35 @@ Add to `apps/web/app/globals.css` in `:root` and `.dark` selectors:
 ```css
 :root {
   /* Quote Status Colors */
-  --status-draft: 220 9% 46%;           /* Gray - #6B7280 */
+  --status-draft: 220 9% 46%; /* Gray - #6B7280 */
   --status-draft-bg: 220 9% 46% / 0.1;
-  --status-sent: 217 91% 60%;           /* Blue - #3B82F6 */
+  --status-sent: 217 91% 60%; /* Blue - #3B82F6 */
   --status-sent-bg: 217 91% 60% / 0.1;
-  --status-accepted: 142 71% 45%;       /* Green - #22C55E */
+  --status-accepted: 142 71% 45%; /* Green - #22C55E */
   --status-accepted-bg: 142 71% 45% / 0.1;
-  --status-expired: 0 84% 60%;          /* Red - #EF4444 */
+  --status-expired: 0 84% 60%; /* Red - #EF4444 */
   --status-expired-bg: 0 84% 60% / 0.1;
 
   /* Invoice Status Colors */
-  --status-pending: 38 92% 50%;         /* Amber - #F59E0B */
+  --status-pending: 38 92% 50%; /* Amber - #F59E0B */
   --status-pending-bg: 38 92% 50% / 0.1;
-  --status-paid: 142 71% 45%;           /* Green - #22C55E */
-  --status-paid-bg: 142 71% 45%;        /* Solid background */
-  --status-overdue: 0 84% 60%;          /* Red - #EF4444 */
-  --status-overdue-bg: 0 84% 60%;       /* Solid background */
-  --status-partial: 217 91% 60%;        /* Blue - #3B82F6 */
+  --status-paid: 142 71% 45%; /* Green - #22C55E */
+  --status-paid-bg: 142 71% 45%; /* Solid background */
+  --status-overdue: 0 84% 60%; /* Red - #EF4444 */
+  --status-overdue-bg: 0 84% 60%; /* Solid background */
+  --status-partial: 217 91% 60%; /* Blue - #3B82F6 */
   --status-partial-bg: 217 91% 60% / 0.1;
 
   /* Chart Colors (Phase 2 Analytics) */
-  --chart-ar-current: 217 91% 60%;      /* 0-30 days - Blue */
-  --chart-ar-warning: 25 95% 53%;       /* 31-60 days - Orange #FB923C */
-  --chart-ar-critical: 0 91% 71%;       /* 60+ days - Red #F87171 */
-  --chart-projected: 270 67% 85%;       /* Light purple - #C4B5FD */
-  --chart-actual: 263 70% 50%;          /* Dark purple - #7C3AED */
+  --chart-ar-current: 217 91% 60%; /* 0-30 days - Blue */
+  --chart-ar-warning: 25 95% 53%; /* 31-60 days - Orange #FB923C */
+  --chart-ar-critical: 0 91% 71%; /* 60+ days - Red #F87171 */
+  --chart-projected: 270 67% 85%; /* Light purple - #C4B5FD */
+  --chart-actual: 263 70% 50%; /* Dark purple - #7C3AED */
 
   /* Sidebar Enhancement Colors */
-  --sidebar-submenu-bg: 0 0% 96%;       /* Subtle submenu background */
-  --sidebar-submenu-indent: 24px;       /* Submenu item indentation */
+  --sidebar-submenu-bg: 0 0% 96%; /* Subtle submenu background */
+  --sidebar-submenu-indent: 24px; /* Submenu item indentation */
 }
 
 .dark {
@@ -127,37 +127,45 @@ Add status-specific variants to the Badge component:
 // apps/web/components/ui/badge.tsx - Extended variants
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  'focus:ring-ring inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2',
   {
     variants: {
       variant: {
         // Existing variants...
-        default: "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
-        success: "border-transparent bg-success text-success-foreground shadow",
-        warning: "border-transparent bg-warning text-warning-foreground shadow",
-        info: "border-transparent bg-info text-info-foreground shadow",
+        default: 'bg-primary text-primary-foreground hover:bg-primary/80 border-transparent shadow',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-transparent',
+        destructive:
+          'bg-destructive text-destructive-foreground hover:bg-destructive/80 border-transparent shadow',
+        outline: 'text-foreground',
+        success: 'bg-success text-success-foreground border-transparent shadow',
+        warning: 'bg-warning text-warning-foreground border-transparent shadow',
+        info: 'bg-info text-info-foreground border-transparent shadow',
 
         // NEW: Quote Status Variants (outline style)
-        "status-draft": "border-[hsl(var(--status-draft))] text-[hsl(var(--status-draft))] bg-[hsl(var(--status-draft-bg))]",
-        "status-sent": "border-[hsl(var(--status-sent))] text-[hsl(var(--status-sent))] bg-[hsl(var(--status-sent-bg))]",
-        "status-accepted": "border-[hsl(var(--status-accepted))] text-[hsl(var(--status-accepted))] bg-[hsl(var(--status-accepted-bg))]",
-        "status-expired": "border-[hsl(var(--status-expired))] text-[hsl(var(--status-expired))] bg-[hsl(var(--status-expired-bg))]",
+        'status-draft':
+          'border-[hsl(var(--status-draft))] bg-[hsl(var(--status-draft-bg))] text-[hsl(var(--status-draft))]',
+        'status-sent':
+          'border-[hsl(var(--status-sent))] bg-[hsl(var(--status-sent-bg))] text-[hsl(var(--status-sent))]',
+        'status-accepted':
+          'border-[hsl(var(--status-accepted))] bg-[hsl(var(--status-accepted-bg))] text-[hsl(var(--status-accepted))]',
+        'status-expired':
+          'border-[hsl(var(--status-expired))] bg-[hsl(var(--status-expired-bg))] text-[hsl(var(--status-expired))]',
 
         // NEW: Invoice Status Variants
-        "status-pending": "border-[hsl(var(--status-pending))] text-[hsl(var(--status-pending))] bg-[hsl(var(--status-pending-bg))]",
-        "status-paid": "border-transparent bg-[hsl(var(--status-paid-bg))] text-white",
-        "status-overdue": "border-transparent bg-[hsl(var(--status-overdue-bg))] text-white",
-        "status-partial": "border-[hsl(var(--status-partial))] text-[hsl(var(--status-partial))] bg-[hsl(var(--status-partial-bg))]",
+        'status-pending':
+          'border-[hsl(var(--status-pending))] bg-[hsl(var(--status-pending-bg))] text-[hsl(var(--status-pending))]',
+        'status-paid': 'border-transparent bg-[hsl(var(--status-paid-bg))] text-white',
+        'status-overdue': 'border-transparent bg-[hsl(var(--status-overdue-bg))] text-white',
+        'status-partial':
+          'border-[hsl(var(--status-partial))] bg-[hsl(var(--status-partial-bg))] text-[hsl(var(--status-partial))]',
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: 'default',
     },
   }
-)
+);
 ```
 
 ---
@@ -211,7 +219,7 @@ interface AppSidebarProps {
   };
   workspace: {
     name: string;
-    tier: "free" | "pro" | "enterprise";
+    tier: 'free' | 'pro' | 'enterprise';
     logo?: string;
   };
   collapsed?: boolean;
@@ -231,27 +239,27 @@ interface NavItem {
 
 #### Visual Specifications
 
-| Property | Expanded | Collapsed |
-|----------|----------|-----------|
-| Width | 256px (16rem) | 64px (4rem) |
-| Background | `hsl(var(--sidebar-background))` | Same |
-| Border | 1px `hsl(var(--sidebar-border))` right | Same |
-| Logo | Full logo + text | Icon only |
-| Nav items | Icon + label | Icon only + tooltip |
-| User section | Avatar + name + email | Avatar only + tooltip |
-| Submenu | Visible when parent expanded | Flyout on hover |
+| Property     | Expanded                               | Collapsed             |
+| ------------ | -------------------------------------- | --------------------- |
+| Width        | 256px (16rem)                          | 64px (4rem)           |
+| Background   | `hsl(var(--sidebar-background))`       | Same                  |
+| Border       | 1px `hsl(var(--sidebar-border))` right | Same                  |
+| Logo         | Full logo + text                       | Icon only             |
+| Nav items    | Icon + label                           | Icon only + tooltip   |
+| User section | Avatar + name + email                  | Avatar only + tooltip |
+| Submenu      | Visible when parent expanded           | Flyout on hover       |
 
 #### State Specifications
 
-| State | Visual Treatment |
-|-------|------------------|
-| Default nav item | `text-sidebar-foreground/70` |
-| Hover nav item | `bg-sidebar-accent text-sidebar-accent-foreground` |
-| Active nav item | `bg-sidebar-primary text-sidebar-primary-foreground` |
-| Active parent (child selected) | `bg-sidebar-accent` with `text-sidebar-foreground` |
-| Submenu item default | `text-muted-foreground` with 24px left indent |
-| Submenu item hover | `bg-muted/50` |
-| Submenu item active | `bg-primary/10 text-primary` |
+| State                          | Visual Treatment                                     |
+| ------------------------------ | ---------------------------------------------------- |
+| Default nav item               | `text-sidebar-foreground/70`                         |
+| Hover nav item                 | `bg-sidebar-accent text-sidebar-accent-foreground`   |
+| Active nav item                | `bg-sidebar-primary text-sidebar-primary-foreground` |
+| Active parent (child selected) | `bg-sidebar-accent` with `text-sidebar-foreground`   |
+| Submenu item default           | `text-muted-foreground` with 24px left indent        |
+| Submenu item hover             | `bg-muted/50`                                        |
+| Submenu item active            | `bg-primary/10 text-primary`                         |
 
 #### Measurements
 
@@ -354,27 +362,27 @@ interface RowActionsProps<TData> {
 
 **Quotes Table:**
 
-| Column | Width | Sortable | Alignment | Content |
-|--------|-------|----------|-----------|---------|
-| Checkbox | 40px | No | Center | Checkbox component |
-| Quote ID | 100px | Yes | Left | `#QT-XXX` format, monospace |
-| Status | 100px | Yes | Left | StatusBadge component |
-| Client | flex (1fr) | Yes | Left | Avatar (32px) + Name + Email stack |
-| Total | 100px | Yes | Right | Currency format with symbol |
-| Expiry Date | 120px | Yes | Left | `YYYY-MM-DD` format |
-| Actions | 100px | No | Right | Icon buttons |
+| Column      | Width      | Sortable | Alignment | Content                            |
+| ----------- | ---------- | -------- | --------- | ---------------------------------- |
+| Checkbox    | 40px       | No       | Center    | Checkbox component                 |
+| Quote ID    | 100px      | Yes      | Left      | `#QT-XXX` format, monospace        |
+| Status      | 100px      | Yes      | Left      | StatusBadge component              |
+| Client      | flex (1fr) | Yes      | Left      | Avatar (32px) + Name + Email stack |
+| Total       | 100px      | Yes      | Right     | Currency format with symbol        |
+| Expiry Date | 120px      | Yes      | Left      | `YYYY-MM-DD` format                |
+| Actions     | 100px      | No       | Right     | Icon buttons                       |
 
 **Invoices Table:**
 
-| Column | Width | Sortable | Alignment | Content |
-|--------|-------|----------|-----------|---------|
-| Checkbox | 40px | No | Center | Checkbox component |
-| Invoice ID | 100px | Yes | Left | `#INV-XXX` format, monospace |
-| Status | 100px | Yes | Left | StatusBadge component |
-| Client | flex (1fr) | Yes | Left | Avatar (32px) + Name + Email stack |
-| Amount | 100px | Yes | Right | Currency format with symbol |
-| Issued Date | 120px | Yes | Left | `YYYY-MM-DD` format |
-| Actions | 100px | No | Right | Icon buttons |
+| Column      | Width      | Sortable | Alignment | Content                            |
+| ----------- | ---------- | -------- | --------- | ---------------------------------- |
+| Checkbox    | 40px       | No       | Center    | Checkbox component                 |
+| Invoice ID  | 100px      | Yes      | Left      | `#INV-XXX` format, monospace       |
+| Status      | 100px      | Yes      | Left      | StatusBadge component              |
+| Client      | flex (1fr) | Yes      | Left      | Avatar (32px) + Name + Email stack |
+| Amount      | 100px      | Yes      | Right     | Currency format with symbol        |
+| Issued Date | 120px      | Yes      | Left      | `YYYY-MM-DD` format                |
+| Actions     | 100px      | No       | Right     | Icon buttons                       |
 
 #### Visual Specifications
 
@@ -403,20 +411,20 @@ Cell heights:
 
 #### Action Icons
 
-| Action | Icon | Size | Tooltip |
-|--------|------|------|---------|
-| Download | `Download` | 16px | "Download PDF" |
-| View | `Eye` | 16px | "View details" |
-| More | `MoreHorizontal` | 16px | "More actions" |
+| Action   | Icon             | Size | Tooltip        |
+| -------- | ---------------- | ---- | -------------- |
+| Download | `Download`       | 16px | "Download PDF" |
+| View     | `Eye`            | 16px | "View details" |
+| More     | `MoreHorizontal` | 16px | "More actions" |
 
 **More Dropdown Menu:**
 
-| Item | Icon | Destructive |
-|------|------|-------------|
-| Edit | `Pencil` | No |
-| Duplicate | `Copy` | No |
-| --- | (separator) | - |
-| Delete | `Trash2` | Yes |
+| Item      | Icon        | Destructive |
+| --------- | ----------- | ----------- |
+| Edit      | `Pencil`    | No          |
+| Duplicate | `Copy`      | No          |
+| ---       | (separator) | -           |
+| Delete    | `Trash2`    | Yes         |
 
 ---
 
@@ -430,13 +438,13 @@ Cell heights:
 
 ```typescript
 interface StatusBadgeProps {
-  entity: "quote" | "invoice";
+  entity: 'quote' | 'invoice';
   status: QuoteStatus | InvoiceStatus;
-  size?: "sm" | "md";
+  size?: 'sm' | 'md';
 }
 
-type QuoteStatus = "draft" | "sent" | "accepted" | "expired";
-type InvoiceStatus = "pending" | "paid" | "overdue" | "partial";
+type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'expired';
+type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'partial';
 ```
 
 #### Status Mapping
@@ -445,46 +453,46 @@ type InvoiceStatus = "pending" | "paid" | "overdue" | "partial";
 const statusConfig = {
   quote: {
     draft: {
-      variant: "status-draft",
-      label: "Draft",
-      icon: FileText
+      variant: 'status-draft',
+      label: 'Draft',
+      icon: FileText,
     },
     sent: {
-      variant: "status-sent",
-      label: "Sent",
-      icon: Send
+      variant: 'status-sent',
+      label: 'Sent',
+      icon: Send,
     },
     accepted: {
-      variant: "status-accepted",
-      label: "Accepted",
-      icon: CheckCircle
+      variant: 'status-accepted',
+      label: 'Accepted',
+      icon: CheckCircle,
     },
     expired: {
-      variant: "status-expired",
-      label: "Expired",
-      icon: Clock
+      variant: 'status-expired',
+      label: 'Expired',
+      icon: Clock,
     },
   },
   invoice: {
     pending: {
-      variant: "status-pending",
-      label: "Pending",
-      icon: Clock
+      variant: 'status-pending',
+      label: 'Pending',
+      icon: Clock,
     },
     paid: {
-      variant: "status-paid",
-      label: "Paid",
-      icon: CheckCircle
+      variant: 'status-paid',
+      label: 'Paid',
+      icon: CheckCircle,
     },
     overdue: {
-      variant: "status-overdue",
-      label: "Overdue",
-      icon: AlertTriangle
+      variant: 'status-overdue',
+      label: 'Overdue',
+      icon: AlertTriangle,
     },
     partial: {
-      variant: "status-partial",
-      label: "Partial",
-      icon: CreditCard
+      variant: 'status-partial',
+      label: 'Partial',
+      icon: CreditCard,
     },
   },
 };
@@ -492,28 +500,28 @@ const statusConfig = {
 
 #### Visual Specifications
 
-| Size | Height | Padding | Font Size | Icon Size |
-|------|--------|---------|-----------|-----------|
-| sm | 20px | px-2 py-0.5 | 10px | 12px |
-| md (default) | 24px | px-2.5 py-0.5 | 12px | 14px |
+| Size         | Height | Padding       | Font Size | Icon Size |
+| ------------ | ------ | ------------- | --------- | --------- |
+| sm           | 20px   | px-2 py-0.5   | 10px      | 12px      |
+| md (default) | 24px   | px-2.5 py-0.5 | 12px      | 14px      |
 
 **Quote Badges (Outline Style):**
 
-| Status | Border | Text | Background |
-|--------|--------|------|------------|
-| Draft | Gray (#6B7280) | Gray | Gray/10% |
-| Sent | Blue (#3B82F6) | Blue | Blue/10% |
-| Accepted | Green (#22C55E) | Green | Green/10% |
-| Expired | Red (#EF4444) | Red | Red/10% |
+| Status   | Border          | Text  | Background |
+| -------- | --------------- | ----- | ---------- |
+| Draft    | Gray (#6B7280)  | Gray  | Gray/10%   |
+| Sent     | Blue (#3B82F6)  | Blue  | Blue/10%   |
+| Accepted | Green (#22C55E) | Green | Green/10%  |
+| Expired  | Red (#EF4444)   | Red   | Red/10%    |
 
 **Invoice Badges (Mixed Style):**
 
-| Status | Border | Text | Background |
-|--------|--------|------|------------|
-| Pending | Amber (#F59E0B) | Amber | Amber/10% |
-| Paid | None | White | Green solid (#22C55E) |
-| Overdue | None | White | Red solid (#EF4444) |
-| Partial | Blue (#3B82F6) | Blue | Blue/10% |
+| Status  | Border          | Text  | Background            |
+| ------- | --------------- | ----- | --------------------- |
+| Pending | Amber (#F59E0B) | Amber | Amber/10%             |
+| Paid    | None            | White | Green solid (#22C55E) |
+| Overdue | None            | White | Red solid (#EF4444)   |
+| Partial | Blue (#3B82F6)  | Blue  | Blue/10%              |
 
 ---
 
@@ -572,15 +580,15 @@ FINANCIAL HEALTH                                               [^]
 
 #### Visual Specifications
 
-| Element | Specification |
-|---------|---------------|
+| Element       | Specification                                                        |
+| ------------- | -------------------------------------------------------------------- |
 | Section label | `text-xs font-medium uppercase tracking-wider text-muted-foreground` |
-| Section gap | 16px between header and cards |
-| Card grid | 2 columns on desktop, 1 column on mobile |
-| Card gap | 24px |
-| Card padding | 24px (p-6) |
-| Card shadow | shadow-sm |
-| Card radius | rounded-xl (12px) |
+| Section gap   | 16px between header and cards                                        |
+| Card grid     | 2 columns on desktop, 1 column on mobile                             |
+| Card gap      | 24px                                                                 |
+| Card padding  | 24px (p-6)                                                           |
+| Card shadow   | shadow-sm                                                            |
+| Card radius   | rounded-xl (12px)                                                    |
 
 ---
 
@@ -607,16 +615,16 @@ RadialProgressChart
 
 ```typescript
 interface RadialProgressChartProps {
-  value: number;              // 0-100 percentage
+  value: number; // 0-100 percentage
   label?: string;
-  size?: number;              // Default: 160
-  strokeWidth?: number;       // Default: 12
-  trackColor?: string;        // Default: --muted
-  progressColor?: string;     // Default: --primary
+  size?: number; // Default: 160
+  strokeWidth?: number; // Default: 12
+  trackColor?: string; // Default: --muted
+  progressColor?: string; // Default: --primary
   trend?: {
-    direction: "up" | "down";
-    value: number;            // Percentage change
-    period?: string;          // e.g., "vs last month"
+    direction: 'up' | 'down';
+    value: number; // Percentage change
+    period?: string; // e.g., "vs last month"
   };
   className?: string;
 }
@@ -641,15 +649,15 @@ Progress: 12px stroke, primary color
 Animation: stroke-dashoffset transition 1s ease-out
 ```
 
-| Element | Specification |
-|---------|---------------|
-| Container | 160x160px (default) |
-| Track circle | stroke-width: 12px, stroke: `hsl(var(--muted))` |
+| Element         | Specification                                     |
+| --------------- | ------------------------------------------------- |
+| Container       | 160x160px (default)                               |
+| Track circle    | stroke-width: 12px, stroke: `hsl(var(--muted))`   |
 | Progress circle | stroke-width: 12px, stroke: `hsl(var(--primary))` |
-| Value text | text-3xl font-bold |
-| Label text | text-sm text-muted-foreground |
-| Trend up | text-sm text-green-600, ChevronUp icon |
-| Trend down | text-sm text-red-600, ChevronDown icon |
+| Value text      | text-3xl font-bold                                |
+| Label text      | text-sm text-muted-foreground                     |
+| Trend up        | text-sm text-green-600, ChevronUp icon            |
+| Trend down      | text-sm text-red-600, ChevronDown icon            |
 
 ---
 
@@ -680,7 +688,7 @@ PreviewTabs
 ```typescript
 interface PreviewTabsProps {
   quoteData: QuoteFormData;
-  activeTab?: "payment" | "email" | "pdf";
+  activeTab?: 'payment' | 'email' | 'pdf';
   onTabChange?: (tab: string) => void;
   className?: string;
 }
@@ -732,16 +740,16 @@ Preview Panel (40% width):
 +------------------------------------------+
 ```
 
-| Element | Specification |
-|---------|---------------|
-| Tab list | h-9, inline-flex, rounded-lg bg-muted p-1 |
-| Tab trigger | px-3 py-1.5, text-sm, rounded-md |
-| Tab trigger active | bg-background shadow-sm |
-| Preview container | bg-muted/30, rounded-lg, p-4 |
-| Preview card | bg-white, rounded-lg, shadow-sm |
-| Business name | text-lg font-semibold |
-| Amount | text-2xl font-bold |
-| Section headers | text-sm font-medium text-muted-foreground |
+| Element            | Specification                             |
+| ------------------ | ----------------------------------------- |
+| Tab list           | h-9, inline-flex, rounded-lg bg-muted p-1 |
+| Tab trigger        | px-3 py-1.5, text-sm, rounded-md          |
+| Tab trigger active | bg-background shadow-sm                   |
+| Preview container  | bg-muted/30, rounded-lg, p-4              |
+| Preview card       | bg-white, rounded-lg, shadow-sm           |
+| Business name      | text-lg font-semibold                     |
+| Amount             | text-2xl font-bold                        |
+| Section headers    | text-sm font-medium text-muted-foreground |
 
 ---
 
@@ -749,22 +757,22 @@ Preview Panel (40% width):
 
 ### 3.1 Breakpoint System
 
-| Breakpoint | Width | Tailwind Class |
-|------------|-------|----------------|
-| Mobile | < 640px | (default) |
-| Small | >= 640px | `sm:` |
-| Medium | >= 768px | `md:` |
-| Large | >= 1024px | `lg:` |
-| Desktop | >= 1280px | `xl:` |
-| Wide | >= 1536px | `2xl:` |
+| Breakpoint | Width     | Tailwind Class |
+| ---------- | --------- | -------------- |
+| Mobile     | < 640px   | (default)      |
+| Small      | >= 640px  | `sm:`          |
+| Medium     | >= 768px  | `md:`          |
+| Large      | >= 1024px | `lg:`          |
+| Desktop    | >= 1280px | `xl:`          |
+| Wide       | >= 1536px | `2xl:`         |
 
 ### 3.2 Sidebar Behavior
 
-| Breakpoint | Default State | Toggle Available | Layout Mode |
-|------------|---------------|------------------|-------------|
-| Mobile (< 768px) | Hidden | Sheet overlay | Fullscreen overlay |
-| Tablet (768-1279px) | Collapsed (64px) | Yes | Icon + flyout |
-| Desktop (>= 1280px) | Expanded (256px) | Yes | Full sidebar |
+| Breakpoint          | Default State    | Toggle Available | Layout Mode        |
+| ------------------- | ---------------- | ---------------- | ------------------ |
+| Mobile (< 768px)    | Hidden           | Sheet overlay    | Fullscreen overlay |
+| Tablet (768-1279px) | Collapsed (64px) | Yes              | Icon + flyout      |
+| Desktop (>= 1280px) | Expanded (256px) | Yes              | Full sidebar       |
 
 #### Mobile Sidebar (Sheet)
 
@@ -786,10 +794,10 @@ Preview Panel (40% width):
 
 ```css
 @media (min-width: 768px) and (max-width: 1279px) {
-  [data-sidebar="sidebar"] {
+  [data-sidebar='sidebar'] {
     width: var(--sidebar-width-collapsed);
   }
-  [data-sidebar="content"] {
+  [data-sidebar='content'] {
     margin-left: var(--sidebar-width-collapsed);
   }
 }
@@ -799,10 +807,10 @@ Preview Panel (40% width):
 
 ```css
 @media (min-width: 1280px) {
-  [data-sidebar="sidebar"] {
+  [data-sidebar='sidebar'] {
     width: var(--sidebar-width-expanded);
   }
-  [data-sidebar="content"] {
+  [data-sidebar='content'] {
     margin-left: var(--sidebar-width-expanded);
   }
 }
@@ -810,11 +818,11 @@ Preview Panel (40% width):
 
 ### 3.3 DataTable Responsive Behavior
 
-| Breakpoint | Columns Visible | Layout |
-|------------|-----------------|--------|
-| Mobile | ID, Status, Actions | Horizontal scroll |
-| Tablet | ID, Status, Client (name only), Total, Actions | Full width |
-| Desktop | All columns | Full width |
+| Breakpoint | Columns Visible                                | Layout            |
+| ---------- | ---------------------------------------------- | ----------------- |
+| Mobile     | ID, Status, Actions                            | Horizontal scroll |
+| Tablet     | ID, Status, Client (name only), Total, Actions | Full width        |
+| Desktop    | All columns                                    | Full width        |
 
 #### Mobile Table
 
@@ -867,11 +875,11 @@ const visibleColumns = {
 
 ### 3.5 Quote Builder Split-Pane
 
-| Breakpoint | Layout | Form Width | Preview Width |
-|------------|--------|------------|---------------|
-| Mobile | Stacked (tabs) | 100% | 100% |
-| Tablet | Side-by-side | 50% | 50% |
-| Desktop | Side-by-side | 60% | 40% |
+| Breakpoint | Layout         | Form Width | Preview Width |
+| ---------- | -------------- | ---------- | ------------- |
+| Mobile     | Stacked (tabs) | 100%       | 100%          |
+| Tablet     | Side-by-side   | 50%        | 50%           |
+| Desktop    | Side-by-side   | 60%        | 40%           |
 
 ```typescript
 // Mobile: Toggle between form and preview
@@ -899,15 +907,15 @@ const visibleColumns = {
 
 #### AppSidebar
 
-| Element | Role | ARIA Attributes |
-|---------|------|-----------------|
-| Sidebar container | `navigation` | `aria-label="Main navigation"` |
-| Nav group | `group` | `aria-labelledby={sectionId}` |
-| Nav item link | `link` | `aria-current="page"` (when active) |
-| Collapsible parent | `button` | `aria-expanded`, `aria-controls` |
-| Submenu | `menu` | `aria-labelledby={parentId}` |
-| Collapse toggle | `button` | `aria-label="Toggle sidebar"`, `aria-expanded` |
-| User dropdown | `button` | `aria-haspopup="menu"`, `aria-expanded` |
+| Element            | Role         | ARIA Attributes                                |
+| ------------------ | ------------ | ---------------------------------------------- |
+| Sidebar container  | `navigation` | `aria-label="Main navigation"`                 |
+| Nav group          | `group`      | `aria-labelledby={sectionId}`                  |
+| Nav item link      | `link`       | `aria-current="page"` (when active)            |
+| Collapsible parent | `button`     | `aria-expanded`, `aria-controls`               |
+| Submenu            | `menu`       | `aria-labelledby={parentId}`                   |
+| Collapse toggle    | `button`     | `aria-label="Toggle sidebar"`, `aria-expanded` |
+| User dropdown      | `button`     | `aria-haspopup="menu"`, `aria-expanded`        |
 
 ```typescript
 // Example implementation
@@ -933,19 +941,19 @@ const visibleColumns = {
 
 #### DataTable
 
-| Element | Role | ARIA Attributes |
-|---------|------|-----------------|
-| Table container | `table` | `aria-label="Quotes table"` |
-| Table header | `rowgroup` | - |
-| Header row | `row` | - |
-| Header cell | `columnheader` | `aria-sort="ascending|descending|none"` |
-| Table body | `rowgroup` | - |
-| Body row | `row` | `aria-selected` (when selectable) |
-| Body cell | `cell` | - |
-| Select all checkbox | `checkbox` | `aria-label="Select all rows"` |
-| Row checkbox | `checkbox` | `aria-label="Select row"` |
-| Sort button | `button` | `aria-label="Sort by {column}"` |
-| Pagination | `navigation` | `aria-label="Table pagination"` |
+| Element             | Role           | ARIA Attributes                   |
+| ------------------- | -------------- | --------------------------------- |
+| Table container     | `table`        | `aria-label="Quotes table"`       |
+| Table header        | `rowgroup`     | -                                 |
+| Header row          | `row`          | -                                 |
+| Header cell         | `columnheader` | `aria-sort="ascending             | descending | none"` |
+| Table body          | `rowgroup`     | -                                 |
+| Body row            | `row`          | `aria-selected` (when selectable) |
+| Body cell           | `cell`         | -                                 |
+| Select all checkbox | `checkbox`     | `aria-label="Select all rows"`    |
+| Row checkbox        | `checkbox`     | `aria-label="Select row"`         |
+| Sort button         | `button`       | `aria-label="Sort by {column}"`   |
+| Pagination          | `navigation`   | `aria-label="Table pagination"`   |
 
 ```typescript
 // Sort header example
@@ -963,9 +971,9 @@ const visibleColumns = {
 
 #### StatusBadge
 
-| Element | Role | ARIA Attributes |
-|---------|------|-----------------|
-| Badge | `status` | `aria-label="{entity} status: {status}"` |
+| Element | Role     | ARIA Attributes                          |
+| ------- | -------- | ---------------------------------------- |
+| Badge   | `status` | `aria-label="{entity} status: {status}"` |
 
 ```typescript
 <Badge
@@ -979,9 +987,9 @@ const visibleColumns = {
 
 #### RadialProgressChart
 
-| Element | Role | ARIA Attributes |
-|---------|------|-----------------|
-| Chart container | `img` | `aria-label="Conversion rate: {value}%"` |
+| Element            | Role          | ARIA Attributes                                   |
+| ------------------ | ------------- | ------------------------------------------------- |
+| Chart container    | `img`         | `aria-label="Conversion rate: {value}%"`          |
 | Progress indicator | `progressbar` | `aria-valuenow`, `aria-valuemin`, `aria-valuemax` |
 
 ```typescript
@@ -997,49 +1005,49 @@ const visibleColumns = {
 
 #### AnalyticsSection
 
-| Element | Role | ARIA Attributes |
-|---------|------|-----------------|
-| Section | `region` | `aria-labelledby={headingId}` |
-| Section heading | `heading` | `id={headingId}` |
-| Collapse toggle | `button` | `aria-expanded`, `aria-controls` |
-| Content area | - | `id={contentId}` |
+| Element         | Role      | ARIA Attributes                  |
+| --------------- | --------- | -------------------------------- |
+| Section         | `region`  | `aria-labelledby={headingId}`    |
+| Section heading | `heading` | `id={headingId}`                 |
+| Collapse toggle | `button`  | `aria-expanded`, `aria-controls` |
+| Content area    | -         | `id={contentId}`                 |
 
 ### 4.2 Keyboard Navigation
 
 #### Global Navigation
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Move focus to next interactive element |
-| `Shift + Tab` | Move focus to previous interactive element |
-| `Enter` / `Space` | Activate focused element |
-| `Escape` | Close modal/dropdown/menu |
-| `Arrow Down/Up` | Navigate within dropdown/menu |
+| Key               | Action                                     |
+| ----------------- | ------------------------------------------ |
+| `Tab`             | Move focus to next interactive element     |
+| `Shift + Tab`     | Move focus to previous interactive element |
+| `Enter` / `Space` | Activate focused element                   |
+| `Escape`          | Close modal/dropdown/menu                  |
+| `Arrow Down/Up`   | Navigate within dropdown/menu              |
 
 #### Sidebar Navigation
 
-| Key | Context | Action |
-|-----|---------|--------|
-| `Tab` | Sidebar | Move through nav items |
-| `Enter` | Nav item | Navigate to page |
-| `Enter` | Collapsible parent | Toggle submenu |
-| `Arrow Down` | Expanded submenu | Move to next item |
-| `Arrow Up` | Expanded submenu | Move to previous item |
-| `Arrow Right` | Collapsed parent | Expand submenu |
-| `Arrow Left` | Expanded submenu | Collapse submenu |
-| `Home` | Nav list | Move to first item |
-| `End` | Nav list | Move to last item |
+| Key           | Context            | Action                 |
+| ------------- | ------------------ | ---------------------- |
+| `Tab`         | Sidebar            | Move through nav items |
+| `Enter`       | Nav item           | Navigate to page       |
+| `Enter`       | Collapsible parent | Toggle submenu         |
+| `Arrow Down`  | Expanded submenu   | Move to next item      |
+| `Arrow Up`    | Expanded submenu   | Move to previous item  |
+| `Arrow Right` | Collapsed parent   | Expand submenu         |
+| `Arrow Left`  | Expanded submenu   | Collapse submenu       |
+| `Home`        | Nav list           | Move to first item     |
+| `End`         | Nav list           | Move to last item      |
 
 #### DataTable
 
-| Key | Context | Action |
-|-----|---------|--------|
-| `Tab` | Table | Move through interactive cells |
-| `Space` | Checkbox | Toggle selection |
-| `Enter` | Row | View detail (if onRowClick) |
-| `Enter` | Sort header | Toggle sort direction |
-| `Arrow Up/Down` | Row focus | Move between rows |
-| `Page Up/Down` | Table | Navigate pages |
+| Key             | Context     | Action                         |
+| --------------- | ----------- | ------------------------------ |
+| `Tab`           | Table       | Move through interactive cells |
+| `Space`         | Checkbox    | Toggle selection               |
+| `Enter`         | Row         | View detail (if onRowClick)    |
+| `Enter`         | Sort header | Toggle sort direction          |
+| `Arrow Up/Down` | Row focus   | Move between rows              |
+| `Page Up/Down`  | Table       | Navigate pages                 |
 
 ### 4.3 Focus Management
 
@@ -1091,24 +1099,25 @@ const visibleColumns = {
 
 All text must meet WCAG 2.1 AA standards:
 
-| Text Type | Minimum Ratio | Notes |
-|-----------|---------------|-------|
-| Normal text (< 18px) | 4.5:1 | Body text, labels |
-| Large text (>= 18px bold) | 3:1 | Headings |
-| UI components | 3:1 | Icons, borders |
-| Decorative | N/A | Non-essential visuals |
+| Text Type                 | Minimum Ratio | Notes                 |
+| ------------------------- | ------------- | --------------------- |
+| Normal text (< 18px)      | 4.5:1         | Body text, labels     |
+| Large text (>= 18px bold) | 3:1           | Headings              |
+| UI components             | 3:1           | Icons, borders        |
+| Decorative                | N/A           | Non-essential visuals |
 
 **Status Badge Contrast Verification:**
 
-| Badge | Background | Text | Ratio |
-|-------|------------|------|-------|
-| Draft (outline) | White | #6B7280 | 5.6:1 |
-| Sent (outline) | White | #3B82F6 | 4.5:1 |
-| Accepted (outline) | White | #22C55E | 3.2:1 (use darker green) |
-| Paid (solid) | #22C55E | White | 3.1:1 (use darker green) |
-| Overdue (solid) | #EF4444 | White | 4.6:1 |
+| Badge              | Background | Text    | Ratio                    |
+| ------------------ | ---------- | ------- | ------------------------ |
+| Draft (outline)    | White      | #6B7280 | 5.6:1                    |
+| Sent (outline)     | White      | #3B82F6 | 4.5:1                    |
+| Accepted (outline) | White      | #22C55E | 3.2:1 (use darker green) |
+| Paid (solid)       | #22C55E    | White   | 3.1:1 (use darker green) |
+| Overdue (solid)    | #EF4444    | White   | 4.6:1                    |
 
 **Recommended adjustments for green badges:**
+
 - Use `#16A34A` (green-600) instead of `#22C55E` (green-500) for better contrast
 
 ### 4.5 Screen Reader Considerations
@@ -1153,22 +1162,22 @@ All text must meet WCAG 2.1 AA standards:
 
 ```css
 /* Sidebar width transition */
-[data-sidebar="sidebar"] {
+[data-sidebar='sidebar'] {
   transition: width 200ms ease-in-out;
 }
 
 /* Content margin transition */
-[data-sidebar="content"] {
+[data-sidebar='content'] {
   transition: margin-left 200ms ease-in-out;
 }
 
 /* Label fade in expanded mode */
-[data-sidebar="expanded"] .sidebar-label {
+[data-sidebar='expanded'] .sidebar-label {
   animation: fade-in 150ms ease-out 100ms both;
 }
 
 /* Label hide in collapsed mode */
-[data-sidebar="collapsed"] .sidebar-label {
+[data-sidebar='collapsed'] .sidebar-label {
   opacity: 0;
   width: 0;
   overflow: hidden;
@@ -1183,13 +1192,13 @@ const submenuAnimation = {
   open: {
     height: 'var(--radix-collapsible-content-height)',
     opacity: 1,
-    transition: { duration: 0.2, ease: 'easeOut' }
+    transition: { duration: 0.2, ease: 'easeOut' },
   },
   closed: {
     height: 0,
     opacity: 0,
-    transition: { duration: 0.2, ease: 'easeOut' }
-  }
+    transition: { duration: 0.2, ease: 'easeOut' },
+  },
 };
 ```
 
@@ -1199,7 +1208,7 @@ const submenuAnimation = {
   transition: transform 200ms ease-in-out;
 }
 
-[data-state="open"] .chevron-icon {
+[data-state='open'] .chevron-icon {
   transform: rotate(180deg);
 }
 
@@ -1226,11 +1235,11 @@ const submenuAnimation = {
   }
 }
 
-[data-state="open"] > .submenu-content {
+[data-state='open'] > .submenu-content {
   animation: submenu-expand 200ms ease-out;
 }
 
-[data-state="closed"] > .submenu-content {
+[data-state='closed'] > .submenu-content {
   animation: submenu-collapse 200ms ease-out;
 }
 ```
@@ -1260,7 +1269,7 @@ const submenuAnimation = {
 }
 
 /* Animated state (value = 68%) */
-.radial-progress-value[data-value="68"] {
+.radial-progress-value[data-value='68'] {
   stroke-dashoffset: 90.56; /* 283 * (1 - 0.68) */
 }
 ```
@@ -1321,7 +1330,7 @@ const submenuAnimation = {
 }
 
 /* Selection transition */
-.table-row[data-selected="true"] {
+.table-row[data-selected='true'] {
   background-color: hsl(var(--muted));
 }
 
@@ -1346,7 +1355,7 @@ const submenuAnimation = {
 
 ```css
 /* Tab content fade */
-[data-state="active"].tab-content {
+[data-state='active'].tab-content {
   animation: tab-fade-in 200ms ease-out;
 }
 
@@ -1447,17 +1456,17 @@ apps/web/components/
 
 When implementing components, use tokens consistently:
 
-| Use Case | Token/Class |
-|----------|-------------|
-| Page background | `bg-background` |
-| Card background | `bg-card` |
-| Primary text | `text-foreground` |
-| Muted text | `text-muted-foreground` |
-| Primary button | `bg-primary text-primary-foreground` |
-| Border | `border-border` |
-| Focus ring | `ring-ring` |
-| Status colors | `hsl(var(--status-{status}))` |
-| Chart colors | `hsl(var(--chart-{n}))` |
+| Use Case        | Token/Class                          |
+| --------------- | ------------------------------------ |
+| Page background | `bg-background`                      |
+| Card background | `bg-card`                            |
+| Primary text    | `text-foreground`                    |
+| Muted text      | `text-muted-foreground`              |
+| Primary button  | `bg-primary text-primary-foreground` |
+| Border          | `border-border`                      |
+| Focus ring      | `ring-ring`                          |
+| Status colors   | `hsl(var(--status-{status}))`        |
+| Chart colors    | `hsl(var(--chart-{n}))`              |
 
 ### 6.3 Testing Checklist
 
@@ -1477,6 +1486,7 @@ For each component, verify:
 ### 6.4 Performance Considerations
 
 1. **Code Splitting:** Analytics charts should be dynamically imported
+
    ```typescript
    const RadialProgressChart = dynamic(
      () => import('@/components/charts/radial-progress-chart'),
@@ -1485,11 +1495,13 @@ For each component, verify:
    ```
 
 2. **Memoization:** Table rows and chart data should be memoized
+
    ```typescript
    const memoizedRows = useMemo(() => processRows(data), [data]);
    ```
 
 3. **Debouncing:** Search input must debounce by 300ms
+
    ```typescript
    const debouncedSearch = useDebouncedCallback(handleSearch, 300);
    ```
@@ -1509,26 +1521,26 @@ For each component, verify:
 
 ### Status Colors (HSL)
 
-| Status | HSL | Hex |
-|--------|-----|-----|
-| Draft | 220 9% 46% | #6B7280 |
-| Sent | 217 91% 60% | #3B82F6 |
+| Status   | HSL         | Hex     |
+| -------- | ----------- | ------- |
+| Draft    | 220 9% 46%  | #6B7280 |
+| Sent     | 217 91% 60% | #3B82F6 |
 | Accepted | 142 71% 45% | #22C55E |
-| Expired | 0 84% 60% | #EF4444 |
-| Pending | 38 92% 50% | #F59E0B |
-| Paid | 142 71% 45% | #22C55E |
-| Overdue | 0 84% 60% | #EF4444 |
-| Partial | 217 91% 60% | #3B82F6 |
+| Expired  | 0 84% 60%   | #EF4444 |
+| Pending  | 38 92% 50%  | #F59E0B |
+| Paid     | 142 71% 45% | #22C55E |
+| Overdue  | 0 84% 60%   | #EF4444 |
+| Partial  | 217 91% 60% | #3B82F6 |
 
 ### Chart Colors (HSL)
 
-| Use Case | HSL | Hex |
-|----------|-----|-----|
-| AR 0-30 days | 217 91% 60% | #3B82F6 |
-| AR 31-60 days | 25 95% 53% | #FB923C |
-| AR 60+ days | 0 91% 71% | #F87171 |
-| Projected | 270 67% 85% | #C4B5FD |
-| Actual | 263 70% 50% | #7C3AED |
+| Use Case      | HSL         | Hex     |
+| ------------- | ----------- | ------- |
+| AR 0-30 days  | 217 91% 60% | #3B82F6 |
+| AR 31-60 days | 25 95% 53%  | #FB923C |
+| AR 60+ days   | 0 91% 71%   | #F87171 |
+| Projected     | 270 67% 85% | #C4B5FD |
+| Actual        | 263 70% 50% | #7C3AED |
 
 ---
 
@@ -1536,34 +1548,34 @@ For each component, verify:
 
 All icons from `lucide-react`:
 
-| Component | Icon | Usage |
-|-----------|------|-------|
-| Dashboard | `LayoutDashboard` | Nav item |
-| Analytics | `BarChart3` | Nav item |
-| Clients | `Users` | Nav item |
-| Projects | `FolderKanban` | Nav item (collapsible) |
-| Quotes | `FileText` | Submenu item |
-| Invoices | `Receipt` | Submenu item |
-| Contracts | `FileCheck` | Submenu item |
-| Settings | `Settings` | Nav item |
-| Collapse sidebar | `PanelLeftClose` | Toggle button |
-| Expand sidebar | `PanelLeftOpen` | Toggle button |
-| Chevron down | `ChevronDown` | Submenu indicator |
-| Search | `Search` | Table toolbar |
-| Download | `Download` | Row action |
-| View | `Eye` | Row action |
-| Edit | `Pencil` | Dropdown item |
-| Duplicate | `Copy` | Dropdown item |
-| Delete | `Trash2` | Dropdown item (destructive) |
-| More | `MoreHorizontal` | Row action dropdown |
-| Trend up | `TrendingUp` | Analytics |
-| Trend down | `TrendingDown` | Analytics |
-| Check | `CheckCircle` | Success status |
-| Warning | `AlertTriangle` | Warning status |
-| Clock | `Clock` | Pending/expired status |
-| Send | `Send` | Sent status |
+| Component        | Icon              | Usage                       |
+| ---------------- | ----------------- | --------------------------- |
+| Dashboard        | `LayoutDashboard` | Nav item                    |
+| Analytics        | `BarChart3`       | Nav item                    |
+| Clients          | `Users`           | Nav item                    |
+| Projects         | `FolderKanban`    | Nav item (collapsible)      |
+| Quotes           | `FileText`        | Submenu item                |
+| Invoices         | `Receipt`         | Submenu item                |
+| Contracts        | `FileCheck`       | Submenu item                |
+| Settings         | `Settings`        | Nav item                    |
+| Collapse sidebar | `PanelLeftClose`  | Toggle button               |
+| Expand sidebar   | `PanelLeftOpen`   | Toggle button               |
+| Chevron down     | `ChevronDown`     | Submenu indicator           |
+| Search           | `Search`          | Table toolbar               |
+| Download         | `Download`        | Row action                  |
+| View             | `Eye`             | Row action                  |
+| Edit             | `Pencil`          | Dropdown item               |
+| Duplicate        | `Copy`            | Dropdown item               |
+| Delete           | `Trash2`          | Dropdown item (destructive) |
+| More             | `MoreHorizontal`  | Row action dropdown         |
+| Trend up         | `TrendingUp`      | Analytics                   |
+| Trend down       | `TrendingDown`    | Analytics                   |
+| Check            | `CheckCircle`     | Success status              |
+| Warning          | `AlertTriangle`   | Warning status              |
+| Clock            | `Clock`           | Pending/expired status      |
+| Send             | `Send`            | Sent status                 |
 
 ---
 
 
-*Version 1.0 - 2026-02-13*
+_Version 1.0 - 2026-02-13_

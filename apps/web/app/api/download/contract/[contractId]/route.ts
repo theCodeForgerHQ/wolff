@@ -19,7 +19,10 @@ export async function GET(
 ) {
   try {
     // Rate limit PDF downloads
-    const clientIp = _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || _request.headers.get('x-real-ip') || 'unknown';
+    const clientIp =
+      _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      _request.headers.get('x-real-ip') ||
+      'unknown';
     const { checkRateLimit } = await import('@/lib/rate-limit');
     const rl = await checkRateLimit(`pdf-download:${clientIp}`, { limit: 10, windowMs: 60000 });
     if (rl.limited) return new NextResponse('Too many requests', { status: 429 });

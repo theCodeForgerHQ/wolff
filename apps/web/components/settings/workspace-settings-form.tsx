@@ -83,7 +83,7 @@ export function WorkspaceSettingsForm({ initialData }: WorkspaceSettingsFormProp
       <div className="grid gap-2">
         <Label htmlFor="slug">Workspace URL</Label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">wolff.app/</span>
+          <span className="text-muted-foreground text-sm">wolff.app/</span>
           <Input
             id="slug"
             value={slug}
@@ -93,23 +93,21 @@ export function WorkspaceSettingsForm({ initialData }: WorkspaceSettingsFormProp
             className="flex-1"
           />
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           This is your workspace's unique identifier in URLs
         </p>
         {initialData?.slug && slug !== initialData.slug && slug.length > 0 && (
           <div className="flex items-start gap-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              Changing your workspace URL may break existing bookmarks and shared links.
-              The old URL will be saved for redirect purposes.
+              Changing your workspace URL may break existing bookmarks and shared links. The old URL
+              will be saved for redirect purposes.
             </p>
           </div>
         )}
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       {success && (
         <p className="text-sm text-green-600 dark:text-green-400">Settings saved successfully</p>

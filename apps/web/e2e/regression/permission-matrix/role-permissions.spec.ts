@@ -36,7 +36,15 @@ test.describe('Permission Matrix - Owner Role', () => {
     await page.waitForLoadState('networkidle');
 
     // Check all navigation items are visible
-    const navItems = ['Dashboard', 'Quotes', 'Invoices', 'Clients', 'Rate Cards', 'Templates', 'Settings'];
+    const navItems = [
+      'Dashboard',
+      'Quotes',
+      'Invoices',
+      'Clients',
+      'Rate Cards',
+      'Templates',
+      'Settings',
+    ];
 
     for (const item of navItems) {
       const navLink = page.getByRole('link', { name: new RegExp(`^${item}$`, 'i') });
@@ -169,7 +177,9 @@ test.describe('Permission Matrix - Admin Role', () => {
       const inviteDialog = page.locator('[role="dialog"]');
       if (await inviteDialog.isVisible()) {
         // Role selector should exist in invite dialog
-        const roleSelect = inviteDialog.locator('select, [data-testid="role-select"], [role="combobox"]').first();
+        const roleSelect = inviteDialog
+          .locator('select, [data-testid="role-select"], [role="combobox"]')
+          .first();
         if (await roleSelect.isVisible()) {
           await expect(roleSelect).toBeEnabled();
         }
@@ -339,7 +349,9 @@ test.describe('Permission Matrix - Cross-Workspace Isolation', () => {
 
     // Should show not found or access denied
     // The page shows "Page not found" or "doesn't exist" text
-    const errorMessage = page.getByText(/not found|access denied|unauthorized|exist|moved/i).first();
+    const errorMessage = page
+      .getByText(/not found|access denied|unauthorized|exist|moved/i)
+      .first();
     await expect(errorMessage).toBeVisible();
   });
 

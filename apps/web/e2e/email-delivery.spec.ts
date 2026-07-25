@@ -83,7 +83,7 @@ test.describe('Email Delivery', () => {
           await sendButton.click();
 
           const messageField = page.locator('textarea, [contenteditable="true"]');
-          if (await messageField.count() > 0) {
+          if ((await messageField.count()) > 0) {
             await expect(messageField.first()).toBeVisible();
           }
         }
@@ -121,7 +121,9 @@ test.describe('Email Delivery', () => {
         if (await sendButton.isVisible()) {
           await sendButton.click();
 
-          const confirmSendButton = page.getByRole('button', { name: /send quote|confirm|send email/i });
+          const confirmSendButton = page.getByRole('button', {
+            name: /send quote|confirm|send email/i,
+          });
           if (await confirmSendButton.isVisible()) {
             await confirmSendButton.click();
 
@@ -139,7 +141,7 @@ test.describe('Email Delivery', () => {
 
       // After sending, status should change to "sent"
       const sentBadge = page.locator('[class*="badge"]:has-text("sent")');
-      if (await sentBadge.count() > 0) {
+      if ((await sentBadge.count()) > 0) {
         await expect(sentBadge.first()).toBeVisible();
       }
     });

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@wolff/database';
-import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace'
+import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type {
   RateCardListItem,
   RateCardDetail,
@@ -55,9 +55,10 @@ export async function getRateCards(filter?: RateCardFilter): Promise<PaginatedRa
   };
 
   const SORTABLE_COLUMNS = ['name', 'rate', 'pricingType', 'createdAt', 'updatedAt'];
-  const orderBy: Prisma.RateCardOrderByWithRelationInput = filter?.sortBy && SORTABLE_COLUMNS.includes(filter.sortBy)
-    ? { [filter.sortBy]: filter.sortOrder || 'asc' }
-    : { name: 'asc' };
+  const orderBy: Prisma.RateCardOrderByWithRelationInput =
+    filter?.sortBy && SORTABLE_COLUMNS.includes(filter.sortBy)
+      ? { [filter.sortBy]: filter.sortOrder || 'asc' }
+      : { name: 'asc' };
 
   const [rateCards, total] = await Promise.all([
     prisma.rateCard.findMany({
@@ -330,10 +331,7 @@ export async function toggleRateCardActive(id: string): Promise<{ isActive: bool
 }
 
 // Duplicate rate card
-export async function duplicateRateCard(
-  id: string,
-  newName?: string
-): Promise<{ id: string }> {
+export async function duplicateRateCard(id: string, newName?: string): Promise<{ id: string }> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
   if (role === 'viewer') {
     throw new Error('Viewers cannot duplicate rate cards');
@@ -371,9 +369,7 @@ export async function duplicateRateCard(
 }
 
 // Get rate cards for selection (quote builder)
-export async function getRateCardsForSelection(
-  categoryId?: string
-): Promise<RateCardSelection[]> {
+export async function getRateCardsForSelection(categoryId?: string): Promise<RateCardSelection[]> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   const rateCards = await prisma.rateCard.findMany({
@@ -427,9 +423,7 @@ export async function getRateCardStats(): Promise<RateCardStats> {
   ]);
 
   // Get category names
-  const categoryIds = byCategory
-    .map((c) => c.categoryId)
-    .filter((id): id is string => id !== null);
+  const categoryIds = byCategory.map((c) => c.categoryId).filter((id): id is string => id !== null);
   const categories = await prisma.rateCardCategory.findMany({
     where: { id: { in: categoryIds } },
     select: { id: true, name: true },
@@ -569,9 +563,7 @@ export async function deleteCategory(id: string): Promise<void> {
 }
 
 // Reorder categories
-export async function reorderCategories(
-  categoryIds: string[]
-): Promise<void> {
+export async function reorderCategories(categoryIds: string[]): Promise<void> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   // Update sort orders in transaction
@@ -637,7 +629,7 @@ export async function importRateCards(
       where: { workspaceId, deletedAt: null },
       select: { name: true },
     });
-    existing.forEach(r => existingNames.add(r.name));
+    existing.forEach((r) => existingNames.add(r.name));
   }
 
   // Process each row

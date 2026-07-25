@@ -33,9 +33,7 @@ export default async function EditTemplatePage({ params }: PageProps) {
         </div>
 
         <h1 className="text-2xl font-bold">Edit Template</h1>
-        <p className="text-muted-foreground">
-          Update your contract template details and content.
-        </p>
+        <p className="text-muted-foreground">Update your contract template details and content.</p>
       </div>
 
       <ContractTemplateForm template={template} />

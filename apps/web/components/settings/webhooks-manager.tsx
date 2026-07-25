@@ -19,11 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  createWebhook,
-  updateWebhook,
-  deleteWebhook,
-} from '@/lib/settings/actions';
+import { createWebhook, updateWebhook, deleteWebhook } from '@/lib/settings/actions';
 import type { WebhookData, WebhookEvent } from '@/lib/settings/types';
 import { WEBHOOK_EVENT_LABELS } from '@/lib/settings/types';
 import { toast } from 'sonner';
@@ -85,9 +81,7 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
     const current = editingWebhook.events;
     setEditingWebhook({
       ...editingWebhook,
-      events: current.includes(event)
-        ? current.filter((e) => e !== event)
-        : [...current, event],
+      events: current.includes(event) ? current.filter((e) => e !== event) : [...current, event],
     });
   };
 
@@ -209,7 +203,8 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
             <div>
               <CardTitle>Webhooks</CardTitle>
               <CardDescription>
-                Send real-time HTTP notifications to external services when events occur in your workspace.
+                Send real-time HTTP notifications to external services when events occur in your
+                workspace.
               </CardDescription>
             </div>
             {!editingWebhook && (
@@ -265,7 +260,7 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
                     }
                     placeholder="Optional secret for verifying webhook signatures"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Used to sign webhook payloads so you can verify they came from Wolff.
                   </p>
                 </div>
@@ -344,7 +339,7 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
 
           {/* Webhooks List */}
           {webhooks.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
+            <p className="text-muted-foreground py-8 text-center">
               No webhooks configured. Add one to start receiving event notifications.
             </p>
           ) : (
@@ -352,31 +347,32 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
               {webhooks.map((webhook) => (
                 <div
                   key={webhook.id}
-                  className={`rounded-lg border p-4 ${
-                    !webhook.isActive ? 'opacity-60' : ''
-                  }`}
+                  className={`rounded-lg border p-4 ${!webhook.isActive ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{webhook.name}</span>
                         {webhook.isActive ? (
-                          <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                          <Badge
+                            variant="default"
+                            className="border-emerald-200 bg-emerald-500/10 text-emerald-600"
+                          >
                             Active
                           </Badge>
                         ) : (
                           <Badge variant="outline">Inactive</Badge>
                         )}
                       </div>
-                      <p className="truncate text-sm text-muted-foreground font-mono">
+                      <p className="text-muted-foreground truncate font-mono text-sm">
                         {webhook.url}
                       </p>
                       {webhook.secret && (
-                        <p className="text-xs text-muted-foreground font-mono">
+                        <p className="text-muted-foreground font-mono text-xs">
                           Secret: {webhook.secret}
                         </p>
                       )}
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         {webhook.events.map((event: WebhookEvent) => (
                           <Badge key={event} variant="outline" className="text-xs">
                             {WEBHOOK_EVENT_LABELS[event]}
@@ -384,12 +380,8 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
                         ))}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(webhook)}
-                      >
+                    <div className="ml-2 flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(webhook)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -415,8 +407,8 @@ export function WebhooksManager({ initialData }: WebhooksManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Webhook</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this webhook? Event notifications will
-              stop being sent to this endpoint. This action cannot be undone.
+              Are you sure you want to delete this webhook? Event notifications will stop being sent
+              to this endpoint. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

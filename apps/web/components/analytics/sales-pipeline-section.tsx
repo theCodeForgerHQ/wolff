@@ -22,10 +22,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 const STATUS_ITEMS = [
@@ -70,20 +72,22 @@ export function SalesPipelineSection({
       </CardHeader>
       <CardContent>
         {/* Key metrics row */}
-        <div className="flex items-center gap-6 mb-5">
+        <div className="mb-5 flex items-center gap-6">
           <div>
             <p className="text-2xl font-semibold tracking-tight">{totalQuotes}</p>
-            <p className="text-xs text-muted-foreground">Total quotes</p>
+            <p className="text-muted-foreground text-xs">Total quotes</p>
           </div>
-          <div className="h-8 w-px bg-border" />
+          <div className="bg-border h-8 w-px" />
           <div>
-            <p className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400">{wonQuotes}</p>
-            <p className="text-xs text-muted-foreground">Won</p>
+            <p className="text-2xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400">
+              {wonQuotes}
+            </p>
+            <p className="text-muted-foreground text-xs">Won</p>
           </div>
-          <div className="h-8 w-px bg-border" />
+          <div className="bg-border h-8 w-px" />
           <div>
             <p className="text-2xl font-semibold tracking-tight">{formatCurrency(avgDealValue)}</p>
-            <p className="text-xs text-muted-foreground">Avg deal</p>
+            <p className="text-muted-foreground text-xs">Avg deal</p>
           </div>
         </div>
 
@@ -94,14 +98,14 @@ export function SalesPipelineSection({
             const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
             return (
               <div key={item.key} className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-16 shrink-0">{item.label}</span>
-                <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                <span className="text-muted-foreground w-16 shrink-0 text-xs">{item.label}</span>
+                <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ease-out ${item.color}`}
                     style={{ width: `${Math.max(pct, count > 0 ? 3 : 0)}%` }}
                   />
                 </div>
-                <span className="text-xs font-medium tabular-nums w-5 text-right">{count}</span>
+                <span className="w-5 text-right text-xs font-medium tabular-nums">{count}</span>
               </div>
             );
           })}

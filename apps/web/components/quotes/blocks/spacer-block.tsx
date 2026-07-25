@@ -15,12 +15,5 @@ export function SpacerBlockContent({ block }: SpacerBlockContentProps) {
     xl: 'h-24',
   }[block.content.height];
 
-  return (
-    <div
-      className={cn(
-        heightClass,
-        'group-hover:bg-muted/30 rounded transition-colors'
-      )}
-    />
-  );
+  return <div className={cn(heightClass, 'group-hover:bg-muted/30 rounded transition-colors')} />;
 }

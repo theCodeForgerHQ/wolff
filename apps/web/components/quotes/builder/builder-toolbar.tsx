@@ -156,7 +156,9 @@ export function BuilderToolbar() {
         if (result.emailSent) {
           toast.success('Quote sent and email delivered');
         } else {
-          toast.warning('Quote marked as sent, but email delivery failed. Please check your email configuration.');
+          toast.warning(
+            'Quote marked as sent, but email delivery failed. Please check your email configuration.'
+          );
         }
         router.push(`/quotes/${document.id}`);
       } else {
@@ -171,7 +173,7 @@ export function BuilderToolbar() {
   };
 
   return (
-    <div className="flex items-center justify-between border-b bg-card px-2 py-2 md:px-4">
+    <div className="bg-card flex items-center justify-between border-b px-2 py-2 md:px-4">
       {/* Left section */}
       <div className="flex items-center gap-1 md:gap-2">
         <Button variant="ghost" size="icon" asChild aria-label="Back to quotes">
@@ -180,7 +182,7 @@ export function BuilderToolbar() {
           </Link>
         </Button>
 
-        <div className="mx-1 h-6 w-px bg-border hidden md:block" />
+        <div className="bg-border mx-1 hidden h-6 w-px md:block" />
 
         <Button
           variant={showBlocksPanel ? 'secondary' : 'ghost'}
@@ -210,7 +212,7 @@ export function BuilderToolbar() {
           )}
         </Button>
 
-        <div className="mx-1 h-6 w-px bg-border hidden md:block" />
+        <div className="bg-border mx-1 hidden h-6 w-px md:block" />
 
         <Button
           variant="ghost"
@@ -238,19 +240,19 @@ export function BuilderToolbar() {
       </div>
 
       {/* Center section - Document title */}
-      <div className="flex items-center gap-2 min-w-0">
-        <h1 className="font-medium truncate text-sm md:text-base">
+      <div className="flex min-w-0 items-center gap-2">
+        <h1 className="truncate text-sm font-medium md:text-base">
           {document?.title || 'Untitled Quote'}
         </h1>
         {isDirty && (
-          <span className="text-xs text-muted-foreground hidden sm:inline">(unsaved)</span>
+          <span className="text-muted-foreground hidden text-xs sm:inline">(unsaved)</span>
         )}
       </div>
 
       {/* Right section */}
       <div className="flex items-center gap-1 md:gap-2">
         {/* Zoom controls - hidden on mobile */}
-        <div className="hidden lg:flex items-center gap-1 rounded-md border bg-background">
+        <div className="bg-background hidden items-center gap-1 rounded-md border lg:flex">
           <Button
             variant="ghost"
             size="icon"
@@ -304,7 +306,7 @@ export function BuilderToolbar() {
           {previewMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </Button>
 
-        <div className="mx-1 h-6 w-px bg-border hidden md:block" />
+        <div className="bg-border mx-1 hidden h-6 w-px md:block" />
 
         <Button
           variant="outline"
@@ -330,11 +332,7 @@ export function BuilderToolbar() {
           aria-label="Save"
           className="md:hidden"
         >
-          {isSaving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         </Button>
 
         <DropdownMenu>
@@ -345,9 +343,7 @@ export function BuilderToolbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportPDF}>
-              Export as PDF
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
             <DropdownMenuItem disabled className="text-muted-foreground">
               Export as Image (Coming Soon)
             </DropdownMenuItem>
@@ -366,9 +362,7 @@ export function BuilderToolbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportPDF}>
-              Export as PDF
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
             <DropdownMenuItem disabled className="text-muted-foreground">
               Export as Image (Coming Soon)
             </DropdownMenuItem>
@@ -379,7 +373,12 @@ export function BuilderToolbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button size="sm" onClick={handleSend} disabled={isSendLoading} className="hidden md:inline-flex">
+        <Button
+          size="sm"
+          onClick={handleSend}
+          disabled={isSendLoading}
+          className="hidden md:inline-flex"
+        >
           {isSendLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -389,7 +388,13 @@ export function BuilderToolbar() {
         </Button>
 
         {/* Mobile Send icon-only */}
-        <Button size="icon" onClick={handleSend} disabled={isSendLoading} aria-label="Send" className="md:hidden">
+        <Button
+          size="icon"
+          onClick={handleSend}
+          disabled={isSendLoading}
+          aria-label="Send"
+          className="md:hidden"
+        >
           {isSendLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

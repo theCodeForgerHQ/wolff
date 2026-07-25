@@ -5,11 +5,23 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
     workspace: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     businessProfile: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn(), create: vi.fn() },
     brandingSettings: { findUnique: vi.fn(), upsert: vi.fn() },
-    taxRate: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    taxRate: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     numberSequence: { findMany: vi.fn(), upsert: vi.fn() },
     paymentSettings: { findUnique: vi.fn(), upsert: vi.fn() },
     workspaceMember: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
-    workspaceInvitation: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    workspaceInvitation: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     user: { findUnique: vi.fn(), update: vi.fn() },
     rateCard: { count: vi.fn() },
     $transaction: vi.fn((fn: any) => fn(mockPrisma)),
@@ -19,13 +31,23 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@/lib/workspace/get-current-workspace', () => ({ getCurrentUserWorkspace: mockGetCurrentUserWorkspace }));
+vi.mock('@/lib/workspace/get-current-workspace', () => ({
+  getCurrentUserWorkspace: mockGetCurrentUserWorkspace,
+}));
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: {
     InputJsonValue: {},
     JsonNull: null,
-    Decimal: class { value: number; constructor(v: number) { this.value = v; } toNumber() { return this.value; } },
+    Decimal: class {
+      value: number;
+      constructor(v: number) {
+        this.value = v;
+      }
+      toNumber() {
+        return this.value;
+      }
+    },
   },
 }));
 import {
@@ -96,7 +118,13 @@ describe('Settings Actions', () => {
         email: 'billing@acme.com',
         phone: '+1234567890',
         website: 'https://acme.com',
-        address: { street: '123 Main St', city: 'NYC', state: 'NY', postalCode: '10001', country: 'US' },
+        address: {
+          street: '123 Main St',
+          city: 'NYC',
+          state: 'NY',
+          postalCode: '10001',
+          country: 'US',
+        },
         taxId: 'TAX-123',
         currency: 'USD',
         timezone: 'America/New_York',
@@ -120,7 +148,10 @@ describe('Settings Actions', () => {
 
   describe('updateBusinessProfile', () => {
     it('updates existing business profile', async () => {
-      mockPrisma.businessProfile.findUnique.mockResolvedValue({ workspaceId: WORKSPACE_ID, businessName: 'Old' });
+      mockPrisma.businessProfile.findUnique.mockResolvedValue({
+        workspaceId: WORKSPACE_ID,
+        businessName: 'Old',
+      });
       mockPrisma.businessProfile.update.mockResolvedValue({ businessName: 'Updated' });
 
       await updateBusinessProfile({ businessName: 'Updated' });
@@ -145,7 +176,17 @@ describe('Settings Actions', () => {
   describe('getTaxRates', () => {
     it('returns tax rates for workspace', async () => {
       mockPrisma.taxRate.findMany.mockResolvedValue([
-        { id: 'tr-1', name: 'Sales Tax', rate: 10, description: null, isInclusive: false, isDefault: true, isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        {
+          id: 'tr-1',
+          name: 'Sales Tax',
+          rate: 10,
+          description: null,
+          isInclusive: false,
+          isDefault: true,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       ]);
 
       const result = await getTaxRates();

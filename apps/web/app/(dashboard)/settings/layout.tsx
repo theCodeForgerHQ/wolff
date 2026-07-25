@@ -15,11 +15,9 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
         <aside className="shrink-0 md:w-48">
           <SettingsNav />
         </aside>
-        <div className="hidden md:block w-px bg-border" />
+        <div className="bg-border hidden w-px md:block" />
         <main className="min-w-0 flex-1">
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
     </div>

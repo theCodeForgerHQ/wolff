@@ -54,9 +54,7 @@ function StatusChart({
   const handleClick = (entry: { name: string }) => {
     if (onSegmentClick) {
       // Convert label back to status key
-      const statusKey = Object.keys(data).find(
-        (key) => getStatusLabel(key) === entry.name
-      );
+      const statusKey = Object.keys(data).find((key) => getStatusLabel(key) === entry.name);
       if (statusKey) onSegmentClick(statusKey);
     }
   };
@@ -95,7 +93,7 @@ function StatusChart({
               verticalAlign="bottom"
               height={36}
               formatter={(value: string) => (
-                <span className="text-sm text-muted-foreground">{value}</span>
+                <span className="text-muted-foreground text-sm">{value}</span>
               )}
             />
             {/* Center label */}

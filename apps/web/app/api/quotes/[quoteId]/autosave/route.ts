@@ -74,18 +74,13 @@ export async function POST(
     if (Array.isArray(body.blocks)) {
       // Limit blocks array size to prevent abuse
       if (body.blocks.length > 200) {
-        return NextResponse.json(
-          { error: 'Too many blocks (max 200)' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Too many blocks (max 200)' }, { status: 400 });
       }
       // Limit total JSON size
       const blocksSize = JSON.stringify(body.blocks).length;
-      if (blocksSize > 500000) { // 500KB
-        return NextResponse.json(
-          { error: 'Blocks data too large (max 500KB)' },
-          { status: 400 }
-        );
+      if (blocksSize > 500000) {
+        // 500KB
+        return NextResponse.json({ error: 'Blocks data too large (max 500KB)' }, { status: 400 });
       }
       // MEDIUM #4: Basic shape validation for blocks array
       const validBlocks = body.blocks.every(
@@ -102,10 +97,11 @@ export async function POST(
         );
       }
       const existingSettings =
-        typeof quote.settings === 'object' && quote.settings !== null
-          ? quote.settings
-          : {};
-      updateData.settings = { ...(existingSettings as Record<string, unknown>), blocks: body.blocks };
+        typeof quote.settings === 'object' && quote.settings !== null ? quote.settings : {};
+      updateData.settings = {
+        ...(existingSettings as Record<string, unknown>),
+        blocks: body.blocks,
+      };
     }
 
     if (Object.keys(updateData).length > 0) {

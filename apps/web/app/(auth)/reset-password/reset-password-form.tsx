@@ -106,12 +106,10 @@ export function ResetPasswordForm() {
             <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
           </div>
           <CardTitle>Invalid or expired link</CardTitle>
-          <CardDescription>
-            This password reset link is invalid or has expired.
-          </CardDescription>
+          <CardDescription>This password reset link is invalid or has expired.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-center text-sm">
             Password reset links expire after 1 hour for security reasons. Please request a new one.
           </p>
           <div className="flex flex-col gap-2">
@@ -155,9 +153,7 @@ export function ResetPasswordForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle>Reset your password</CardTitle>
-        <CardDescription>
-          Enter your new password below.
-        </CardDescription>
+        <CardDescription>Enter your new password below.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -171,7 +167,7 @@ export function ResetPasswordForm() {
               {...register('password')}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
 
@@ -185,11 +181,11 @@ export function ResetPasswordForm() {
               {...register('confirmPassword')}
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
             )}
           </div>
 
-          <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          <div className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
             <p className="font-medium">Password requirements:</p>
             <ul className="mt-1 list-inside list-disc space-y-0.5">
               <li>At least 8 characters</li>

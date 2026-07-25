@@ -43,8 +43,8 @@ test.describe('Data Integrity: Null Client Relations', () => {
     await expect(page.locator('body')).not.toContainText('Server Error');
 
     // Verify dashboard has some structure (nav or sidebar)
-    const hasNav = await page.locator('nav').count() > 0 ||
-                   await page.locator('[data-sidebar]').count() > 0;
+    const hasNav =
+      (await page.locator('nav').count()) > 0 || (await page.locator('[data-sidebar]').count()) > 0;
     expect(hasNav).toBe(true);
   });
 
@@ -58,7 +58,9 @@ test.describe('Data Integrity: Null Client Relations', () => {
     expect(invalidRenders.length).toBe(0);
   });
 
-  test('DI-003: Dashboard stats don\'t include deleted client data incorrectly', async ({ page }) => {
+  test("DI-003: Dashboard stats don't include deleted client data incorrectly", async ({
+    page,
+  }) => {
     await safeNavigate(page, '/dashboard');
 
     // Monitor for console errors during load
@@ -87,9 +89,9 @@ test.describe('Data Integrity: Null Client Relations', () => {
     await assertNoServerComponentCrash(page, 'Quotes list with edge case data');
 
     // Should have some content (either quotes or empty state)
-    const hasTable = await page.locator('table').count() > 0;
-    const hasCards = await page.locator('[data-testid*="quote"]').count() > 0;
-    const hasEmptyState = await page.getByText(/no quotes/i).count() > 0;
+    const hasTable = (await page.locator('table').count()) > 0;
+    const hasCards = (await page.locator('[data-testid*="quote"]').count()) > 0;
+    const hasEmptyState = (await page.getByText(/no quotes/i).count()) > 0;
 
     expect(hasTable || hasCards || hasEmptyState).toBe(true);
   });
@@ -108,7 +110,7 @@ test.describe('Data Integrity: Null Client Relations', () => {
     if (await quoteRow.isVisible({ timeout: 2000 })) {
       // Get the parent row/card
       const container = quoteRow.locator('..').locator('..');
-      const text = await container.textContent() || '';
+      const text = (await container.textContent()) || '';
 
       // Should not have raw undefined/null
       expect(text.toLowerCase()).not.toContain('undefined');
@@ -138,7 +140,7 @@ test.describe('Data Integrity: Null Client Relations', () => {
   // DI-007 to DI-008: Quote Detail Tests
   // ========================================================================
 
-  test('DI-007: Quote detail page with deleted client doesn\'t crash', async ({ page }) => {
+  test("DI-007: Quote detail page with deleted client doesn't crash", async ({ page }) => {
     // Direct navigation to edge case quote
     try {
       await safeNavigate(page, `/quotes/${EDGE_CASE_IDS.QUOTE_DELETED_CLIENT}`);
@@ -151,7 +153,10 @@ test.describe('Data Integrity: Null Client Relations', () => {
       expect(invalidRenders.length).toBe(0);
     } catch (error) {
       // 404 is acceptable, crash is not
-      const is404 = await page.getByText(/not found/i).isVisible().catch(() => false);
+      const is404 = await page
+        .getByText(/not found/i)
+        .isVisible()
+        .catch(() => false);
       if (!is404) {
         throw error;
       }
@@ -166,14 +171,16 @@ test.describe('Data Integrity: Null Client Relations', () => {
       await assertNoServerComponentCrash(page, 'Quote detail with no-company client');
 
       // Client name should be shown (Individual Freelancer)
-      const bodyText = await page.locator('body').textContent() || '';
+      const bodyText = (await page.locator('body').textContent()) || '';
 
       // Should NOT show undefined/null for company
       expect(bodyText.toLowerCase()).not.toMatch(/\bundefined\b/);
-
     } catch (error) {
       // 404 is acceptable
-      const is404 = await page.getByText(/not found/i).isVisible().catch(() => false);
+      const is404 = await page
+        .getByText(/not found/i)
+        .isVisible()
+        .catch(() => false);
       if (!is404) {
         throw error;
       }
@@ -191,9 +198,9 @@ test.describe('Data Integrity: Null Client Relations', () => {
     await assertNoServerComponentCrash(page, 'Invoices list with edge case data');
 
     // Should have some structure
-    const hasTable = await page.locator('table').count() > 0;
-    const hasCards = await page.locator('[data-testid*="invoice"]').count() > 0;
-    const hasEmptyState = await page.getByText(/no invoices/i).count() > 0;
+    const hasTable = (await page.locator('table').count()) > 0;
+    const hasCards = (await page.locator('[data-testid*="invoice"]').count()) > 0;
+    const hasEmptyState = (await page.getByText(/no invoices/i).count()) > 0;
 
     expect(hasTable || hasCards || hasEmptyState).toBe(true);
   });
@@ -214,7 +221,7 @@ test.describe('Data Integrity: Null Client Relations', () => {
     expect(invalidRenders.length).toBe(0);
   });
 
-  test('DI-011: Invoice detail page with deleted client doesn\'t crash', async ({ page }) => {
+  test("DI-011: Invoice detail page with deleted client doesn't crash", async ({ page }) => {
     try {
       await safeNavigate(page, `/invoices/${EDGE_CASE_IDS.INVOICE_DELETED_CLIENT}`);
 
@@ -226,7 +233,10 @@ test.describe('Data Integrity: Null Client Relations', () => {
       expect(invalidRenders.length).toBe(0);
     } catch (error) {
       // 404 is acceptable
-      const is404 = await page.getByText(/not found/i).isVisible().catch(() => false);
+      const is404 = await page
+        .getByText(/not found/i)
+        .isVisible()
+        .catch(() => false);
       if (!is404) {
         throw error;
       }
@@ -239,26 +249,19 @@ test.describe('Data Integrity: Null Client Relations', () => {
 
   test('DI-012: Rapid navigation between pages with edge case data', async ({ page }) => {
     // Stress test: rapidly navigate between pages that may have edge case data
-    const pages = [
-      '/dashboard',
-      '/quotes',
-      '/invoices',
-      '/clients',
-      '/dashboard',
-      '/quotes',
-    ];
+    const pages = ['/dashboard', '/quotes', '/invoices', '/clients', '/dashboard', '/quotes'];
 
     for (const url of pages) {
       await safeNavigate(page, url);
 
       // Quick check for crash indicators
-      const bodyText = await page.locator('body').textContent() || '';
+      const bodyText = (await page.locator('body').textContent()) || '';
       expect(bodyText).not.toContain('Application error');
       expect(bodyText).not.toContain('TypeError');
     }
   });
 
-  test('DI-013: Search results including edge case records don\'t crash', async ({ page }) => {
+  test("DI-013: Search results including edge case records don't crash", async ({ page }) => {
     await safeNavigate(page, '/quotes');
 
     // Try searching with a term that might match edge case records
@@ -282,7 +285,7 @@ test.describe('Data Integrity: Null Client Relations', () => {
 // ========================================================================
 
 test.describe('Data Integrity: Clients with Edge Cases', () => {
-  test('DI-014: Clients list doesn\'t show deleted clients', async ({ page }) => {
+  test("DI-014: Clients list doesn't show deleted clients", async ({ page }) => {
     await safeNavigate(page, '/clients');
 
     // Search for deleted client
@@ -311,7 +314,7 @@ test.describe('Data Integrity: Clients with Edge Cases', () => {
       if (await client.isVisible({ timeout: 2000 })) {
         // Get the row/card containing this client
         const container = client.locator('..').locator('..');
-        const text = await container.textContent() || '';
+        const text = (await container.textContent()) || '';
 
         // Should not show "undefined" or "null" for missing company
         expect(text.toLowerCase()).not.toMatch(/\bundefined\b/);

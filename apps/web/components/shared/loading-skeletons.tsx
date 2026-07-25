@@ -1,9 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 // Dashboard skeleton
 export function DashboardSkeleton() {
@@ -65,7 +61,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
         {/* Table header */}
         <div className="flex items-center border-b p-4">
           {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-4 w-24 mr-8" />
+            <Skeleton key={i} className="mr-8 h-4 w-24" />
           ))}
         </div>
 
@@ -73,7 +69,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
         {[...Array(rows)].map((_, i) => (
           <div key={i} className="flex items-center border-b p-4 last:border-0">
             {[...Array(5)].map((_, j) => (
-              <Skeleton key={j} className="h-4 w-24 mr-8" />
+              <Skeleton key={j} className="mr-8 h-4 w-24" />
             ))}
           </div>
         ))}
@@ -185,7 +181,10 @@ export function DocumentDetailSkeleton() {
         <CardContent>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center py-2 border-b last:border-0">
+              <div
+                key={i}
+                className="flex items-center justify-between border-b py-2 last:border-0"
+              >
                 <div className="space-y-1">
                   <Skeleton className="h-5 w-40" />
                   <Skeleton className="h-4 w-64" />
@@ -201,15 +200,15 @@ export function DocumentDetailSkeleton() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col items-end space-y-2">
-            <div className="flex justify-between w-48">
+            <div className="flex w-48 justify-between">
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-20" />
             </div>
-            <div className="flex justify-between w-48">
+            <div className="flex w-48 justify-between">
               <Skeleton className="h-4 w-12" />
               <Skeleton className="h-4 w-16" />
             </div>
-            <div className="flex justify-between w-48 border-t pt-2">
+            <div className="flex w-48 justify-between border-t pt-2">
               <Skeleton className="h-5 w-12" />
               <Skeleton className="h-5 w-24" />
             </div>

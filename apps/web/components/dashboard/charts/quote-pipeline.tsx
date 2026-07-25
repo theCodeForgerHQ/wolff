@@ -37,16 +37,18 @@ export function QuotePipeline({ data, className }: QuotePipelineProps) {
       </CardHeader>
       <CardContent>
         {isEmpty ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No pipeline data</p>
+          <p className="text-muted-foreground py-4 text-center text-sm">No pipeline data</p>
         ) : (
           <div className="space-y-3">
             {stages.map((stage) => (
               <div key={stage.key} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{stage.label}</span>
-                  <span className="font-medium">{stage.value} ({Math.round(stage.pct)}%)</span>
+                  <span className="font-medium">
+                    {stage.value} ({Math.round(stage.pct)}%)
+                  </span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-muted">
+                <div className="bg-muted h-2 w-full rounded-full">
                   <div
                     className={`h-full rounded-full ${stage.color} transition-all duration-500`}
                     style={{ width: `${Math.max(stage.pct, stage.value > 0 ? 4 : 0)}%` }}

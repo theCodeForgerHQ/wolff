@@ -112,15 +112,18 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return apiSuccess({
-    id: client.id,
-    name: client.name,
-    email: client.email,
-    phone: client.phone,
-    company: client.company,
-    address: client.address,
-    billingAddress: client.billingAddress,
-    metadata: client.metadata,
-    createdAt: client.createdAt,
-  }, 201);
+  return apiSuccess(
+    {
+      id: client.id,
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      company: client.company,
+      address: client.address,
+      billingAddress: client.billingAddress,
+      metadata: client.metadata,
+      createdAt: client.createdAt,
+    },
+    201
+  );
 }

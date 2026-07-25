@@ -46,12 +46,12 @@ export function OnboardingBrandingStep({ onNext, onSkip, onBack }: OnboardingBra
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
-          <Palette className="h-6 w-6 text-primary" />
+      <div className="mb-6 text-center">
+        <div className="bg-primary/10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full">
+          <Palette className="text-primary h-6 w-6" />
         </div>
         <h3 className="text-lg font-semibold">Customize your branding</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Make your quotes and invoices match your brand
         </p>
       </div>
@@ -61,7 +61,7 @@ export function OnboardingBrandingStep({ onNext, onSkip, onBack }: OnboardingBra
           <Label htmlFor="primaryColor">Primary Color</Label>
           <div className="flex gap-3">
             <div
-              className="h-10 w-10 rounded-md border shadow-sm cursor-pointer"
+              className="h-10 w-10 cursor-pointer rounded-md border shadow-sm"
               style={{ backgroundColor: primaryColor }}
               onClick={() => document.getElementById('primaryColorInput')?.click()}
             />
@@ -79,16 +79,14 @@ export function OnboardingBrandingStep({ onNext, onSkip, onBack }: OnboardingBra
               className="flex-1"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Used for headings and buttons
-          </p>
+          <p className="text-muted-foreground text-xs">Used for headings and buttons</p>
         </div>
 
         <div className="space-y-3">
           <Label htmlFor="accentColor">Accent Color</Label>
           <div className="flex gap-3">
             <div
-              className="h-10 w-10 rounded-md border shadow-sm cursor-pointer"
+              className="h-10 w-10 cursor-pointer rounded-md border shadow-sm"
               style={{ backgroundColor: accentColor }}
               onClick={() => document.getElementById('accentColorInput')?.click()}
             />
@@ -106,15 +104,13 @@ export function OnboardingBrandingStep({ onNext, onSkip, onBack }: OnboardingBra
               className="flex-1"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Used for highlights and success states
-          </p>
+          <p className="text-muted-foreground text-xs">Used for highlights and success states</p>
         </div>
       </div>
 
       {/* Preview */}
-      <div className="border rounded-lg p-4 bg-muted/50">
-        <p className="text-sm font-medium mb-3">Preview</p>
+      <div className="bg-muted/50 rounded-lg border p-4">
+        <p className="mb-3 text-sm font-medium">Preview</p>
         <div className="flex gap-3">
           <Button style={{ backgroundColor: primaryColor }} className="text-white">
             Primary Button
@@ -125,11 +121,11 @@ export function OnboardingBrandingStep({ onNext, onSkip, onBack }: OnboardingBra
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground text-center">
+      <p className="text-muted-foreground text-center text-sm">
         You can upload your logo later in Settings → Branding
       </p>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       <div className="flex justify-between pt-4">
         <Button type="button" variant="ghost" onClick={onBack}>
