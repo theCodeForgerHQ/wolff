@@ -332,7 +332,6 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="rounded-lg border bg-green-50 p-4 dark:bg-green-950">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   {quote.signatureData.data.startsWith('data:image/') ||
                   quote.signatureData.data.startsWith('https://') ? (
                     <img

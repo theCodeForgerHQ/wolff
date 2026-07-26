@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     // Find recurring invoices due for generation in batches to avoid memory issues
     const BATCH_SIZE = 50;
     let offset = 0;
-    let eligibleInvoices: Awaited<
+    const eligibleInvoices: Awaited<
       ReturnType<
         typeof prisma.invoice.findMany<{
           where: any;

@@ -7,7 +7,6 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatInvoice(inv: Record<string, any>) {
   return {
     id: inv.id as string,
@@ -36,7 +35,6 @@ function formatInvoice(inv: Record<string, any>) {
     sentAt: inv.sentAt as Date | null,
     paidAt: inv.paidAt as Date | null,
     voidedAt: inv.voidedAt as Date | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lineItems: inv.lineItems?.map((li: any) => ({
       id: li.id as string,
       name: li.name as string,

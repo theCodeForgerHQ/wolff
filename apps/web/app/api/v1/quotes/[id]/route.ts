@@ -7,7 +7,6 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatQuote(q: Record<string, any>) {
   return {
     id: q.id as string,
@@ -29,7 +28,6 @@ function formatQuote(q: Record<string, any>) {
     sentAt: q.sentAt as Date | null,
     acceptedAt: q.acceptedAt as Date | null,
     declinedAt: q.declinedAt as Date | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lineItems: q.lineItems?.map((li: any) => ({
       id: li.id as string,
       name: li.name as string,
