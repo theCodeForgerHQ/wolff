@@ -135,7 +135,11 @@ jobs:
 
   e2e:
     name: E2E (flows + visual)
-    runs-on: ubuntu-latest
+    # arm64, because the committed linux screenshot baselines were recorded
+    # on linux/arm64 (apps/web/e2e/visual/run-in-linux.sh on Apple silicon)
+    # and Chromium rasterises text differently per architecture. The other
+    # jobs do not depend on the architecture and stay on ubuntu-latest.
+    runs-on: ubuntu-24.04-arm
     needs: [build]
     timeout-minutes: 30
     services:
@@ -169,6 +173,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - name: Make sure psql is available (the arm64 image may not ship it)
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - name: Migrate and seed one database per suite
         run: |
           for url in "$E2E_DATABASE_URL" "$VISUAL_DATABASE_URL"; do

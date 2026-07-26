@@ -6,9 +6,9 @@
 # pinned version, the same Ubuntu 24.04 and browser build CI installs.
 #
 # The container runs on the host's architecture. On Apple silicon that is
-# linux/arm64, while GitHub's ubuntu-latest is x86_64; Chromium crashes under
-# amd64 emulation, so that combination can't be recorded locally. Set
-# VISUAL_DOCKER_PLATFORM=linux/amd64 on an x86_64 host to pin it.
+# linux/arm64, which is why CI's e2e job runs on ubuntu-24.04-arm: Chromium
+# crashes under amd64 emulation, so x86_64 baselines can't be recorded here.
+# Set VISUAL_DOCKER_PLATFORM=linux/amd64 on an x86_64 host to pin it.
 #
 # Only the browser and the test runner run in the container. The app is the
 # production build served from the host (next start on :3100), and the
