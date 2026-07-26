@@ -63,9 +63,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       where: {
         workspaceId,
         deletedAt: null,
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-        ],
+        OR: [{ name: { contains: search, mode: 'insensitive' } }],
       },
       take: 5,
       orderBy: { createdAt: 'desc' },

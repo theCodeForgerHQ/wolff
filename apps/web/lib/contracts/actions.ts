@@ -89,7 +89,10 @@ export async function getContractTemplates(
       include: {
         _count: { select: { instances: true } },
       },
-      orderBy: { [(['name', 'createdAt', 'updatedAt', 'status'].includes(sortBy) ? sortBy : 'createdAt')]: sortOrder },
+      orderBy: {
+        [['name', 'createdAt', 'updatedAt', 'status'].includes(sortBy) ? sortBy : 'createdAt']:
+          sortOrder,
+      },
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -228,7 +231,9 @@ export async function updateContractTemplate(
       ...(input.name !== undefined && { name: input.name }),
       ...(input.content !== undefined && { content: input.content }),
       ...(input.isTemplate !== undefined && { isTemplate: input.isTemplate }),
-      ...(input.variables !== undefined && { variables: input.variables as unknown as Prisma.InputJsonValue }),
+      ...(input.variables !== undefined && {
+        variables: input.variables as unknown as Prisma.InputJsonValue,
+      }),
     },
     include: {
       _count: { select: { instances: true } },
@@ -377,10 +382,10 @@ export async function getContractInstanceById(id: string): Promise<ContractInsta
     sentAt: instance.sentAt,
     viewedAt: instance.viewedAt,
     signedAt: instance.signedAt,
-    signatureData: (instance.signatureData as unknown) as SignatureData | null,
+    signatureData: instance.signatureData as unknown as SignatureData | null,
     signerIpAddress: instance.signerIpAddress,
     countersignedAt: instance.countersignedAt,
-    countersignatureData: (instance.countersignatureData as unknown) as SignatureData | null,
+    countersignatureData: instance.countersignatureData as unknown as SignatureData | null,
     countersignerName: instance.countersignerName,
     pdfUrl: instance.pdfUrl,
     createdAt: instance.createdAt,
@@ -389,7 +394,9 @@ export async function getContractInstanceById(id: string): Promise<ContractInsta
 }
 
 // Get contract instance by access token (for public client view)
-export async function getContractInstanceByToken(token: string): Promise<ContractInstanceDetail | null> {
+export async function getContractInstanceByToken(
+  token: string
+): Promise<ContractInstanceDetail | null> {
   // HIGH #3-7: Add deletedAt check to prevent accessing soft-deleted contract instances
   const instance = await prisma.contractInstance.findFirst({
     where: { accessToken: token, deletedAt: null },
@@ -435,7 +442,9 @@ export async function getContractInstanceByToken(token: string): Promise<Contrac
           signerName: (sigData.signerName as string) || (sigData.name as string) || 'Unknown',
           signedAt: (sigData.signedAt as string) || instance.signedAt.toISOString(),
         });
-        documentIntegrity = verifyDocumentHash(recomputedHash, storedHash) ? 'verified' : 'tampered';
+        documentIntegrity = verifyDocumentHash(recomputedHash, storedHash)
+          ? 'verified'
+          : 'tampered';
       }
     } catch (err) {
       logger.error({ err }, 'Document hash verification failed');
@@ -458,10 +467,10 @@ export async function getContractInstanceByToken(token: string): Promise<Contrac
     sentAt: instance.sentAt,
     viewedAt: instance.viewedAt ?? new Date(),
     signedAt: instance.signedAt,
-    signatureData: (instance.signatureData as unknown) as SignatureData | null,
+    signatureData: instance.signatureData as unknown as SignatureData | null,
     signerIpAddress: instance.signerIpAddress,
     countersignedAt: instance.countersignedAt,
-    countersignatureData: (instance.countersignatureData as unknown) as SignatureData | null,
+    countersignatureData: instance.countersignatureData as unknown as SignatureData | null,
     countersignerName: instance.countersignerName,
     pdfUrl: instance.pdfUrl,
     createdAt: instance.createdAt,
@@ -513,7 +522,9 @@ export async function createContractInstance(
   // Process template content with variable values
   let content = input.content || template.content;
   if (input.variableValues) {
-    const variables = safeParseVariables(template.variables) as Array<ContractVariable & { name?: string }>;
+    const variables = safeParseVariables(template.variables) as Array<
+      ContractVariable & { name?: string }
+    >;
     for (const variable of variables) {
       // Support both 'key' (type definition) and 'name' (seed data) fields
       const varKey = variable.key || variable.name || '';
@@ -572,10 +583,10 @@ export async function createContractInstance(
     sentAt: instance.sentAt,
     viewedAt: instance.viewedAt,
     signedAt: instance.signedAt,
-    signatureData: (instance.signatureData as unknown) as SignatureData | null,
+    signatureData: instance.signatureData as unknown as SignatureData | null,
     signerIpAddress: instance.signerIpAddress,
     countersignedAt: instance.countersignedAt,
-    countersignatureData: (instance.countersignatureData as unknown) as SignatureData | null,
+    countersignatureData: instance.countersignatureData as unknown as SignatureData | null,
     countersignerName: instance.countersignerName,
     pdfUrl: instance.pdfUrl,
     createdAt: instance.createdAt,
@@ -591,7 +602,10 @@ interface SendEmailOptions {
   message?: string;
 }
 
-export async function sendContractInstance(id: string, emailOptions?: SendEmailOptions): Promise<{ emailSent: boolean }> {
+export async function sendContractInstance(
+  id: string,
+  emailOptions?: SendEmailOptions
+): Promise<{ emailSent: boolean }> {
   const { workspaceId, userId, role } = await getCurrentUserWorkspace();
 
   // HIGH #43: Viewers cannot send contract instances
@@ -623,7 +637,7 @@ export async function sendContractInstance(id: string, emailOptions?: SendEmailO
       throw new Error('Maximum 10 recipients allowed');
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = emailOptions.recipients.filter(e => !emailRegex.test(e));
+    const invalidEmails = emailOptions.recipients.filter((e) => !emailRegex.test(e));
     if (invalidEmails.length > 0) {
       throw new Error(`Invalid email addresses: ${invalidEmails.join(', ')}`);
     }
@@ -707,7 +721,11 @@ export async function sendContractInstance(id: string, emailOptions?: SendEmailO
 
 // Sign a contract (called from public client view)
 // OTP verification enforced when otpCode is provided in the input.
-export async function signContract(input: SignContractInput & { otpCode?: string }, ipAddress?: string, userAgent?: string): Promise<void> {
+export async function signContract(
+  input: SignContractInput & { otpCode?: string },
+  ipAddress?: string,
+  userAgent?: string
+): Promise<void> {
   // HIGH #13: Rate limit contract signing to prevent abuse
   const rateLimitKey = `sign-contract:${ipAddress || input.token}`;
   const rateLimitResult = await checkRateLimit(rateLimitKey, strictRateLimitOptions);
@@ -849,7 +867,7 @@ export async function signContract(input: SignContractInput & { otpCode?: string
 // Countersign a contract (called by business user after client has signed)
 export async function counterSignContract(
   contractId: string,
-  signatureData: SignatureData,
+  signatureData: SignatureData
 ): Promise<{ success: boolean; error?: string }> {
   const { workspaceId, userId } = await getCurrentUserWorkspace();
 
@@ -949,9 +967,7 @@ export async function getContractSettings(): Promise<ContractSettingsData> {
 }
 
 // Update contract settings
-export async function updateContractSettings(
-  input: Partial<ContractSettingsData>
-): Promise<void> {
+export async function updateContractSettings(input: Partial<ContractSettingsData>): Promise<void> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   await prisma.businessProfile.upsert({

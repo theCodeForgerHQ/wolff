@@ -140,7 +140,10 @@ async function handleDomainEvent(event: DomainEvent): Promise<void> {
 
   // Critical: Never query all endpoints — skip if workspaceId is missing
   if (!workspaceId) {
-    logger.warn({ eventType: event.type }, '[Webhooks] Skipping event delivery — no workspaceId in payload');
+    logger.warn(
+      { eventType: event.type },
+      '[Webhooks] Skipping event delivery — no workspaceId in payload'
+    );
     return;
   }
 

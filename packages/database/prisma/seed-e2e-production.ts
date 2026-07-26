@@ -98,9 +98,27 @@ async function seedE2EProductionData() {
 
   // Create E2E test clients
   const e2eClients = [
-    { id: `e2e-client-1-${workspace.id}`, name: 'E2E Test Client Alpha', email: 'alpha@e2e-test.local', company: 'Alpha Corp', phone: '+1 (555) 100-0001' },
-    { id: `e2e-client-2-${workspace.id}`, name: 'E2E Test Client Beta', email: 'beta@e2e-test.local', company: 'Beta Industries', phone: '+1 (555) 100-0002' },
-    { id: `e2e-client-3-${workspace.id}`, name: 'E2E Test Client Gamma', email: 'gamma@e2e-test.local', company: 'Gamma LLC', phone: '+1 (555) 100-0003' },
+    {
+      id: `e2e-client-1-${workspace.id}`,
+      name: 'E2E Test Client Alpha',
+      email: 'alpha@e2e-test.local',
+      company: 'Alpha Corp',
+      phone: '+1 (555) 100-0001',
+    },
+    {
+      id: `e2e-client-2-${workspace.id}`,
+      name: 'E2E Test Client Beta',
+      email: 'beta@e2e-test.local',
+      company: 'Beta Industries',
+      phone: '+1 (555) 100-0002',
+    },
+    {
+      id: `e2e-client-3-${workspace.id}`,
+      name: 'E2E Test Client Gamma',
+      email: 'gamma@e2e-test.local',
+      company: 'Gamma LLC',
+      phone: '+1 (555) 100-0003',
+    },
   ];
 
   for (const clientData of e2eClients) {
@@ -431,8 +449,12 @@ async function seedE2EProductionData() {
   console.log('\n📋 Seeded Data Summary:');
   console.log(`   • Clients: ${e2eClients.length}`);
   console.log(`   • Rate Cards: ${e2eRateCards.length}`);
-  console.log(`   • Quotes: ${e2eQuotes.length} (draft, sent, viewed, accepted, declined, converted)`);
-  console.log(`   • Invoices: ${e2eInvoices.length} (draft, sent, viewed, partial, paid, overdue, voided)`);
+  console.log(
+    `   • Quotes: ${e2eQuotes.length} (draft, sent, viewed, accepted, declined, converted)`
+  );
+  console.log(
+    `   • Invoices: ${e2eInvoices.length} (draft, sent, viewed, partial, paid, overdue, voided)`
+  );
   console.log('\n🔧 Run E2E tests with:');
   console.log(`   PLAYWRIGHT_TEST_BASE_URL="https://your-production-url.com" pnpm test:e2e`);
 }

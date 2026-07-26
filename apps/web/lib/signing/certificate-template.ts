@@ -99,14 +99,18 @@ export function generateSigningCertificateHtml(data: SigningCertificateData): st
 
     ${signatureSection}
 
-    ${data.documentHash ? `
+    ${
+      data.documentHash
+        ? `
     <h2>Document Integrity</h2>
     <table class="detail-table">
       <tr><td>Algorithm</td><td>SHA-256</td></tr>
       <tr><td>Hash</td><td style="font-family: 'Courier New', monospace; font-size: 11px; word-break: break-all;">${escapeHtml(data.documentHash)}</td></tr>
     </table>
     <p style="font-size: 11px; color: #6b7280; margin-top: 8px;">This SHA-256 hash can be used to verify the document has not been modified since signing.</p>
-    ` : ''}
+    `
+        : ''
+    }
 
     <h2>Audit Trail</h2>
     <table style="font-size: 13px;">

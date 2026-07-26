@@ -81,10 +81,10 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
   return (
     <div className="space-y-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
         <Link
           href="/clients"
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          className="hover:text-foreground flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Clients
@@ -116,7 +116,7 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
             <p className="text-muted-foreground">{client.name}</p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/clients/${client.id}/edit`}>
               <Pencil className="mr-2 h-3.5 w-3.5" />
@@ -149,10 +149,10 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
       </div>
 
       {/* Contact Details */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
         <a
           href={`mailto:${client.email}`}
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+          className="hover:text-foreground flex items-center gap-1.5 transition-colors"
         >
           <Mail className="h-3.5 w-3.5" />
           {client.email}
@@ -160,7 +160,7 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
         {client.phone && (
           <a
             href={`tel:${client.phone}`}
-            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            className="hover:text-foreground flex items-center gap-1.5 transition-colors"
           >
             <Phone className="h-3.5 w-3.5" />
             {client.phone}
@@ -172,7 +172,7 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
             href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            className="hover:text-foreground flex items-center gap-1.5 transition-colors"
           >
             <Globe className="h-3.5 w-3.5" />
             {client.website}
@@ -187,40 +187,40 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
       </div>
 
       {/* Financial Summary */}
-      <div className="rounded-lg border bg-card p-6">
+      <div className="bg-card rounded-lg border p-6">
         <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
           <div>
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1">
+            <p className="text-muted-foreground text-sm">Total Revenue</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               {formatCurrency(totalRevenue, currency)}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Outstanding</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1 text-amber-600">
+            <p className="text-muted-foreground text-sm">Outstanding</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-amber-600">
               {formatCurrency(outstanding, currency)}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Quotes</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1">
+            <p className="text-muted-foreground text-sm">Quotes</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               {client._count?.quotes || 0}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Invoices</p>
-            <p className="text-2xl font-semibold tracking-tight mt-1">
+            <p className="text-muted-foreground text-sm">Invoices</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
               {client._count?.invoices || 0}
             </p>
           </div>
         </div>
         {totalRevenue > 0 && (
           <div className="mt-5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+            <div className="text-muted-foreground mb-1.5 flex items-center justify-between text-xs">
               <span>Collection progress</span>
               <span>{Math.round(collectionProgress)}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div className="bg-muted h-1.5 overflow-hidden rounded-full">
               <div
                 className="h-full rounded-full bg-emerald-500 transition-all"
                 style={{ width: `${collectionProgress}%` }}
@@ -242,22 +242,25 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
               addHref={`/invoices/new?clientId=${client.id}`}
             />
             {client.invoices && client.invoices.length > 0 ? (
-              <div className="rounded-lg border divide-y">
+              <div className="divide-y rounded-lg border">
                 {client.invoices.map((invoice) => (
                   <Link
                     key={invoice.id}
                     href={`/invoices/${invoice.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    className="hover:bg-muted/50 flex items-center justify-between px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
                   >
                     <div>
                       <p className="text-sm font-medium">{invoice.invoiceNumber}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         Due {formatDate(invoice.dueDate)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium tabular-nums">
-                        {formatCurrency(Number(invoice.total), (invoice as any).currency || currency)}
+                        {formatCurrency(
+                          Number(invoice.total),
+                          (invoice as any).currency || currency
+                        )}
                       </span>
                       <StatusBadge status={invoice.status} />
                     </div>
@@ -277,16 +280,16 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
               addHref={`/quotes/new?clientId=${client.id}`}
             />
             {client.quotes && client.quotes.length > 0 ? (
-              <div className="rounded-lg border divide-y">
+              <div className="divide-y rounded-lg border">
                 {client.quotes.map((quote) => (
                   <Link
                     key={quote.id}
                     href={`/quotes/${quote.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                    className="hover:bg-muted/50 flex items-center justify-between px-4 py-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
                   >
                     <div>
                       <p className="text-sm font-medium">{quote.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         {formatDate(quote.createdAt)}
                       </p>
                     </div>
@@ -310,8 +313,8 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
           {/* Additional Contacts (company-specific) */}
           {client.contacts.length > 0 && (
             <section>
-              <h2 className="text-sm font-medium text-muted-foreground mb-4">People</h2>
-              <div className="rounded-lg border divide-y">
+              <h2 className="text-muted-foreground mb-4 text-sm font-medium">People</h2>
+              <div className="divide-y rounded-lg border">
                 {client.contacts.map((contact) => (
                   <div key={contact.id} className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -323,9 +326,9 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
                       )}
                     </div>
                     {contact.role && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{contact.role}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">{contact.role}</p>
                     )}
-                    <div className="flex flex-wrap gap-x-3 mt-1 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 text-xs">
                       {contact.email && (
                         <a
                           href={`mailto:${contact.email}`}
@@ -352,16 +355,16 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
           {/* Notes */}
           {client.notes && (
             <section>
-              <h2 className="text-sm font-medium text-muted-foreground mb-4">Notes</h2>
+              <h2 className="text-muted-foreground mb-4 text-sm font-medium">Notes</h2>
               <div className="rounded-lg border px-4 py-3">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{client.notes}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{client.notes}</p>
               </div>
             </section>
           )}
 
           {/* Activity */}
           <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-4">Activity</h2>
+            <h2 className="text-muted-foreground mb-4 text-sm font-medium">Activity</h2>
             {activities.length > 0 ? (
               <div className="space-y-0">
                 {activities.map((item, i) => (
@@ -369,22 +372,22 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
                     <div className="relative flex flex-col items-center">
                       <div
                         className={cn(
-                          'h-2 w-2 rounded-full mt-1.5 shrink-0 bg-gray-400',
+                          'mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gray-400',
                           (item.type === 'quote_accepted' || item.type === 'invoice_paid') &&
                             'bg-emerald-500',
                           (item.type === 'quote_sent' || item.type === 'invoice_sent') &&
                             'bg-blue-500',
                           (item.type === 'quote_declined' || item.type === 'invoice_overdue') &&
-                            'bg-red-500',
+                            'bg-red-500'
                         )}
                       />
                       {i < activities.length - 1 && (
-                        <div className="w-px flex-1 bg-border mt-1.5" />
+                        <div className="bg-border mt-1.5 w-px flex-1" />
                       )}
                     </div>
                     <div className="pb-5">
                       <p className="text-sm">{item.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
                         {formatRelativeDate(item.date)}
                         {item.amount != null && ` \u00b7 ${formatCurrency(item.amount, currency)}`}
                       </p>
@@ -393,7 +396,7 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No activity yet</p>
+              <p className="text-muted-foreground text-sm">No activity yet</p>
             )}
           </section>
         </div>
@@ -405,9 +408,9 @@ export function ClientDetail({ client, activities, currency = 'USD' }: ClientDet
           <AlertDialogHeader>
             <AlertDialogTitle>Delete client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {client.company || client.name}? This action
-              cannot be undone. Associated quotes and invoices will remain but will no longer be
-              linked to this client.
+              Are you sure you want to delete {client.company || client.name}? This action cannot be
+              undone. Associated quotes and invoices will remain but will no longer be linked to
+              this client.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -438,11 +441,11 @@ function SectionHeader({
   addHref?: string;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
-        <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+        <h2 className="text-muted-foreground text-sm font-medium">{title}</h2>
         {count > 0 && (
-          <span className="text-xs text-muted-foreground tabular-nums bg-muted rounded-full px-2 py-0.5">
+          <span className="text-muted-foreground bg-muted rounded-full px-2 py-0.5 text-xs tabular-nums">
             {count}
           </span>
         )}
@@ -472,7 +475,7 @@ function StatusBadge({ status }: { status: string }) {
         (status === 'draft' || status === 'viewed') &&
           'border-border bg-muted text-muted-foreground',
         (status === 'overdue' || status === 'declined' || status === 'expired') &&
-          'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400',
+          'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400'
       )}
     >
       {status}
@@ -481,7 +484,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function EmptyState({ label }: { label: string }) {
-  return <p className="text-sm text-muted-foreground py-2">{label}</p>;
+  return <p className="text-muted-foreground py-2 text-sm">{label}</p>;
 }
 
 // Low #88: Handle future dates (e.g. upcoming due dates)

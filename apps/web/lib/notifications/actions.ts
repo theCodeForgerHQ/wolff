@@ -17,7 +17,10 @@ export interface NotificationData {
 }
 
 // Low #91: Added offset pagination support
-export async function getNotifications(limit = 20, offset = 0): Promise<{ data: NotificationData[]; total: number }> {
+export async function getNotifications(
+  limit = 20,
+  offset = 0
+): Promise<{ data: NotificationData[]; total: number }> {
   const { userId, workspaceId } = await getCurrentUserWorkspace();
 
   const where = { userId, workspaceId };
@@ -68,4 +71,3 @@ export async function markAllNotificationsRead(): Promise<void> {
 
   revalidatePath('/');
 }
-

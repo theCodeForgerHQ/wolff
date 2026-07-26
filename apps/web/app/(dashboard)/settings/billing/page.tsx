@@ -12,9 +12,24 @@ export const metadata = {
 };
 
 const MOCK_INVOICES = [
-  { date: 'Feb 10, 2026', description: 'Trial period for Starter Plan', amount: '$0.00', status: 'Paid' as const },
-  { date: 'Jan 10, 2026', description: 'Pro Plan - Monthly', amount: '$9.00', status: 'Paid' as const },
-  { date: 'Dec 10, 2025', description: 'Pro Plan - Monthly', amount: '$9.00', status: 'Paid' as const },
+  {
+    date: 'Feb 10, 2026',
+    description: 'Trial period for Starter Plan',
+    amount: '$0.00',
+    status: 'Paid' as const,
+  },
+  {
+    date: 'Jan 10, 2026',
+    description: 'Pro Plan - Monthly',
+    amount: '$9.00',
+    status: 'Paid' as const,
+  },
+  {
+    date: 'Dec 10, 2025',
+    description: 'Pro Plan - Monthly',
+    amount: '$9.00',
+    status: 'Paid' as const,
+  },
 ];
 
 export default async function BillingSettingsPage() {
@@ -37,7 +52,8 @@ export default async function BillingSettingsPage() {
             <div>
               <CardTitle>Your Subscription</CardTitle>
               <CardDescription>
-                All subscription transactions are processed using Stripe with your billing email address.
+                All subscription transactions are processed using Stripe with your billing email
+                address.
               </CardDescription>
             </div>
           </div>
@@ -46,12 +62,14 @@ export default async function BillingSettingsPage() {
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <CreditCard className="h-6 w-6 text-primary" />
+                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
+                  <CreditCard className="text-primary h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold capitalize">{currentPlan === 'free' ? 'Free Plan' : `${currentPlan} Plan`}</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold capitalize">
+                    {currentPlan === 'free' ? 'Free Plan' : `${currentPlan} Plan`}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
                     {/* Low #51: Fixed label — nextBillingDate is not the start date */}
                     {billing?.nextBillingDate
                       ? `Next billing on ${new Date(billing.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
@@ -65,11 +83,17 @@ export default async function BillingSettingsPage() {
                   {currentPlan !== 'free' && (
                     <>
                       <p className="text-lg font-bold">
-                        ${currentPlan === 'pro' ? '9.00' : currentPlan === 'team' ? '29.00' : '0.00'}
+                        $
+                        {currentPlan === 'pro' ? '9.00' : currentPlan === 'team' ? '29.00' : '0.00'}
                       </p>
                       {billing?.nextBillingDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Next billing: {new Date(billing.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <p className="text-muted-foreground text-xs">
+                          Next billing:{' '}
+                          {new Date(billing.nextBillingDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
                         </p>
                       )}
                     </>
@@ -119,24 +143,28 @@ export default async function BillingSettingsPage() {
           {billing?.paymentMethod ? (
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-16 items-center justify-center rounded border bg-muted text-xs font-semibold uppercase">
+                <div className="bg-muted flex h-10 w-16 items-center justify-center rounded border text-xs font-semibold uppercase">
                   {billing.paymentMethod.brand}
                 </div>
                 <div>
                   <p className="font-medium">
                     {billing.paymentMethod.brand} ending in {billing.paymentMethod.last4}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Expires {billing.paymentMethod.expMonth}/{billing.paymentMethod.expYear}
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm">Update</Button>
+              <Button variant="outline" size="sm">
+                Update
+              </Button>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed p-8 text-center">
               <p className="text-muted-foreground mb-2">No payment method on file</p>
-              <p className="text-sm text-muted-foreground">Add a payment method to upgrade your plan or enable auto-renewal.</p>
+              <p className="text-muted-foreground text-sm">
+                Add a payment method to upgrade your plan or enable auto-renewal.
+              </p>
             </div>
           )}
         </CardContent>
@@ -146,21 +174,25 @@ export default async function BillingSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Invoice History</CardTitle>
-          <CardDescription>
-            Track all of your payments here and download receipts.
-          </CardDescription>
+          <CardDescription>Track all of your payments here and download receipts.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-0 divide-y">
             {MOCK_INVOICES.map((invoice, index) => (
-              <div key={index} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+              <div
+                key={index}
+                className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+              >
                 <div className="flex items-center gap-6">
-                  <span className="w-[100px] text-sm text-muted-foreground">{invoice.date}</span>
+                  <span className="text-muted-foreground w-[100px] text-sm">{invoice.date}</span>
                   <span className="text-sm">{invoice.description}</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium">{invoice.amount}</span>
-                  <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 dark:text-green-400">
+                  <Badge
+                    variant="default"
+                    className="bg-green-500/10 text-green-600 hover:bg-green-500/20 dark:text-green-400"
+                  >
                     {invoice.status}
                   </Badge>
                   <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">

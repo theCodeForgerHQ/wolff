@@ -21,13 +21,13 @@ export function SettingsBreadcrumb() {
     <div className="flex items-center gap-1.5 text-lg">
       <Link
         href="/settings/account"
-        className="font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        className="text-muted-foreground hover:text-foreground font-semibold transition-colors"
       >
         Settings
       </Link>
       {currentItem && (
         <>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground h-4 w-4" />
           <span className="font-semibold">{pageLabel}</span>
         </>
       )}

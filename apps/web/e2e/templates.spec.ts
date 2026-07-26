@@ -29,7 +29,7 @@ test.describe('Templates Module', () => {
       await page.goto('/templates');
 
       const templateCards = page.locator('[class*="card"], [class*="Card"]');
-      if (await templateCards.count() > 0) {
+      if ((await templateCards.count()) > 0) {
         await expect(templateCards.first()).toBeVisible();
       }
     });
@@ -50,7 +50,7 @@ test.describe('Templates Module', () => {
 
       // Templates should show their type (quote, invoice, etc.)
       const typeBadges = page.locator('[class*="badge"], [class*="Badge"]');
-      if (await typeBadges.count() > 0) {
+      if ((await typeBadges.count()) > 0) {
         await expect(typeBadges.first()).toBeVisible();
       }
     });
@@ -266,7 +266,9 @@ test.describe('Templates Module', () => {
       if (await templateLink.isVisible()) {
         await templateLink.click();
 
-        const useButton = page.getByRole('button', { name: /use template|create from template|create quote/i });
+        const useButton = page.getByRole('button', {
+          name: /use template|create from template|create quote/i,
+        });
         if (await useButton.isVisible()) {
           await useButton.click();
 
@@ -308,7 +310,7 @@ test.describe('Templates Accessibility', () => {
     await page.goto('/templates');
 
     const cards = page.locator('[class*="card"], [class*="Card"]');
-    if (await cards.count() > 0) {
+    if ((await cards.count()) > 0) {
       // Cards should be navigable
       await expect(cards.first()).toBeVisible();
     }

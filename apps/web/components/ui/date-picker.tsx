@@ -6,11 +6,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface DatePickerProps {
   date?: Date;
@@ -44,12 +40,7 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={onSelect}
-          initialFocus
-        />
+        <Calendar mode="single" selected={date} onSelect={onSelect} initialFocus />
       </PopoverContent>
     </Popover>
   );
@@ -86,8 +77,7 @@ export function DateRangePicker({
           {dateRange?.from ? (
             dateRange.to ? (
               <>
-                {format(dateRange.from, 'LLL dd, y')} -{' '}
-                {format(dateRange.to, 'LLL dd, y')}
+                {format(dateRange.from, 'LLL dd, y')} - {format(dateRange.to, 'LLL dd, y')}
               </>
             ) : (
               format(dateRange.from, 'LLL dd, y')
@@ -102,9 +92,7 @@ export function DateRangePicker({
           mode="range"
           defaultMonth={dateRange?.from}
           selected={dateRange}
-          onSelect={(range) =>
-            onSelect?.({ from: range?.from, to: range?.to })
-          }
+          onSelect={(range) => onSelect?.({ from: range?.from, to: range?.to })}
           numberOfMonths={2}
           initialFocus
         />

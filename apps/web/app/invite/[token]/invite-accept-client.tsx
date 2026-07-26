@@ -32,10 +32,10 @@ export function InviteAcceptClient({ tokenHash, workspaceName }: InviteAcceptCli
 
   if (accepted) {
     return (
-      <div className="text-center space-y-4">
+      <div className="space-y-4 text-center">
         <CheckCircle className="mx-auto h-12 w-12 text-green-600" />
         <p className="text-lg font-medium">Welcome to {workspaceName}!</p>
-        <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+        <p className="text-muted-foreground text-sm">Redirecting to dashboard...</p>
       </div>
     );
   }
@@ -43,11 +43,11 @@ export function InviteAcceptClient({ tokenHash, workspaceName }: InviteAcceptCli
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-4 text-center">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
-      <div className="flex gap-3 justify-center">
+      <div className="flex justify-center gap-3">
         <Button onClick={handleAccept} disabled={isPending}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Accept Invitation

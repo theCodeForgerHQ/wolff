@@ -11,6 +11,7 @@ This constitution establishes the inviolable principles, boundaries, and guardra
 ### 1.1 Product Definition
 
 Wolff is **exclusively** a visual quote and invoice management tool. It is:
+
 - An open-source, self-hosted solution
 - A SaaS option for cloud deployment
 - A tool for freelancers, small businesses, and agencies
@@ -18,6 +19,7 @@ Wolff is **exclusively** a visual quote and invoice management tool. It is:
 ### 1.2 Product Scope Boundaries
 
 **Wolff SHALL:**
+
 - Create, manage, and send professional quotes
 - Convert quotes to invoices seamlessly
 - Handle e-signatures and contract attachments
@@ -27,6 +29,7 @@ Wolff is **exclusively** a visual quote and invoice management tool. It is:
 - Generate professional PDFs
 
 **Wolff SHALL NOT:**
+
 - Become a full accounting system
 - Include CRM/lead management features
 - Add project management capabilities
@@ -41,6 +44,7 @@ Wolff is **exclusively** a visual quote and invoice management tool. It is:
 ### 2.1 Visual Builder First
 
 The quote/invoice builder MUST be:
+
 - Block-based and visual (NOT spreadsheet-like)
 - Drag-and-drop enabled
 - WYSIWYG (What You See Is What You Get)
@@ -51,6 +55,7 @@ The quote/invoice builder MUST be:
 ### 2.2 Client Experience
 
 Client-facing pages MUST:
+
 - Work without requiring an account/login
 - Be mobile-first in design
 - Load in under 3 seconds on 4G
@@ -69,16 +74,16 @@ Client-facing pages MUST:
 
 ### 3.1 Technology Stack (Non-Negotiable)
 
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| Framework | Next.js 14+ (App Router) | Modern React, SSR, edge-ready |
-| Language | TypeScript (strict) | Type safety |
-| UI | Shadcn UI + Tailwind | Customizable, accessible |
-| Database | PostgreSQL 15+ | Reliability, JSON support |
-| ORM | Prisma 5+ | Type-safe queries |
-| Auth | NextAuth.js v5 | Flexible, self-hostable |
-| Payments | Stripe Connect | Industry standard |
-| Package Manager | pnpm | Speed, disk efficiency |
+| Component       | Technology               | Rationale                     |
+| --------------- | ------------------------ | ----------------------------- |
+| Framework       | Next.js 14+ (App Router) | Modern React, SSR, edge-ready |
+| Language        | TypeScript (strict)      | Type safety                   |
+| UI              | Shadcn UI + Tailwind     | Customizable, accessible      |
+| Database        | PostgreSQL 15+           | Reliability, JSON support     |
+| ORM             | Prisma 5+                | Type-safe queries             |
+| Auth            | NextAuth.js v5           | Flexible, self-hostable       |
+| Payments        | Stripe Connect           | Industry standard             |
+| Package Manager | pnpm                     | Speed, disk efficiency        |
 
 **PROHIBITION:** No alternative technologies without documented justification and team approval.
 
@@ -106,14 +111,14 @@ Client-facing pages MUST:
 
 ### 3.3 Performance Requirements
 
-| Metric | Target | Mandatory |
-|--------|--------|-----------|
-| Largest Contentful Paint | < 2.5s | Yes |
-| First Input Delay | < 100ms | Yes |
-| Cumulative Layout Shift | < 0.1 | Yes |
-| API Response (95th) | < 500ms | Yes |
-| PDF Generation | < 5s | Yes |
-| Bundle Size (main) | < 200KB | Yes |
+| Metric                   | Target  | Mandatory |
+| ------------------------ | ------- | --------- |
+| Largest Contentful Paint | < 2.5s  | Yes       |
+| First Input Delay        | < 100ms | Yes       |
+| Cumulative Layout Shift  | < 0.1   | Yes       |
+| API Response (95th)      | < 500ms | Yes       |
+| PDF Generation           | < 5s    | Yes       |
+| Bundle Size (main)       | < 200KB | Yes       |
 
 ### 3.4 Security Requirements
 
@@ -210,11 +215,11 @@ Client-facing pages MUST:
 
 ### 6.1 Feature Prioritization
 
-| Priority | Definition | Timeline |
-|----------|------------|----------|
-| P0 | Must have for MVP | Before launch |
-| P1 | Should have | v1.1 (post-launch) |
-| P2 | Nice to have | v1.2+ |
+| Priority | Definition        | Timeline           |
+| -------- | ----------------- | ------------------ |
+| P0       | Must have for MVP | Before launch      |
+| P1       | Should have       | v1.1 (post-launch) |
+| P2       | Nice to have      | v1.2+              |
 
 ### 6.2 Feature Approval Process
 
@@ -226,6 +231,7 @@ Client-facing pages MUST:
 ### 6.3 Feature Rejection Criteria
 
 A feature MUST be rejected if it:
+
 - Conflicts with Article I scope boundaries
 - Compromises Article III security requirements
 - Cannot meet Article III performance targets
@@ -243,13 +249,13 @@ A feature MUST be rejected if it:
 
 ### 7.2 Approved Integration Categories
 
-| Category | Examples | Priority |
-|----------|----------|----------|
-| Payments | Stripe | P0 (Required) |
-| Email | SMTP, SendGrid, Resend | P0 |
-| Storage | Local, S3 | P0 |
-| Accounting | QuickBooks, Xero | P1 |
-| Calendar | Google Calendar | P2 |
+| Category   | Examples               | Priority      |
+| ---------- | ---------------------- | ------------- |
+| Payments   | Stripe                 | P0 (Required) |
+| Email      | SMTP, SendGrid, Resend | P0            |
+| Storage    | Local, S3              | P0            |
+| Accounting | QuickBooks, Xero       | P1            |
+| Calendar   | Google Calendar        | P2            |
 
 ### 7.3 Integration Requirements
 
@@ -265,11 +271,13 @@ A feature MUST be rejected if it:
 ### 8.1 Self-Hosted Deployment
 
 **MUST Support:**
+
 - Single docker-compose command deployment
 - Environment variable configuration only
 - No mandatory external services except database
 
 **Requirements:**
+
 - Docker image < 500MB
 - Memory usage < 1GB baseline
 - Works on commodity hardware (2GB RAM, 2 CPU)
@@ -283,11 +291,11 @@ A feature MUST be rejected if it:
 
 ### 8.3 Environment Requirements
 
-| Environment | Purpose | Data |
-|-------------|---------|------|
-| Development | Local development | Mock/seed data |
-| Staging | Pre-production testing | Anonymized data |
-| Production | Live users | Real data |
+| Environment | Purpose                | Data            |
+| ----------- | ---------------------- | --------------- |
+| Development | Local development      | Mock/seed data  |
+| Staging     | Pre-production testing | Anonymized data |
+| Production  | Live users             | Real data       |
 
 ---
 
@@ -314,6 +322,7 @@ A feature MUST be rejected if it:
 ### 10.1 Constitution Changes
 
 This constitution may only be amended through:
+
 1. Written proposal with justification
 2. Impact analysis on existing code
 3. Team consensus (or Product Owner approval)
@@ -322,6 +331,7 @@ This constitution may only be amended through:
 ### 10.2 Exception Requests
 
 Temporary exceptions may be granted:
+
 1. Document the exception and reason
 2. Set expiration date
 3. Create ticket to resolve
@@ -352,4 +362,4 @@ Temporary exceptions may be granted:
 
 ---
 
-*This constitution was established on January 30, 2026 and governs all development activities for the Wolff project.*
+_This constitution was established on January 30, 2026 and governs all development activities for the Wolff project._

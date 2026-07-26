@@ -61,9 +61,7 @@ describe('EmptyState', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
-      <EmptyState {...defaultProps} className="custom-class" />
-    );
+    const { container } = render(<EmptyState {...defaultProps} className="custom-class" />);
 
     const wrapper = container.firstChild;
     expect(wrapper).toHaveClass('custom-class');

@@ -9,13 +9,14 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Bulk Selection', () => {
-
   test.describe('Individual Row Selection', () => {
     test('should select an individual row on Quotes page', async ({ page }) => {
       await page.goto('/quotes');
       await page.waitForLoadState('networkidle');
 
-      const rowCheckbox = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]').first();
+      const rowCheckbox = page
+        .locator('tbody td input[type="checkbox"], tbody [role="checkbox"]')
+        .first();
 
       if (!(await rowCheckbox.isVisible().catch(() => false))) {
         test.skip();
@@ -26,7 +27,9 @@ test.describe('Bulk Selection', () => {
       await rowCheckbox.click();
 
       // Wait for checked state to update
-      await expect(rowCheckbox).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(rowCheckbox)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
       // Verify it's checked
       const isChecked = await rowCheckbox.isChecked().catch(() => false);
@@ -38,7 +41,9 @@ test.describe('Bulk Selection', () => {
       await page.goto('/invoices');
       await page.waitForLoadState('networkidle');
 
-      const rowCheckbox = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]').first();
+      const rowCheckbox = page
+        .locator('tbody td input[type="checkbox"], tbody [role="checkbox"]')
+        .first();
 
       if (!(await rowCheckbox.isVisible().catch(() => false))) {
         test.skip();
@@ -48,7 +53,9 @@ test.describe('Bulk Selection', () => {
       await rowCheckbox.click();
 
       // Wait for checked state to update
-      await expect(rowCheckbox).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(rowCheckbox)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
       const isChecked = await rowCheckbox.isChecked().catch(() => false);
       const hasAriaChecked = await rowCheckbox.getAttribute('aria-checked');
@@ -59,7 +66,9 @@ test.describe('Bulk Selection', () => {
       await page.goto('/contracts');
       await page.waitForLoadState('networkidle');
 
-      const rowCheckbox = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]').first();
+      const rowCheckbox = page
+        .locator('tbody td input[type="checkbox"], tbody [role="checkbox"]')
+        .first();
 
       if (!(await rowCheckbox.isVisible().catch(() => false))) {
         // Contracts page might be empty
@@ -70,7 +79,9 @@ test.describe('Bulk Selection', () => {
       await rowCheckbox.click();
 
       // Wait for checked state to update
-      await expect(rowCheckbox).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(rowCheckbox)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
       const isChecked = await rowCheckbox.isChecked().catch(() => false);
       const hasAriaChecked = await rowCheckbox.getAttribute('aria-checked');
@@ -83,7 +94,9 @@ test.describe('Bulk Selection', () => {
       await page.goto('/invoices');
       await page.waitForLoadState('networkidle');
 
-      const selectAll = page.locator('thead th input[type="checkbox"], thead [role="checkbox"]').first();
+      const selectAll = page
+        .locator('thead th input[type="checkbox"], thead [role="checkbox"]')
+        .first();
 
       if (!(await selectAll.isVisible().catch(() => false))) {
         test.skip();
@@ -93,10 +106,14 @@ test.describe('Bulk Selection', () => {
       await selectAll.click();
 
       // Wait for select-all to propagate to row checkboxes
-      await expect(selectAll).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(selectAll)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
       // All row checkboxes should now be checked
-      const rowCheckboxes = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]');
+      const rowCheckboxes = page.locator(
+        'tbody td input[type="checkbox"], tbody [role="checkbox"]'
+      );
       const rowCount = await rowCheckboxes.count();
 
       if (rowCount > 0) {
@@ -113,7 +130,9 @@ test.describe('Bulk Selection', () => {
       await page.goto('/contracts');
       await page.waitForLoadState('networkidle');
 
-      const selectAll = page.locator('thead th input[type="checkbox"], thead [role="checkbox"]').first();
+      const selectAll = page
+        .locator('thead th input[type="checkbox"], thead [role="checkbox"]')
+        .first();
 
       if (!(await selectAll.isVisible().catch(() => false))) {
         test.skip();
@@ -123,9 +142,13 @@ test.describe('Bulk Selection', () => {
       await selectAll.click();
 
       // Wait for select-all to propagate to row checkboxes
-      await expect(selectAll).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(selectAll)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
-      const rowCheckboxes = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]');
+      const rowCheckboxes = page.locator(
+        'tbody td input[type="checkbox"], tbody [role="checkbox"]'
+      );
       const rowCount = await rowCheckboxes.count();
 
       if (rowCount > 0) {
@@ -140,7 +163,9 @@ test.describe('Bulk Selection', () => {
       await page.goto('/projects');
       await page.waitForLoadState('networkidle');
 
-      const selectAll = page.locator('thead th input[type="checkbox"], thead [role="checkbox"]').first();
+      const selectAll = page
+        .locator('thead th input[type="checkbox"], thead [role="checkbox"]')
+        .first();
 
       if (!(await selectAll.isVisible().catch(() => false))) {
         // Projects page might be empty or table not visible
@@ -151,9 +176,13 @@ test.describe('Bulk Selection', () => {
       await selectAll.click();
 
       // Wait for select-all to propagate to row checkboxes
-      await expect(selectAll).toBeChecked({ timeout: 2000 }).catch(() => {});
+      await expect(selectAll)
+        .toBeChecked({ timeout: 2000 })
+        .catch(() => {});
 
-      const rowCheckboxes = page.locator('tbody td input[type="checkbox"], tbody [role="checkbox"]');
+      const rowCheckboxes = page.locator(
+        'tbody td input[type="checkbox"], tbody [role="checkbox"]'
+      );
       const rowCount = await rowCheckboxes.count();
 
       if (rowCount > 0) {

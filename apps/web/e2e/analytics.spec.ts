@@ -16,21 +16,31 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 test.describe('Analytics Dashboard', () => {
-
   test.describe('Dashboard Analytics Section', () => {
     test('E2E-D01: should display analytics section on dashboard', async ({ page }) => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
       // Should have analytics-related content or dashboard content
-      const analyticsSection = page.locator('[data-testid="analytics-section"], [data-testid="revenue-chart"], .recharts-wrapper').first();
+      const analyticsSection = page
+        .locator(
+          '[data-testid="analytics-section"], [data-testid="revenue-chart"], .recharts-wrapper'
+        )
+        .first();
       const hasAnalytics = await analyticsSection.isVisible().catch(() => false);
 
       // Check for revenue/analytics text or general dashboard content
-      const hasRevenueText = await page.getByText(/revenue|trend|analytics|total|overview/i).first().isVisible().catch(() => false);
+      const hasRevenueText = await page
+        .getByText(/revenue|trend|analytics|total|overview/i)
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Dashboard page should at least load with heading
-      const hasHeading = await page.getByRole('heading', { level: 1 }).isVisible().catch(() => false);
+      const hasHeading = await page
+        .getByRole('heading', { level: 1 })
+        .isVisible()
+        .catch(() => false);
 
       expect(hasAnalytics || hasRevenueText || hasHeading).toBe(true);
     });
@@ -48,7 +58,12 @@ test.describe('Analytics Dashboard', () => {
 
       let foundChart = false;
       for (const element of chartElements) {
-        if (await element.first().isVisible().catch(() => false)) {
+        if (
+          await element
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           foundChart = true;
           break;
         }
@@ -57,7 +72,10 @@ test.describe('Analytics Dashboard', () => {
       // If no chart yet, check that revenue data is at least shown as text
       if (!foundChart) {
         const revenueText = page.getByText(/\$[\d,]+(\.\d{2})?/);
-        foundChart = await revenueText.first().isVisible().catch(() => false);
+        foundChart = await revenueText
+          .first()
+          .isVisible()
+          .catch(() => false);
       }
 
       expect(foundChart).toBe(true);
@@ -174,11 +192,17 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard/analytics');
 
       // Look for date filter
-      const dateFilter = page.locator('[data-testid="date-filter"], [data-testid="analytics-date-filter"]');
+      const dateFilter = page.locator(
+        '[data-testid="date-filter"], [data-testid="analytics-date-filter"]'
+      );
       const presetButtons = page.getByRole('button', { name: /7d|30d|90d|12m/i });
 
-      const hasDateFilter = await dateFilter.isVisible().catch(() => false) ||
-                            await presetButtons.first().isVisible().catch(() => false);
+      const hasDateFilter =
+        (await dateFilter.isVisible().catch(() => false)) ||
+        (await presetButtons
+          .first()
+          .isVisible()
+          .catch(() => false));
 
       if (hasDateFilter) {
         // Click 7d preset if available
@@ -223,9 +247,16 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard/analytics');
 
       // Find clickable chart elements
-      const chartSegments = page.locator('.recharts-pie-sector, .recharts-bar, [data-testid*="chart-segment"]');
+      const chartSegments = page.locator(
+        '.recharts-pie-sector, .recharts-bar, [data-testid*="chart-segment"]'
+      );
 
-      if (await chartSegments.first().isVisible().catch(() => false)) {
+      if (
+        await chartSegments
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await chartSegments.first().click();
 
         // Modal should open
@@ -250,8 +281,13 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard');
 
       // Look for Recharts area or line chart
-      const areaChart = page.locator('.recharts-area, .recharts-line, [data-testid="revenue-chart"]');
-      const hasChart = await areaChart.first().isVisible().catch(() => false);
+      const areaChart = page.locator(
+        '.recharts-area, .recharts-line, [data-testid="revenue-chart"]'
+      );
+      const hasChart = await areaChart
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Or look for revenue text if chart not yet implemented
       const revenueSection = page.getByText(/revenue|total revenue/i).first();
@@ -266,11 +302,17 @@ test.describe('Analytics Dashboard', () => {
       // Revenue amounts should be formatted as currency (e.g., $1,234.56)
       // Look for currency values in stat cards or charts
       const currencyText = page.getByText(/\$[\d,]+(\.\d{2})?/);
-      const hasCurrency = await currencyText.first().isVisible().catch(() => false);
+      const hasCurrency = await currencyText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Also check for formatted numbers in stats cards
       const statsCard = page.locator('[data-testid*="stat"], .stat-card, [class*="card"]');
-      const hasStats = await statsCard.first().isVisible().catch(() => false);
+      const hasStats = await statsCard
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasCurrency || hasStats).toBe(true);
     });
@@ -282,8 +324,14 @@ test.describe('Analytics Dashboard', () => {
       const zeroRevenue = page.getByText(/\$0(\.00)?|no revenue|no data/i);
       const normalRevenue = page.getByText(/\$[\d,]+\.\d{2}/);
 
-      const hasZero = await zeroRevenue.first().isVisible().catch(() => false);
-      const hasRevenue = await normalRevenue.first().isVisible().catch(() => false);
+      const hasZero = await zeroRevenue
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasRevenue = await normalRevenue
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Either zero or some revenue should be shown
       expect(hasZero || hasRevenue).toBe(true);
@@ -298,8 +346,14 @@ test.describe('Analytics Dashboard', () => {
       const quoteStatusChart = page.locator('[data-testid="quote-status-chart"], .recharts-pie');
       const quoteStatusText = page.getByText(/quote.*status|quotes.*draft|quotes.*sent/i);
 
-      const hasChart = await quoteStatusChart.first().isVisible().catch(() => false);
-      const hasText = await quoteStatusText.first().isVisible().catch(() => false);
+      const hasChart = await quoteStatusChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasText = await quoteStatusText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Either chart or status text should be visible
       expect(hasChart || hasText).toBe(true);
@@ -312,8 +366,14 @@ test.describe('Analytics Dashboard', () => {
       const invoiceStatusChart = page.locator('[data-testid="invoice-status-chart"]');
       const invoiceStatusText = page.getByText(/invoice.*status|invoices.*paid|invoices.*overdue/i);
 
-      const hasChart = await invoiceStatusChart.first().isVisible().catch(() => false);
-      const hasText = await invoiceStatusText.first().isVisible().catch(() => false);
+      const hasChart = await invoiceStatusChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasText = await invoiceStatusText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasChart || hasText).toBe(true);
     });
@@ -322,18 +382,36 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard');
 
       // Status badges should have semantic colors
-      const acceptedBadge = page.locator('[class*="green"], [class*="success"]').filter({ hasText: /accepted|paid/i });
-      const pendingBadge = page.locator('[class*="yellow"], [class*="warning"]').filter({ hasText: /pending|sent/i });
-      const declinedBadge = page.locator('[class*="red"], [class*="danger"]').filter({ hasText: /declined|overdue/i });
+      const acceptedBadge = page
+        .locator('[class*="green"], [class*="success"]')
+        .filter({ hasText: /accepted|paid/i });
+      const pendingBadge = page
+        .locator('[class*="yellow"], [class*="warning"]')
+        .filter({ hasText: /pending|sent/i });
+      const declinedBadge = page
+        .locator('[class*="red"], [class*="danger"]')
+        .filter({ hasText: /declined|overdue/i });
 
       // At least one status indicator should exist
-      const hasAccepted = await acceptedBadge.first().isVisible().catch(() => false);
-      const hasPending = await pendingBadge.first().isVisible().catch(() => false);
-      const hasDeclined = await declinedBadge.first().isVisible().catch(() => false);
+      const hasAccepted = await acceptedBadge
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasPending = await pendingBadge
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasDeclined = await declinedBadge
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Status text should exist somewhere
       const statusText = page.getByText(/draft|sent|accepted|declined|paid|overdue/i);
-      const hasStatusText = await statusText.first().isVisible().catch(() => false);
+      const hasStatusText = await statusText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasAccepted || hasPending || hasDeclined || hasStatusText).toBe(true);
     });
@@ -349,11 +427,22 @@ test.describe('Analytics Dashboard', () => {
       // Look for funnel visualization or related text
       const funnel = page.locator('[data-testid="conversion-funnel"]');
       const funnelTitle = page.getByText(/conversion funnel/i);
-      const funnelCard = page.locator('[class*="chart"], [class*="card"]').filter({ hasText: /conversion/i });
+      const funnelCard = page
+        .locator('[class*="chart"], [class*="card"]')
+        .filter({ hasText: /conversion/i });
 
-      const hasFunnel = await funnel.first().isVisible().catch(() => false);
-      const hasFunnelTitle = await funnelTitle.first().isVisible().catch(() => false);
-      const hasFunnelCard = await funnelCard.first().isVisible().catch(() => false);
+      const hasFunnel = await funnel
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasFunnelTitle = await funnelTitle
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasFunnelCard = await funnelCard
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Should find funnel component or title
       expect(hasFunnel || hasFunnelTitle || hasFunnelCard).toBe(true);
@@ -364,11 +453,17 @@ test.describe('Analytics Dashboard', () => {
 
       // Look for percentage values in funnel
       const percentages = page.getByText(/%/);
-      const hasPercentages = await percentages.first().isVisible().catch(() => false);
+      const hasPercentages = await percentages
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Or conversion rate number
       const conversionRate = page.getByText(/conversion.*rate|[\d.]+%/i);
-      const hasConversionRate = await conversionRate.first().isVisible().catch(() => false);
+      const hasConversionRate = await conversionRate
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // At least one percentage should be shown somewhere
       expect(hasPercentages || hasConversionRate).toBe(true);
@@ -383,8 +478,14 @@ test.describe('Analytics Dashboard', () => {
       const agingChart = page.locator('[data-testid="payment-aging-chart"]');
       const agingText = page.getByText(/aging|overdue|outstanding|days/i);
 
-      const hasChart = await agingChart.first().isVisible().catch(() => false);
-      const hasText = await agingText.first().isVisible().catch(() => false);
+      const hasChart = await agingChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasText = await agingText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       if (hasChart || hasText) {
         // Should show aging buckets
@@ -393,7 +494,12 @@ test.describe('Analytics Dashboard', () => {
 
         for (const bucket of buckets) {
           const bucketEl = page.getByText(new RegExp(bucket, 'i'));
-          if (await bucketEl.first().isVisible().catch(() => false)) {
+          if (
+            await bucketEl
+              .first()
+              .isVisible()
+              .catch(() => false)
+          ) {
             foundBuckets++;
           }
         }
@@ -407,15 +513,25 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard');
 
       // Look for overdue indicators
-      const overdueSection = page.locator('[class*="red"], [class*="danger"], [class*="destructive"]');
+      const overdueSection = page.locator(
+        '[class*="red"], [class*="danger"], [class*="destructive"]'
+      );
       const overdueText = page.getByText(/overdue/i);
 
-      const hasOverdue = await overdueText.first().isVisible().catch(() => false);
+      const hasOverdue = await overdueText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       if (hasOverdue) {
         // Overdue should have warning styling
-        const overdueAmount = page.locator('[class*="red"], [class*="warning"]').filter({ hasText: /\$/ });
-        await overdueAmount.first().isVisible().catch(() => false);
+        const overdueAmount = page
+          .locator('[class*="red"], [class*="warning"]')
+          .filter({ hasText: /\$/ });
+        await overdueAmount
+          .first()
+          .isVisible()
+          .catch(() => false);
       }
     });
   });
@@ -428,12 +544,21 @@ test.describe('Analytics Dashboard', () => {
       const distChart = page.locator('[data-testid="client-distribution-chart"]');
       const distText = page.getByText(/client.*distribution|clients.*by|region|location/i);
 
-      const hasChart = await distChart.first().isVisible().catch(() => false);
-      const hasText = await distText.first().isVisible().catch(() => false);
+      const hasChart = await distChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasText = await distText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Client distribution may be shown as list or chart
       const clientCount = page.getByText(/total clients|\d+ clients/i);
-      const hasClientCount = await clientCount.first().isVisible().catch(() => false);
+      const hasClientCount = await clientCount
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasChart || hasText || hasClientCount).toBe(true);
     });
@@ -443,15 +568,20 @@ test.describe('Analytics Dashboard', () => {
 
       // Look for region data
       const regionPatterns = [
-        /california|texas|new york|florida/i,  // US states
-        /united states|canada|uk|australia/i,  // Countries
-        /[\d,]+\s*(clients?|%)/i,              // Count format
+        /california|texas|new york|florida/i, // US states
+        /united states|canada|uk|australia/i, // Countries
+        /[\d,]+\s*(clients?|%)/i, // Count format
       ];
 
       let foundRegionData = false;
       for (const pattern of regionPatterns) {
         const regionEl = page.getByText(pattern);
-        if (await regionEl.first().isVisible().catch(() => false)) {
+        if (
+          await regionEl
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           foundRegionData = true;
           break;
         }
@@ -459,7 +589,10 @@ test.describe('Analytics Dashboard', () => {
 
       // May just show client count if no distribution data
       const clientsSection = page.getByText(/clients/i);
-      const hasClients = await clientsSection.first().isVisible().catch(() => false);
+      const hasClients = await clientsSection
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(foundRegionData || hasClients).toBe(true);
     });
@@ -480,9 +613,18 @@ test.describe('Analytics Dashboard', () => {
       const monthlyTitle = page.getByText(/monthly comparison/i);
       const monthNames = page.getByText(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i);
 
-      const hasChart = await monthlyChart.first().isVisible().catch(() => false);
-      const hasTitle = await monthlyTitle.first().isVisible().catch(() => false);
-      const hasMonths = await monthNames.first().isVisible().catch(() => false);
+      const hasChart = await monthlyChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasTitle = await monthlyTitle
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasMonths = await monthNames
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasChart || hasTitle || hasMonths).toBe(true);
     });
@@ -519,16 +661,26 @@ test.describe('Analytics Dashboard', () => {
       const forecastChart = page.locator('[data-testid="forecast-chart"]');
       const forecastText = page.getByText(/forecast|projection|predicted|trend/i);
 
-      const hasChart = await forecastChart.first().isVisible().catch(() => false);
-      const hasText = await forecastText.first().isVisible().catch(() => false);
+      const hasChart = await forecastChart
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const hasText = await forecastText
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Forecast may not be implemented yet
       if (hasChart || hasText) {
         // Should distinguish actual from projected
         const actualLine = page.locator('[class*="actual"], .recharts-line').first();
-        const projectedLine = page.locator('[class*="forecast"], [class*="projected"], [stroke-dasharray]');
+        const projectedLine = page.locator(
+          '[class*="forecast"], [class*="projected"], [stroke-dasharray]'
+        );
 
-        await expect(actualLine).toBeVisible().catch(() => {});
+        await expect(actualLine)
+          .toBeVisible()
+          .catch(() => {});
       }
     });
 
@@ -537,7 +689,10 @@ test.describe('Analytics Dashboard', () => {
 
       // Look for disclaimer text
       const disclaimer = page.getByText(/projection|estimate|based on|approximate|disclaimer/i);
-      const hasDisclaimer = await disclaimer.first().isVisible().catch(() => false);
+      const hasDisclaimer = await disclaimer
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Disclaimer may be in tooltip or footer
     });
@@ -557,7 +712,12 @@ test.describe('Analytics Dashboard', () => {
 
       let foundFilter = false;
       for (const filter of dateFilters) {
-        if (await filter.first().isVisible().catch(() => false)) {
+        if (
+          await filter
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           foundFilter = true;
           break;
         }
@@ -567,7 +727,12 @@ test.describe('Analytics Dashboard', () => {
       if (!foundFilter) {
         await page.goto('/dashboard/analytics');
         for (const filter of dateFilters) {
-          if (await filter.first().isVisible().catch(() => false)) {
+          if (
+            await filter
+              .first()
+              .isVisible()
+              .catch(() => false)
+          ) {
             foundFilter = true;
             break;
           }
@@ -626,7 +791,12 @@ test.describe('Analytics Dashboard', () => {
 
       let foundExport = false;
       for (const btn of exportButtons) {
-        if (await btn.first().isVisible().catch(() => false)) {
+        if (
+          await btn
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           foundExport = true;
           break;
         }
@@ -634,7 +804,7 @@ test.describe('Analytics Dashboard', () => {
 
       // Export may be in a dropdown menu
       const moreMenu = page.getByRole('button', { name: /more|options|⋮/i });
-      if (!foundExport && await moreMenu.isVisible().catch(() => false)) {
+      if (!foundExport && (await moreMenu.isVisible().catch(() => false))) {
         await moreMenu.click();
         const exportOption = page.getByRole('menuitem', { name: /export/i });
         foundExport = await exportOption.isVisible().catch(() => false);
@@ -646,7 +816,12 @@ test.describe('Analytics Dashboard', () => {
 
       const exportButton = page.getByRole('button', { name: /export|download|csv/i });
 
-      if (await exportButton.first().isVisible().catch(() => false)) {
+      if (
+        await exportButton
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         // Set up download listener
         const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
 
@@ -679,7 +854,12 @@ test.describe('Analytics Dashboard', () => {
       ];
 
       for (const element of clickableElements) {
-        if (await element.first().isVisible().catch(() => false)) {
+        if (
+          await element
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
           await element.first().click();
 
           // Check if modal opened
@@ -709,7 +889,10 @@ test.describe('Analytics Dashboard', () => {
         if (await modal.isVisible({ timeout: 1000 }).catch(() => false)) {
           // Should have a table
           const table = modal.locator('table, [role="table"]');
-          const hasList = await modal.locator('ul, ol, [role="list"]').isVisible().catch(() => false);
+          const hasList = await modal
+            .locator('ul, ol, [role="list"]')
+            .isVisible()
+            .catch(() => false);
           const hasTable = await table.isVisible().catch(() => false);
 
           // Should show some data format
@@ -735,7 +918,9 @@ test.describe('Analytics Dashboard', () => {
           await page.keyboard.press('Escape');
 
           // Modal should close
-          await expect(modal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
+          await expect(modal)
+            .not.toBeVisible({ timeout: 1000 })
+            .catch(() => {});
         }
       }
     });
@@ -755,7 +940,9 @@ test.describe('Analytics Dashboard', () => {
 
           if (await closeButton.isVisible().catch(() => false)) {
             await closeButton.click();
-            await expect(modal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
+            await expect(modal)
+              .not.toBeVisible({ timeout: 1000 })
+              .catch(() => {});
           }
         }
       }
@@ -772,7 +959,12 @@ test.describe('Analytics Dashboard', () => {
 
       // Charts should stack or be scrollable
       const charts = page.locator('.recharts-wrapper, [class*="chart"]');
-      if (await charts.first().isVisible().catch(() => false)) {
+      if (
+        await charts
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         await expect(charts.first()).toBeVisible();
       }
     });
@@ -822,10 +1014,21 @@ test.describe('Analytics Dashboard', () => {
       // Charts should have accessible labels
       const charts = page.locator('.recharts-wrapper, [data-testid*="chart"]');
 
-      if (await charts.first().isVisible().catch(() => false)) {
+      if (
+        await charts
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         // Recharts adds role attributes
-        const hasAriaLabel = await charts.first().getAttribute('aria-label').catch(() => null);
-        const hasRole = await charts.first().getAttribute('role').catch(() => null);
+        const hasAriaLabel = await charts
+          .first()
+          .getAttribute('aria-label')
+          .catch(() => null);
+        const hasRole = await charts
+          .first()
+          .getAttribute('role')
+          .catch(() => null);
 
         // Chart container should exist
         await expect(charts.first()).toBeVisible();
@@ -850,7 +1053,9 @@ test.describe('Analytics Dashboard', () => {
       await page.goto('/dashboard');
 
       // Look for skeleton loaders or loading indicators
-      const skeletons = page.locator('[class*="skeleton"], [class*="Skeleton"], [class*="loading"]');
+      const skeletons = page.locator(
+        '[class*="skeleton"], [class*="Skeleton"], [class*="loading"]'
+      );
       const spinner = page.locator('[class*="spin"], [class*="loader"]');
 
       // Loading state should transition to content
@@ -863,7 +1068,7 @@ test.describe('Analytics Dashboard', () => {
     test('should handle slow network gracefully', async ({ page }) => {
       // Simulate slow network
       await page.route('**/*', async (route) => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         await route.continue();
       });
 
@@ -891,7 +1096,10 @@ test.describe('Analytics Dashboard', () => {
 
       // Error message should be user-friendly
       const errorMessage = page.getByText(/error|try again|something went wrong/i);
-      const hasError = await errorMessage.first().isVisible().catch(() => false);
+      const hasError = await errorMessage
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       // Either error message or empty state should be shown
     });

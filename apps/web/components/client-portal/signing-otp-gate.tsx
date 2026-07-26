@@ -5,13 +5,7 @@ import { Mail, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { sendSigningOtp, verifySigningOtpAction } from '@/lib/signing/actions';
 import { toast } from 'sonner';
 
@@ -94,13 +88,13 @@ export function SigningOtpGate({
     return (
       <Card>
         <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
+          <div className="bg-primary/10 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full">
+            <ShieldCheck className="text-primary h-6 w-6" />
           </div>
           <CardTitle>Verify Your Identity</CardTitle>
           <CardDescription>
-            Before signing, we need to verify your identity. We&apos;ll send a
-            verification code to <strong>{maskedEmail}</strong>.
+            Before signing, we need to verify your identity. We&apos;ll send a verification code to{' '}
+            <strong>{maskedEmail}</strong>.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
@@ -125,24 +119,24 @@ export function SigningOtpGate({
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-          <Mail className="h-6 w-6 text-primary" />
+        <div className="bg-primary/10 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full">
+          <Mail className="text-primary h-6 w-6" />
         </div>
         <CardTitle>Enter Verification Code</CardTitle>
         <CardDescription>
-          We sent a 6-digit code to <strong>{maskedEmail}</strong>.
-          Check your inbox and enter it below.
+          We sent a 6-digit code to <strong>{maskedEmail}</strong>. Check your inbox and enter it
+          below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="max-w-xs mx-auto space-y-2">
+        <div className="mx-auto max-w-xs space-y-2">
           <Label htmlFor="otp-code">Verification Code</Label>
           <Input
             id="otp-code"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
-            className="text-center text-2xl tracking-widest font-mono"
+            className="text-center font-mono text-2xl tracking-widest"
             maxLength={6}
             autoFocus
             disabled={isPending}
@@ -173,7 +167,7 @@ export function SigningOtpGate({
             type="button"
             onClick={handleResend}
             disabled={isPending}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
           >
             Didn&apos;t receive the code? Resend
           </button>

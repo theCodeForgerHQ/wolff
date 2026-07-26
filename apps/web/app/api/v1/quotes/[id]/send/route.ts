@@ -35,8 +35,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (recipients) {
       if (recipients.length > 10) return apiError('Maximum 10 recipients allowed', 400);
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const invalid = recipients.filter(e => !emailRegex.test(e));
-      if (invalid.length > 0) return apiError(`Invalid email addresses: ${invalid.join(', ')}`, 400);
+      const invalid = recipients.filter((e) => !emailRegex.test(e));
+      if (invalid.length > 0)
+        return apiError(`Invalid email addresses: ${invalid.join(', ')}`, 400);
     }
 
     // Fetch quote with client
@@ -105,14 +106,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create event
-    await prisma.quoteEvent.create({
-      data: {
-        quoteId: id,
-        eventType: emailSent ? 'sent' : 'send_failed',
-        actorType: 'system',
-        metadata: { via: 'api', emailSent },
-      },
-    }).catch(() => {});
+    await prisma.quoteEvent
+      .create({
+        data: {
+          quoteId: id,
+          eventType: emailSent ? 'sent' : 'send_failed',
+          actorType: 'system',
+          metadata: { via: 'api', emailSent },
+        },
+      })
+      .catch(() => {});
 
     if (!emailSent) {
       return apiError('Quote email could not be sent. Status unchanged.', 502);

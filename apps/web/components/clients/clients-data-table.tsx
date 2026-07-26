@@ -87,11 +87,9 @@ export function ClientsDataTable({ data }: ClientsDataTableProps) {
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <User className="h-12 w-12 text-muted-foreground mb-4" />
+      <User className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No clients found</h3>
-      <p className="text-muted-foreground mb-4">
-        Add your first client to get started
-      </p>
+      <p className="text-muted-foreground mb-4">Add your first client to get started</p>
       <Button asChild>
         <Link href="/clients/new">
           <Plus className="mr-2 h-4 w-4" />
@@ -104,14 +102,12 @@ export function ClientsDataTable({ data }: ClientsDataTableProps) {
   return (
     <>
       {selectedRows.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-muted-foreground">
-            {selectedRows.length} selected
-          </span>
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">{selectedRows.length} selected</span>
           {/* Bug #214: Confirmation before bulk delete */}
           {showBulkDeleteConfirm ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-destructive font-medium">
+              <span className="text-destructive text-sm font-medium">
                 Delete {selectedRows.length} clients?
               </span>
               <Button
@@ -163,9 +159,9 @@ export function ClientsDataTable({ data }: ClientsDataTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Client</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this client? This action cannot be
-              undone. All associated quotes and invoices will remain but will no
-              longer be linked to this client.
+              Are you sure you want to delete this client? This action cannot be undone. All
+              associated quotes and invoices will remain but will no longer be linked to this
+              client.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -65,9 +65,7 @@ describe('Email Integration', () => {
         to: 'client@example.com',
         subject: 'Your quote from Acme Corp',
         html: '<html>Quote details...</html>',
-        attachments: [
-          { filename: 'quote-QT-0001.pdf', content: Buffer.from('pdf') },
-        ],
+        attachments: [{ filename: 'quote-QT-0001.pdf', content: Buffer.from('pdf') }],
       };
 
       mockTransporter.sendMail.mockResolvedValue({
@@ -239,21 +237,17 @@ describe('Email Integration', () => {
 
   describe('Error Handling', () => {
     it('handles SMTP connection errors', async () => {
-      mockTransporter.verify.mockRejectedValue(
-        new Error('Connection refused')
-      );
+      mockTransporter.verify.mockRejectedValue(new Error('Connection refused'));
 
       await expect(mockTransporter.verify()).rejects.toThrow('Connection refused');
     });
 
     it('handles send failures', async () => {
-      mockTransporter.sendMail.mockRejectedValue(
-        new Error('Recipient not found')
-      );
+      mockTransporter.sendMail.mockRejectedValue(new Error('Recipient not found'));
 
-      await expect(
-        mockTransporter.sendMail({ to: 'invalid@example.com' })
-      ).rejects.toThrow('Recipient not found');
+      await expect(mockTransporter.sendMail({ to: 'invalid@example.com' })).rejects.toThrow(
+        'Recipient not found'
+      );
     });
 
     it('handles rate limiting', async () => {
@@ -261,9 +255,7 @@ describe('Email Integration', () => {
         new Error('Email rate limit exceeded. Please try again later.')
       );
 
-      await expect(
-        mockTransporter.sendMail({})
-      ).rejects.toThrow('Email rate limit exceeded');
+      await expect(mockTransporter.sendMail({})).rejects.toThrow('Email rate limit exceeded');
     });
 
     it('retries on temporary failures', async () => {

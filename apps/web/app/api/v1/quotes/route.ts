@@ -16,7 +16,15 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || undefined;
 
   const where: Record<string, unknown> = { workspaceId, deletedAt: null };
-  const validQuoteStatuses = ['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'converted'];
+  const validQuoteStatuses = [
+    'draft',
+    'sent',
+    'viewed',
+    'accepted',
+    'declined',
+    'expired',
+    'converted',
+  ];
   if (status) {
     if (!validQuoteStatuses.includes(status)) return apiError(`Invalid status: ${status}`, 400);
     where.status = status;
@@ -102,7 +110,13 @@ export async function POST(request: NextRequest) {
     clientId?: string;
     projectId?: string;
     currency?: string;
-    lineItems?: Array<{ name: string; description?: string; quantity: number; rate: number; taxRate?: number }>;
+    lineItems?: Array<{
+      name: string;
+      description?: string;
+      quantity: number;
+      rate: number;
+      taxRate?: number;
+    }>;
   };
 
   if (!clientId) return apiError('clientId is required', 400);
@@ -121,18 +135,23 @@ export async function POST(request: NextRequest) {
 
   // Bug #35: Validate projectId belongs to workspace
   if (projectId) {
-    const project = await prisma.project.findFirst({ where: { id: projectId, workspaceId, deletedAt: null } });
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, workspaceId, deletedAt: null },
+    });
     if (!project) return apiError('Project not found', 404);
   }
 
   // Generate quote number in a serializable transaction to prevent duplicates
-  const seq = await prisma.$transaction(async (tx) => {
-    return tx.numberSequence.upsert({
-      where: { workspaceId_type: { workspaceId, type: 'quote' } },
-      update: { currentValue: { increment: 1 } },
-      create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
-    });
-  }, { isolationLevel: 'Serializable' });
+  const seq = await prisma.$transaction(
+    async (tx) => {
+      return tx.numberSequence.upsert({
+        where: { workspaceId_type: { workspaceId, type: 'quote' } },
+        update: { currentValue: { increment: 1 } },
+        create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
+      });
+    },
+    { isolationLevel: 'Serializable' }
+  );
   const quoteNumber = `${seq.prefix || 'Q-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
 
   // CR #5: Validate line item values — reject Infinity/NaN
@@ -153,9 +172,13 @@ export async function POST(request: NextRequest) {
       return apiError('Line item quantity and rate cannot be negative', 400);
     }
     // Bug #40: Upper bound on rate and quantity
-    if (item.quantity > 1_000_000) return apiError('Line item quantity must be at most 1,000,000', 400);
+    if (item.quantity > 1_000_000)
+      return apiError('Line item quantity must be at most 1,000,000', 400);
     if (item.rate > 1_000_000) return apiError('Line item rate must be at most 1,000,000', 400);
-    if (item.taxRate !== undefined && (!Number.isFinite(item.taxRate) || item.taxRate < 0 || item.taxRate > 100)) {
+    if (
+      item.taxRate !== undefined &&
+      (!Number.isFinite(item.taxRate) || item.taxRate < 0 || item.taxRate > 100)
+    ) {
       return apiError('Tax rate must be between 0 and 100', 400);
     }
   }
@@ -187,7 +210,15 @@ export async function POST(request: NextRequest) {
       projectId: projectId || null,
       quoteNumber,
       title,
-      currency: currency || (await prisma.businessProfile.findUnique({ where: { workspaceId }, select: { currency: true } }))?.currency || 'USD',
+      currency:
+        currency ||
+        (
+          await prisma.businessProfile.findUnique({
+            where: { workspaceId },
+            select: { currency: true },
+          })
+        )?.currency ||
+        'USD',
       subtotal,
       taxTotal,
       total: subtotal + taxTotal,
@@ -200,24 +231,27 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return apiSuccess({
-    id: quote.id,
-    quoteNumber: quote.quoteNumber,
-    title: quote.title,
-    status: quote.status,
-    client: quote.client,
-    currency: quote.currency,
-    subtotal: toNumber(quote.subtotal),
-    taxTotal: toNumber(quote.taxTotal),
-    total: toNumber(quote.total),
-    lineItems: quote.lineItems.map((li) => ({
-      id: li.id,
-      name: li.name,
-      description: li.description,
-      quantity: toNumber(li.quantity),
-      rate: toNumber(li.rate),
-      amount: toNumber(li.amount),
-    })),
-    createdAt: quote.createdAt,
-  }, 201);
+  return apiSuccess(
+    {
+      id: quote.id,
+      quoteNumber: quote.quoteNumber,
+      title: quote.title,
+      status: quote.status,
+      client: quote.client,
+      currency: quote.currency,
+      subtotal: toNumber(quote.subtotal),
+      taxTotal: toNumber(quote.taxTotal),
+      total: toNumber(quote.total),
+      lineItems: quote.lineItems.map((li) => ({
+        id: li.id,
+        name: li.name,
+        description: li.description,
+        quantity: toNumber(li.quantity),
+        rate: toNumber(li.rate),
+        amount: toNumber(li.amount),
+      })),
+      createdAt: quote.createdAt,
+    },
+    201
+  );
 }

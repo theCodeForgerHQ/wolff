@@ -41,10 +41,10 @@ function ConfirmEmailContent() {
   }, [token]);
 
   return (
-    <div className="mx-auto max-w-md text-center space-y-6 p-8">
+    <div className="mx-auto max-w-md space-y-6 p-8 text-center">
       {status === 'loading' && (
         <>
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <Loader2 className="text-primary mx-auto h-12 w-12 animate-spin" />
           <p className="text-muted-foreground">Verifying your email...</p>
         </>
       )}
@@ -74,10 +74,10 @@ function ConfirmEmailContent() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-destructive">Verification Failed</h1>
+            <h1 className="text-destructive text-2xl font-bold">Verification Failed</h1>
             <p className="text-muted-foreground">{message}</p>
           </div>
-          <div className="flex gap-3 justify-center">
+          <div className="flex justify-center gap-3">
             <Button variant="outline" asChild>
               <Link href="/verify-email">Resend Verification</Link>
             </Button>
@@ -93,11 +93,11 @@ function ConfirmEmailContent() {
 
 export default function ConfirmEmailPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="bg-background flex min-h-screen items-center justify-center">
       <Suspense
         fallback={
-          <div className="mx-auto max-w-md text-center space-y-6 p-8">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <div className="mx-auto max-w-md space-y-6 p-8 text-center">
+            <Loader2 className="text-primary mx-auto h-12 w-12 animate-spin" />
             <p className="text-muted-foreground">Loading...</p>
           </div>
         }

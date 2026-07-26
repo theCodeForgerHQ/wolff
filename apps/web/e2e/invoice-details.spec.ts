@@ -22,7 +22,7 @@ test.describe('Invoice Details Page', () => {
         await invoiceLink.click();
 
         const statusBadge = page.locator('[class*="badge"], [class*="status"]');
-        if (await statusBadge.count() > 0) {
+        if ((await statusBadge.count()) > 0) {
           await expect(statusBadge.first()).toBeVisible();
         }
       }
@@ -160,7 +160,7 @@ test.describe('Invoice Details Page', () => {
         await invoiceLink.click();
 
         const amounts = page.getByText(/\$[\d,]+\.\d{2}/);
-        if (await amounts.count() > 0) {
+        if ((await amounts.count()) > 0) {
           await expect(amounts.first()).toBeVisible();
         }
       }
@@ -384,7 +384,7 @@ test.describe('Invoice Details Page', () => {
         await paidInvoice.click();
 
         const paymentEntry = page.locator('[class*="payment"], [class*="transaction"]');
-        if (await paymentEntry.count() > 0) {
+        if ((await paymentEntry.count()) > 0) {
           await expect(paymentEntry.first()).toBeVisible();
         }
       }
@@ -413,7 +413,7 @@ test.describe('Invoice Details Page', () => {
 
         // Should show payment date
         const datePattern = page.getByText(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\w+ \d{1,2}, \d{4}/);
-        if (await datePattern.count() > 0) {
+        if ((await datePattern.count()) > 0) {
           await expect(datePattern.first()).toBeVisible();
         }
       }
@@ -609,7 +609,9 @@ test.describe('Invoice Details Page', () => {
             await duplicateOption.click();
 
             // Should create new invoice
-            await page.waitForURL(/\/invoices\/|\/invoices\/new/, { timeout: 5000 }).catch(() => null);
+            await page
+              .waitForURL(/\/invoices\/|\/invoices\/new/, { timeout: 5000 })
+              .catch(() => null);
           }
         }
       }
@@ -702,7 +704,7 @@ test.describe('Invoice Details Accessibility', () => {
       await invoiceLink.click();
 
       const buttons = page.getByRole('button');
-      if (await buttons.count() > 0) {
+      if ((await buttons.count()) > 0) {
         const firstButton = buttons.first();
         await expect(firstButton).toBeVisible();
       }

@@ -29,7 +29,7 @@ test.describe('Contracts Module', () => {
       await page.goto('/contracts');
 
       const contractCards = page.locator('[class*="card"], [class*="Card"]');
-      if (await contractCards.count() > 0) {
+      if ((await contractCards.count()) > 0) {
         await expect(contractCards.first()).toBeVisible();
 
         // Should show status badge
@@ -114,7 +114,9 @@ test.describe('Contracts Module', () => {
       await page.goto('/contracts/new');
 
       // Should have rich text editor or content area
-      const contentEditor = page.locator('[contenteditable="true"], textarea, [class*="editor"]').first();
+      const contentEditor = page
+        .locator('[contenteditable="true"], textarea, [class*="editor"]')
+        .first();
       if (await contentEditor.isVisible()) {
         await expect(contentEditor).toBeVisible();
       }
@@ -400,7 +402,7 @@ test.describe('Contracts Accessibility', () => {
     await page.goto('/contracts/new');
 
     const labels = page.locator('label');
-    if (await labels.count() > 0) {
+    if ((await labels.count()) > 0) {
       await expect(labels.first()).toBeVisible();
     }
   });

@@ -17,10 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -66,7 +63,11 @@ interface ContractInstanceListProps {
 
 const statusConfig: Record<
   string,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }
+  {
+    label: string;
+    variant: 'default' | 'secondary' | 'destructive' | 'outline';
+    icon: React.ReactNode;
+  }
 > = {
   draft: {
     label: 'Draft',
@@ -132,7 +133,9 @@ export function ContractInstanceList({
         if (result.emailSent) {
           toast.success('Contract sent and email delivered');
         } else {
-          toast.warning('Contract marked as sent, but email delivery failed. Please check your email configuration.');
+          toast.warning(
+            'Contract marked as sent, but email delivery failed. Please check your email configuration.'
+          );
         }
         router.refresh();
       } catch (error) {
@@ -157,8 +160,8 @@ export function ContractInstanceList({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative max-w-sm flex-1">
+          <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search contracts..."
             value={search}
@@ -184,9 +187,9 @@ export function ContractInstanceList({
       {instances.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <FileText className="text-muted-foreground mb-4 h-12 w-12" />
             <h3 className="text-lg font-semibold">No contracts</h3>
-            <p className="text-muted-foreground text-center mt-1">
+            <p className="text-muted-foreground mt-1 text-center">
               Create a contract from a template to get started.
             </p>
           </CardContent>
@@ -211,18 +214,13 @@ export function ContractInstanceList({
                 return (
                   <TableRow key={instance.id}>
                     <TableCell className="font-medium">
-                      <Link
-                        href={`/contracts/${instance.id}`}
-                        className="hover:underline"
-                      >
+                      <Link href={`/contracts/${instance.id}`} className="hover:underline">
                         {instance.contractName}
                       </Link>
                     </TableCell>
                     <TableCell>{instance.clientName}</TableCell>
                     <TableCell>
-                      {instance.quoteName || (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      {instance.quoteName || <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>
                       <Badge variant={config?.variant ?? 'secondary'} className="gap-1">
@@ -230,14 +228,17 @@ export function ContractInstanceList({
                         {config?.label ?? instance.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {instance.signedAt ? formatDate(instance.signedAt) : '-'}
-                    </TableCell>
+                    <TableCell>{instance.signedAt ? formatDate(instance.signedAt) : '-'}</TableCell>
                     <TableCell>{formatDate(instance.createdAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="More actions"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -281,8 +282,7 @@ export function ContractInstanceList({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Contract</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this contract? This action cannot be
-              undone.
+              Are you sure you want to delete this contract? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -34,10 +34,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 /**
@@ -940,7 +942,11 @@ export function generateCreditNotePdfHtml(data: CreditNotePdfData): string {
 export function generateContractPdfHtml(data: ContractPdfData): string {
   const primaryColor = sanitizeColor(data.branding?.primaryColor || '#3B82F6');
 
-  const signatureHtml = (sig: ContractPdfData['signatureData'], label: string, signerName?: string | null) => {
+  const signatureHtml = (
+    sig: ContractPdfData['signatureData'],
+    label: string,
+    signerName?: string | null
+  ) => {
     if (!sig) {
       return `
         <div class="signature-box">
@@ -949,9 +955,10 @@ export function generateContractPdfHtml(data: ContractPdfData): string {
         </div>
       `;
     }
-    const sigDisplay = sig.type === 'drawn'
-      ? `<img src="${escapeHtml(sig.value)}" alt="${escapeHtml(label)}" style="max-height: 60px;" />`
-      : `<p style="font-family: 'Brush Script MT', cursive; font-size: 28px; margin: 0;">${escapeHtml(sig.value)}</p>`;
+    const sigDisplay =
+      sig.type === 'drawn'
+        ? `<img src="${escapeHtml(sig.value)}" alt="${escapeHtml(label)}" style="max-height: 60px;" />`
+        : `<p style="font-family: 'Brush Script MT', cursive; font-size: 28px; margin: 0;">${escapeHtml(sig.value)}</p>`;
 
     return `
       <div class="signature-box">

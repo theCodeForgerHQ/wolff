@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
   const mockPrisma: Record<string, any> = {
-    client: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
+    client: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      count: vi.fn(),
+    },
     quote: { findMany: vi.fn() },
     invoice: { findMany: vi.fn(), aggregate: vi.fn() },
     payment: { findMany: vi.fn() },
@@ -14,13 +21,21 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@/lib/api/errors', () => ({
   NotFoundError: class extends Error {
-    constructor(resource: string, id: string) { super(`${resource} not found: ${id}`); this.name = 'NotFoundError'; }
+    constructor(resource: string, id: string) {
+      super(`${resource} not found: ${id}`);
+      this.name = 'NotFoundError';
+    }
   },
   UnauthorizedError: class extends Error {
-    constructor(message = 'Unauthorized') { super(message); this.name = 'UnauthorizedError'; }
+    constructor(message = 'Unauthorized') {
+      super(message);
+      this.name = 'UnauthorizedError';
+    }
   },
 }));
-vi.mock('@/lib/workspace/get-current-workspace', () => ({ getCurrentUserWorkspace: mockGetCurrentUserWorkspace }));
+vi.mock('@/lib/workspace/get-current-workspace', () => ({
+  getCurrentUserWorkspace: mockGetCurrentUserWorkspace,
+}));
 vi.mock('nanoid', () => ({ nanoid: vi.fn(() => 'mock-nanoid-id') }));
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
@@ -52,7 +67,16 @@ describe('Client Actions', () => {
   describe('getClients', () => {
     it('returns paginated clients', async () => {
       mockPrisma.client.findMany.mockResolvedValue([
-        { id: 'c1', name: 'Client 1', email: 'a@b.com', company: null, phone: null, createdAt: new Date(), _count: { quotes: 1, invoices: 0 }, invoices: [] },
+        {
+          id: 'c1',
+          name: 'Client 1',
+          email: 'a@b.com',
+          company: null,
+          phone: null,
+          createdAt: new Date(),
+          _count: { quotes: 1, invoices: 0 },
+          invoices: [],
+        },
       ]);
       mockPrisma.client.count.mockResolvedValue(5);
 

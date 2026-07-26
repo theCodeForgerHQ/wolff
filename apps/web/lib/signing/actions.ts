@@ -28,9 +28,15 @@ export async function sendSigningOtp(input: {
     const ip = await getClientIp();
 
     // Rate limit: 5 OTP sends per 10 minutes per IP
-    const rateLimitResult = await checkRateLimit(`otp-send:${ip}`, { limit: 5, windowMs: 10 * 60 * 1000 });
+    const rateLimitResult = await checkRateLimit(`otp-send:${ip}`, {
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
     if (rateLimitResult.limited) {
-      return { success: false, error: 'Too many verification requests. Please wait a few minutes.' };
+      return {
+        success: false,
+        error: 'Too many verification requests. Please wait a few minutes.',
+      };
     }
 
     let clientEmail: string;
@@ -41,7 +47,11 @@ export async function sendSigningOtp(input: {
     if (input.type === 'quote') {
       // Bug #155: Only allow OTP for quotes in signable status
       const quote = await prisma.quote.findFirst({
-        where: { accessToken: input.accessToken, deletedAt: null, status: { in: ['sent', 'viewed'] } },
+        where: {
+          accessToken: input.accessToken,
+          deletedAt: null,
+          status: { in: ['sent', 'viewed'] },
+        },
         select: {
           id: true,
           client: { select: { email: true, name: true } },
@@ -66,7 +76,11 @@ export async function sendSigningOtp(input: {
       // MEDIUM #19: Filter out soft-deleted contract instances
       // Bug #155: Only allow OTP for contracts in signable status
       const contract = await prisma.contractInstance.findFirst({
-        where: { accessToken: input.accessToken, deletedAt: null, status: { in: ['sent', 'viewed'] } },
+        where: {
+          accessToken: input.accessToken,
+          deletedAt: null,
+          status: { in: ['sent', 'viewed'] },
+        },
         select: {
           id: true,
           client: { select: { email: true, name: true } },
@@ -141,7 +155,10 @@ export async function verifySigningOtpAction(input: {
     const ip = await getClientIp();
 
     // Rate limit: 10 verify attempts per 10 minutes per IP
-    const rateLimitResult = await checkRateLimit(`otp-verify:${ip}`, { limit: 10, windowMs: 10 * 60 * 1000 });
+    const rateLimitResult = await checkRateLimit(`otp-verify:${ip}`, {
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    });
     if (rateLimitResult.limited) {
       return { success: false, error: 'Too many attempts. Please wait a few minutes.' };
     }

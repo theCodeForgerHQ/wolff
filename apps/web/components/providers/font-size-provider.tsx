@@ -1,10 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import {
-  getUserPreferences,
-  updateUserPreferences,
-} from '@/lib/user/preferences-actions';
+import { getUserPreferences, updateUserPreferences } from '@/lib/user/preferences-actions';
 
 export type FontSizeKey = 'xs' | 'sm' | 'default' | 'md' | 'lg' | 'xl';
 export type SidebarStyleKey = 'default' | 'elevated';
@@ -33,7 +30,11 @@ export interface SidebarStyleOption {
 
 export const SIDEBAR_STYLE_OPTIONS: SidebarStyleOption[] = [
   { key: 'default', label: 'Flat', description: 'White background across the entire app' },
-  { key: 'elevated', label: 'Elevated', description: 'Gray canvas with cards and content on white' },
+  {
+    key: 'elevated',
+    label: 'Elevated',
+    description: 'Gray canvas with cards and content on white',
+  },
 ];
 
 const FONT_SIZE_STORAGE_KEY = 'wolff-font-size';

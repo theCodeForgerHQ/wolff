@@ -1,13 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
@@ -34,10 +28,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 const chartConfig = {
@@ -51,7 +47,10 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function RevenueForecastChart({ forecastData, currency = 'USD' }: RevenueForecastChartProps) {
+export function RevenueForecastChart({
+  forecastData,
+  currency = 'USD',
+}: RevenueForecastChartProps) {
   const data = useMemo(() => {
     if (!forecastData || forecastData.length === 0) {
       return [];
@@ -72,12 +71,12 @@ export function RevenueForecastChart({ forecastData, currency = 'USD' }: Revenue
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground h-4 w-4" />
             <CardTitle className="text-sm font-medium">Revenue Forecast</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex h-[260px] items-center justify-center text-sm">
             No forecast data available
           </div>
         </CardContent>
@@ -90,15 +89,15 @@ export function RevenueForecastChart({ forecastData, currency = 'USD' }: Revenue
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground h-4 w-4" />
             <CardTitle className="text-sm font-medium">Revenue Forecast</CardTitle>
           </div>
-          <p className="text-2xl font-semibold tracking-tight mt-1">
+          <p className="mt-1 text-2xl font-semibold tracking-tight">
             {formatCurrency(totalActual || totalProjected, currency)}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1">
-          <span className="text-xs text-muted-foreground">Variance</span>
+        <div className="bg-muted/50 flex items-center gap-1.5 rounded-md border px-2.5 py-1">
+          <span className="text-muted-foreground text-xs">Variance</span>
           <span
             className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
               variance >= 0
@@ -117,10 +116,7 @@ export function RevenueForecastChart({ forecastData, currency = 'USD' }: Revenue
       </CardHeader>
       <CardContent className="pt-0">
         <ChartContainer config={chartConfig} className="h-[260px] w-full">
-          <AreaChart
-            data={data}
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-          >
+          <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="forecastFillProjected" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--color-projected)" stopOpacity={0.15} />
@@ -149,17 +145,19 @@ export function RevenueForecastChart({ forecastData, currency = 'USD' }: Revenue
               axisLine={false}
               className="text-[11px]"
               tickFormatter={(value) => {
-                const symbol = new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
-                  .formatToParts(0)
-                  .find(p => p.type === 'currency')?.value ?? '$';
+                const symbol =
+                  new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency,
+                    maximumFractionDigits: 0,
+                  })
+                    .formatToParts(0)
+                    .find((p) => p.type === 'currency')?.value ?? '$';
                 return `${symbol} ${value / 1000}k`;
               }}
               width={65}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
             <Area
               type="monotone"
               dataKey="projected"
@@ -180,13 +178,13 @@ export function RevenueForecastChart({ forecastData, currency = 'USD' }: Revenue
             />
           </AreaChart>
         </ChartContainer>
-        <div className="mt-3 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+        <div className="text-muted-foreground mt-3 flex items-center justify-center gap-6 text-xs">
           <div className="flex items-center gap-2">
-            <span className="h-px w-5 border-t-[1.5px] border-dashed border-primary/50" />
+            <span className="border-primary/50 h-px w-5 border-t-[1.5px] border-dashed" />
             <span>Projected</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-0.5 w-5 rounded-full bg-primary" />
+            <span className="bg-primary h-0.5 w-5 rounded-full" />
             <span>Actual</span>
           </div>
         </div>

@@ -38,7 +38,11 @@ function processRefund(payment: Payment, refundAmount: number): RefundResult {
   };
 }
 
-function calculateAmountDue(invoiceTotal: number, amountPaid: number, totalRefunded: number): number {
+function calculateAmountDue(
+  invoiceTotal: number,
+  amountPaid: number,
+  totalRefunded: number
+): number {
   return invoiceTotal - amountPaid + totalRefunded;
 }
 

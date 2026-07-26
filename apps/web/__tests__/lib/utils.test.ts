@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  cn,
-  formatCurrency,
-  formatDate,
-  formatRelativeTime,
-} from '@/lib/utils';
+import { cn, formatCurrency, formatDate, formatRelativeTime } from '@/lib/utils';
 
 describe('cn (class name merger)', () => {
   it('merges class names', () => {
@@ -51,7 +46,9 @@ describe('formatDate', () => {
 
   it('formats with custom options', () => {
     const date = new Date('2024-01-15');
-    expect(formatDate(date, { year: 'numeric', month: '2-digit', day: '2-digit' })).toBe('01/15/2024');
+    expect(formatDate(date, { year: 'numeric', month: '2-digit', day: '2-digit' })).toBe(
+      '01/15/2024'
+    );
   });
 });
 

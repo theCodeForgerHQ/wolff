@@ -77,9 +77,7 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
       });
       if (result.success) {
         setEndpoints((prev) =>
-          prev.map((ep) =>
-            ep.id === endpoint.id ? { ...ep, isActive: !ep.isActive } : ep
-          )
+          prev.map((ep) => (ep.id === endpoint.id ? { ...ep, isActive: !ep.isActive } : ep))
         );
         toast.success(endpoint.isActive ? 'Webhook disabled' : 'Webhook enabled');
       } else {
@@ -99,9 +97,7 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
   };
 
   const handleUpdated = (endpoint: EndpointItem) => {
-    setEndpoints((prev) =>
-      prev.map((ep) => (ep.id === endpoint.id ? endpoint : ep))
-    );
+    setEndpoints((prev) => prev.map((ep) => (ep.id === endpoint.id ? endpoint : ep)));
     setEditingEndpoint(null);
   };
 
@@ -112,12 +108,10 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
         <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
           <CardHeader>
             <CardTitle className="text-base">Webhook Secret Created</CardTitle>
-            <CardDescription>
-              Copy this secret now. It will not be shown again.
-            </CardDescription>
+            <CardDescription>Copy this secret now. It will not be shown again.</CardDescription>
           </CardHeader>
           <CardContent>
-            <code className="block rounded bg-muted p-3 font-mono text-sm break-all">
+            <code className="bg-muted block break-all rounded p-3 font-mono text-sm">
               {createdSecret}
             </code>
             <div className="mt-3 flex gap-2">
@@ -131,11 +125,7 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
               >
                 Copy
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setCreatedSecret(null)}
-              >
+              <Button size="sm" variant="ghost" onClick={() => setCreatedSecret(null)}>
                 Dismiss
               </Button>
             </div>
@@ -151,14 +141,19 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
               Send real-time event notifications to external services
             </CardDescription>
           </div>
-          <Button onClick={() => { setShowForm(true); setEditingEndpoint(null); }}>
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setEditingEndpoint(null);
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Endpoint
           </Button>
         </CardHeader>
         <CardContent>
           {endpoints.length === 0 && !showForm ? (
-            <p className="py-8 text-center text-muted-foreground">
+            <p className="text-muted-foreground py-8 text-center">
               No webhook endpoints configured. Add one to start receiving event notifications.
             </p>
           ) : (
@@ -174,7 +169,7 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
               <TableBody>
                 {endpoints.map((endpoint) => (
                   <TableRow key={endpoint.id}>
-                    <TableCell className="font-mono text-sm max-w-[300px] truncate">
+                    <TableCell className="max-w-[300px] truncate font-mono text-sm">
                       {endpoint.url}
                     </TableCell>
                     <TableCell>
@@ -228,7 +223,19 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
                           }}
                           title="Edit"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                          </svg>
                         </Button>
                         <Button
                           variant="ghost"
@@ -236,7 +243,7 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
                           onClick={() => setDeleteId(endpoint.id)}
                           title="Delete"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="text-destructive h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -254,7 +261,10 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
           endpoint={editingEndpoint}
           onCreated={handleCreated}
           onUpdated={handleUpdated}
-          onCancel={() => { setShowForm(false); setEditingEndpoint(null); }}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingEndpoint(null);
+          }}
         />
       )}
 
@@ -272,8 +282,8 @@ export function WebhookEndpointsList({ initialEndpoints }: WebhookEndpointsListP
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Webhook Endpoint</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this webhook endpoint and all its delivery history.
-              This action cannot be undone.
+              This will permanently delete this webhook endpoint and all its delivery history. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

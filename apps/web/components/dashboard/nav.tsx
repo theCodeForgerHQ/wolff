@@ -83,7 +83,7 @@ export function DashboardNav() {
   return (
     <aside
       className={cn(
-        'hidden md:flex h-screen flex-col border-r bg-card transition-all duration-300',
+        'bg-card hidden h-screen flex-col border-r transition-all duration-300 md:flex',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -113,7 +113,7 @@ export function DashboardNav() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center rounded-md py-2 text-sm font-medium transition-colors justify-center px-2',
+                    'flex items-center justify-center rounded-md px-2 py-2 text-sm font-medium transition-colors',
                     hasActiveChild
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -139,25 +139,23 @@ export function DashboardNav() {
                   <item.icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1 text-left">{item.title}</span>
                   <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform',
-                      isExpanded && 'rotate-180'
-                    )}
+                    className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')}
                   />
                 </button>
                 {isExpanded && (
-                  <div className="ml-[22px] flex flex-col gap-0.5 mt-0.5">
+                  <div className="ml-[22px] mt-0.5 flex flex-col gap-0.5">
                     {item.children.map((child) => {
-                      const isChildItemActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                      const isChildItemActive =
+                        pathname === child.href || pathname.startsWith(`${child.href}/`);
                       return (
                         <Link
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            'relative rounded-md px-3 py-2 text-sm transition-colors border-l-2',
+                            'relative rounded-md border-l-2 px-3 py-2 text-sm transition-colors',
                             isChildItemActive
-                              ? 'border-primary bg-primary/10 font-medium text-foreground'
-                              : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                              ? 'border-primary bg-primary/10 text-foreground font-medium'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground border-transparent'
                           )}
                         >
                           {child.title}

@@ -5,8 +5,10 @@ test.describe('Notifications', () => {
     test('should show notification icon in header', async ({ page }) => {
       await page.goto('/dashboard');
 
-      const notificationIcon = page.locator('[class*="notification"], [aria-label*="notification"], button:has([class*="bell"])');
-      if (await notificationIcon.count() > 0) {
+      const notificationIcon = page.locator(
+        '[class*="notification"], [aria-label*="notification"], button:has([class*="bell"])'
+      );
+      if ((await notificationIcon.count()) > 0) {
         await expect(notificationIcon.first()).toBeVisible();
       }
     });
@@ -16,7 +18,7 @@ test.describe('Notifications', () => {
 
       const badge = page.locator('[class*="badge"], [class*="count"]');
       // Badge may or may not be visible depending on notifications
-      if (await badge.count() > 0) {
+      if ((await badge.count()) > 0) {
         await expect(badge.first()).toBeAttached();
       }
     });
@@ -24,7 +26,9 @@ test.describe('Notifications', () => {
     test('should open notification dropdown on click', async ({ page }) => {
       await page.goto('/dashboard');
 
-      const notificationButton = page.locator('[class*="notification"] button, [aria-label*="notification"]').first();
+      const notificationButton = page
+        .locator('[class*="notification"] button, [aria-label*="notification"]')
+        .first();
       if (await notificationButton.isVisible()) {
         await notificationButton.click();
 
@@ -44,7 +48,9 @@ test.describe('Notifications', () => {
       if (await notificationButton.isVisible()) {
         await notificationButton.click();
 
-        const notificationList = page.locator('[class*="notification-list"], [class*="notifications"]');
+        const notificationList = page.locator(
+          '[class*="notification-list"], [class*="notifications"]'
+        );
         if (await notificationList.isVisible()) {
           await expect(notificationList).toBeVisible();
         }
@@ -58,8 +64,10 @@ test.describe('Notifications', () => {
       if (await notificationButton.isVisible()) {
         await notificationButton.click();
 
-        const notificationItem = page.locator('[class*="notification-item"], [class*="notification"] li');
-        if (await notificationItem.count() > 0) {
+        const notificationItem = page.locator(
+          '[class*="notification-item"], [class*="notification"] li'
+        );
+        if ((await notificationItem.count()) > 0) {
           await expect(notificationItem.first()).toBeVisible();
         }
       }
@@ -87,7 +95,7 @@ test.describe('Notifications', () => {
         await notificationButton.click();
 
         const unreadNotification = page.locator('[class*="unread"], [class*="new"]');
-        if (await unreadNotification.count() > 0) {
+        if ((await unreadNotification.count()) > 0) {
           await expect(unreadNotification.first()).toBeVisible();
         }
       }
@@ -137,7 +145,7 @@ test.describe('Notifications', () => {
 
           // Badge should disappear
           const badge = page.locator('[class*="notification"] [class*="badge"]');
-          if (await badge.count() > 0) {
+          if ((await badge.count()) > 0) {
             await expect(badge).not.toBeVisible();
           }
         }
@@ -151,7 +159,11 @@ test.describe('Notifications', () => {
       if (await notificationButton.isVisible()) {
         await notificationButton.click();
 
-        const deleteButton = page.locator('[class*="notification-item"] button[class*="delete"], [class*="notification-item"] button[class*="dismiss"]').first();
+        const deleteButton = page
+          .locator(
+            '[class*="notification-item"] button[class*="delete"], [class*="notification-item"] button[class*="dismiss"]'
+          )
+          .first();
         if (await deleteButton.isVisible()) {
           await deleteButton.click();
         }
@@ -293,7 +305,9 @@ test.describe('Notifications', () => {
         const saveButton = page.getByRole('button', { name: /save/i });
         await saveButton.click();
 
-        const toastCloseButton = page.locator('[class*="toast"] button[class*="close"], [class*="toast"] button[aria-label*="close"]');
+        const toastCloseButton = page.locator(
+          '[class*="toast"] button[class*="close"], [class*="toast"] button[aria-label*="close"]'
+        );
         if (await toastCloseButton.isVisible()) {
           await toastCloseButton.click();
           await expect(toastCloseButton).not.toBeVisible();
@@ -306,7 +320,9 @@ test.describe('Notifications', () => {
     test('should show notification preferences', async ({ page }) => {
       await page.goto('/settings/account');
 
-      const notificationSettings = page.getByText(/notification.*settings|notification.*preferences/i);
+      const notificationSettings = page.getByText(
+        /notification.*settings|notification.*preferences/i
+      );
       if (await notificationSettings.isVisible()) {
         await expect(notificationSettings).toBeVisible();
       }
@@ -452,7 +468,7 @@ test.describe('Notification Accessibility', () => {
     await page.goto('/dashboard');
 
     const liveRegion = page.locator('[aria-live="polite"], [aria-live="assertive"]');
-    if (await liveRegion.count() > 0) {
+    if ((await liveRegion.count()) > 0) {
       await expect(liveRegion.first()).toBeAttached();
     }
   });

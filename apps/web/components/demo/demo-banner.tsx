@@ -18,12 +18,7 @@ export function DemoBanner({ className }: DemoBannerProps) {
   }
 
   return (
-    <div
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 bg-amber-500 text-amber-950',
-        className
-      )}
-    >
+    <div className={cn('fixed left-0 right-0 top-0 z-50 bg-amber-500 text-amber-950', className)}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between gap-4 py-2 text-sm">
           <div className="flex items-center gap-2">
@@ -50,7 +45,7 @@ export function DemoBanner({ className }: DemoBannerProps) {
 
             <button
               onClick={() => setIsDismissed(true)}
-              className="p-1 rounded hover:bg-amber-600/50 transition-colors"
+              className="rounded p-1 transition-colors hover:bg-amber-600/50"
               aria-label="Dismiss banner"
             >
               <X className="h-4 w-4" />
@@ -66,13 +61,7 @@ export function DemoBanner({ className }: DemoBannerProps) {
  * Server component wrapper that checks if user is in demo mode
  * and renders the banner accordingly
  */
-export function DemoBannerWrapper({
-  isDemo,
-  className,
-}: {
-  isDemo: boolean;
-  className?: string;
-}) {
+export function DemoBannerWrapper({ isDemo, className }: { isDemo: boolean; className?: string }) {
   if (!isDemo) {
     return null;
   }

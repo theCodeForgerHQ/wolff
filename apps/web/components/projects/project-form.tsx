@@ -88,19 +88,15 @@ export function ProjectForm({
               </SelectContent>
             </Select>
             {form.formState.errors.clientId && (
-              <p className="text-sm text-destructive">{form.formState.errors.clientId.message}</p>
+              <p className="text-destructive text-sm">{form.formState.errors.clientId.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="name">Project Name *</Label>
-            <Input
-              id="name"
-              {...form.register('name')}
-              placeholder="e.g., Website Redesign 2024"
-            />
+            <Input id="name" {...form.register('name')} placeholder="e.g., Website Redesign 2024" />
             {form.formState.errors.name && (
-              <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+              <p className="text-destructive text-sm">{form.formState.errors.name.message}</p>
             )}
           </div>
 
@@ -113,7 +109,9 @@ export function ProjectForm({
               rows={4}
             />
             {form.formState.errors.description && (
-              <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
+              <p className="text-destructive text-sm">
+                {form.formState.errors.description.message}
+              </p>
             )}
           </div>
         </CardContent>

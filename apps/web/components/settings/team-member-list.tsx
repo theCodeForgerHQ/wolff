@@ -29,7 +29,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { updateMemberRole, removeMember, type WorkspaceMemberData, type WorkspaceMemberRole } from '@/lib/settings/actions';
+import {
+  updateMemberRole,
+  removeMember,
+  type WorkspaceMemberData,
+  type WorkspaceMemberRole,
+} from '@/lib/settings/actions';
 
 const roleIcons: Record<WorkspaceMemberRole, React.ReactNode> = {
   owner: <Crown className="h-4 w-4 text-yellow-500" />,
@@ -93,9 +98,7 @@ export function TeamMemberList({ members, currentUserRole }: TeamMemberListProps
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
+        <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">{error}</div>
       )}
 
       {members.map((member) => (
@@ -109,10 +112,8 @@ export function TeamMemberList({ members, currentUserRole }: TeamMemberListProps
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">
-                  {member.user.name || member.user.email}
-                </p>
-                <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                <p className="font-medium">{member.user.name || member.user.email}</p>
+                <p className="text-muted-foreground text-sm">{member.user.email}</p>
               </div>
             </div>
 
@@ -120,7 +121,9 @@ export function TeamMemberList({ members, currentUserRole }: TeamMemberListProps
               {canManageTeam && member.role !== 'owner' ? (
                 <Select
                   value={member.role}
-                  onValueChange={(value) => handleRoleChange(member.id, value as WorkspaceMemberRole)}
+                  onValueChange={(value) =>
+                    handleRoleChange(member.id, value as WorkspaceMemberRole)
+                  }
                   disabled={updating === member.id}
                 >
                   <SelectTrigger className="w-32">
@@ -195,12 +198,16 @@ export function TeamMemberList({ members, currentUserRole }: TeamMemberListProps
       )}
 
       {/* Bug #80: AlertDialog for member removal confirmation */}
-      <AlertDialog open={!!removeMemberId} onOpenChange={(open) => !open && setRemoveMemberId(null)}>
+      <AlertDialog
+        open={!!removeMemberId}
+        onOpenChange={(open) => !open && setRemoveMemberId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove team member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this member from the workspace? They will lose access to all workspace data.
+              Are you sure you want to remove this member from the workspace? They will lose access
+              to all workspace data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

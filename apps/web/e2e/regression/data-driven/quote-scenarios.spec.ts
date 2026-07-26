@@ -32,7 +32,7 @@ const QUOTE_SCENARIOS = [
   },
   {
     name: 'Decimal rates',
-    lineItems: [{ name: 'Hourly', quantity: 8, rate: 125.50 }],
+    lineItems: [{ name: 'Hourly', quantity: 8, rate: 125.5 }],
     expectedTotal: 1004,
   },
   {
@@ -151,7 +151,7 @@ test.describe('Data-Driven: Tax Calculations', () => {
         const taxElement = page.locator('[data-testid="tax-total"]');
         const totalElement = page.locator('[data-testid="quote-total"]');
 
-        if (await taxElement.isVisible() && await totalElement.isVisible()) {
+        if ((await taxElement.isVisible()) && (await totalElement.isVisible())) {
           const taxText = await taxElement.textContent();
           const totalText = await totalElement.textContent();
 
@@ -168,7 +168,9 @@ test.describe('Data-Driven: Tax Calculations', () => {
 
 test.describe('Data-Driven: Discount Calculations', () => {
   for (const scenario of DISCOUNT_SCENARIOS) {
-    test(`TC-DD-003: ${scenario.type} discount ${scenario.value} on $${scenario.subtotal}`, async ({ page }) => {
+    test(`TC-DD-003: ${scenario.type} discount ${scenario.value} on $${scenario.subtotal}`, async ({
+      page,
+    }) => {
       await page.goto('/quotes/new');
       await page.waitForLoadState('networkidle');
 
@@ -282,7 +284,9 @@ test.describe('Data-Driven: Quote Status Transitions', () => {
   ];
 
   for (const transition of STATUS_TRANSITIONS) {
-    test(`TC-DD-006: ${transition.from} -> ${transition.to} via ${transition.action}`, async ({ page }) => {
+    test(`TC-DD-006: ${transition.from} -> ${transition.to} via ${transition.action}`, async ({
+      page,
+    }) => {
       // This test verifies that the state machine works correctly
       // Each transition should result in the expected end state
       // Implementation depends on seeded test data with specific statuses
@@ -366,7 +370,7 @@ test.describe('Data-Driven: Search Functionality', () => {
 
         if (data.shouldFind) {
           // Should find clients or at least have the page work
-          const pageWorks = count > 0 || await emptyState.isVisible();
+          const pageWorks = count > 0 || (await emptyState.isVisible());
           expect(pageWorks).toBeTruthy();
         }
       }

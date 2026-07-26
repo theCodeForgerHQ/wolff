@@ -126,7 +126,9 @@ test.describe('Onboarding Flow', () => {
 
       // Should see the onboarding wizard welcome text and first step heading
       await expect(page.getByText('Welcome to Wolff')).toBeVisible();
-      await expect(page.getByRole('heading', { name: /tell us about your business/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /tell us about your business/i })
+      ).toBeVisible();
     });
 
     test('should show progress indicator with steps', async ({ page }) => {
@@ -193,7 +195,9 @@ test.describe('Onboarding Flow', () => {
       await page.getByRole('button', { name: /back/i }).click();
 
       // Should be back on business step (verify we're back on step 1)
-      await expect(page.getByRole('heading', { name: /tell us about your business/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /tell us about your business/i })
+      ).toBeVisible();
       await expect(page.getByLabel(/business name/i)).toBeVisible();
     });
 

@@ -3,23 +3,9 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import {
-  Mail,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  MoreHorizontal,
-  X,
-} from 'lucide-react';
+import { Mail, Clock, CheckCircle, XCircle, AlertCircle, MoreHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -89,9 +75,9 @@ export function ScheduledEmailList({ emails }: ScheduledEmailListProps) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+          <Mail className="text-muted-foreground mb-4 h-12 w-12" />
           <h3 className="text-lg font-semibold">No scheduled emails</h3>
-          <p className="text-muted-foreground text-center mt-1">
+          <p className="text-muted-foreground mt-1 text-center">
             Scheduled emails will appear here when you set up automated reminders.
           </p>
         </CardContent>
@@ -104,9 +90,7 @@ export function ScheduledEmailList({ emails }: ScheduledEmailListProps) {
       <Card>
         <CardHeader>
           <CardTitle>Scheduled Emails</CardTitle>
-          <CardDescription>
-            View and manage scheduled email notifications
-          </CardDescription>
+          <CardDescription>View and manage scheduled email notifications</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -128,14 +112,10 @@ export function ScheduledEmailList({ emails }: ScheduledEmailListProps) {
                     <TableCell>
                       <div>
                         <p className="font-medium">{email.recipientName || 'Unknown'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {email.recipientEmail}
-                        </p>
+                        <p className="text-muted-foreground text-sm">{email.recipientEmail}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {email.subject}
-                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{email.subject}</TableCell>
                     <TableCell>
                       {format(new Date(email.scheduledFor), 'MMM d, yyyy h:mm a')}
                     </TableCell>
@@ -149,7 +129,12 @@ export function ScheduledEmailList({ emails }: ScheduledEmailListProps) {
                       {email.status === 'pending' && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="More actions"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -178,8 +163,7 @@ export function ScheduledEmailList({ emails }: ScheduledEmailListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Scheduled Email</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel this scheduled email? This action
-              cannot be undone.
+              Are you sure you want to cancel this scheduled email? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

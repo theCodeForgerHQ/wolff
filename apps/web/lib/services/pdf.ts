@@ -43,7 +43,7 @@ async function acquirePdfSlot(): Promise<void> {
     if (Date.now() - start > PDF_SLOT_TIMEOUT) {
       throw new Error('PDF generation service is busy. Please try again later.');
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   activePdfCount++;
 }
@@ -82,8 +82,10 @@ async function getBrowser(): Promise<Browser> {
     });
   } else {
     // Local development: find system Chrome/Chromium
-    const executablePath =
-      (process.env.PUPPETEER_EXECUTABLE_PATH || findLocalChrome()).replace(/\\/g, '/');
+    const executablePath = (process.env.PUPPETEER_EXECUTABLE_PATH || findLocalChrome()).replace(
+      /\\/g,
+      '/'
+    );
 
     browserInstance = await puppeteer.launch({
       headless: true,
@@ -152,10 +154,7 @@ export async function closeBrowser(): Promise<void> {
 }
 
 // Generate PDF from HTML
-export async function generatePdfFromHtml(
-  html: string,
-  options: PdfOptions = {}
-): Promise<Buffer> {
+export async function generatePdfFromHtml(html: string, options: PdfOptions = {}): Promise<Buffer> {
   // Limit HTML size to prevent DoS via massive content (e.g., thousands of line items)
   const MAX_HTML_SIZE = 2 * 1024 * 1024; // 2MB
   if (html.length > MAX_HTML_SIZE) {
@@ -230,22 +229,19 @@ function isPrivateIp(hostname: string): boolean {
   // Handle decimal IP format (e.g., 2130706433 = 127.0.0.1)
   if (/^\d+$/.test(ip)) {
     const num = parseInt(ip, 10);
-    if (num >= 0 && num <= 0xFFFFFFFF) {
-      ip = [
-        (num >>> 24) & 0xFF,
-        (num >>> 16) & 0xFF,
-        (num >>> 8) & 0xFF,
-        num & 0xFF,
-      ].join('.');
+    if (num >= 0 && num <= 0xffffffff) {
+      ip = [(num >>> 24) & 0xff, (num >>> 16) & 0xff, (num >>> 8) & 0xff, num & 0xff].join('.');
     }
   }
 
   // Handle octal IP format (e.g., 0177.0.0.1 = 127.0.0.1)
-  if (/^0\d/.test(ip) || ip.includes('.0') && /\.\d/.test(ip)) {
+  if (/^0\d/.test(ip) || (ip.includes('.0') && /\.\d/.test(ip))) {
     const parts = ip.split('.');
-    if (parts.length === 4 && parts.every(p => /^0?\d+$/.test(p))) {
-      const decoded = parts.map(p => p.startsWith('0') && p.length > 1 ? parseInt(p, 8) : parseInt(p, 10));
-      if (decoded.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
+    if (parts.length === 4 && parts.every((p) => /^0?\d+$/.test(p))) {
+      const decoded = parts.map((p) =>
+        p.startsWith('0') && p.length > 1 ? parseInt(p, 8) : parseInt(p, 10)
+      );
+      if (decoded.every((n) => !isNaN(n) && n >= 0 && n <= 255)) {
         ip = decoded.join('.');
       }
     }
@@ -253,9 +249,9 @@ function isPrivateIp(hostname: string): boolean {
 
   // Standard IPv4 dotted-decimal checks
   const ipParts = ip.split('.');
-  if (ipParts.length === 4 && ipParts.every(p => /^\d{1,3}$/.test(p))) {
+  if (ipParts.length === 4 && ipParts.every((p) => /^\d{1,3}$/.test(p))) {
     const octets = ipParts.map(Number);
-    if (octets.some(o => o < 0 || o > 255)) return false;
+    if (octets.some((o) => o < 0 || o > 255)) return false;
 
     const a = octets[0]!;
     const b = octets[1]!;
@@ -270,7 +266,7 @@ function isPrivateIp(hostname: string): boolean {
     // 169.254.0.0/16 (link-local, including AWS metadata 169.254.169.254)
     if (a === 169 && b === 254) return true;
     // 0.0.0.0
-    if (octets.every(o => o === 0)) return true;
+    if (octets.every((o) => o === 0)) return true;
   }
 
   return false;
@@ -302,10 +298,7 @@ function validatePdfUrl(url: string): boolean {
 }
 
 // Generate PDF from URL
-export async function generatePdfFromUrl(
-  url: string,
-  options: PdfOptions = {}
-): Promise<Buffer> {
+export async function generatePdfFromUrl(url: string, options: PdfOptions = {}): Promise<Buffer> {
   if (!validatePdfUrl(url)) {
     throw new Error('Invalid URL for PDF generation');
   }

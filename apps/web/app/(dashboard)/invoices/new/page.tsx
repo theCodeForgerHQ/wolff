@@ -1,5 +1,10 @@
 import { getClientsForSelect } from '@/lib/clients/actions';
-import { getTaxRates, getNumberSequences, getBusinessProfile, getWorkspaceCurrency } from '@/lib/settings/actions';
+import {
+  getTaxRates,
+  getNumberSequences,
+  getBusinessProfile,
+  getWorkspaceCurrency,
+} from '@/lib/settings/actions';
 
 import { NewInvoiceForm } from './new-invoice-form';
 

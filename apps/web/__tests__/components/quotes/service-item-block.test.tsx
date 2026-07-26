@@ -91,9 +91,7 @@ describe('ServiceItemBlockContent', () => {
       });
 
       const amount = block.content.quantity * block.content.rate;
-      const taxAmount = block.content.taxRate
-        ? amount * (block.content.taxRate / 100)
-        : 0;
+      const taxAmount = block.content.taxRate ? amount * (block.content.taxRate / 100) : 0;
 
       expect(taxAmount).toBe(0);
     });

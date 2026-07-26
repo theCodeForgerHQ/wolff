@@ -41,7 +41,11 @@ export const invoiceSettingsSchema = z.object({
   showLogo: z.boolean().default(true),
   showPaymentInfo: z.boolean().default(true),
   autoReminders: z.boolean().default(true),
-  reminderDays: z.array(z.number().int().min(1).max(90)).max(5).default([7, 3, 1]).transform((days) => [...new Set(days)]),
+  reminderDays: z
+    .array(z.number().int().min(1).max(90))
+    .max(5)
+    .default([7, 3, 1])
+    .transform((days) => [...new Set(days)]),
 });
 
 // Quote settings schema
@@ -66,16 +70,20 @@ export const emailSettingsSchema = z.object({
 
 // Payment settings schema
 export const paymentSettingsSchema = z.object({
-  acceptedMethods: z.array(z.enum(['stripe', 'bank_transfer', 'check', 'cash', 'other'])).default(['stripe']),
+  acceptedMethods: z
+    .array(z.enum(['stripe', 'bank_transfer', 'check', 'cash', 'other']))
+    .default(['stripe']),
   stripeEnabled: z.boolean().default(false),
-  bankDetails: z.object({
-    bankName: z.string().max(100).optional(),
-    accountName: z.string().max(100).optional(),
-    accountNumber: z.string().max(50).optional(),
-    routingNumber: z.string().max(50).optional(),
-    swiftCode: z.string().max(20).optional(),
-    iban: z.string().max(50).optional(),
-  }).optional(),
+  bankDetails: z
+    .object({
+      bankName: z.string().max(100).optional(),
+      accountName: z.string().max(100).optional(),
+      accountNumber: z.string().max(50).optional(),
+      routingNumber: z.string().max(50).optional(),
+      swiftCode: z.string().max(20).optional(),
+      iban: z.string().max(50).optional(),
+    })
+    .optional(),
   defaultCurrency: z.string().length(3).default('USD'),
   defaultTaxRate: z.number().min(0).max(100).default(0),
   taxLabel: z.string().max(50).default('Tax'),

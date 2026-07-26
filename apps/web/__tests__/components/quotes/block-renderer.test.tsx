@@ -42,10 +42,16 @@ vi.mock('@/lib/stores/quote-builder-store', () => ({
 
 // Mock block components with identifiable content
 vi.mock('@/components/quotes/blocks', () => ({
-  HeaderBlockContent: ({ block }: any) => <div data-testid="header-block">{block.content.text}</div>,
+  HeaderBlockContent: ({ block }: any) => (
+    <div data-testid="header-block">{block.content.text}</div>
+  ),
   TextBlockContent: ({ block }: any) => <div data-testid="text-block">Text Block</div>,
-  ServiceItemBlockContent: ({ block }: any) => <div data-testid="service-item-block">{block.content.name}</div>,
-  ServiceGroupBlockContent: ({ block }: any) => <div data-testid="service-group-block">{block.content.title}</div>,
+  ServiceItemBlockContent: ({ block }: any) => (
+    <div data-testid="service-item-block">{block.content.name}</div>
+  ),
+  ServiceGroupBlockContent: ({ block }: any) => (
+    <div data-testid="service-group-block">{block.content.title}</div>
+  ),
   DividerBlockContent: () => <div data-testid="divider-block">Divider</div>,
   SpacerBlockContent: () => <div data-testid="spacer-block">Spacer</div>,
   ImageBlockContent: ({ block }: any) => <div data-testid="image-block">{block.content.alt}</div>,
@@ -62,14 +68,28 @@ function createTestBlock(type: string, id = 'block-1', contentOverrides = {}): Q
   const defaults: Record<string, any> = {
     header: { text: 'Test Header', level: 2, alignment: 'left' },
     text: { html: '<p>Test text</p>', alignment: 'left' },
-    'service-item': { name: 'Test Service', description: '', quantity: 1, rate: 100, unit: 'hour', taxRate: null, rateCardId: null },
+    'service-item': {
+      name: 'Test Service',
+      description: '',
+      quantity: 1,
+      rate: 100,
+      unit: 'hour',
+      taxRate: null,
+      rateCardId: null,
+    },
     'service-group': { title: 'Test Group', description: '', collapsed: false, items: [] },
     divider: { style: 'solid', thickness: 1, color: '#e5e7eb' },
     spacer: { height: 'md' },
     image: { src: '', alt: 'Test image', width: 'full', alignment: 'center', caption: '' },
     columns: { ratio: '50-50', gap: 'md', leftContent: [], rightContent: [] },
     table: { headers: ['Col 1'], rows: [['Cell 1']], striped: true, bordered: true },
-    signature: { label: 'Signature', required: true, signatureData: null, signedAt: null, signerName: null },
+    signature: {
+      label: 'Signature',
+      required: true,
+      signatureData: null,
+      signedAt: null,
+      signerName: null,
+    },
   };
 
   return {
@@ -206,9 +226,7 @@ describe('BlockRenderer', () => {
 
     it('hides toolbar in preview mode', () => {
       const block = createTestBlock('text');
-      render(
-        <BlockRenderer block={block} index={0} isSelected={false} isPreview={true} />
-      );
+      render(<BlockRenderer block={block} index={0} isSelected={false} isPreview={true} />);
       // No drag handle or action buttons in preview
       expect(screen.queryByLabelText('Block options')).not.toBeInTheDocument();
     });
@@ -217,9 +235,7 @@ describe('BlockRenderer', () => {
   describe('Accessibility', () => {
     it('action menu has accessible label', () => {
       const block = createTestBlock('text');
-      render(
-        <BlockRenderer block={block} index={0} isSelected={false} isPreview={false} />
-      );
+      render(<BlockRenderer block={block} index={0} isSelected={false} isPreview={false} />);
       expect(screen.getByLabelText('Block options')).toBeInTheDocument();
     });
   });

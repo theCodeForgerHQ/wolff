@@ -59,16 +59,14 @@ export function ProjectSelector({
     }
 
     loadProjects();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [clientId]);
 
   if (!clientId) {
     return (
-      <Button
-        variant="outline"
-        className="w-full justify-start text-muted-foreground"
-        disabled
-      >
+      <Button variant="outline" className="text-muted-foreground w-full justify-start" disabled>
         <FolderKanban className="mr-2 h-4 w-4" />
         Select a client first
       </Button>
@@ -97,7 +95,7 @@ export function ProjectSelector({
               <div className="flex flex-col">
                 <span>{project.name}</span>
                 {project.description && (
-                  <span className="text-xs text-muted-foreground line-clamp-1">
+                  <span className="text-muted-foreground line-clamp-1 text-xs">
                     {project.description}
                   </span>
                 )}

@@ -45,20 +45,17 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">Pending Invitations</h2>
+      <h2 className="mb-4 text-lg font-semibold">Pending Invitations</h2>
       <div className="space-y-3">
         {invitations.map((inv) => (
-          <div
-            key={inv.id}
-            className="flex items-center justify-between rounded-lg border p-4"
-          >
+          <div key={inv.id} className="flex items-center justify-between rounded-lg border p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+              <div className="bg-muted flex h-9 w-9 items-center justify-center rounded-full">
+                <Mail className="text-muted-foreground h-4 w-4" />
               </div>
               <div>
                 <p className="text-sm font-medium">{inv.email}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Expires {new Date(inv.expiresAt).toLocaleDateString()}
                 </p>
               </div>

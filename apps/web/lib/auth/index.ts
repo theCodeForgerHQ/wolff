@@ -28,12 +28,16 @@ const nextAuth = NextAuth({
     maxAge: 7 * 24 * 60 * 60, // 7 days — Bug #15: sessions expire instead of lasting forever
   },
   // Bug #87: Only trust host header in environments with known-good reverse proxies
-  trustHost: process.env.VERCEL === '1' || process.env.NODE_ENV === 'development' || process.env.TRUST_HOST === 'true',
+  trustHost:
+    process.env.VERCEL === '1' ||
+    process.env.NODE_ENV === 'development' ||
+    process.env.TRUST_HOST === 'true',
   ...authConfig,
 });
 
 // Export with explicit typing to avoid TypeScript portability issues
-export const handlers: { GET: typeof nextAuth.handlers.GET; POST: typeof nextAuth.handlers.POST } = nextAuth.handlers;
+export const handlers: { GET: typeof nextAuth.handlers.GET; POST: typeof nextAuth.handlers.POST } =
+  nextAuth.handlers;
 export const auth: () => Promise<Session | null> = nextAuth.auth;
 export const signIn: typeof nextAuth.signIn = nextAuth.signIn;
 export const signOut: typeof nextAuth.signOut = nextAuth.signOut;

@@ -20,20 +20,17 @@ export default function InvoiceItemsPage() {
 }
 
 async function InvoiceItemsContent() {
-  const [items, currency] = await Promise.all([
-    getSavedLineItems(),
-    getWorkspaceCurrency(),
-  ]);
+  const [items, currency] = await Promise.all([getSavedLineItems(), getWorkspaceCurrency()]);
   return <InvoiceItemsClient initialItems={items} currency={currency} />;
 }
 
 function TableSkeleton() {
   return (
-    <div className="rounded-md border p-4 space-y-3">
+    <div className="space-y-3 rounded-md border p-4">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4">
           <Skeleton className="h-4 w-4" />
-          <Skeleton className="h-4 flex-1 max-w-[200px]" />
+          <Skeleton className="h-4 max-w-[200px] flex-1" />
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-24" />
         </div>

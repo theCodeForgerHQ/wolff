@@ -36,7 +36,7 @@ test.describe('Error Boundaries', () => {
 
       // Header/navigation should still be visible
       const header = page.locator('header, nav');
-      if (await header.count() > 0) {
+      if ((await header.count()) > 0) {
         await expect(header.first()).toBeVisible();
       }
     });
@@ -128,7 +128,7 @@ test.describe('Error Boundaries', () => {
 
       // Error field should be highlighted
       const errorField = page.locator('[class*="error"], [aria-invalid="true"]');
-      if (await errorField.count() > 0) {
+      if ((await errorField.count()) > 0) {
         await expect(errorField.first()).toBeVisible();
       }
     });
@@ -274,7 +274,7 @@ test.describe('Error Boundaries', () => {
 
       // Even if one component fails, others should work
       const workingComponent = page.locator('[class*="card"], [class*="section"], main');
-      if (await workingComponent.count() > 0) {
+      if ((await workingComponent.count()) > 0) {
         await expect(workingComponent.first()).toBeVisible();
       }
     });
@@ -351,7 +351,7 @@ test.describe('Error Boundaries Accessibility', () => {
 
     // Error should be in live region
     const liveRegion = page.locator('[aria-live], [role="alert"]');
-    if (await liveRegion.count() > 0) {
+    if ((await liveRegion.count()) > 0) {
       await expect(liveRegion.first()).toBeAttached();
     }
   });
@@ -379,7 +379,7 @@ test.describe('Error Boundaries Accessibility', () => {
 
     // Error messages should be associated with fields
     const errorField = page.locator('[aria-describedby], [aria-errormessage]');
-    if (await errorField.count() > 0) {
+    if ((await errorField.count()) > 0) {
       await expect(errorField.first()).toBeAttached();
     }
   });

@@ -253,10 +253,7 @@ export async function getProject(projectId: string) {
 /**
  * Update a project
  */
-export async function updateProject(
-  projectId: string,
-  data: UpdateProjectInput
-) {
+export async function updateProject(projectId: string, data: UpdateProjectInput) {
   const { workspace, role } = await getActiveWorkspace();
 
   // MEDIUM #25: Viewers cannot update projects
@@ -416,10 +413,7 @@ export async function getProjectStats(projectId: string) {
     sent: project.quotes.filter((q) => q.status === 'sent').length,
     accepted: project.quotes.filter((q) => q.status === 'accepted').length,
     expired: project.quotes.filter((q) => q.status === 'expired').length,
-    totalValue: project.quotes.reduce(
-      (sum, q) => sum + toNumber(q.total),
-      0
-    ),
+    totalValue: project.quotes.reduce((sum, q) => sum + toNumber(q.total), 0),
     acceptedValue: project.quotes
       .filter((q) => q.status === 'accepted')
       .reduce((sum, q) => sum + toNumber(q.total), 0),
@@ -428,24 +422,20 @@ export async function getProjectStats(projectId: string) {
   // Calculate invoice stats
   const invoiceStats = {
     total: project.invoices.length,
-    pending: project.invoices.filter((i) =>
-      ['draft', 'sent', 'viewed'].includes(i.status)
-    ).length,
+    pending: project.invoices.filter((i) => ['draft', 'sent', 'viewed'].includes(i.status)).length,
     paid: project.invoices.filter((i) => i.status === 'paid').length,
-    overdue: project.invoices.filter((i) => i.status !== 'paid' && i.status !== 'voided' && i.status !== 'draft' && i.dueDate && new Date(i.dueDate) < new Date()).length,
+    overdue: project.invoices.filter(
+      (i) =>
+        i.status !== 'paid' &&
+        i.status !== 'voided' &&
+        i.status !== 'draft' &&
+        i.dueDate &&
+        new Date(i.dueDate) < new Date()
+    ).length,
     partial: project.invoices.filter((i) => i.status === 'partial').length,
-    totalValue: project.invoices.reduce(
-      (sum, i) => sum + toNumber(i.total),
-      0
-    ),
-    totalPaid: project.invoices.reduce(
-      (sum, i) => sum + toNumber(i.amountPaid),
-      0
-    ),
-    totalDue: project.invoices.reduce(
-      (sum, i) => sum + toNumber(i.amountDue),
-      0
-    ),
+    totalValue: project.invoices.reduce((sum, i) => sum + toNumber(i.total), 0),
+    totalPaid: project.invoices.reduce((sum, i) => sum + toNumber(i.amountPaid), 0),
+    totalDue: project.invoices.reduce((sum, i) => sum + toNumber(i.amountDue), 0),
   };
 
   return {

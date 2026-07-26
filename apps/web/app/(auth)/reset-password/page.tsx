@@ -15,8 +15,8 @@ function ResetPasswordSkeleton() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <Skeleton className="h-8 w-48 mx-auto" />
-        <Skeleton className="h-4 w-64 mx-auto mt-2" />
+        <Skeleton className="mx-auto h-8 w-48" />
+        <Skeleton className="mx-auto mt-2 h-4 w-64" />
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">

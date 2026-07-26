@@ -56,7 +56,7 @@ const supportOptions = [
   {
     icon: Mail,
     title: 'Email Support',
-    description: 'We\'ll respond within 24 hours',
+    description: "We'll respond within 24 hours",
     action: 'Send Email',
     href: 'mailto:support@wolff.app',
     available: true,
@@ -74,19 +74,23 @@ const supportOptions = [
 const faqs = [
   {
     question: 'How do I create my first quote?',
-    answer: 'Navigate to Quotes in the sidebar, click "New Quote", fill in the client details and line items, then save or send to your client.',
+    answer:
+      'Navigate to Quotes in the sidebar, click "New Quote", fill in the client details and line items, then save or send to your client.',
   },
   {
     question: 'Can I convert a quote to an invoice?',
-    answer: 'Yes! Once a quote is accepted, you can convert it to an invoice with one click. All the details will be automatically transferred.',
+    answer:
+      'Yes! Once a quote is accepted, you can convert it to an invoice with one click. All the details will be automatically transferred.',
   },
   {
     question: 'How do I set up payment processing?',
-    answer: 'Go to Settings > Payments and connect your Stripe account. Once connected, your clients can pay invoices directly.',
+    answer:
+      'Go to Settings > Payments and connect your Stripe account. Once connected, your clients can pay invoices directly.',
   },
   {
     question: 'Can I customize the look of my quotes?',
-    answer: 'Yes! Go to Settings > Branding to customize colors, fonts, and add your logo to all your documents.',
+    answer:
+      'Yes! Go to Settings > Branding to customize colors, fonts, and add your logo to all your documents.',
   },
 ];
 
@@ -95,27 +99,25 @@ export default function HelpPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Help & Support</h1>
-        <p className="text-muted-foreground">
-          Find answers, learn best practices, and get support
-        </p>
+        <p className="text-muted-foreground">Find answers, learn best practices, and get support</p>
       </div>
 
       {/* Low #78: Added IDs for anchor navigation from help topic links */}
       <section id="getting-started">
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">Resources</h2>
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium">Resources</h2>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {helpTopics.map((topic) => (
             <a
               key={topic.title}
               href={topic.href}
-              className="flex items-start gap-3 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
+              className="hover:bg-muted/50 flex items-start gap-3 rounded-lg border p-4 transition-colors"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <topic.icon className="h-4 w-4 text-primary" />
+              <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                <topic.icon className="text-primary h-4 w-4" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium">{topic.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{topic.description}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">{topic.description}</p>
               </div>
             </a>
           ))}
@@ -124,17 +126,21 @@ export default function HelpPage() {
 
       {/* FAQs */}
       <section id="tips">
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">Frequently Asked Questions</h2>
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium">
+          Frequently Asked Questions
+        </h2>
         <div className="rounded-lg border">
           <Accordion type="single" collapsible className="px-4">
             {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`faq-${index}`} className={index === faqs.length - 1 ? 'border-b-0' : ''}>
+              <AccordionItem
+                key={index}
+                value={`faq-${index}`}
+                className={index === faqs.length - 1 ? 'border-b-0' : ''}
+              >
                 <AccordionTrigger className="text-sm hover:no-underline">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  {faq.answer}
-                </AccordionContent>
+                <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
@@ -143,17 +149,17 @@ export default function HelpPage() {
 
       {/* Support Options */}
       <section id="docs">
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">Get Support</h2>
-        <div className="rounded-lg border divide-y">
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium">Get Support</h2>
+        <div className="divide-y rounded-lg border">
           {supportOptions.map((option) => (
             <div key={option.title} className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <option.icon className="h-4 w-4 text-primary" />
+                <div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                  <option.icon className="text-primary h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-sm font-medium">{option.title}</p>
-                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                  <p className="text-muted-foreground text-xs">{option.description}</p>
                 </div>
               </div>
               {option.available ? (
@@ -165,10 +171,12 @@ export default function HelpPage() {
                     </a>
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm">{option.action}</Button>
+                  <Button variant="outline" size="sm">
+                    {option.action}
+                  </Button>
                 )
               ) : (
-                <span className="text-xs text-muted-foreground">Coming soon</span>
+                <span className="text-muted-foreground text-xs">Coming soon</span>
               )}
             </div>
           ))}

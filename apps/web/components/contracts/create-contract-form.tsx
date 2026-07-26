@@ -10,13 +10,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -138,17 +132,12 @@ export function CreateContractForm({
       <Card>
         <CardHeader>
           <CardTitle>Create Contract</CardTitle>
-          <CardDescription>
-            Create a new contract from a template for your client.
-          </CardDescription>
+          <CardDescription>Create a new contract from a template for your client.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="template">Contract Template</Label>
-            <Select
-              value={selectedContractId}
-              onValueChange={handleTemplateChange}
-            >
+            <Select value={selectedContractId} onValueChange={handleTemplateChange}>
               <SelectTrigger id="template">
                 <SelectValue placeholder="Select a template" />
               </SelectTrigger>
@@ -161,16 +150,13 @@ export function CreateContractForm({
               </SelectContent>
             </Select>
             {errors.contractId && (
-              <p className="text-sm text-destructive">{errors.contractId.message}</p>
+              <p className="text-destructive text-sm">{errors.contractId.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="client">Client</Label>
-            <Select
-              value={selectedClientId}
-              onValueChange={(value) => setValue('clientId', value)}
-            >
+            <Select value={selectedClientId} onValueChange={(value) => setValue('clientId', value)}>
               <SelectTrigger id="client">
                 <SelectValue placeholder="Select a client" />
               </SelectTrigger>
@@ -183,7 +169,7 @@ export function CreateContractForm({
               </SelectContent>
             </Select>
             {errors.clientId && (
-              <p className="text-sm text-destructive">{errors.clientId.message}</p>
+              <p className="text-destructive text-sm">{errors.clientId.message}</p>
             )}
           </div>
 
@@ -191,9 +177,7 @@ export function CreateContractForm({
             <Label htmlFor="quote">Related Quote (Optional)</Label>
             <Select
               value={watch('quoteId') || 'none'}
-              onValueChange={(value) =>
-                setValue('quoteId', value === 'none' ? '' : value)
-              }
+              onValueChange={(value) => setValue('quoteId', value === 'none' ? '' : value)}
             >
               <SelectTrigger id="quote">
                 <SelectValue placeholder="Select a quote (optional)" />
@@ -224,9 +208,7 @@ export function CreateContractForm({
               <div key={variable.key} className="space-y-2">
                 <Label htmlFor={variable.key}>
                   {variable.label}
-                  {variable.required && (
-                    <span className="text-destructive ml-1">*</span>
-                  )}
+                  {variable.required && <span className="text-destructive ml-1">*</span>}
                 </Label>
                 {variable.type === 'boolean' ? (
                   <Select
@@ -249,7 +231,13 @@ export function CreateContractForm({
                 ) : (
                   <Input
                     id={variable.key}
-                    type={variable.type === 'date' ? 'date' : variable.type === 'number' ? 'number' : 'text'}
+                    type={
+                      variable.type === 'date'
+                        ? 'date'
+                        : variable.type === 'number'
+                          ? 'number'
+                          : 'text'
+                    }
                     value={variableValues[variable.key] || ''}
                     onChange={(e) =>
                       setVariableValues((prev) => ({

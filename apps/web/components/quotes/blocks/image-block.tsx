@@ -32,7 +32,12 @@ export function ImageBlockContent({ block }: ImageBlockContentProps) {
   const handleUrlSubmit = () => {
     // Bug #65: Validate URL to prevent javascript: protocol injection
     const trimmedUrl = urlInput.trim();
-    if (trimmedUrl && !trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://') && !trimmedUrl.startsWith('data:image/')) {
+    if (
+      trimmedUrl &&
+      !trimmedUrl.startsWith('http://') &&
+      !trimmedUrl.startsWith('https://') &&
+      !trimmedUrl.startsWith('data:image/')
+    ) {
       return; // Reject invalid URLs silently
     }
     // Bug #62: Block SVG data URIs to prevent XSS (SVG can contain JavaScript)
@@ -51,11 +56,11 @@ export function ImageBlockContent({ block }: ImageBlockContentProps) {
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center rounded-lg border-2 border-dashed bg-muted/20 p-8',
+          'bg-muted/20 flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8',
           isEditing && 'border-primary'
         )}
       >
-        <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
+        <ImageIcon className="text-muted-foreground mb-4 h-12 w-12" />
         {isEditing ? (
           <div className="w-full max-w-md space-y-2">
             <div className="flex gap-2">
@@ -69,12 +74,12 @@ export function ImageBlockContent({ block }: ImageBlockContentProps) {
                 Add
               </Button>
             </div>
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-center text-xs">
               or drag and drop an image here
             </p>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Click to add an image</p>
+          <p className="text-muted-foreground text-sm">Click to add an image</p>
         )}
       </div>
     );
@@ -100,11 +105,11 @@ export function ImageBlockContent({ block }: ImageBlockContentProps) {
           <img
             src={block.content.src}
             alt={block.content.alt || 'Quote image'}
-            className="w-full h-auto object-cover"
+            className="h-auto w-full object-cover"
           />
         </div>
         {block.content.caption && (
-          <figcaption className="mt-2 text-center text-sm text-muted-foreground">
+          <figcaption className="text-muted-foreground mt-2 text-center text-sm">
             {block.content.caption}
           </figcaption>
         )}

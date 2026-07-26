@@ -100,7 +100,10 @@ export async function getQuotePdfData(quoteId: string): Promise<QuotePdfData | n
 export async function getQuotePdfDataByToken(accessToken: string): Promise<QuotePdfData | null> {
   // MEDIUM #30: Rate limit public PDF endpoints to prevent abuse
   const { checkRateLimit } = await import('@/lib/rate-limit');
-  const rateLimitResult = await checkRateLimit(`pdf-quote:${accessToken}`, { limit: 20, windowMs: 60000 });
+  const rateLimitResult = await checkRateLimit(`pdf-quote:${accessToken}`, {
+    limit: 20,
+    windowMs: 60000,
+  });
   if (rateLimitResult.limited) {
     return null;
   }
@@ -289,10 +292,15 @@ export async function getInvoicePdfData(invoiceId: string): Promise<InvoicePdfDa
 /**
  * Get invoice data for PDF generation by access token (public)
  */
-export async function getInvoicePdfDataByToken(accessToken: string): Promise<InvoicePdfData | null> {
+export async function getInvoicePdfDataByToken(
+  accessToken: string
+): Promise<InvoicePdfData | null> {
   // MEDIUM #30: Rate limit public PDF endpoints to prevent abuse
   const { checkRateLimit } = await import('@/lib/rate-limit');
-  const rateLimitResult = await checkRateLimit(`pdf-invoice:${accessToken}`, { limit: 20, windowMs: 60000 });
+  const rateLimitResult = await checkRateLimit(`pdf-invoice:${accessToken}`, {
+    limit: 20,
+    windowMs: 60000,
+  });
   if (rateLimitResult.limited) {
     return null;
   }
@@ -392,7 +400,9 @@ export async function getInvoicePdfDataByToken(accessToken: string): Promise<Inv
 /**
  * Get contract data for PDF generation (authenticated)
  */
-export async function getContractPdfData(contractInstanceId: string): Promise<ContractPdfData | null> {
+export async function getContractPdfData(
+  contractInstanceId: string
+): Promise<ContractPdfData | null> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   const instance = await prisma.contractInstance.findFirst({
@@ -435,10 +445,12 @@ export async function getContractPdfData(contractInstanceId: string): Promise<Co
       phone: profile?.phone || null,
       logoUrl: profile?.logoUrl || null,
     },
-    branding: branding ? {
-      primaryColor: branding.primaryColor,
-      accentColor: branding.accentColor,
-    } : null,
+    branding: branding
+      ? {
+          primaryColor: branding.primaryColor,
+          accentColor: branding.accentColor,
+        }
+      : null,
     signatureData: instance.signatureData as ContractPdfData['signatureData'],
     countersignatureData: instance.countersignatureData as ContractPdfData['countersignatureData'],
     countersignerName: instance.countersignerName,
@@ -448,10 +460,15 @@ export async function getContractPdfData(contractInstanceId: string): Promise<Co
 /**
  * Get contract data for PDF generation by access token (public)
  */
-export async function getContractPdfDataByToken(accessToken: string): Promise<ContractPdfData | null> {
+export async function getContractPdfDataByToken(
+  accessToken: string
+): Promise<ContractPdfData | null> {
   // Bug #140: Rate limit public PDF endpoints to prevent abuse
   const { checkRateLimit } = await import('@/lib/rate-limit');
-  const rateLimitResult = await checkRateLimit(`pdf-contract:${accessToken}`, { limit: 20, windowMs: 60000 });
+  const rateLimitResult = await checkRateLimit(`pdf-contract:${accessToken}`, {
+    limit: 20,
+    windowMs: 60000,
+  });
   if (rateLimitResult.limited) {
     return null;
   }
@@ -496,10 +513,12 @@ export async function getContractPdfDataByToken(accessToken: string): Promise<Co
       phone: profile?.phone || null,
       logoUrl: profile?.logoUrl || null,
     },
-    branding: branding ? {
-      primaryColor: branding.primaryColor,
-      accentColor: branding.accentColor,
-    } : null,
+    branding: branding
+      ? {
+          primaryColor: branding.primaryColor,
+          accentColor: branding.accentColor,
+        }
+      : null,
     signatureData: instance.signatureData as ContractPdfData['signatureData'],
     countersignatureData: instance.countersignatureData as ContractPdfData['countersignatureData'],
     countersignerName: instance.countersignerName,

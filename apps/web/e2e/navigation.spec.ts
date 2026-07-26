@@ -12,7 +12,10 @@ test.describe('Public Navigation', () => {
     await page.goto('/login');
 
     // Login page should have content container
-    const container = page.locator('div').filter({ hasText: /welcome back/i }).first();
+    const container = page
+      .locator('div')
+      .filter({ hasText: /welcome back/i })
+      .first();
     await expect(container).toBeVisible();
   });
 

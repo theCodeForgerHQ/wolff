@@ -72,7 +72,13 @@ describe('Input Validation & Injection Prevention', () => {
         title: 'Test',
         clientId: 'client-1',
         blocks: [
-          { id: '1', type: 'script' as any, content: { text: '' } as any, createdAt: '', updatedAt: '' },
+          {
+            id: '1',
+            type: 'script' as any,
+            content: { text: '' } as any,
+            createdAt: '',
+            updatedAt: '',
+          },
         ],
       });
       expect(result.success).toBe(false);
@@ -81,7 +87,10 @@ describe('Input Validation & Injection Prevention', () => {
 
     it('allows valid block types', async () => {
       mockPrisma.numberSequence.upsert.mockResolvedValue({
-        prefix: 'QT', suffix: null, currentValue: 1, padding: 4,
+        prefix: 'QT',
+        suffix: null,
+        currentValue: 1,
+        padding: 4,
       });
       mockPrisma.quote.create.mockResolvedValue({ id: 'q-1' });
       mockPrisma.quoteLineItem.createMany.mockResolvedValue({ count: 0 });
@@ -91,8 +100,11 @@ describe('Input Validation & Injection Prevention', () => {
         clientId: 'client-1',
         blocks: [
           {
-            id: '1', type: 'header', content: { text: 'Hi', level: 2, alignment: 'left' },
-            createdAt: '', updatedAt: '',
+            id: '1',
+            type: 'header',
+            content: { text: 'Hi', level: 2, alignment: 'left' },
+            createdAt: '',
+            updatedAt: '',
           } as any,
         ],
       });

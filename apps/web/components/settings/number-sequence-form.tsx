@@ -22,7 +22,9 @@ export function NumberSequenceForm({
   description,
   initialData,
 }: NumberSequenceFormProps) {
-  const [prefix, setPrefix] = React.useState(initialData?.prefix || (type === 'quote' ? 'QT' : 'INV'));
+  const [prefix, setPrefix] = React.useState(
+    initialData?.prefix || (type === 'quote' ? 'QT' : 'INV')
+  );
   const [suffix, setSuffix] = React.useState(initialData?.suffix || '');
   const [currentValue, setCurrentValue] = React.useState(initialData?.currentValue ?? 0);
   const [padding, setPadding] = React.useState(initialData?.padding ?? 4);
@@ -73,9 +75,7 @@ export function NumberSequenceForm({
               placeholder="QT"
               maxLength={10}
             />
-            <p className="text-xs text-muted-foreground">
-              Text before the number
-            </p>
+            <p className="text-muted-foreground text-xs">Text before the number</p>
           </div>
 
           <div className="space-y-2">
@@ -87,9 +87,7 @@ export function NumberSequenceForm({
               placeholder="(optional)"
               maxLength={10}
             />
-            <p className="text-xs text-muted-foreground">
-              Text after the number
-            </p>
+            <p className="text-muted-foreground text-xs">Text after the number</p>
           </div>
         </div>
 
@@ -103,9 +101,7 @@ export function NumberSequenceForm({
               value={currentValue}
               onChange={(e) => setCurrentValue(Math.max(0, parseInt(e.target.value) || 0))}
             />
-            <p className="text-xs text-muted-foreground">
-              The next {type} will use this + 1
-            </p>
+            <p className="text-muted-foreground text-xs">The next {type} will use this + 1</p>
           </div>
 
           <div className="space-y-2">
@@ -118,18 +114,14 @@ export function NumberSequenceForm({
               value={padding}
               onChange={(e) => setPadding(parseInt(e.target.value) || 4)}
             />
-            <p className="text-xs text-muted-foreground">
-              Minimum digits (e.g., 4 = 0001)
-            </p>
+            <p className="text-muted-foreground text-xs">Minimum digits (e.g., 4 = 0001)</p>
           </div>
         </div>
 
-        <div className="rounded-lg border bg-muted/50 p-4">
+        <div className="bg-muted/50 rounded-lg border p-4">
           <p className="mb-1 text-sm font-medium">Preview</p>
-          <p className="text-2xl font-mono">{previewNumber}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Next {type} number
-          </p>
+          <p className="font-mono text-2xl">{previewNumber}</p>
+          <p className="text-muted-foreground mt-1 text-xs">Next {type} number</p>
         </div>
 
         <div className="flex justify-end">

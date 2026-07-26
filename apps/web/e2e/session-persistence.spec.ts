@@ -62,7 +62,9 @@ test.describe('Issue #6 - Session Persistence Across Tabs', () => {
     await authenticatedContext?.close();
   });
 
-  test('authenticated session is accessible in a new browser context (simulates new tab)', async ({ browser }) => {
+  test('authenticated session is accessible in a new browser context (simulates new tab)', async ({
+    browser,
+  }) => {
     // Get cookies from the authenticated context
     const storageState = await authenticatedContext.storageState();
 
@@ -82,7 +84,10 @@ test.describe('Issue #6 - Session Persistence Across Tabs', () => {
       expect(currentUrl.includes('/dashboard') || currentUrl.includes('/onboarding')).toBe(true);
 
       // Verify dashboard content is actually rendered (not a blank page)
-      const hasContent = await newTabPage.locator('nav, [data-sidebar], main').first().isVisible({ timeout: 5000 });
+      const hasContent = await newTabPage
+        .locator('nav, [data-sidebar], main')
+        .first()
+        .isVisible({ timeout: 5000 });
       expect(hasContent).toBe(true);
     } finally {
       await newTabContext.close();

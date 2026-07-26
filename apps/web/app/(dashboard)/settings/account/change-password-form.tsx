@@ -79,7 +79,9 @@ export function ChangePasswordForm({ hasExistingPassword }: ChangePasswordFormPr
         return;
       }
 
-      toast.success(hasExistingPassword ? 'Password changed successfully' : 'Password set successfully');
+      toast.success(
+        hasExistingPassword ? 'Password changed successfully' : 'Password set successfully'
+      );
       reset();
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -89,7 +91,7 @@ export function ChangePasswordForm({ hasExistingPassword }: ChangePasswordFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-md space-y-4">
       {hasExistingPassword && (
         <div className="space-y-2">
           <Label htmlFor="currentPassword">Current password</Label>
@@ -101,17 +103,13 @@ export function ChangePasswordForm({ hasExistingPassword }: ChangePasswordFormPr
             {...register('currentPassword')}
           />
           {errors.currentPassword && (
-            <p className="text-sm text-destructive">
-              {errors.currentPassword.message}
-            </p>
+            <p className="text-destructive text-sm">{errors.currentPassword.message}</p>
           )}
         </div>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="newPassword">
-          {hasExistingPassword ? 'New password' : 'Password'}
-        </Label>
+        <Label htmlFor="newPassword">{hasExistingPassword ? 'New password' : 'Password'}</Label>
         <Input
           id="newPassword"
           type="password"
@@ -120,9 +118,7 @@ export function ChangePasswordForm({ hasExistingPassword }: ChangePasswordFormPr
           {...register('newPassword')}
         />
         {errors.newPassword && (
-          <p className="text-sm text-destructive">
-            {errors.newPassword.message}
-          </p>
+          <p className="text-destructive text-sm">{errors.newPassword.message}</p>
         )}
       </div>
 
@@ -136,13 +132,11 @@ export function ChangePasswordForm({ hasExistingPassword }: ChangePasswordFormPr
           {...register('confirmPassword')}
         />
         {errors.confirmPassword && (
-          <p className="text-sm text-destructive">
-            {errors.confirmPassword.message}
-          </p>
+          <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
         )}
       </div>
 
-      <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+      <div className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
         <p className="font-medium">Password requirements:</p>
         <ul className="mt-1 list-inside list-disc space-y-0.5">
           <li>At least 8 characters</li>

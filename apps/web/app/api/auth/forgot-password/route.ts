@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
     const MIN_RESPONSE_TIME = 500; // ms — ensures consistent timing regardless of user existence
 
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const rateLimitResult = await checkRateLimit(`forgot-password:${clientIp}`, { limit: 5, windowMs: 300000 }); // 5 requests per 5 minutes
+    const rateLimitResult = await checkRateLimit(`forgot-password:${clientIp}`, {
+      limit: 5,
+      windowMs: 300000,
+    }); // 5 requests per 5 minutes
     if (rateLimitResult.limited) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -39,10 +42,7 @@ export async function POST(request: NextRequest) {
     const { email } = body;
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     const successResponse = {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const delayedResponse = async () => {
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_RESPONSE_TIME) {
-        await new Promise(r => setTimeout(r, MIN_RESPONSE_TIME - elapsed));
+        await new Promise((r) => setTimeout(r, MIN_RESPONSE_TIME - elapsed));
       }
       return NextResponse.json(successResponse);
     };
@@ -80,9 +80,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Bug #84: Clean up expired tokens from all users (background housekeeping)
-    prisma.passwordResetToken.deleteMany({
-      where: { expiresAt: { lt: new Date() } },
-    }).catch(() => {}); // Fire and forget
+    prisma.passwordResetToken
+      .deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      })
+      .catch(() => {}); // Fire and forget
 
     // Generate a secure random token (store hash, send raw)
     const rawToken = randomBytes(32).toString('hex');
@@ -136,9 +138,6 @@ export async function POST(request: NextRequest) {
     return delayedResponse();
   } catch (error) {
     logger.error({ err: error }, 'Forgot password error');
-    return NextResponse.json(
-      { error: 'Something went wrong' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

@@ -23,10 +23,7 @@ export const clientContactSchema = z.object({
 // Create client schema
 export const createClientSchema = z.object({
   type: clientTypeSchema.default('individual'),
-  name: z
-    .string()
-    .min(1, 'Name is required')
-    .max(200, 'Name must be less than 200 characters'),
+  name: z.string().min(1, 'Name is required').max(200, 'Name must be less than 200 characters'),
   email: emailSchema,
   phone: phoneSchema,
   website: urlSchema,

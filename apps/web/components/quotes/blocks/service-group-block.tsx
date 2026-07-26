@@ -35,10 +35,12 @@ export function ServiceGroupBlockContent({ block }: ServiceGroupBlockContentProp
       style: 'currency',
       currency: currency,
     }).formatToParts(amount);
-    return parts.map((p, i) => {
-      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-      return p.value;
-    }).join('');
+    return parts
+      .map((p, i) => {
+        if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+        return p.value;
+      })
+      .join('');
   };
 
   // Bug #80: Widened type to accept arrays (for items) and other content field types
@@ -79,7 +81,7 @@ export function ServiceGroupBlockContent({ block }: ServiceGroupBlockContentProp
 
   if (isEditing) {
     return (
-      <div className="rounded-lg border border-border bg-card text-card-foreground">
+      <div className="border-border bg-card text-card-foreground rounded-lg border">
         <div className="flex items-center gap-3 border-b p-4">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleToggleCollapse}>
             {block.content.collapsed ? (
@@ -93,7 +95,7 @@ export function ServiceGroupBlockContent({ block }: ServiceGroupBlockContentProp
               value={block.content.title}
               onChange={(e) => handleChange('title', e.target.value)}
               placeholder="Group title"
-              className="font-medium text-foreground"
+              className="text-foreground font-medium"
             />
           </div>
           {showPrices && (
@@ -107,12 +109,12 @@ export function ServiceGroupBlockContent({ block }: ServiceGroupBlockContentProp
               value={block.content.description}
               onChange={(e) => handleChange('description', e.target.value)}
               placeholder="Group description (optional)"
-              className="text-sm text-foreground"
+              className="text-foreground text-sm"
             />
 
             <div className="space-y-2">
               {block.content.items.map((item, index) => (
-                <div key={item.id} className="relative group">
+                <div key={item.id} className="group relative">
                   <ServiceItemBlockContent block={item} />
                   <Button
                     variant="ghost"
@@ -137,32 +139,31 @@ export function ServiceGroupBlockContent({ block }: ServiceGroupBlockContentProp
   }
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div
-        className="flex items-center gap-3 p-4 cursor-pointer"
-        onClick={handleToggleCollapse}
-      >
+    <div className="bg-card rounded-lg border">
+      <div className="flex cursor-pointer items-center gap-3 p-4" onClick={handleToggleCollapse}>
         {block.content.collapsed ? (
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground h-4 w-4" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="text-muted-foreground h-4 w-4" />
         )}
         <div className="flex-1">
           <h4 className="font-medium">{block.content.title || 'Untitled Group'}</h4>
           {block.content.description && (
-            <p className="mt-1 text-sm text-muted-foreground">{block.content.description}</p>
+            <p className="text-muted-foreground mt-1 text-sm">{block.content.description}</p>
           )}
         </div>
         {showPrices && (
           <div className="text-right">
-            <span className="text-sm text-muted-foreground">{block.content.items.length} items</span>
+            <span className="text-muted-foreground text-sm">
+              {block.content.items.length} items
+            </span>
             <div className="font-semibold">{formatCurrency(groupTotal)}</div>
           </div>
         )}
       </div>
 
       {!block.content.collapsed && block.content.items.length > 0 && (
-        <div className="border-t p-4 space-y-2">
+        <div className="space-y-2 border-t p-4">
           {block.content.items.map((item) => (
             <ServiceItemBlockContent key={item.id} block={item} />
           ))}

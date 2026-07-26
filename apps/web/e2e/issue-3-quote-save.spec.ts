@@ -50,7 +50,11 @@ test.describe('Issue #3: Quote Draft Saving in Visual Builder', () => {
       await page.waitForLoadState('networkidle');
 
       // Check for toast messages
-      const toastText = await page.locator('[data-sonner-toast]').first().textContent().catch(() => '');
+      const toastText = await page
+        .locator('[data-sonner-toast]')
+        .first()
+        .textContent()
+        .catch(() => '');
 
       // The fix should show either:
       // - "Please select a client before saving" (validation working correctly)
@@ -63,7 +67,9 @@ test.describe('Issue #3: Quote Draft Saving in Visual Builder', () => {
 
       console.log('Toast message:', toastText);
     } else {
-      console.log('Save button is disabled (no changes detected) - this is expected for a fresh builder');
+      console.log(
+        'Save button is disabled (no changes detected) - this is expected for a fresh builder'
+      );
     }
   });
 

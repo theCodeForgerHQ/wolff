@@ -101,19 +101,21 @@ export function ClientForm({
                 </SelectContent>
               </Select>
               {form.formState.errors.type && (
-                <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
+                <p className="text-destructive text-sm">{form.formState.errors.type.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">{clientType === 'company' ? 'Contact Name' : 'Full Name'} *</Label>
+              <Label htmlFor="name">
+                {clientType === 'company' ? 'Contact Name' : 'Full Name'} *
+              </Label>
               <Input
                 id="name"
                 {...form.register('name')}
                 placeholder={clientType === 'company' ? 'Primary contact name' : 'John Doe'}
               />
               {form.formState.errors.name && (
-                <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                <p className="text-destructive text-sm">{form.formState.errors.name.message}</p>
               )}
             </div>
           </div>
@@ -122,19 +124,11 @@ export function ClientForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="company">Company Name</Label>
-                <Input
-                  id="company"
-                  {...form.register('company')}
-                  placeholder="Acme Inc."
-                />
+                <Input id="company" {...form.register('company')} placeholder="Acme Inc." />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="taxId">Tax ID / VAT</Label>
-                <Input
-                  id="taxId"
-                  {...form.register('taxId')}
-                  placeholder="123-45-6789"
-                />
+                <Input id="taxId" {...form.register('taxId')} placeholder="123-45-6789" />
               </div>
             </div>
           )}
@@ -149,7 +143,7 @@ export function ClientForm({
                 placeholder="client@example.com"
               />
               {form.formState.errors.email && (
-                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                <p className="text-destructive text-sm">{form.formState.errors.email.message}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -181,9 +175,10 @@ export function ClientForm({
           <CardTitle>Address</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {form.formState.errors.address && typeof form.formState.errors.address.message === 'string' && (
-            <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>
-          )}
+          {form.formState.errors.address &&
+            typeof form.formState.errors.address.message === 'string' && (
+              <p className="text-destructive text-sm">{form.formState.errors.address.message}</p>
+            )}
           <div className="space-y-2">
             <Label htmlFor="address.street">Street Address</Label>
             <Input
@@ -192,31 +187,29 @@ export function ClientForm({
               placeholder="123 Main St"
             />
             {form.formState.errors.address?.street && (
-              <p className="text-sm text-destructive">{form.formState.errors.address.street.message}</p>
+              <p className="text-destructive text-sm">
+                {form.formState.errors.address.street.message}
+              </p>
             )}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="address.city">City</Label>
-              <Input
-                id="address.city"
-                {...form.register('address.city')}
-                placeholder="New York"
-              />
+              <Input id="address.city" {...form.register('address.city')} placeholder="New York" />
               {form.formState.errors.address?.city && (
-                <p className="text-sm text-destructive">{form.formState.errors.address.city.message}</p>
+                <p className="text-destructive text-sm">
+                  {form.formState.errors.address.city.message}
+                </p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="address.state">State / Province</Label>
-              <Input
-                id="address.state"
-                {...form.register('address.state')}
-                placeholder="NY"
-              />
+              <Input id="address.state" {...form.register('address.state')} placeholder="NY" />
               {form.formState.errors.address?.state && (
-                <p className="text-sm text-destructive">{form.formState.errors.address.state.message}</p>
+                <p className="text-destructive text-sm">
+                  {form.formState.errors.address.state.message}
+                </p>
               )}
             </div>
           </div>
@@ -230,7 +223,9 @@ export function ClientForm({
                 placeholder="10001"
               />
               {form.formState.errors.address?.postalCode && (
-                <p className="text-sm text-destructive">{form.formState.errors.address.postalCode.message}</p>
+                <p className="text-destructive text-sm">
+                  {form.formState.errors.address.postalCode.message}
+                </p>
               )}
             </div>
             <div className="space-y-2">
@@ -241,7 +236,9 @@ export function ClientForm({
                 placeholder="United States"
               />
               {form.formState.errors.address?.country && (
-                <p className="text-sm text-destructive">{form.formState.errors.address.country.message}</p>
+                <p className="text-destructive text-sm">
+                  {form.formState.errors.address.country.message}
+                </p>
               )}
             </div>
           </div>
@@ -264,14 +261,11 @@ export function ClientForm({
         </CardHeader>
         <CardContent>
           {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No additional contacts added.</p>
+            <p className="text-muted-foreground text-sm">No additional contacts added.</p>
           ) : (
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="relative rounded-lg border p-4"
-                >
+                <div key={field.id} className="relative rounded-lg border p-4">
                   <Button
                     type="button"
                     variant="ghost"

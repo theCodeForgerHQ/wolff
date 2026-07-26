@@ -1,18 +1,14 @@
 'use client';
 
 import { useDroppable } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useQuoteBuilderStore } from '@/lib/stores/quote-builder-store';
 import { BlockRenderer } from './block-renderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function DocumentCanvas() {
-  const { document, zoom, previewMode, selectedBlockId, selectBlock } =
-    useQuoteBuilderStore();
+  const { document, zoom, previewMode, selectedBlockId, selectBlock } = useQuoteBuilderStore();
 
   const { setNodeRef, isOver } = useDroppable({
     id: 'canvas',
@@ -20,7 +16,7 @@ export function DocumentCanvas() {
 
   if (!document) {
     return (
-      <div className="flex h-full items-center justify-center bg-muted/30">
+      <div className="bg-muted/30 flex h-full items-center justify-center">
         <p className="text-muted-foreground">Loading document...</p>
       </div>
     );
@@ -34,16 +30,13 @@ export function DocumentCanvas() {
   };
 
   return (
-    <ScrollArea className="flex-1 bg-muted/30">
-      <div
-        className="flex justify-center p-8"
-        onClick={handleCanvasClick}
-      >
+    <ScrollArea className="bg-muted/30 flex-1">
+      <div className="flex justify-center p-8" onClick={handleCanvasClick}>
         <div
           ref={setNodeRef}
           className={cn(
-            'document-paper relative w-full max-w-[816px] min-h-[1056px] bg-white shadow-lg transition-all',
-            isOver && 'ring-2 ring-primary ring-offset-2',
+            'document-paper relative min-h-[1056px] w-full max-w-[816px] bg-white shadow-lg transition-all',
+            isOver && 'ring-primary ring-2 ring-offset-2',
             previewMode && 'pointer-events-none'
           )}
           style={{
@@ -57,7 +50,7 @@ export function DocumentCanvas() {
             <div className="mb-8 flex items-start justify-between">
               <div>
                 <h1 className="text-2xl font-bold">{document.title}</h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Quote #{document.quoteNumber || 'DRAFT'}
                 </p>
               </div>
@@ -116,23 +109,44 @@ export function DocumentCanvas() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal</span>
-                      <span>{formatCurrency(document.totals.subtotal, document.currency || document.settings.currency)}</span>
+                      <span>
+                        {formatCurrency(
+                          document.totals.subtotal,
+                          document.currency || document.settings.currency
+                        )}
+                      </span>
                     </div>
                     {document.totals.discountAmount > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Discount</span>
-                        <span>-{formatCurrency(document.totals.discountAmount, document.currency || document.settings.currency)}</span>
+                        <span>
+                          -
+                          {formatCurrency(
+                            document.totals.discountAmount,
+                            document.currency || document.settings.currency
+                          )}
+                        </span>
                       </div>
                     )}
                     {document.totals.taxTotal > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Tax</span>
-                        <span>{formatCurrency(document.totals.taxTotal, document.currency || document.settings.currency)}</span>
+                        <span>
+                          {formatCurrency(
+                            document.totals.taxTotal,
+                            document.currency || document.settings.currency
+                          )}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-2 text-lg font-bold">
                       <span>Total</span>
-                      <span>{formatCurrency(document.totals.total, document.currency || document.settings.currency)}</span>
+                      <span>
+                        {formatCurrency(
+                          document.totals.total,
+                          document.currency || document.settings.currency
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>

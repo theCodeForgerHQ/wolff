@@ -43,11 +43,15 @@ interface ConvertToInvoiceButtonProps {
 }
 
 function formatMoney(amount: number, currency: string): string {
-  const parts = new Intl.NumberFormat('en-US', { style: 'currency', currency }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  const parts = new Intl.NumberFormat('en-US', { style: 'currency', currency }).formatToParts(
+    amount
+  );
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 export function ConvertToInvoiceButton({
@@ -103,28 +107,28 @@ export function ConvertToInvoiceButton({
         <DialogHeader>
           <DialogTitle>Convert Quote to Invoice</DialogTitle>
           <DialogDescription>
-            This will create a new invoice from this quote. All line items, notes, and terms will
-            be copied to the invoice.
+            This will create a new invoice from this quote. All line items, notes, and terms will be
+            copied to the invoice.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <div className="rounded-lg border p-4 space-y-2">
+          <div className="space-y-2 rounded-lg border p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Quote</span>
               <span className="font-medium">{quoteTitle}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total Amount</span>
-              <span className="font-medium">
-                {formatMoney(total, currency)}
-              </span>
+              <span className="font-medium">{formatMoney(total, currency)}</span>
             </div>
           </div>
 
           <div className="mt-4 space-y-3">
             <div>
-              <Label htmlFor="payment-terms" className="text-sm font-normal">Payment Terms</Label>
+              <Label htmlFor="payment-terms" className="text-sm font-normal">
+                Payment Terms
+              </Label>
               <Select value={paymentTermDays} onValueChange={setPaymentTermDays}>
                 <SelectTrigger id="payment-terms" className="mt-1">
                   <SelectValue />
@@ -137,7 +141,7 @@ export function ConvertToInvoiceButton({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Due: {dueDate.toLocaleDateString()}
               </p>
             </div>
@@ -153,17 +157,11 @@ export function ConvertToInvoiceButton({
             </div>
           </div>
 
-          {error && (
-            <p className="mt-4 text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isConverting}
-          >
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isConverting}>
             Cancel
           </Button>
           <Button onClick={handleConvert} disabled={isConverting}>

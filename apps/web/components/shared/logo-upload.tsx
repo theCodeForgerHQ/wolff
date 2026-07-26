@@ -101,20 +101,14 @@ export function LogoUpload({ value, onChange, className }: LogoUploadProps) {
   if (value) {
     return (
       <div className={cn('relative', className)}>
-        <div className="relative rounded-lg border bg-muted/50 p-4">
+        <div className="bg-muted/50 relative rounded-lg border p-4">
           <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 overflow-hidden rounded-lg border bg-card">
-              <img
-                src={value}
-                alt="Logo"
-                className="h-full w-full object-contain"
-              />
+            <div className="bg-card relative h-16 w-16 overflow-hidden rounded-lg border">
+              <img src={value} alt="Logo" className="h-full w-full object-contain" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium">Logo uploaded</p>
-              <p className="text-xs text-muted-foreground">
-                Click the button to replace or remove
-              </p>
+              <p className="text-muted-foreground text-xs">Click the button to replace or remove</p>
             </div>
             <Button
               type="button"
@@ -151,18 +145,16 @@ export function LogoUpload({ value, onChange, className }: LogoUploadProps) {
           className="absolute inset-0 cursor-pointer opacity-0"
         />
         <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
-          <div className="rounded-full bg-muted p-3">
+          <div className="bg-muted rounded-full p-3">
             {isLoading ? (
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
             ) : (
-              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              <ImageIcon className="text-muted-foreground h-6 w-6" />
             )}
           </div>
           <div>
             <p className="text-sm font-medium">Upload your logo</p>
-            <p className="text-xs text-muted-foreground">
-              PNG, JPG up to 2MB
-            </p>
+            <p className="text-muted-foreground text-xs">PNG, JPG up to 2MB</p>
           </div>
           <Button type="button" variant="outline" size="sm" className="mt-2">
             <Upload className="mr-2 h-4 w-4" />

@@ -31,7 +31,9 @@ test.describe('Invoices Module', () => {
     test('should have filter button', async ({ page }) => {
       await page.goto('/invoices');
 
-      const filterButton = page.locator('button').filter({ has: page.locator('svg.lucide-filter') });
+      const filterButton = page
+        .locator('button')
+        .filter({ has: page.locator('svg.lucide-filter') });
       await expect(filterButton).toBeVisible();
     });
 
@@ -40,7 +42,7 @@ test.describe('Invoices Module', () => {
 
       // If invoices exist, cards should show title and status
       const invoiceCards = page.locator('[class*="Card"]');
-      if (await invoiceCards.count() > 0) {
+      if ((await invoiceCards.count()) > 0) {
         const firstCard = invoiceCards.first();
         await expect(firstCard).toBeVisible();
       }

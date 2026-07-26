@@ -2,13 +2,13 @@
 
 ## Document Information
 
-| Attribute | Value |
-|-----------|-------|
-| **Version** | 1.0 |
-| **Date** | 2026-02-13 |
-| **Author** | Architecture review         |
+| Attribute    | Value                                                                    |
+| ------------ | ------------------------------------------------------------------------ |
+| **Version**  | 1.0                                                                      |
+| **Date**     | 2026-02-13                                                               |
+| **Author**   | Architecture review                                                      |
 | **Based On** | ARCHITECTURE.md, PHASE2_SPECIFICATION.md, DATA_MODEL.md, GAP_ANALYSIS.md |
-| **Status** | Draft for Review |
+| **Status**   | Draft for Review                                                         |
 
 ---
 
@@ -31,13 +31,13 @@
 
 Phase 2 introduces significant architectural enhancements to Wolff:
 
-| Category | Key Changes |
-|----------|-------------|
-| **Data Model** | Project entity, enhanced entity hierarchy |
-| **Navigation** | Hierarchical sidebar, workspace switcher, user profile |
-| **UI Components** | DataTable with TanStack Table, enhanced badges |
-| **Analytics** | 4 new report sections with dedicated endpoints |
-| **Workflow** | Quote-to-Invoice conversion visualization |
+| Category          | Key Changes                                            |
+| ----------------- | ------------------------------------------------------ |
+| **Data Model**    | Project entity, enhanced entity hierarchy              |
+| **Navigation**    | Hierarchical sidebar, workspace switcher, user profile |
+| **UI Components** | DataTable with TanStack Table, enhanced badges         |
+| **Analytics**     | 4 new report sections with dedicated endpoints         |
+| **Workflow**      | Quote-to-Invoice conversion visualization              |
 
 ### 1.2 Architecture Diagram - Phase 2 Extensions
 
@@ -479,9 +479,9 @@ interface DeleteProjectResponse {
 ```typescript
 // Query Parameters
 interface ClientLTVQuery {
-  dateFrom?: string;  // ISO date
-  dateTo?: string;    // ISO date
-  limit?: number;     // default: 10
+  dateFrom?: string; // ISO date
+  dateTo?: string; // ISO date
+  limit?: number; // default: 10
 }
 
 // Response
@@ -503,12 +503,12 @@ interface ClientLTVResponse {
 
     // Payment Behavior
     averageDaysToPay: number;
-    onTimePaymentRate: number;  // percentage
+    onTimePaymentRate: number; // percentage
 
     // Engagement
     totalQuotes: number;
     acceptedQuotes: number;
-    quoteAcceptanceRate: number;  // percentage
+    quoteAcceptanceRate: number; // percentage
   }>;
   summary: {
     totalClients: number;
@@ -526,8 +526,8 @@ interface ClientLTVResponse {
 interface TopServicesQuery {
   dateFrom?: string;
   dateTo?: string;
-  limit?: number;      // default: 10
-  source?: 'quotes' | 'invoices' | 'all';  // default: 'all'
+  limit?: number; // default: 10
+  source?: 'quotes' | 'invoices' | 'all'; // default: 'all'
 }
 
 // Response
@@ -691,7 +691,7 @@ export interface RevenueByCategoryData {
 
 export interface SalesPipelineData {
   conversionRate: number;
-  conversionRateTrend: number;  // change from previous period
+  conversionRateTrend: number; // change from previous period
   averageDealValue: number;
   quotesByStatus: {
     draft: number;
@@ -885,7 +885,7 @@ interface DataTableProps<TData, TValue> {
   onRowSelectionChange?: (selectedRows: TData[]) => void;
 
   // Pagination
-  pageSizes?: number[];  // default: [10, 25, 50, 100]
+  pageSizes?: number[]; // default: [10, 25, 50, 100]
   defaultPageSize?: number;
 
   // Actions
@@ -959,7 +959,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | number | null;
   isNew?: boolean;
-  children?: NavItem[];  // NEW: Support for nested navigation
+  children?: NavItem[]; // NEW: Support for nested navigation
 }
 
 const mainNavItems: NavItem[] = [
@@ -972,7 +972,7 @@ const mainNavItems: NavItem[] = [
     title: 'Analytics',
     href: '/analytics',
     icon: BarChart3,
-    isNew: true,  // Mark as new feature
+    isNew: true, // Mark as new feature
   },
   {
     title: 'Clients',
@@ -1059,37 +1059,41 @@ export function SalesPipelineSection({ dateRange }: SalesPipelineSectionProps) {
 // components/ui/badge.tsx (Extended variants)
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  'focus:ring-ring inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2',
   {
     variants: {
       variant: {
         // Existing variants
-        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-        success: "border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
-        warning: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
-        info: "border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
+        default: 'bg-primary text-primary-foreground hover:bg-primary/80 border-transparent',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-transparent',
+        destructive:
+          'bg-destructive text-destructive-foreground hover:bg-destructive/80 border-transparent',
+        outline: 'text-foreground',
+        success:
+          'border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+        warning:
+          'border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100',
+        info: 'border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
 
         // NEW: Quote status variants
-        "quote-draft": "border-gray-300 text-gray-600 bg-transparent",
-        "quote-sent": "border-blue-400 text-blue-600 bg-transparent",
-        "quote-accepted": "border-green-400 text-green-600 bg-transparent",
-        "quote-expired": "border-red-400 text-red-600 bg-transparent",
-        "quote-declined": "border-orange-400 text-orange-600 bg-transparent",
+        'quote-draft': 'border-gray-300 bg-transparent text-gray-600',
+        'quote-sent': 'border-blue-400 bg-transparent text-blue-600',
+        'quote-accepted': 'border-green-400 bg-transparent text-green-600',
+        'quote-expired': 'border-red-400 bg-transparent text-red-600',
+        'quote-declined': 'border-orange-400 bg-transparent text-orange-600',
 
         // NEW: Invoice status variants
-        "invoice-draft": "border-gray-300 text-gray-600 bg-transparent",
-        "invoice-pending": "border-amber-400 text-amber-600 bg-transparent",
-        "invoice-paid": "border-transparent bg-green-500 text-white",
-        "invoice-overdue": "border-transparent bg-red-500 text-white",
-        "invoice-partial": "border-blue-400 text-blue-600 bg-transparent",
-        "invoice-voided": "border-gray-400 text-gray-600 bg-gray-100",
+        'invoice-draft': 'border-gray-300 bg-transparent text-gray-600',
+        'invoice-pending': 'border-amber-400 bg-transparent text-amber-600',
+        'invoice-paid': 'border-transparent bg-green-500 text-white',
+        'invoice-overdue': 'border-transparent bg-red-500 text-white',
+        'invoice-partial': 'border-blue-400 bg-transparent text-blue-600',
+        'invoice-voided': 'border-gray-400 bg-gray-100 text-gray-600',
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: 'default',
     },
   }
 );
@@ -1277,7 +1281,7 @@ interface SidebarPersistedState {
 export function useSidebarPersistedState() {
   const [state, setState] = useState<SidebarPersistedState>({
     isCollapsed: false,
-    expandedGroups: ['projects'],  // Default expanded
+    expandedGroups: ['projects'], // Default expanded
   });
 
   // Load from localStorage on mount
@@ -1298,21 +1302,24 @@ export function useSidebarPersistedState() {
   }, [state]);
 
   const toggleCollapsed = useCallback(() => {
-    setState(prev => ({ ...prev, isCollapsed: !prev.isCollapsed }));
+    setState((prev) => ({ ...prev, isCollapsed: !prev.isCollapsed }));
   }, []);
 
   const toggleGroup = useCallback((groupId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       expandedGroups: prev.expandedGroups.includes(groupId)
-        ? prev.expandedGroups.filter(id => id !== groupId)
+        ? prev.expandedGroups.filter((id) => id !== groupId)
         : [...prev.expandedGroups, groupId],
     }));
   }, []);
 
-  const isGroupExpanded = useCallback((groupId: string) => {
-    return state.expandedGroups.includes(groupId);
-  }, [state.expandedGroups]);
+  const isGroupExpanded = useCallback(
+    (groupId: string) => {
+      return state.expandedGroups.includes(groupId);
+    },
+    [state.expandedGroups]
+  );
 
   return {
     isCollapsed: state.isCollapsed,
@@ -1749,7 +1756,7 @@ The migration follows a non-breaking approach:
 export async function getQuotes(filters?: {
   status?: QuoteStatus;
   clientId?: string;
-  projectId?: string | null;  // NEW: optional project filter
+  projectId?: string | null; // NEW: optional project filter
   search?: string;
 }): Promise<QuoteListItem[]> {
   const { userId, workspace } = await getActiveWorkspace();
@@ -1763,7 +1770,7 @@ export async function getQuotes(filters?: {
 
     // NEW: Project filter (null = no project, undefined = all)
     ...(filters?.projectId !== undefined && {
-      projectId: filters.projectId
+      projectId: filters.projectId,
     }),
 
     ...(filters?.search && {
@@ -1991,14 +1998,14 @@ export default function AnalyticsPage() {
 
 ### 8.4 Performance Targets
 
-| Metric | Target | Implementation Strategy |
-|--------|--------|------------------------|
-| LCP (Analytics Page) | < 2.5s | Code splitting, lazy loading charts |
-| FID | < 100ms | React Server Components where possible |
-| CLS | < 0.1 | Skeleton loading states with fixed dimensions |
-| DataTable initial load | < 500ms | Server-side pagination, limit to 25 rows |
-| Chart render | < 300ms | Canvas-based rendering (Recharts), data pre-processing |
-| Analytics query (95th %ile) | < 1s | Optimized indexes, raw SQL for complex aggregations |
+| Metric                      | Target  | Implementation Strategy                                |
+| --------------------------- | ------- | ------------------------------------------------------ |
+| LCP (Analytics Page)        | < 2.5s  | Code splitting, lazy loading charts                    |
+| FID                         | < 100ms | React Server Components where possible                 |
+| CLS                         | < 0.1   | Skeleton loading states with fixed dimensions          |
+| DataTable initial load      | < 500ms | Server-side pagination, limit to 25 rows               |
+| Chart render                | < 300ms | Canvas-based rendering (Recharts), data pre-processing |
+| Analytics query (95th %ile) | < 1s    | Optimized indexes, raw SQL for complex aggregations    |
 
 ---
 
@@ -2075,20 +2082,20 @@ packages/database/prisma/
 
 ### New NPM Packages
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| @tanstack/react-table | ^8.x | DataTable sorting, filtering, pagination |
+| Package               | Version | Purpose                                  |
+| --------------------- | ------- | ---------------------------------------- |
+| @tanstack/react-table | ^8.x    | DataTable sorting, filtering, pagination |
 
 ### Existing Packages (Already Installed)
 
-| Package | Purpose |
-|---------|---------|
-| recharts | Charts (radial, area, bar) |
-| @radix-ui/react-collapsible | Sidebar submenu collapse |
-| date-fns | Date range calculations |
-| zod | API validation schemas |
+| Package                     | Purpose                    |
+| --------------------------- | -------------------------- |
+| recharts                    | Charts (radial, area, bar) |
+| @radix-ui/react-collapsible | Sidebar submenu collapse   |
+| date-fns                    | Date range calculations    |
+| zod                         | API validation schemas     |
 
 ---
 
-*Document generated by Architecture review        *
-*Version 1.0 - 2026-02-13*
+_Document generated by Architecture review        _
+_Version 1.0 - 2026-02-13_

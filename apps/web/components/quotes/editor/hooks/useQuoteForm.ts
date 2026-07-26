@@ -48,90 +48,92 @@ export function useQuoteForm() {
     if (hasInitializedRef.current && document?.id) return;
     if (!document || !document.id) {
       // Fetch workspace currency for new quotes
-      getWorkspaceCurrency().then((workspaceCurrency) => {
-        const now = new Date().toISOString();
-        const expDate = new Date();
-        expDate.setDate(expDate.getDate() + 30);
+      getWorkspaceCurrency()
+        .then((workspaceCurrency) => {
+          const now = new Date().toISOString();
+          const expDate = new Date();
+          expDate.setDate(expDate.getDate() + 30);
 
-        initDocument({
-          id: `temp-${Date.now()}`,
-          workspaceId: 'default',
-          clientId: clientId || '',
-          projectId: null,
-          quoteNumber: 'DRAFT',
-          status: 'draft',
-          title: 'New Quote',
-          currency: workspaceCurrency,
-          issueDate: now,
-          expirationDate: expDate.toISOString(),
-          blocks: [],
-          settings: {
-            requireSignature: true,
-            autoConvertToInvoice: false,
-            depositRequired: false,
-            depositType: 'percentage',
-            depositValue: 50,
-            showLineItemPrices: true,
-            allowPartialAcceptance: false,
+          initDocument({
+            id: `temp-${Date.now()}`,
+            workspaceId: 'default',
+            clientId: clientId || '',
+            projectId: null,
+            quoteNumber: 'DRAFT',
+            status: 'draft',
+            title: 'New Quote',
             currency: workspaceCurrency,
-            taxInclusive: false,
-          },
-          totals: {
-            subtotal: 0,
-            discountType: null,
-            discountValue: null,
-            discountAmount: 0,
-            taxTotal: 0,
-            total: 0,
-          },
-          notes: '',
-          terms: '',
-          internalNotes: '',
-        });
-        hasInitializedRef.current = true;
-      }).catch(() => {
-        // Fallback if workspace currency fetch fails
-        const now = new Date().toISOString();
-        const expDate = new Date();
-        expDate.setDate(expDate.getDate() + 30);
+            issueDate: now,
+            expirationDate: expDate.toISOString(),
+            blocks: [],
+            settings: {
+              requireSignature: true,
+              autoConvertToInvoice: false,
+              depositRequired: false,
+              depositType: 'percentage',
+              depositValue: 50,
+              showLineItemPrices: true,
+              allowPartialAcceptance: false,
+              currency: workspaceCurrency,
+              taxInclusive: false,
+            },
+            totals: {
+              subtotal: 0,
+              discountType: null,
+              discountValue: null,
+              discountAmount: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+            notes: '',
+            terms: '',
+            internalNotes: '',
+          });
+          hasInitializedRef.current = true;
+        })
+        .catch(() => {
+          // Fallback if workspace currency fetch fails
+          const now = new Date().toISOString();
+          const expDate = new Date();
+          expDate.setDate(expDate.getDate() + 30);
 
-        initDocument({
-          id: `temp-${Date.now()}`,
-          workspaceId: 'default',
-          clientId: clientId || '',
-          projectId: null,
-          quoteNumber: 'DRAFT',
-          status: 'draft',
-          title: 'New Quote',
-          currency: 'USD',
-          issueDate: now,
-          expirationDate: expDate.toISOString(),
-          blocks: [],
-          settings: {
-            requireSignature: true,
-            autoConvertToInvoice: false,
-            depositRequired: false,
-            depositType: 'percentage',
-            depositValue: 50,
-            showLineItemPrices: true,
-            allowPartialAcceptance: false,
+          initDocument({
+            id: `temp-${Date.now()}`,
+            workspaceId: 'default',
+            clientId: clientId || '',
+            projectId: null,
+            quoteNumber: 'DRAFT',
+            status: 'draft',
+            title: 'New Quote',
             currency: 'USD',
-            taxInclusive: false,
-          },
-          totals: {
-            subtotal: 0,
-            discountType: null,
-            discountValue: null,
-            discountAmount: 0,
-            taxTotal: 0,
-            total: 0,
-          },
-          notes: '',
-          terms: '',
-          internalNotes: '',
+            issueDate: now,
+            expirationDate: expDate.toISOString(),
+            blocks: [],
+            settings: {
+              requireSignature: true,
+              autoConvertToInvoice: false,
+              depositRequired: false,
+              depositType: 'percentage',
+              depositValue: 50,
+              showLineItemPrices: true,
+              allowPartialAcceptance: false,
+              currency: 'USD',
+              taxInclusive: false,
+            },
+            totals: {
+              subtotal: 0,
+              discountType: null,
+              discountValue: null,
+              discountAmount: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+            notes: '',
+            terms: '',
+            internalNotes: '',
+          });
+          hasInitializedRef.current = true;
         });
-        hasInitializedRef.current = true;
-      });
     }
   }, [document, initDocument, clientId]);
 
@@ -171,14 +173,17 @@ export function useQuoteForm() {
     updateProjectId(newProjectId);
   };
 
-  const handleClientChange = useCallback((newClient: ClientInfo | null) => {
-    setClient(newClient);
-    if (newClient) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('clientId', newClient.id);
-      router.replace(url.pathname + url.search);
-    }
-  }, [router]);
+  const handleClientChange = useCallback(
+    (newClient: ClientInfo | null) => {
+      setClient(newClient);
+      if (newClient) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('clientId', newClient.id);
+        router.replace(url.pathname + url.search);
+      }
+    },
+    [router]
+  );
 
   return {
     document,

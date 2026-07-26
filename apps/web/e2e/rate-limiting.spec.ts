@@ -157,7 +157,6 @@ test.describe('Rate Limiting', () => {
       await submitButton.click();
       await submitButton.click();
       await submitButton.click();
-
     });
 
     test('should disable button during submission', async ({ page }) => {
@@ -198,7 +197,6 @@ test.describe('Rate Limiting', () => {
             if (await closeButton.isVisible()) {
               await closeButton.click();
             }
-
           }
         }
 

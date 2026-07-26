@@ -10,23 +10,11 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ContractEditor } from './contract-editor';
 import { VariableManager } from './variable-manager';
-import {
-  createContractTemplate,
-  updateContractTemplate,
-} from '@/lib/contracts/actions';
-import type {
-  ContractTemplateDetail,
-  ContractVariable,
-} from '@/lib/contracts/types';
+import { createContractTemplate, updateContractTemplate } from '@/lib/contracts/actions';
+import type { ContractTemplateDetail, ContractVariable } from '@/lib/contracts/types';
 
 const contractTemplateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -42,9 +30,7 @@ interface ContractTemplateFormProps {
 export function ContractTemplateForm({ template }: ContractTemplateFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [variables, setVariables] = useState<ContractVariable[]>(
-    template?.variables || []
-  );
+  const [variables, setVariables] = useState<ContractVariable[]>(template?.variables || []);
   const [content, setContent] = useState(template?.content || '');
 
   const {
@@ -107,14 +93,8 @@ export function ContractTemplateForm({ template }: ContractTemplateFormProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Template Name</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              placeholder="e.g., Standard Service Agreement"
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
+            <Input id="name" {...register('name')} placeholder="e.g., Standard Service Agreement" />
+            {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
           </div>
         </CardContent>
       </Card>
@@ -125,18 +105,14 @@ export function ContractTemplateForm({ template }: ContractTemplateFormProps) {
         <CardHeader>
           <CardTitle>Contract Content</CardTitle>
           <CardDescription>
-            Write your contract content. Use {'{{variableKey}}'} syntax to insert
-            variables that will be replaced when creating contracts.
+            Write your contract content. Use {'{{variableKey}}'} syntax to insert variables that
+            will be replaced when creating contracts.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ContractEditor
-            content={content}
-            onChange={handleContentChange}
-            variables={variables}
-          />
+          <ContractEditor content={content} onChange={handleContentChange} variables={variables} />
           {errors.content && (
-            <p className="mt-2 text-sm text-destructive">{errors.content.message}</p>
+            <p className="text-destructive mt-2 text-sm">{errors.content.message}</p>
           )}
         </CardContent>
       </Card>

@@ -25,9 +25,7 @@ export default async function WorkspaceSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>General</CardTitle>
-          <CardDescription>
-            Basic workspace information
-          </CardDescription>
+          <CardDescription>Basic workspace information</CardDescription>
         </CardHeader>
         <CardContent>
           <WorkspaceSettingsForm initialData={workspace} />

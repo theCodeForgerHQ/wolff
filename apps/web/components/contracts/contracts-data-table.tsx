@@ -22,11 +22,7 @@ import { ContractInstanceListItem, ContractInstanceDetail } from '@/lib/contract
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { deleteContractInstance, getContractInstanceById } from '@/lib/contracts/actions';
 import { getBusinessProfile } from '@/lib/settings/actions';
@@ -38,32 +34,38 @@ import { SendEmailDialog } from '@/components/shared/send-email-dialog';
 const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   draft: {
     label: 'Draft',
-    className: 'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+    className:
+      'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
     icon: <FileText className="h-3 w-3" />,
   },
   sent: {
     label: 'Sent',
-    className: 'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
+    className:
+      'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
     icon: <Mail className="h-3 w-3" />,
   },
   viewed: {
     label: 'Viewed',
-    className: 'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
+    className:
+      'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
     icon: <Eye className="h-3 w-3" />,
   },
   pending: {
     label: 'Pending',
-    className: 'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
+    className:
+      'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
     icon: <Hourglass className="h-3 w-3" />,
   },
   signed: {
     label: 'Signed',
-    className: 'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
+    className:
+      'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
     icon: <CheckCircle2 className="h-3 w-3" />,
   },
   expired: {
     label: 'Expired',
-    className: 'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
+    className:
+      'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
     icon: <Clock className="h-3 w-3" />,
   },
 };
@@ -84,7 +86,9 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
   // Business name for email dialog
   const [businessName, setBusinessName] = useState('');
   useEffect(() => {
-    getBusinessProfile().then((p) => setBusinessName(p?.businessName || '')).catch(() => {});
+    getBusinessProfile()
+      .then((p) => setBusinessName(p?.businessName || ''))
+      .catch(() => {});
   }, []);
 
   // Dialog states
@@ -136,9 +140,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
   const handleSendComplete = useCallback(() => {
     if (sendTarget) {
       setData((prev) =>
-        prev.map((c) =>
-          c.id === sendTarget.id ? { ...c, status: 'sent', sentAt: new Date() } : c
-        )
+        prev.map((c) => (c.id === sendTarget.id ? { ...c, status: 'sent', sentAt: new Date() } : c))
       );
     }
     setSendTarget(null);
@@ -153,9 +155,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
   const handleCountersignComplete = useCallback(() => {
     if (countersignTarget) {
       setData((prev) =>
-        prev.map((c) =>
-          c.id === countersignTarget.id ? { ...c, status: 'signed' } : c
-        )
+        prev.map((c) => (c.id === countersignTarget.id ? { ...c, status: 'signed' } : c))
       );
     }
     setCountersignTarget(null);
@@ -198,7 +198,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+      <FileText className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No contracts yet</h3>
       <p className="text-muted-foreground mb-4">
         Create your first contract from a template to get started
@@ -213,7 +213,9 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
   );
 
   const contract = viewingContract;
-  const config = contract ? (statusConfig[contract.status] || statusConfig.draft)! : statusConfig.draft!;
+  const config = contract
+    ? (statusConfig[contract.status] || statusConfig.draft)!
+    : statusConfig.draft!;
 
   return (
     <>
@@ -232,9 +234,9 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
       {/* Loading overlay for async fetch */}
       {isLoadingContract && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-          <div className="rounded-lg bg-background p-4 shadow-lg flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Loading contract...</span>
+          <div className="bg-background flex items-center gap-3 rounded-lg p-4 shadow-lg">
+            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+            <span className="text-muted-foreground text-sm">Loading contract...</span>
           </div>
         </div>
       )}
@@ -250,14 +252,11 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">{contract.contractName}</h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       For {contract.clientName} &middot; Created {formatDate(contract.createdAt)}
                     </p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={`gap-1 ${config.className}`}
-                  >
+                  <Badge variant="outline" className={`gap-1 ${config.className}`}>
                     {config.icon}
                     {config.label}
                   </Badge>
@@ -267,59 +266,69 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
               <Separator />
 
               {/* Scrollable Body */}
-              <div className="flex-1 overflow-y-auto bg-muted/20">
-                <div className="p-6 space-y-6">
+              <div className="bg-muted/20 flex-1 overflow-y-auto">
+                <div className="space-y-6 p-6">
                   {/* Contract Details */}
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Details</p>
+                    <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                      Details
+                    </p>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-                        <p className="font-medium text-sm">{contract.clientName}</p>
+                        <p className="text-muted-foreground mb-0.5 text-xs">Client</p>
+                        <p className="text-sm font-medium">{contract.clientName}</p>
                       </div>
                       {contract.quoteName && (
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">Related Quote</p>
-                          <p className="font-medium text-sm">{contract.quoteName}</p>
+                          <p className="text-muted-foreground mb-0.5 text-xs">Related Quote</p>
+                          <p className="text-sm font-medium">{contract.quoteName}</p>
                         </div>
                       )}
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Sent</p>
-                        <p className="font-medium text-sm">
+                        <p className="text-muted-foreground mb-0.5 text-xs">Sent</p>
+                        <p className="text-sm font-medium">
                           {contract.sentAt ? formatDate(contract.sentAt) : 'Not sent'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Viewed</p>
-                        <p className="font-medium text-sm">
+                        <p className="text-muted-foreground mb-0.5 text-xs">Viewed</p>
+                        <p className="text-sm font-medium">
                           {contract.viewedAt ? formatDate(contract.viewedAt) : 'Not viewed'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Signed</p>
-                        <p className="font-medium text-sm">
+                        <p className="text-muted-foreground mb-0.5 text-xs">Signed</p>
+                        <p className="text-sm font-medium">
                           {contract.signedAt ? formatDate(contract.signedAt) : 'Not signed'}
                         </p>
                       </div>
                       {contract.signerIpAddress && (
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">Client IP</p>
-                          <p className="font-medium text-sm font-mono">{contract.signerIpAddress}</p>
+                          <p className="text-muted-foreground mb-0.5 text-xs">Client IP</p>
+                          <p className="font-mono text-sm font-medium">
+                            {contract.signerIpAddress}
+                          </p>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Signatures */}
-                  {(contract.signatureData || contract.status === 'pending' || contract.status === 'signed') && (
+                  {(contract.signatureData ||
+                    contract.status === 'pending' ||
+                    contract.status === 'signed') && (
                     <>
                       <Separator className="bg-border/60" />
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Signatures</p>
+                        <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                          Signatures
+                        </p>
                         <div className="grid gap-4 sm:grid-cols-2">
                           {/* Client Signature */}
-                          <div className="rounded-lg border bg-background p-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-2">Client Signature</p>
+                          <div className="bg-background rounded-lg border p-4">
+                            <p className="text-muted-foreground mb-2 text-xs font-medium">
+                              Client Signature
+                            </p>
                             {contract.signatureData ? (
                               <>
                                 {contract.signatureData.type === 'drawn' ? (
@@ -336,21 +345,23 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                                     {contract.signatureData.value}
                                   </p>
                                 )}
-                                <p className="text-xs text-muted-foreground mt-2">
+                                <p className="text-muted-foreground mt-2 text-xs">
                                   Signed by {contract.signatureData.name} on{' '}
                                   {formatDate(new Date(contract.signatureData.date))}
                                 </p>
                               </>
                             ) : (
-                              <div className="h-16 border-2 border-dashed rounded flex items-center justify-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground flex h-16 items-center justify-center rounded border-2 border-dashed text-sm">
                                 Awaiting signature
                               </div>
                             )}
                           </div>
 
                           {/* Business Signature */}
-                          <div className="rounded-lg border bg-background p-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-2">Business Signature</p>
+                          <div className="bg-background rounded-lg border p-4">
+                            <p className="text-muted-foreground mb-2 text-xs font-medium">
+                              Business Signature
+                            </p>
                             {contract.countersignatureData ? (
                               <>
                                 {contract.countersignatureData.type === 'drawn' ? (
@@ -367,13 +378,13 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                                     {contract.countersignatureData.value}
                                   </p>
                                 )}
-                                <p className="text-xs text-muted-foreground mt-2">
+                                <p className="text-muted-foreground mt-2 text-xs">
                                   Countersigned by {contract.countersignatureData.name} on{' '}
                                   {formatDate(new Date(contract.countersignatureData.date))}
                                 </p>
                               </>
                             ) : (
-                              <div className="h-16 border-2 border-dashed rounded flex items-center justify-center text-sm text-muted-foreground">
+                              <div className="text-muted-foreground flex h-16 items-center justify-center rounded border-2 border-dashed text-sm">
                                 Awaiting countersignature
                               </div>
                             )}
@@ -387,8 +398,10 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
 
                   {/* Contract Content */}
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Contract Content</p>
-                    <div className="rounded-lg border bg-background p-4 [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[300px]! [&_.ProseMirror]:overflow-y-auto [&_.prose]:!prose-sm">
+                    <p className="text-muted-foreground mb-3 text-xs font-semibold uppercase tracking-widest">
+                      Contract Content
+                    </p>
+                    <div className="bg-background [&_.ProseMirror]:min-h-[100px]! [&_.ProseMirror]:max-h-[300px]! [&_.prose]:!prose-sm rounded-lg border p-4 [&_.ProseMirror]:overflow-y-auto">
                       <ContractEditor
                         key={contract.id}
                         content={contract.content}
@@ -402,7 +415,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
               <Separator />
 
               {/* Footer Actions */}
-              <div className="p-4 flex items-center justify-end">
+              <div className="flex items-center justify-end p-4">
                 <div className="flex items-center gap-2">
                   {contract.status === 'draft' && (
                     <Button
@@ -431,12 +444,12 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                     </Button>
                   )}
                   {contract.status !== 'draft' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <a href={`/c/${contract.accessToken}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`/c/${contract.accessToken}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View as Client
                       </a>

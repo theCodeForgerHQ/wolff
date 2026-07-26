@@ -1,6 +1,20 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, Edit, Download, Trash2, ExternalLink, Receipt, ArrowRight, Clock, CheckCircle, XCircle, Eye, Mail, PenLine } from 'lucide-react';
+import {
+  FileText,
+  Edit,
+  Download,
+  Trash2,
+  ExternalLink,
+  Receipt,
+  ArrowRight,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Mail,
+  PenLine,
+} from 'lucide-react';
 import { getQuote } from '@/lib/quotes/actions';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -36,7 +50,10 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   accepted: { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-700 dark:text-green-300' },
   declined: { bg: 'bg-red-100 dark:bg-red-900', text: 'text-red-700 dark:text-red-300' },
   expired: { bg: 'bg-orange-100 dark:bg-orange-900', text: 'text-orange-700 dark:text-orange-300' },
-  converted: { bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-700 dark:text-purple-300' },
+  converted: {
+    bg: 'bg-purple-100 dark:bg-purple-900',
+    text: 'text-purple-700 dark:text-purple-300',
+  },
 };
 
 export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) {
@@ -66,8 +83,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
             </span>
           </div>
           <p className="text-muted-foreground">
-            {quote.quoteNumber} &bull; Created on{' '}
-            {new Date(quote.issueDate).toLocaleDateString()}
+            {quote.quoteNumber} &bull; Created on {new Date(quote.issueDate).toLocaleDateString()}
           </p>
         </div>
 
@@ -87,9 +103,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
               </Link>
             </Button>
           )}
-          {quote.status === 'draft' && (
-            <SendQuoteButton quoteId={id} />
-          )}
+          {quote.status === 'draft' && <SendQuoteButton quoteId={id} />}
           {quote.status === 'accepted' && !quote.linkedInvoice && (
             <ConvertToInvoiceButton
               quoteId={quote.id}
@@ -109,14 +123,12 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
               <CardTitle>Quote Preview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border bg-card p-8">
+              <div className="bg-card rounded-lg border p-8">
                 {/* Header */}
                 <div className="mb-8 flex justify-between">
                   <div>
                     <h2 className="text-2xl font-bold">{quote.title}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Quote #{quote.quoteNumber}
-                    </p>
+                    <p className="text-muted-foreground text-sm">Quote #{quote.quoteNumber}</p>
                   </div>
                   <div className="text-right text-sm">
                     <p className="font-medium">Issue Date</p>
@@ -142,8 +154,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                       .filter((b) => b.type === 'service-item')
                       .map((block) => {
                         if (block.type !== 'service-item') return null;
-                        const lineTotal =
-                          block.content.quantity * block.content.rate;
+                        const lineTotal = block.content.quantity * block.content.rate;
                         return (
                           <div
                             key={block.id}
@@ -152,14 +163,15 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                             <div>
                               <h4 className="font-medium">{block.content.name}</h4>
                               {block.content.description && (
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-muted-foreground text-sm">
                                   {block.content.description}
                                 </p>
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="text-sm text-muted-foreground">
-                                {block.content.quantity} x {formatCurrency(block.content.rate, quote.currency)}
+                              <p className="text-muted-foreground text-sm">
+                                {block.content.quantity} x{' '}
+                                {formatCurrency(block.content.rate, quote.currency)}
                               </p>
                               <p className="font-semibold">
                                 {formatCurrency(lineTotal, quote.currency)}
@@ -201,7 +213,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                 {quote.notes && (
                   <div className="mt-8 border-t pt-4">
                     <h3 className="mb-2 font-semibold">Notes</h3>
-                    <p className="text-sm text-muted-foreground">{quote.notes}</p>
+                    <p className="text-muted-foreground text-sm">{quote.notes}</p>
                   </div>
                 )}
 
@@ -209,7 +221,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                 {quote.terms && (
                   <div className="mt-4">
                     <h3 className="mb-2 font-semibold">Terms & Conditions</h3>
-                    <p className="text-sm text-muted-foreground">{quote.terms}</p>
+                    <p className="text-muted-foreground text-sm">{quote.terms}</p>
                   </div>
                 )}
               </div>
@@ -226,13 +238,13 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-muted-foreground text-sm">Total Value</p>
                 <p className="text-2xl font-bold">
                   {formatCurrency(quote.totals.total, quote.currency)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-muted-foreground text-sm">Status</p>
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
                 >
@@ -240,7 +252,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                 </span>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Line Items</p>
+                <p className="text-muted-foreground text-sm">Line Items</p>
                 <p className="font-medium">
                   {quote.blocks.filter((b) => b.type === 'service-item').length}
                 </p>
@@ -258,10 +270,10 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                 <>
                   <p className="font-medium">{quote.client.name}</p>
                   {quote.client.company && quote.client.company !== quote.client.name && (
-                    <p className="text-sm text-muted-foreground">{quote.client.company}</p>
+                    <p className="text-muted-foreground text-sm">{quote.client.company}</p>
                   )}
                   {quote.client.email && (
-                    <p className="text-sm text-muted-foreground">{quote.client.email}</p>
+                    <p className="text-muted-foreground text-sm">{quote.client.email}</p>
                   )}
                 </>
               ) : (
@@ -282,7 +294,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
           {quote.linkedInvoice && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Receipt className="h-4 w-4" />
                   Linked Invoice
                 </CardTitle>
@@ -292,11 +304,11 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">{quote.linkedInvoice.invoiceNumber}</p>
-                      <p className="text-sm text-muted-foreground capitalize">
+                      <p className="text-muted-foreground text-sm capitalize">
                         {quote.linkedInvoice.status}
                       </p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="text-muted-foreground h-4 w-4" />
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="w-full" asChild>
@@ -313,28 +325,45 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
           {quote.signatureData && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <PenLine className="h-4 w-4" />
                   Signature
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="rounded-lg border bg-green-50 dark:bg-green-950 p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {(quote.signatureData.data.startsWith('data:image/') || quote.signatureData.data.startsWith('https://')) ? (
+                <div className="rounded-lg border bg-green-50 p-4 dark:bg-green-950">
+                  {quote.signatureData.data.startsWith('data:image/') ||
+                  quote.signatureData.data.startsWith('https://') ? (
                     <img
                       src={quote.signatureData.data}
                       alt="Client signature"
-                      className="max-h-20 mx-auto"
+                      className="mx-auto max-h-20"
                     />
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center">Invalid signature data</p>
+                    <p className="text-muted-foreground text-center text-sm">
+                      Invalid signature data
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1 text-sm">
-                  <p><span className="text-muted-foreground">Signed by:</span> {quote.signatureData.signerName}</p>
-                  <p><span className="text-muted-foreground">Date:</span> {new Date(quote.signatureData.signedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  <p><span className="text-muted-foreground">IP:</span> {quote.signatureData.ipAddress}</p>
+                  <p>
+                    <span className="text-muted-foreground">Signed by:</span>{' '}
+                    {quote.signatureData.signerName}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Date:</span>{' '}
+                    {new Date(quote.signatureData.signedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">IP:</span>{' '}
+                    {quote.signatureData.ipAddress}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -361,11 +390,12 @@ async function QuoteActivity({ quoteId }: { quoteId: string }) {
   });
 
   const getEventIcon = (eventType: string) => {
-    if (eventType.includes('sent') || eventType.includes('quote_sent')) return <Mail className="h-4 w-4 text-blue-500" />;
+    if (eventType.includes('sent') || eventType.includes('quote_sent'))
+      return <Mail className="h-4 w-4 text-blue-500" />;
     if (eventType.includes('accepted')) return <CheckCircle className="h-4 w-4 text-green-500" />;
     if (eventType.includes('declined')) return <XCircle className="h-4 w-4 text-red-500" />;
     if (eventType.includes('viewed')) return <Eye className="h-4 w-4 text-yellow-500" />;
-    return <Clock className="h-4 w-4 text-muted-foreground" />;
+    return <Clock className="text-muted-foreground h-4 w-4" />;
   };
 
   const getEventLabel = (eventType: string) => {
@@ -386,9 +416,7 @@ async function QuoteActivity({ quoteId }: { quoteId: string }) {
       </CardHeader>
       <CardContent>
         {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No activity yet.
-          </p>
+          <p className="text-muted-foreground text-sm">No activity yet.</p>
         ) : (
           <div className="space-y-3">
             {events.map((event) => (
@@ -396,7 +424,7 @@ async function QuoteActivity({ quoteId }: { quoteId: string }) {
                 <div className="mt-0.5">{getEventIcon(event.eventType)}</div>
                 <div className="flex-1">
                   <p className="text-sm">{getEventLabel(event.eventType)}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {new Date(event.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',

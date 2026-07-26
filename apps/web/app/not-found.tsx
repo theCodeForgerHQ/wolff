@@ -16,11 +16,11 @@ export default function NotFound() {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-linear-to-b from-background to-muted/50">
+    <div className="bg-linear-to-b from-background to-muted/50 flex min-h-screen items-center justify-center p-6">
       <Card className="max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <FileQuestion className="h-8 w-8 text-muted-foreground" />
+          <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+            <FileQuestion className="text-muted-foreground h-8 w-8" />
           </div>
           <CardTitle className="text-2xl">Page not found</CardTitle>
           <CardDescription>
@@ -28,7 +28,7 @@ export default function NotFound() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Check the URL or navigate back to the dashboard.
           </p>
         </CardContent>

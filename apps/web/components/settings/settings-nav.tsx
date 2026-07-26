@@ -92,7 +92,7 @@ export function SettingsNav() {
       </div>
 
       {/* Desktop: Sidebar nav */}
-      <nav className="hidden md:flex flex-col gap-0.5">
+      <nav className="hidden flex-col gap-0.5 md:flex">
         {settingsNavItems.map((item) => (
           <Link
             key={item.href}

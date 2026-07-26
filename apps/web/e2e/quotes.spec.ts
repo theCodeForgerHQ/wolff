@@ -35,7 +35,9 @@ test.describe('Quotes Module', () => {
       await page.goto('/quotes');
 
       // Filter button should be visible
-      const filterButton = page.locator('button').filter({ has: page.locator('svg.lucide-filter') });
+      const filterButton = page
+        .locator('button')
+        .filter({ has: page.locator('svg.lucide-filter') });
       await expect(filterButton).toBeVisible();
     });
 
@@ -44,7 +46,7 @@ test.describe('Quotes Module', () => {
 
       // If quotes exist, cards should show title and status
       const quoteCards = page.locator('[class*="Card"]');
-      if (await quoteCards.count() > 0) {
+      if ((await quoteCards.count()) > 0) {
         // Each card should have a title and status badge
         const firstCard = quoteCards.first();
         await expect(firstCard).toBeVisible();

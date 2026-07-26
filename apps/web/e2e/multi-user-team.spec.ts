@@ -13,7 +13,7 @@ test.describe('Multi-user & Team', () => {
 
       // Use data-testid for team member cards
       const memberList = page.getByTestId('team-member-card');
-      if (await memberList.count() > 0) {
+      if ((await memberList.count()) > 0) {
         await expect(memberList.first()).toBeVisible();
       }
     });
@@ -210,7 +210,7 @@ test.describe('Multi-user & Team', () => {
       await page.goto('/settings/team');
 
       const removeButton = page.getByRole('button', { name: /remove|delete/i });
-      if (await removeButton.count() > 0) {
+      if ((await removeButton.count()) > 0) {
         await expect(removeButton.first()).toBeVisible();
       }
     });
@@ -322,8 +322,10 @@ test.describe('Multi-user & Team', () => {
         const activityLog = page.getByText(/activity|history/i);
         if (await activityLog.isVisible()) {
           // Activity entries should have user attribution
-          const userAttribution = page.locator('[class*="activity"] [class*="user"], [class*="activity"] [class*="name"]');
-          if (await userAttribution.count() > 0) {
+          const userAttribution = page.locator(
+            '[class*="activity"] [class*="user"], [class*="activity"] [class*="name"]'
+          );
+          if ((await userAttribution.count()) > 0) {
             await expect(userAttribution.first()).toBeVisible();
           }
         }
@@ -458,7 +460,7 @@ test.describe('Multi-user Accessibility', () => {
 
     // Team members are displayed as cards, not a table
     const memberCards = page.getByTestId('team-member-card');
-    if (await memberCards.count() > 0) {
+    if ((await memberCards.count()) > 0) {
       await expect(memberCards.first()).toBeVisible();
     }
   });

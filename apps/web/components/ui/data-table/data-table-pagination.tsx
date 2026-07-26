@@ -1,12 +1,7 @@
 'use client';
 
 import { Table } from '@tanstack/react-table';
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -14,9 +9,7 @@ interface DataTablePaginationProps<TData> {
   table: Table<TData>;
 }
 
-export function DataTablePagination<TData>({
-  table,
-}: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
@@ -64,7 +57,7 @@ export function DataTablePagination<TData>({
   return (
     <div className="flex items-center justify-between px-2">
       <div className="flex items-center space-x-6 lg:space-x-8">
-        <div className="flex items-center justify-center text-sm text-muted-foreground whitespace-nowrap">
+        <div className="text-muted-foreground flex items-center justify-center whitespace-nowrap text-sm">
           {/* Bug #108: Show "No entries" when table is empty instead of "Showing 1 to 0" */}
           {table.getFilteredRowModel().rows.length === 0
             ? 'No entries'
@@ -98,7 +91,7 @@ export function DataTablePagination<TData>({
               page === 'ellipsis' ? (
                 <span
                   key={`ellipsis-${index}`}
-                  className="flex h-8 w-8 items-center justify-center text-muted-foreground"
+                  className="text-muted-foreground flex h-8 w-8 items-center justify-center"
                 >
                   ...
                 </span>

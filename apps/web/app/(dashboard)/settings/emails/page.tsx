@@ -19,10 +19,10 @@ export default async function EmailSettingsPage() {
 
       {/* Low #53: Show email templates section with link to manage */}
       <div className="rounded-lg border p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-semibold">Email Templates</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {templates.length} template{templates.length !== 1 ? 's' : ''} configured
             </p>
           </div>
@@ -39,7 +39,7 @@ export default async function EmailSettingsPage() {
               <li key={t.id}>
                 <Link
                   href={`/settings/emails/${t.id}`}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
                 >
                   <Mail className="h-3.5 w-3.5" />
                   {t.name}

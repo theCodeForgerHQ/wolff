@@ -18,11 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  createTaxRate,
-  updateTaxRate,
-  deleteTaxRate,
-} from '@/lib/settings/actions';
+import { createTaxRate, updateTaxRate, deleteTaxRate } from '@/lib/settings/actions';
 import type { TaxRateData, CreateTaxRateInput } from '@/lib/settings/types';
 import { toast } from 'sonner';
 
@@ -115,9 +111,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
       } else {
         const result = await createTaxRate(input);
         setTaxRates((prev) => [
-          ...prev.map((tr) =>
-            editingRate.isDefault ? { ...tr, isDefault: false } : tr
-          ),
+          ...prev.map((tr) => (editingRate.isDefault ? { ...tr, isDefault: false } : tr)),
           {
             id: result.id,
             ...input,
@@ -164,9 +158,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Tax Rates</CardTitle>
-              <CardDescription>
-                Configure tax rates for your quotes and invoices.
-              </CardDescription>
+              <CardDescription>Configure tax rates for your quotes and invoices.</CardDescription>
             </div>
             {!editingRate && (
               <Button onClick={handleAddNew} size="sm">
@@ -190,9 +182,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
                     <Input
                       id="name"
                       value={editingRate.name}
-                      onChange={(e) =>
-                        setEditingRate({ ...editingRate, name: e.target.value })
-                      }
+                      onChange={(e) => setEditingRate({ ...editingRate, name: e.target.value })}
                       placeholder="e.g., Sales Tax"
                     />
                   </div>
@@ -206,9 +196,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
                       min="0"
                       max="100"
                       value={editingRate.rate}
-                      onChange={(e) =>
-                        setEditingRate({ ...editingRate, rate: e.target.value })
-                      }
+                      onChange={(e) => setEditingRate({ ...editingRate, rate: e.target.value })}
                       placeholder="e.g., 8.25"
                     />
                   </div>
@@ -268,11 +256,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
                 </div>
 
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setEditingRate(null)}
-                    disabled={isSaving}
-                  >
+                  <Button variant="ghost" onClick={() => setEditingRate(null)} disabled={isSaving}>
                     <X className="mr-1 h-4 w-4" />
                     Cancel
                   </Button>
@@ -287,9 +271,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
 
           {/* Tax Rates List */}
           {taxRates.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No tax rates configured
-            </p>
+            <p className="text-muted-foreground py-8 text-center">No tax rates configured</p>
           ) : (
             <div className="space-y-2">
               {taxRates.map((taxRate) => (
@@ -302,34 +284,22 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{taxRate.name}</span>
-                      <span className="text-lg font-semibold text-primary">
-                        {taxRate.rate}%
-                      </span>
+                      <span className="text-primary text-lg font-semibold">{taxRate.rate}%</span>
                       {taxRate.isDefault && (
                         <Badge variant="default" className="gap-1">
                           <Star className="h-3 w-3" />
                           Default
                         </Badge>
                       )}
-                      {taxRate.isInclusive && (
-                        <Badge variant="secondary">Inclusive</Badge>
-                      )}
-                      {!taxRate.isActive && (
-                        <Badge variant="outline">Inactive</Badge>
-                      )}
+                      {taxRate.isInclusive && <Badge variant="secondary">Inclusive</Badge>}
+                      {!taxRate.isActive && <Badge variant="outline">Inactive</Badge>}
                     </div>
                     {taxRate.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {taxRate.description}
-                      </p>
+                      <p className="text-muted-foreground text-sm">{taxRate.description}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(taxRate)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(taxRate)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -354,8 +324,7 @@ export function TaxRatesManager({ initialData }: TaxRatesManagerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Tax Rate</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this tax rate? This action cannot be
-              undone.
+              Are you sure you want to delete this tax rate? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

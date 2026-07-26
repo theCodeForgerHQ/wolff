@@ -49,7 +49,10 @@ export const getCurrentUserWorkspace = cache(async (): Promise<WorkspaceContext>
   }
 
   // CR #12: Fall back to first non-deleted workspace
-  logger.warn({ userId }, '[workspace] Stored workspace ID not found, falling back to first workspace');
+  logger.warn(
+    { userId },
+    '[workspace] Stored workspace ID not found, falling back to first workspace'
+  );
   const firstMembership = await prisma.workspaceMember.findFirst({
     where: { userId, workspace: { deletedAt: null } },
     select: { workspaceId: true, role: true },

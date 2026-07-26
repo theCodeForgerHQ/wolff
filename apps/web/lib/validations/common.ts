@@ -43,18 +43,18 @@ export const emailSchema = z
 
 // Phone schema (flexible international format, requires at least 7 digits)
 // Low #93: Restructured so empty string resolves before regex validation fires
-export const phoneSchema = z.union([
-  z.literal(''),
-  z.string()
-    .regex(
-      /^\+?[\d\s\-().]{7,25}$/,
-      'Please enter a valid phone number (at least 7 digits)'
-    )
-    .refine(
-      (val) => (val.match(/\d/g) || []).length >= 7,
-      'Phone number must contain at least 7 digits'
-    ),
-]).optional();
+export const phoneSchema = z
+  .union([
+    z.literal(''),
+    z
+      .string()
+      .regex(/^\+?[\d\s\-().]{7,25}$/, 'Please enter a valid phone number (at least 7 digits)')
+      .refine(
+        (val) => (val.match(/\d/g) || []).length >= 7,
+        'Phone number must contain at least 7 digits'
+      ),
+  ])
+  .optional();
 
 // URL schema - accepts full URLs or plain domains (auto-prepends https://)
 export const urlSchema = z
@@ -128,15 +128,13 @@ export function createStatusSchema<T extends string>(statuses: readonly T[]) {
 }
 
 // Date helpers
-export const futureDateSchema = z.coerce.date().refine(
-  (date) => date > new Date(),
-  'Date must be in the future'
-);
+export const futureDateSchema = z.coerce
+  .date()
+  .refine((date) => date > new Date(), 'Date must be in the future');
 
-export const pastDateSchema = z.coerce.date().refine(
-  (date) => date < new Date(),
-  'Date must be in the past'
-);
+export const pastDateSchema = z.coerce
+  .date()
+  .refine((date) => date < new Date(), 'Date must be in the past');
 
 // Type exports
 export type Pagination = z.infer<typeof paginationSchema>;

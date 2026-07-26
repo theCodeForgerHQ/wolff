@@ -2,7 +2,11 @@ export const dynamic = 'force-dynamic';
 
 import { TeamMemberList } from '@/components/settings/team-member-list';
 import { InviteMemberButton } from '@/components/settings/invite-member-button';
-import { getWorkspaceMembers, getCurrentUserRole, getPendingInvitations } from '@/lib/settings/actions';
+import {
+  getWorkspaceMembers,
+  getCurrentUserRole,
+  getPendingInvitations,
+} from '@/lib/settings/actions';
 import { PendingInvitations } from '@/components/settings/pending-invitations';
 
 export const metadata = {
@@ -26,10 +30,7 @@ export default async function TeamSettingsPage() {
         </div>
       )}
 
-      <TeamMemberList
-        members={members}
-        currentUserRole={currentUserRole}
-      />
+      <TeamMemberList members={members} currentUserRole={currentUserRole} />
 
       {canManageTeam && pendingInvitations.length > 0 && (
         <div className="mt-8">

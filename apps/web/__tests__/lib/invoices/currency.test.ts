@@ -140,7 +140,7 @@ describe('Currency Handling (Bug #336, #358)', () => {
     });
 
     it('formats negative fractional amount', () => {
-      const result = formatCurrency(-0.50);
+      const result = formatCurrency(-0.5);
       expect(result).toContain('0.50');
     });
 

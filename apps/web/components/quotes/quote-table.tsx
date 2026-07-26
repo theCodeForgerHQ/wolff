@@ -96,7 +96,7 @@ export function QuoteTable({ quotes, isLoading = false }: QuoteTableProps) {
       isLoading={isLoading}
       emptyState={
         <div className="flex flex-col items-center gap-2">
-          <FileText className="h-8 w-8 text-muted-foreground" />
+          <FileText className="text-muted-foreground h-8 w-8" />
           <p className="text-muted-foreground">No quotes found</p>
         </div>
       }

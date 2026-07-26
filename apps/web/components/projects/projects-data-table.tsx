@@ -98,11 +98,9 @@ export function ProjectsDataTable({ data }: ProjectsDataTableProps) {
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center py-16">
-      <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
+      <FolderKanban className="text-muted-foreground mb-4 h-12 w-12" />
       <h3 className="text-lg font-medium">No projects found</h3>
-      <p className="text-muted-foreground mb-4">
-        Create your first project to organize your work
-      </p>
+      <p className="text-muted-foreground mb-4">Create your first project to organize your work</p>
       <Button asChild>
         <Link href="/projects/new">
           <Plus className="mr-2 h-4 w-4" />
@@ -115,16 +113,9 @@ export function ProjectsDataTable({ data }: ProjectsDataTableProps) {
   return (
     <>
       {selectedRows.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-muted-foreground">
-            {selectedRows.length} selected
-          </span>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDelete}
-            disabled={isDeleting}
-          >
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-muted-foreground text-sm">{selectedRows.length} selected</span>
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete Selected
           </Button>
@@ -149,9 +140,8 @@ export function ProjectsDataTable({ data }: ProjectsDataTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this project? This action cannot be
-              undone. Associated quotes and invoices will remain but will no
-              longer be linked to this project.
+              Are you sure you want to delete this project? This action cannot be undone. Associated
+              quotes and invoices will remain but will no longer be linked to this project.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

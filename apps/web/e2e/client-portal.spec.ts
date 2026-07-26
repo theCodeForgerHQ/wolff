@@ -65,7 +65,7 @@ test.describe('Client Portal - Quote View', () => {
 
       // Should display line items or services
       const lineItems = page.locator('table, [class*="item"], [class*="line"]');
-      if (await lineItems.count() > 0) {
+      if ((await lineItems.count()) > 0) {
         await expect(lineItems.first()).toBeVisible();
       }
     });
@@ -327,7 +327,7 @@ test.describe('Client Portal - Invoice View', () => {
       await page.goto('/invoice/demo-invoice-token');
 
       const lineItems = page.locator('table, [class*="item"]');
-      if (await lineItems.count() > 0) {
+      if ((await lineItems.count()) > 0) {
         await expect(lineItems.first()).toBeVisible();
       }
     });
@@ -410,7 +410,7 @@ test.describe('Client Portal Accessibility', () => {
     await page.goto('/q/demo-quote-token');
 
     const buttons = page.getByRole('button');
-    if (await buttons.count() > 0) {
+    if ((await buttons.count()) > 0) {
       const firstButton = buttons.first();
       await expect(firstButton).toBeVisible();
     }

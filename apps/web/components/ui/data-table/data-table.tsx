@@ -85,7 +85,7 @@ export function DataTable<TData, TValue>({
       const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
       onRowSelect(selectedRows);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- HIGH #49: `table` is recreated every render; depend on `rowSelection` only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- HIGH #49: `table` is recreated every render; depend on `rowSelection` only
   }, [rowSelection, onRowSelect]);
 
   return (
@@ -121,7 +121,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
                   <div className="flex items-center justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
                   </div>
                 </TableCell>
               </TableRow>

@@ -216,13 +216,7 @@ export interface QuoteDocument {
 }
 
 export type QuoteStatus =
-  | 'draft'
-  | 'sent'
-  | 'viewed'
-  | 'accepted'
-  | 'declined'
-  | 'expired'
-  | 'converted';
+  'draft' | 'sent' | 'viewed' | 'accepted' | 'declined' | 'expired' | 'converted';
 
 export interface QuoteSettings {
   requireSignature: boolean;

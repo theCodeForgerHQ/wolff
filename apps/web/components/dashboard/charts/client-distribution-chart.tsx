@@ -1,17 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChartCard } from './chart-card';
-import { CHART_PALETTE, formatChartCurrency, formatFullCurrency } from '@/lib/dashboard/chart-utils';
+import {
+  CHART_PALETTE,
+  formatChartCurrency,
+  formatFullCurrency,
+} from '@/lib/dashboard/chart-utils';
 import type { ClientDistributionData } from '@/lib/dashboard/types';
 import { Button } from '@/components/ui/button';
 
@@ -34,9 +30,7 @@ export function ClientDistributionChart({
 
   const chartData = useMemo(() => {
     const sorted = [...data].sort((a, b) =>
-      viewMode === 'clients'
-        ? b.clientCount - a.clientCount
-        : b.totalRevenue - a.totalRevenue
+      viewMode === 'clients' ? b.clientCount - a.clientCount : b.totalRevenue - a.totalRevenue
     );
 
     return sorted.slice(0, 10).map((item, index) => ({
@@ -114,12 +108,15 @@ export function ClientDistributionChart({
             <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload || !payload[0]) return null;
-                const item = payload[0].payload as ClientDistributionData & { fill: string; value: number };
+                const item = payload[0].payload as ClientDistributionData & {
+                  fill: string;
+                  value: number;
+                };
                 const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
 
                 return (
-                  <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
+                    <div className="mb-1 flex items-center gap-2">
                       <span
                         className="h-3 w-3 rounded-full"
                         style={{ backgroundColor: item.fill }}
@@ -130,20 +127,15 @@ export function ClientDistributionChart({
                       Clients: <span className="font-medium">{item.clientCount}</span>
                     </p>
                     <p className="text-sm">
-                      Revenue: <span className="font-medium">{formatFullCurrency(item.totalRevenue)}</span>
+                      Revenue:{' '}
+                      <span className="font-medium">{formatFullCurrency(item.totalRevenue)}</span>
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {percentage}% of total
-                    </p>
+                    <p className="text-muted-foreground text-sm">{percentage}% of total</p>
                   </div>
                 );
               }}
             />
-            <Bar
-              dataKey="value"
-              radius={[0, 4, 4, 0]}
-              animationDuration={500}
-            >
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} animationDuration={500}>
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}

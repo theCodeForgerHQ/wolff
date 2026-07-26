@@ -54,7 +54,10 @@ export async function createCreditNote(
   const { role } = await getCurrentUserWorkspace();
 
   if (role === 'viewer') {
-    return { success: false, error: 'Insufficient permissions: viewers cannot create credit notes' };
+    return {
+      success: false,
+      error: 'Insufficient permissions: viewers cannot create credit notes',
+    };
   }
 
   const invoice = await prisma.invoice.findFirst({
@@ -70,7 +73,11 @@ export async function createCreditNote(
   }
 
   if (!CREDIT_NOTE_ELIGIBLE_STATUSES.includes(invoice.status)) {
-    return { success: false, error: 'Credit notes can only be created for sent, paid, partial, overdue, or voided invoices' };
+    return {
+      success: false,
+      error:
+        'Credit notes can only be created for sent, paid, partial, overdue, or voided invoices',
+    };
   }
 
   if (!data.reason.trim()) {
@@ -107,7 +114,10 @@ export async function createCreditNote(
   // Validate credit note amount doesn't exceed invoice total
   const invoiceTotal = Number(invoice.total);
   if (totalAmount > invoiceTotal) {
-    return { success: false, error: `Credit note amount ($${totalAmount.toFixed(2)}) cannot exceed invoice total ($${invoiceTotal.toFixed(2)})` };
+    return {
+      success: false,
+      error: `Credit note amount ($${totalAmount.toFixed(2)}) cannot exceed invoice total ($${invoiceTotal.toFixed(2)})`,
+    };
   }
 
   // Validate credit note amount doesn't exceed remaining amountDue
@@ -116,12 +126,18 @@ export async function createCreditNote(
     where: { invoiceId, status: 'draft', deletedAt: null },
     select: { amount: true },
   });
-  const pendingDraftTotal = existingDraftCreditNotes.reduce((sum, cn) => sum + Number(cn.amount), 0);
+  const pendingDraftTotal = existingDraftCreditNotes.reduce(
+    (sum, cn) => sum + Number(cn.amount),
+    0
+  );
 
   const invoiceAmountDue = Number(invoice.amountDue);
   const effectiveAmountDue = invoiceAmountDue - pendingDraftTotal;
   if (totalAmount > effectiveAmountDue) {
-    return { success: false, error: `Credit note amount ($${totalAmount.toFixed(2)}) cannot exceed remaining amount due ($${effectiveAmountDue.toFixed(2)}) after accounting for pending draft credit notes` };
+    return {
+      success: false,
+      error: `Credit note amount ($${totalAmount.toFixed(2)}) cannot exceed remaining amount due ($${effectiveAmountDue.toFixed(2)}) after accounting for pending draft credit notes`,
+    };
   }
 
   const creditNoteNumber = await generateCreditNoteNumber(workspace.id);
@@ -237,7 +253,10 @@ export async function issueCreditNote(creditNoteId: string) {
   revalidatePath(ROUTES.invoiceDetail(creditNote.invoiceId));
 
   try {
-    domainEvents.emit({ type: 'credit_note.issued', payload: { creditNoteId, invoiceId: creditNote.invoiceId, workspaceId: workspace.id } });
+    domainEvents.emit({
+      type: 'credit_note.issued',
+      payload: { creditNoteId, invoiceId: creditNote.invoiceId, workspaceId: workspace.id },
+    });
   } catch {}
 
   return { success: true };

@@ -36,17 +36,9 @@ interface BlockRendererProps {
 }
 
 export function BlockRenderer({ block, index, isSelected, isPreview }: BlockRendererProps) {
-  const { selectBlock, removeBlock, duplicateBlock, setHoveredBlock } =
-    useQuoteBuilderStore();
+  const { selectBlock, removeBlock, duplicateBlock, setHoveredBlock } = useQuoteBuilderStore();
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
     disabled: isPreview,
   });
@@ -89,7 +81,7 @@ export function BlockRenderer({ block, index, isSelected, isPreview }: BlockRend
         // Exhaustive check - this should never happen if all block types are handled
         const _exhaustiveCheck: never = block;
         return (
-          <div className="rounded bg-muted p-4 text-center text-sm text-muted-foreground">
+          <div className="bg-muted text-muted-foreground rounded p-4 text-center text-sm">
             Unknown block type: {(_exhaustiveCheck as QuoteBlock).type}
           </div>
         );
@@ -109,8 +101,8 @@ export function BlockRenderer({ block, index, isSelected, isPreview }: BlockRend
       className={cn(
         'group relative rounded-lg transition-all',
         isDragging && 'z-50 opacity-50',
-        isSelected && 'ring-2 ring-primary ring-offset-2',
-        !isSelected && 'hover:ring-1 hover:ring-muted-foreground/20'
+        isSelected && 'ring-primary ring-2 ring-offset-2',
+        !isSelected && 'hover:ring-muted-foreground/20 hover:ring-1'
       )}
       onClick={handleClick}
       onMouseEnter={() => setHoveredBlock(block.id)}

@@ -3,22 +3,9 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Mail,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Check,
-  X,
-} from 'lucide-react';
+import { Mail, MoreHorizontal, Pencil, Trash2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -114,9 +101,7 @@ export function EmailTemplateList({ templates }: EmailTemplateListProps) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {template.subject}
-                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{template.subject}</TableCell>
                     <TableCell>
                       {template.isActive ? (
                         <Badge variant="default" className="gap-1 bg-green-100 text-green-800">
@@ -133,7 +118,12 @@ export function EmailTemplateList({ templates }: EmailTemplateListProps) {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="More actions"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -166,9 +156,9 @@ export function EmailTemplateList({ templates }: EmailTemplateListProps) {
       {templates.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+            <Mail className="text-muted-foreground mb-4 h-12 w-12" />
             <h3 className="text-lg font-semibold">No email templates</h3>
-            <p className="text-muted-foreground text-center mt-1">
+            <p className="text-muted-foreground mt-1 text-center">
               Create custom email templates for your business communications.
             </p>
           </CardContent>
@@ -180,8 +170,7 @@ export function EmailTemplateList({ templates }: EmailTemplateListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this email template? This action
-              cannot be undone.
+              Are you sure you want to delete this email template? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

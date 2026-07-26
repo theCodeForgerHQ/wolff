@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, ArrowRight, Building2, Palette, CreditCard, PartyPopper, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Check,
+  ArrowRight,
+  Building2,
+  Palette,
+  CreditCard,
+  PartyPopper,
+  Loader2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { OnboardingBusinessStep } from './steps/business-step';
 import { OnboardingBrandingStep } from './steps/branding-step';
@@ -72,13 +74,11 @@ export function OnboardingWizard({ initialProgress, stripeEnabled }: OnboardingW
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-background to-muted/50 flex items-center justify-center p-4">
+    <div className="bg-linear-to-b from-background to-muted/50 flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
-        <CardHeader className="text-center pb-2">
+        <CardHeader className="pb-2 text-center">
           <CardTitle className="text-2xl">Welcome to Wolff</CardTitle>
-          <CardDescription>
-            Let&apos;s set up your account in just a few steps
-          </CardDescription>
+          <CardDescription>Let&apos;s set up your account in just a few steps</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Progress Bar */}
@@ -147,10 +147,7 @@ export function OnboardingWizard({ initialProgress, stripeEnabled }: OnboardingW
               />
             )}
             {currentStep === 'complete' && (
-              <OnboardingCompleteStep
-                onComplete={handleComplete}
-                isLoading={isLoading}
-              />
+              <OnboardingCompleteStep onComplete={handleComplete} isLoading={isLoading} />
             )}
           </div>
         </CardContent>

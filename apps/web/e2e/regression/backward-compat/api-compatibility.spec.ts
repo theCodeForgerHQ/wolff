@@ -185,7 +185,9 @@ test.describe('Backward Compatibility - Feature Flags', () => {
       const element = comingSoon.nth(i);
       // Should either be hidden or show "coming soon" message
       const isHidden = await element.isHidden();
-      const hasMessage = await element.locator('[data-testid="feature-disabled-message"]').isVisible();
+      const hasMessage = await element
+        .locator('[data-testid="feature-disabled-message"]')
+        .isVisible();
 
       expect(isHidden || hasMessage).toBeTruthy();
     }

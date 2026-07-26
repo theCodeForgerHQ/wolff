@@ -49,9 +49,7 @@ export default async function ContractsPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contracts</h1>
-          <p className="text-muted-foreground">
-            Manage your contracts and track signatures
-          </p>
+          <p className="text-muted-foreground">Manage your contracts and track signatures</p>
         </div>
         <Button asChild>
           <Link href="/contracts/new">

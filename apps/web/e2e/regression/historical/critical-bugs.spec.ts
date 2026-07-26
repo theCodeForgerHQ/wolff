@@ -26,15 +26,24 @@ test.describe('Historical Regressions - Quote Builder', () => {
       await page.click('[data-block-type="text"]');
 
       // Get block ID
-      const firstBlockId = await page.locator('[data-testid="block"]').first().getAttribute('data-block-id');
+      const firstBlockId = await page
+        .locator('[data-testid="block"]')
+        .first()
+        .getAttribute('data-block-id');
 
       // Duplicate the block
-      const duplicateBtn = page.locator('[data-testid="block"]').first().locator('button[aria-label="duplicate"]');
+      const duplicateBtn = page
+        .locator('[data-testid="block"]')
+        .first()
+        .locator('button[aria-label="duplicate"]');
       if (await duplicateBtn.isVisible()) {
         await duplicateBtn.click();
 
         // Get duplicated block ID
-        const secondBlockId = await page.locator('[data-testid="block"]').nth(1).getAttribute('data-block-id');
+        const secondBlockId = await page
+          .locator('[data-testid="block"]')
+          .nth(1)
+          .getAttribute('data-block-id');
 
         // IDs must be different
         expect(firstBlockId).not.toBe(secondBlockId);
@@ -120,7 +129,9 @@ test.describe('Historical Regressions - Quote Builder', () => {
         await page.reload();
 
         // Check that bold formatting is present
-        const boldText = page.locator('[data-testid="rich-text-editor"] strong, [data-testid="rich-text-editor"] b');
+        const boldText = page.locator(
+          '[data-testid="rich-text-editor"] strong, [data-testid="rich-text-editor"] b'
+        );
         await expect(boldText).toBeVisible();
       }
     }
@@ -214,7 +225,9 @@ test.describe('Historical Regressions - Authentication', () => {
     await page.goto('/dashboard');
 
     // Verify logged in - look for user menu or dashboard content
-    const userMenu = page.locator('[data-testid="user-menu"], button:has-text("AP"), [aria-label*="user"]');
+    const userMenu = page.locator(
+      '[data-testid="user-menu"], button:has-text("AP"), [aria-label*="user"]'
+    );
     await expect(userMenu.first()).toBeVisible();
 
     // Reload
@@ -311,7 +324,7 @@ test.describe('Historical Regressions - PDF', () => {
     const titleInput = page.locator('input[name="title"], #title');
     const addItemBtn = page.getByRole('button', { name: /add.*item/i });
 
-    if (await titleInput.isVisible() && await addItemBtn.isVisible()) {
+    if ((await titleInput.isVisible()) && (await addItemBtn.isVisible())) {
       await titleInput.fill('Large Quote');
 
       // Add several line items

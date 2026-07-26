@@ -19,6 +19,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Apply the visual refresh without touching any component logic.
 
 ### Step 1.1: Update globals.css
+
 - **Action:** Add the missing sections from designer's `globals.css` to ours
 - **What to add:**
   1. `--font-size-scale: 1;` CSS variable in `:root`
@@ -31,6 +32,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - **Verification:** Build passes, existing pages render identically (new CSS classes are opt-in)
 
 ### Step 1.2: No changes to tailwind.config.ts
+
 - **Action:** None — configs are identical
 - **Verification:** Confirmed via diff
 
@@ -41,6 +43,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Add small reusable components the designer created that we're missing.
 
 ### Step 2.1: Add FontSizeProvider
+
 - **Action:** Create `components/providers/font-size-provider.tsx`
 - **Source:** Copy from designer's repo (pure client component, no server logic)
 - **Purpose:** Controls `--font-size-scale` CSS variable for accessibility
@@ -48,16 +51,19 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - **Risk:** LOW — additive provider, no behavior change at default scale of 1
 
 ### Step 2.2: Add UI chart component
+
 - **Action:** Create `components/ui/chart.tsx`
 - **Source:** Copy from designer's repo (standard Shadcn chart wrapper for Recharts)
 - **Risk:** LOW — standalone utility component
 
 ### Step 2.3: Add UI form component
+
 - **Action:** Create `components/ui/form.tsx`
 - **Source:** Copy from designer's repo (standard Shadcn form wrapper for react-hook-form)
 - **Risk:** LOW — standalone utility component, used by new editor forms
 
 ### Step 2.4: Verify build
+
 - **Action:** Run `pnpm build` and confirm no errors
 - **Risk:** LOW
 
@@ -68,11 +74,13 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Build the new invoice creation/editing UI matching the target design screenshot.
 
 ### Step 3.1: Study designer's new-invoice-form.tsx
+
 - **Action:** Read and understand the designer's `new-invoice-form.tsx` component
 - **DO NOT copy directly** — it uses mock data and may lack our server action integrations
 - **Extract:** Layout structure, CSS classes, component hierarchy, tab pattern
 
 ### Step 3.2: Create invoice editor component
+
 - **Action:** Create `components/invoices/invoice-editor.tsx` (new file)
 - **Layout:** 60/40 split grid (`grid grid-cols-5 gap-6`)
   - Left (col-span-3): Invoice form
@@ -95,18 +103,21 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - **Risk:** MEDIUM — new UI component, but uses existing server actions and validation
 
 ### Step 3.3: Wire into new invoice page
+
 - **Action:** Update `app/(dashboard)/invoices/new/page.tsx` to use new `InvoiceEditor`
 - **Keep:** Existing server-side data fetching (clients, tax rates, defaults)
 - **Replace:** Current `NewInvoiceForm` component with new `InvoiceEditor`
 - **Risk:** MEDIUM — changes user-facing page
 
 ### Step 3.4: Wire into edit invoice page
+
 - **Action:** Update `app/(dashboard)/invoices/[id]/edit/page.tsx` to use `InvoiceEditor` in edit mode
 - **Keep:** Existing draft-only guard, server-side data fetching
 - **Pass:** Existing invoice data as initial values
 - **Risk:** MEDIUM — changes user-facing page
 
 ### Step 3.5: Verify invoice CRUD flow
+
 - **Action:** Manual testing
   1. Create new invoice with line items
   2. Verify totals calculate correctly
@@ -123,10 +134,12 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Build the new quote editor with sections (Details, Items, Terms, Notes).
 
 ### Step 4.1: Study designer's QuoteEditor.tsx and sections
+
 - **Action:** Read and understand the designer's split-view quote editor
 - **Extract:** Section navigation pattern, layout, CSS classes
 
 ### Step 4.2: Create quote editor sections
+
 - **Action:** Create section components under `components/quotes/editor/`:
   - `DetailsSection.tsx` — Client selector, project selector, title, expiration, tax rate
   - `ItemsSection.tsx` — Line items table with inline editing, add/remove
@@ -136,6 +149,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - **Risk:** MEDIUM — new components, but existing state management
 
 ### Step 4.3: Create QuoteEditor wrapper
+
 - **Action:** Create `components/quotes/editor/QuoteEditor.tsx`
 - **Layout:** Same 60/40 split as invoice editor
 - **Left panel:** Section tabs (Details | Items | Terms | Notes) + active section content
@@ -143,11 +157,13 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - **Risk:** MEDIUM
 
 ### Step 4.4: Wire into quote pages
+
 - **Action:** Update `app/(dashboard)/quotes/new/editor/page.tsx` and `app/(dashboard)/quotes/[id]/page.tsx` (edit mode)
 - **Keep:** Existing server-side data fetching and server actions
 - **Risk:** MEDIUM
 
 ### Step 4.5: Verify quote CRUD flow
+
 - **Action:** Manual testing (same checklist as invoices)
 - **Risk:** N/A
 
@@ -158,6 +174,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Add the settings page for font size and sidebar style.
 
 ### Step 5.1: Create appearance settings page
+
 - **Action:** Create `app/(dashboard)/settings/appearance/page.tsx`
 - **Features:**
   - Font size slider (controls `--font-size-scale`)
@@ -172,10 +189,12 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 **Goal:** Align dependency versions with designer's repo.
 
 ### Step 6.1: Add new dependencies
+
 - **Action:** Add `html2canvas@^1.4.1` and `jspdf@^4.1.0` (needed for client-side PDF)
 - **Risk:** LOW — new deps, no conflicts
 
 ### Step 6.2: Bump existing dependencies (OPTIONAL — defer if not needed)
+
 - **Candidates:** `@hookform/resolvers`, `react-hook-form`, `zod`
 - **Risk:** MEDIUM — could introduce breaking API changes
 - **Recommendation:** Only bump if Phase 3/4 requires newer APIs. Test thoroughly after bumping.
@@ -185,10 +204,12 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 ## Phase 7: Verification & QA (REQUIRED)
 
 ### Step 7.1: Full build verification
+
 - `pnpm build` must pass with zero errors
 - All TypeScript strict mode checks must pass
 
 ### Step 7.2: Visual regression check
+
 - Check every page in light mode AND dark mode:
   - Dashboard
   - Quotes list and detail
@@ -200,6 +221,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
   - Contracts
 
 ### Step 7.3: Functional regression check
+
 - Create a quote end-to-end
 - Convert quote to invoice
 - Record a payment
@@ -207,6 +229,7 @@ This plan integrates the designer's visual refresh and split-view editor pattern
 - Test demo mode login and flows
 
 ### Step 7.4: Mobile responsiveness
+
 - Test all new split-view editors on mobile viewport
 - Ensure preview panel stacks below form on small screens
 
@@ -245,6 +268,7 @@ These files/directories must NOT be modified during this implementation:
 ## Rollback Plan
 
 If any phase causes regressions:
+
 1. Each phase should be its own commit
 2. `git revert <commit>` to undo a specific phase
 3. The `new-design` branch can be abandoned without affecting `main`

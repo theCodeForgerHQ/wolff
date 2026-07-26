@@ -28,14 +28,16 @@ describe('Invoice State Machine', () => {
   });
 
   describe('invalid transitions', () => {
-    it('blocks draft -> paid (must go through sent)', () => expect(isValidTransition('draft', 'paid')).toBe(false));
+    it('blocks draft -> paid (must go through sent)', () =>
+      expect(isValidTransition('draft', 'paid')).toBe(false));
     it('blocks draft -> viewed', () => expect(isValidTransition('draft', 'viewed')).toBe(false));
     it('blocks draft -> partial', () => expect(isValidTransition('draft', 'partial')).toBe(false));
     it('blocks paid -> sent', () => expect(isValidTransition('paid', 'sent')).toBe(false));
     it('blocks paid -> draft', () => expect(isValidTransition('paid', 'draft')).toBe(false));
     it('blocks voided -> sent', () => expect(isValidTransition('voided', 'sent')).toBe(false));
     it('blocks voided -> paid', () => expect(isValidTransition('voided', 'paid')).toBe(false));
-    it('blocks voided -> draft (terminal state)', () => expect(isValidTransition('voided', 'draft')).toBe(false));
+    it('blocks voided -> draft (terminal state)', () =>
+      expect(isValidTransition('voided', 'draft')).toBe(false));
   });
 
   describe('all statuses have defined transitions', () => {

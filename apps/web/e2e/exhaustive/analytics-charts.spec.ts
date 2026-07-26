@@ -10,7 +10,6 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Analytics Chart Sections', () => {
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/analytics');
     await page.waitForLoadState('networkidle');
@@ -19,11 +18,13 @@ test.describe('Analytics Chart Sections', () => {
   });
 
   test('should display Client Lifetime Value section', async ({ page }) => {
-    const clvSection = page.locator(
-      'section:has-text("Client Lifetime Value"), ' +
-      '[data-testid="client-lifetime-value"], ' +
-      ':has-text("Client Lifetime Value")'
-    ).first();
+    const clvSection = page
+      .locator(
+        'section:has-text("Client Lifetime Value"), ' +
+          '[data-testid="client-lifetime-value"], ' +
+          ':has-text("Client Lifetime Value")'
+      )
+      .first();
 
     if (!(await clvSection.isVisible().catch(() => false))) {
       // May need to scroll down to find the section
@@ -34,9 +35,11 @@ test.describe('Analytics Chart Sections', () => {
       await expect(clvSection).toBeVisible();
 
       // Should contain data or a chart
-      const hasContent = await clvSection.locator(
-        '.recharts-wrapper, svg, table, [class*="chart"], [class*="value"], span'
-      ).first().isVisible().catch(() => false);
+      const hasContent = await clvSection
+        .locator('.recharts-wrapper, svg, table, [class*="chart"], [class*="value"], span')
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       expect(hasContent).toBe(true);
     } else {
@@ -46,11 +49,13 @@ test.describe('Analytics Chart Sections', () => {
   });
 
   test('should display Conversion Rate chart', async ({ page }) => {
-    const conversionChart = page.locator(
-      '.recharts-wrapper:near(:text("Conversion Rate")), ' +
-      '[data-testid="conversion-rate-chart"], ' +
-      'section:has-text("Conversion Rate") .recharts-wrapper'
-    ).first();
+    const conversionChart = page
+      .locator(
+        '.recharts-wrapper:near(:text("Conversion Rate")), ' +
+          '[data-testid="conversion-rate-chart"], ' +
+          'section:has-text("Conversion Rate") .recharts-wrapper'
+      )
+      .first();
 
     if (!(await conversionChart.isVisible().catch(() => false))) {
       // Scroll to find the chart
@@ -78,11 +83,13 @@ test.describe('Analytics Chart Sections', () => {
   });
 
   test('should display Quotes by Status chart', async ({ page }) => {
-    const statusChart = page.locator(
-      '.recharts-wrapper:near(:text("Quotes by Status")), ' +
-      '[data-testid="quotes-by-status-chart"], ' +
-      'section:has-text("Quotes by Status") .recharts-wrapper'
-    ).first();
+    const statusChart = page
+      .locator(
+        '.recharts-wrapper:near(:text("Quotes by Status")), ' +
+          '[data-testid="quotes-by-status-chart"], ' +
+          'section:has-text("Quotes by Status") .recharts-wrapper'
+      )
+      .first();
 
     if (!(await statusChart.isVisible().catch(() => false))) {
       // Scroll down to find it
@@ -109,11 +116,13 @@ test.describe('Analytics Chart Sections', () => {
   });
 
   test('should display Revenue Comparison chart', async ({ page }) => {
-    const revenueCompChart = page.locator(
-      '.recharts-wrapper:near(:text("Revenue Comparison")), ' +
-      '[data-testid="revenue-comparison-chart"], ' +
-      'section:has-text("Revenue Comparison") .recharts-wrapper'
-    ).first();
+    const revenueCompChart = page
+      .locator(
+        '.recharts-wrapper:near(:text("Revenue Comparison")), ' +
+          '[data-testid="revenue-comparison-chart"], ' +
+          'section:has-text("Revenue Comparison") .recharts-wrapper'
+      )
+      .first();
 
     if (!(await revenueCompChart.isVisible().catch(() => false))) {
       // Scroll to bottom to find the chart

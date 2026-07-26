@@ -31,7 +31,8 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.waitForLoadState('networkidle');
 
       // Should have new/create project button
-      const createButton = page.getByRole('link', { name: /new project|create project|add project/i })
+      const createButton = page
+        .getByRole('link', { name: /new project|create project|add project/i })
         .or(page.getByRole('button', { name: /new project|create project|add project/i }));
       await expect(createButton).toBeVisible();
     });
@@ -41,8 +42,12 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.waitForLoadState('networkidle');
 
       // Either shows projects or empty state
-      const hasProjects = await page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).count() > 0;
-      const hasEmptyState = await page.getByText(/no projects|get started|create your first/i).isVisible().catch(() => false);
+      const hasProjects =
+        (await page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).count()) > 0;
+      const hasEmptyState = await page
+        .getByText(/no projects|get started|create your first/i)
+        .isVisible()
+        .catch(() => false);
 
       expect(hasProjects || hasEmptyState).toBe(true);
     });
@@ -93,7 +98,10 @@ test.describe('Projects Module - FR-P2-005', () => {
         await page.waitForLoadState('networkidle');
 
         // Should redirect or show success
-        const success = await page.getByText(/created|success/i).isVisible().catch(() => false);
+        const success = await page
+          .getByText(/created|success/i)
+          .isVisible()
+          .catch(() => false);
         const redirected = !page.url().includes('/new');
         expect(success || redirected).toBe(true);
       }
@@ -103,7 +111,10 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.goto('/projects');
       await page.waitForLoadState('networkidle');
 
-      const projectLink = page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).first();
+      const projectLink = page
+        .locator('a[href^="/projects/"]')
+        .filter({ hasNotText: /new/i })
+        .first();
 
       if (await projectLink.isVisible()) {
         await projectLink.click();
@@ -119,14 +130,18 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.goto('/projects');
       await page.waitForLoadState('networkidle');
 
-      const projectLink = page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).first();
+      const projectLink = page
+        .locator('a[href^="/projects/"]')
+        .filter({ hasNotText: /new/i })
+        .first();
 
       if (await projectLink.isVisible()) {
         await projectLink.click();
         await page.waitForLoadState('networkidle');
 
         // Find edit button
-        const editButton = page.getByRole('button', { name: /edit/i })
+        const editButton = page
+          .getByRole('button', { name: /edit/i })
           .or(page.getByRole('link', { name: /edit/i }));
 
         if (await editButton.isVisible()) {
@@ -146,7 +161,10 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.goto('/projects');
       await page.waitForLoadState('networkidle');
 
-      const projectLink = page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).first();
+      const projectLink = page
+        .locator('a[href^="/projects/"]')
+        .filter({ hasNotText: /new/i })
+        .first();
 
       if (await projectLink.isVisible()) {
         await projectLink.click();
@@ -166,7 +184,8 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.waitForLoadState('networkidle');
 
       // Look for project selector
-      const projectSelect = page.getByLabel(/project/i)
+      const projectSelect = page
+        .getByLabel(/project/i)
         .or(page.locator('[data-testid="project-select"]'))
         .or(page.locator('select[name*="project"]'));
 
@@ -182,7 +201,9 @@ test.describe('Projects Module - FR-P2-005', () => {
       }
     });
 
-    test('TC-P2-PROJ-010: should allow quote creation without project (backward compatibility)', async ({ page }) => {
+    test('TC-P2-PROJ-010: should allow quote creation without project (backward compatibility)', async ({
+      page,
+    }) => {
       await page.goto('/quotes/new');
       await page.waitForLoadState('networkidle');
 
@@ -203,7 +224,10 @@ test.describe('Projects Module - FR-P2-005', () => {
       await page.goto('/projects');
       await page.waitForLoadState('networkidle');
 
-      const projectLink = page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).first();
+      const projectLink = page
+        .locator('a[href^="/projects/"]')
+        .filter({ hasNotText: /new/i })
+        .first();
 
       if (await projectLink.isVisible()) {
         await projectLink.click();
@@ -226,7 +250,8 @@ test.describe('Projects Module - FR-P2-005', () => {
 
       // Should have Projects in sidebar navigation (it's a collapsible button, not a link)
       const sidebar = page.locator('nav, aside, [data-sidebar="sidebar"]').first();
-      const projectsNavItem = sidebar.getByRole('button', { name: /projects/i })
+      const projectsNavItem = sidebar
+        .getByRole('button', { name: /projects/i })
         .or(sidebar.getByRole('link', { name: /projects/i }));
       await expect(projectsNavItem.first()).toBeVisible();
     });

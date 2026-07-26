@@ -90,8 +90,10 @@ export const MOCK_QUOTE: PublicQuoteData = {
     taxTotal: 0,
     total: 18240,
   },
-  notes: 'Timeline: Estimated 8-10 weeks from project kickoff. We will provide weekly progress updates and milestone reviews.',
-  terms: 'Payment terms: 30% deposit upon acceptance, 40% at design approval, 30% upon project completion. All work is subject to our standard service agreement.',
+  notes:
+    'Timeline: Estimated 8-10 weeks from project kickoff. We will provide weekly progress updates and milestone reviews.',
+  terms:
+    'Payment terms: 30% deposit upon acceptance, 40% at design approval, 30% upon project completion. All work is subject to our standard service agreement.',
   business: {
     name: 'Pixel Studio',
     email: 'hello@pixelstudio.design',
@@ -181,8 +183,10 @@ export const MOCK_INVOICE: PublicInvoiceData = {
     amountPaid: 0,
     amountDue: 10700,
   },
-  notes: 'Thank you for your business! This invoice covers the first phase of the website redesign project.',
-  terms: 'Payment is due within 30 days of invoice date. Late payments may be subject to a 1.5% monthly finance charge.',
+  notes:
+    'Thank you for your business! This invoice covers the first phase of the website redesign project.',
+  terms:
+    'Payment is due within 30 days of invoice date. Late payments may be subject to a 1.5% monthly finance charge.',
   business: {
     name: 'Pixel Studio',
     email: 'hello@pixelstudio.design',

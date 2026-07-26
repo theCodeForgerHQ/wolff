@@ -188,7 +188,9 @@ test.describe('CRUD Operations - Clients', () => {
     test('should navigate to create client page', async ({ page }) => {
       await page.goto('/clients/new');
 
-      await expect(page.getByRole('heading', { name: /new client|add client|create client/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /new client|add client|create client/i })
+      ).toBeVisible();
     });
 
     test('should show required fields', async ({ page }) => {
@@ -370,7 +372,9 @@ test.describe('CRUD Operations - Rate Cards', () => {
     test('should navigate to create rate card page', async ({ page }) => {
       await page.goto('/rate-cards/new');
 
-      await expect(page.getByRole('heading', { name: /new rate card|create rate card|add rate card/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /new rate card|create rate card|add rate card/i })
+      ).toBeVisible();
     });
 
     test('should show rate card fields', async ({ page }) => {
@@ -435,7 +439,7 @@ test.describe('CRUD Operations - Rate Cards', () => {
         await rateCardLink.click();
 
         const items = page.locator('table, [class*="item"]');
-        if (await items.count() > 0) {
+        if ((await items.count()) > 0) {
           await expect(items.first()).toBeVisible();
         }
       }
@@ -477,7 +481,7 @@ test.describe('CRUD Operations - Rate Cards', () => {
           await addButton.click();
 
           const itemFields = page.getByPlaceholder(/name|service/i);
-          if (await itemFields.count() > 0) {
+          if ((await itemFields.count()) > 0) {
             await expect(itemFields.first()).toBeVisible();
           }
         }
@@ -512,7 +516,9 @@ test.describe('CRUD Operations - Invoices', () => {
     test('should navigate to create invoice page', async ({ page }) => {
       await page.goto('/invoices/new');
 
-      await expect(page.getByRole('heading', { name: /new invoice|create invoice/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /new invoice|create invoice/i })
+      ).toBeVisible();
     });
 
     test('should show invoice creation fields', async ({ page }) => {
@@ -556,7 +562,9 @@ test.describe('CRUD Operations - Invoices', () => {
       if (await quoteLink.isVisible()) {
         await quoteLink.click();
 
-        const convertButton = page.getByRole('button', { name: /convert.*invoice|create invoice/i });
+        const convertButton = page.getByRole('button', {
+          name: /convert.*invoice|create invoice/i,
+        });
         if (await convertButton.isVisible()) {
           await convertButton.click();
 
@@ -689,7 +697,7 @@ test.describe('CRUD Operations - Bulk Actions', () => {
     await page.goto('/quotes');
 
     const checkboxes = page.getByRole('checkbox');
-    if (await checkboxes.count() > 1) {
+    if ((await checkboxes.count()) > 1) {
       await checkboxes.first().check();
       await checkboxes.nth(1).check();
 
@@ -704,7 +712,7 @@ test.describe('CRUD Operations - Bulk Actions', () => {
     await page.goto('/invoices');
 
     const checkboxes = page.getByRole('checkbox');
-    if (await checkboxes.count() > 1) {
+    if ((await checkboxes.count()) > 1) {
       await checkboxes.first().check();
       await checkboxes.nth(1).check();
     }
@@ -729,7 +737,6 @@ test.describe('CRUD Operations - Search and Filter', () => {
     const searchInput = page.getByPlaceholder(/search/i);
     if (await searchInput.isVisible()) {
       await searchInput.fill('test');
-
     }
   });
 

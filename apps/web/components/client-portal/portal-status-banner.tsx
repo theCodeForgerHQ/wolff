@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  AlertCircle,
-  Info,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, XCircle, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusVariant } from '@/lib/portal/types';
 
@@ -63,21 +56,13 @@ export function PortalStatusBanner({
   const styles = variantStyles[variant];
 
   return (
-    <div
-      className={cn(
-        'flex items-start gap-3 rounded-lg border p-4',
-        styles.bg,
-        styles.border
-      )}
-    >
+    <div className={cn('flex items-start gap-3 rounded-lg border p-4', styles.bg, styles.border)}>
       <div className={styles.text}>{variantIcons[variant]}</div>
       <div className="flex-1">
         <p className={cn('font-semibold', styles.text)}>{label}</p>
         <p className={cn('text-sm opacity-90', styles.text)}>{description}</p>
         {additionalMessage && (
-          <p className={cn('mt-1 text-sm font-medium', styles.text)}>
-            {additionalMessage}
-          </p>
+          <p className={cn('mt-1 text-sm font-medium', styles.text)}>{additionalMessage}</p>
         )}
       </div>
     </div>

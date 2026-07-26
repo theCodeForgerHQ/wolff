@@ -75,9 +75,7 @@ export function AnalyticsPageContent({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Analytics</h1>
-          <p className="text-muted-foreground">
-            Business insights and performance metrics
-          </p>
+          <p className="text-muted-foreground">Business insights and performance metrics</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
@@ -111,7 +109,7 @@ export function AnalyticsPageContent({
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-6">
+        <TabsContent value="overview" className="mt-6 space-y-6">
           <RevenueChart
             data={dashboardData.revenueData}
             period={period}
@@ -133,7 +131,7 @@ export function AnalyticsPageContent({
         </TabsContent>
 
         {/* Revenue Tab */}
-        <TabsContent value="revenue" className="space-y-6 mt-6">
+        <TabsContent value="revenue" className="mt-6 space-y-6">
           <RevenueChart
             data={dashboardData.revenueData}
             period={period}
@@ -144,33 +142,24 @@ export function AnalyticsPageContent({
         </TabsContent>
 
         {/* Quotes Tab */}
-        <TabsContent value="quotes" className="space-y-6 mt-6">
+        <TabsContent value="quotes" className="mt-6 space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <QuoteStatusChart
-              data={dashboardData.quoteStatusCounts}
-              className="h-full"
-            />
+            <QuoteStatusChart data={dashboardData.quoteStatusCounts} className="h-full" />
             <ConversionFunnel data={conversionFunnelData} />
           </div>
         </TabsContent>
 
         {/* Invoices Tab */}
-        <TabsContent value="invoices" className="space-y-6 mt-6">
+        <TabsContent value="invoices" className="mt-6 space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <InvoiceStatusChart
-              data={dashboardData.invoiceStatusCounts}
-              className="h-full"
-            />
+            <InvoiceStatusChart data={dashboardData.invoiceStatusCounts} className="h-full" />
             <PaymentAgingChart data={paymentAgingData} />
           </div>
         </TabsContent>
 
         {/* Clients Tab */}
-        <TabsContent value="clients" className="space-y-6 mt-6">
-          <ClientDistributionChart
-            data={clientDistributionData}
-            height={400}
-          />
+        <TabsContent value="clients" className="mt-6 space-y-6">
+          <ClientDistributionChart data={clientDistributionData} height={400} />
         </TabsContent>
       </Tabs>
     </div>
@@ -203,9 +192,10 @@ function generateCSV(data: Record<string, unknown>): string {
   if (stats) {
     Object.entries(stats).forEach(([key, value]) => {
       const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
-      const formattedValue = typeof value === 'number' && key.toLowerCase().includes('revenue')
-        ? `$${value.toFixed(2)}`
-        : value;
+      const formattedValue =
+        typeof value === 'number' && key.toLowerCase().includes('revenue')
+          ? `$${value.toFixed(2)}`
+          : value;
       lines.push(`${escapeCSV(formattedKey)},${escapeCSV(formattedValue)}`);
     });
   }

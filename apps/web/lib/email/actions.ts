@@ -83,7 +83,9 @@ export async function getEmailTemplateById(id: string): Promise<EmailTemplateDet
 }
 
 // Get active template by type
-export async function getActiveTemplateByType(type: EmailTemplateType): Promise<EmailTemplateDetail | null> {
+export async function getActiveTemplateByType(
+  type: EmailTemplateType
+): Promise<EmailTemplateDetail | null> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   const template = await prisma.emailTemplate.findFirst({
@@ -275,13 +277,10 @@ function processTemplate(template: string, variables: EmailVariables): string {
   });
 
   // Handle simple conditionals {{#if variable}}...{{/if}}
-  result = result.replace(
-    /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
-    (_, varName, content) => {
-      const value = variables[varName as keyof EmailVariables];
-      return value ? content : '';
-    }
-  );
+  result = result.replace(/{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g, (_, varName, content) => {
+    const value = variables[varName as keyof EmailVariables];
+    return value ? content : '';
+  });
 
   return result;
 }

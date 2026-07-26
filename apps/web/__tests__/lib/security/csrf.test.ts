@@ -8,14 +8,14 @@ describe('CSRF Origin Validation', () => {
 
   it('allows requests with matching Origin header', () => {
     const request = {
-      headers: { get: (name: string) => name === 'origin' ? 'http://localhost:3000' : null },
+      headers: { get: (name: string) => (name === 'origin' ? 'http://localhost:3000' : null) },
     };
     expect(validateRequestOrigin(request)).toBe(true);
   });
 
   it('rejects requests with non-matching Origin header', () => {
     const request = {
-      headers: { get: (name: string) => name === 'origin' ? 'https://evil.com' : null },
+      headers: { get: (name: string) => (name === 'origin' ? 'https://evil.com' : null) },
     };
     expect(validateRequestOrigin(request)).toBe(false);
   });
@@ -55,7 +55,7 @@ describe('CSRF Origin Validation', () => {
 
   it('handles malformed Origin header gracefully', () => {
     const request = {
-      headers: { get: (name: string) => name === 'origin' ? 'not-a-valid-url' : null },
+      headers: { get: (name: string) => (name === 'origin' ? 'not-a-valid-url' : null) },
     };
     expect(validateRequestOrigin(request)).toBe(false);
   });

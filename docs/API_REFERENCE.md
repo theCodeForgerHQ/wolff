@@ -22,13 +22,13 @@ API keys follow the format `qc_sk_` followed by a 64-character hex string. Keys 
 
 ### Authentication Errors
 
-| Status | Message | Description |
-|--------|---------|-------------|
-| `401` | Missing or invalid Authorization header | No `Bearer` token provided |
-| `401` | Invalid API key format | Key doesn't start with `qc_sk_` |
-| `401` | Invalid or revoked API key | Key not found or has been revoked |
-| `401` | API key has expired | Key has passed its expiration date |
-| `429` | Too many requests | Rate limit exceeded |
+| Status | Message                                 | Description                        |
+| ------ | --------------------------------------- | ---------------------------------- |
+| `401`  | Missing or invalid Authorization header | No `Bearer` token provided         |
+| `401`  | Invalid API key format                  | Key doesn't start with `qc_sk_`    |
+| `401`  | Invalid or revoked API key              | Key not found or has been revoked  |
+| `401`  | API key has expired                     | Key has passed its expiration date |
+| `429`  | Too many requests                       | Rate limit exceeded                |
 
 ---
 
@@ -38,12 +38,13 @@ API keys follow the format `qc_sk_` followed by a 64-character hex string. Keys 
 
 List endpoints support pagination via query parameters:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | integer | `1` | Page number (minimum: 1) |
-| `limit` | integer | `25` | Items per page (maximum: 100) |
+| Parameter | Type    | Default | Description                   |
+| --------- | ------- | ------- | ----------------------------- |
+| `page`    | integer | `1`     | Page number (minimum: 1)      |
+| `limit`   | integer | `25`    | Items per page (maximum: 100) |
 
 **Response format:**
+
 ```json
 {
   "data": [...],
@@ -84,13 +85,14 @@ GET /api/v1/clients
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `page` | integer | Page number |
-| `limit` | integer | Items per page (max 100) |
-| `search` | string | Search by name, email, or company |
+| Parameter | Type    | Description                       |
+| --------- | ------- | --------------------------------- |
+| `page`    | integer | Page number                       |
+| `limit`   | integer | Items per page (max 100)          |
+| `search`  | string  | Search by name, email, or company |
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -136,6 +138,7 @@ GET /api/v1/clients/:id
 ```
 
 **Response (200):**
+
 ```json
 {
   "id": "00d92e87-b0eb-44fb-8052-5635600e2964",
@@ -158,6 +161,7 @@ GET /api/v1/clients/:id
 ```
 
 **Errors:**
+
 - `404` — Client not found
 
 ---
@@ -171,17 +175,18 @@ Content-Type: application/json
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Client name |
-| `email` | string | Yes | Client email (must be unique in workspace) |
-| `phone` | string | No | Phone number |
-| `company` | string | No | Company name |
-| `address` | object | No | Address with `street`, `city`, `state`, `postalCode`, `country` |
-| `billingAddress` | object | No | Billing address (same shape as address) |
-| `metadata` | object | No | Custom metadata (max 10KB) |
+| Field            | Type   | Required | Description                                                     |
+| ---------------- | ------ | -------- | --------------------------------------------------------------- |
+| `name`           | string | Yes      | Client name                                                     |
+| `email`          | string | Yes      | Client email (must be unique in workspace)                      |
+| `phone`          | string | No       | Phone number                                                    |
+| `company`        | string | No       | Company name                                                    |
+| `address`        | object | No       | Address with `street`, `city`, `state`, `postalCode`, `country` |
+| `billingAddress` | object | No       | Billing address (same shape as address)                         |
+| `metadata`       | object | No       | Custom metadata (max 10KB)                                      |
 
 **Example:**
+
 ```json
 {
   "name": "Jane Smith",
@@ -192,6 +197,7 @@ Content-Type: application/json
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "8ff9ae4c-caee-46e4-b5d2-90c651dc2027",
@@ -207,6 +213,7 @@ Content-Type: application/json
 ```
 
 **Errors:**
+
 - `400` — Validation error (missing name/email, invalid email format)
 - `409` — A client with this email already exists
 
@@ -223,17 +230,18 @@ Send only the fields you want to update.
 
 **Request Body:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Client name (cannot be empty) |
-| `email` | string | Client email (uniqueness checked) |
-| `phone` | string | Phone number |
-| `company` | string | Company name |
-| `address` | object | Address object |
-| `billingAddress` | object | Billing address object |
-| `metadata` | object | Custom metadata |
+| Field            | Type   | Description                       |
+| ---------------- | ------ | --------------------------------- |
+| `name`           | string | Client name (cannot be empty)     |
+| `email`          | string | Client email (uniqueness checked) |
+| `phone`          | string | Phone number                      |
+| `company`        | string | Company name                      |
+| `address`        | object | Address object                    |
+| `billingAddress` | object | Billing address object            |
+| `metadata`       | object | Custom metadata                   |
 
 **Example:**
+
 ```json
 {
   "name": "Jane Smith Updated",
@@ -244,6 +252,7 @@ Send only the fields you want to update.
 **Response (200):** Updated client object.
 
 **Errors:**
+
 - `400` — Client name cannot be empty
 - `404` — Client not found
 - `409` — A client with this email already exists
@@ -257,6 +266,7 @@ DELETE /api/v1/clients/:id
 ```
 
 **Response (200):**
+
 ```json
 {
   "message": "Client deleted"
@@ -264,6 +274,7 @@ DELETE /api/v1/clients/:id
 ```
 
 **Errors:**
+
 - `404` — Client not found
 
 ---
@@ -279,26 +290,27 @@ Import up to **500 clients** in a single request.
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `clients` | array | Yes | Array of client objects (max 500) |
-| `skipDuplicates` | boolean | No | Skip clients with existing emails (default: `true`) |
+| Field            | Type    | Required | Description                                         |
+| ---------------- | ------- | -------- | --------------------------------------------------- |
+| `clients`        | array   | Yes      | Array of client objects (max 500)                   |
+| `skipDuplicates` | boolean | No       | Skip clients with existing emails (default: `true`) |
 
 Each client object in the array:
 
-| Field | Type | Required |
-|-------|------|----------|
-| `name` | string | Yes |
-| `email` | string | Yes |
-| `phone` | string | No |
-| `company` | string | No |
-| `street` | string | No |
-| `city` | string | No |
-| `state` | string | No |
-| `postalCode` | string | No |
-| `country` | string | No |
+| Field        | Type   | Required |
+| ------------ | ------ | -------- |
+| `name`       | string | Yes      |
+| `email`      | string | Yes      |
+| `phone`      | string | No       |
+| `company`    | string | No       |
+| `street`     | string | No       |
+| `city`       | string | No       |
+| `state`      | string | No       |
+| `postalCode` | string | No       |
+| `country`    | string | No       |
 
 **Example:**
+
 ```json
 {
   "clients": [
@@ -317,6 +329,7 @@ Each client object in the array:
 ```
 
 **Response (201):**
+
 ```json
 {
   "message": "Import complete: 2 created, 0 skipped, 0 failed",
@@ -343,14 +356,15 @@ GET /api/v1/quotes
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `page` | integer | Page number |
-| `limit` | integer | Items per page (max 100) |
-| `status` | string | Filter by status: `draft`, `sent`, `viewed`, `accepted`, `declined`, `expired`, `converted` |
-| `search` | string | Search by quote title |
+| Parameter | Type    | Description                                                                                 |
+| --------- | ------- | ------------------------------------------------------------------------------------------- |
+| `page`    | integer | Page number                                                                                 |
+| `limit`   | integer | Items per page (max 100)                                                                    |
+| `status`  | string  | Filter by status: `draft`, `sent`, `viewed`, `accepted`, `declined`, `expired`, `converted` |
+| `search`  | string  | Search by quote title                                                                       |
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -415,6 +429,7 @@ GET /api/v1/quotes/:id
 **Response (200):** Full quote object with all fields and line items.
 
 **Errors:**
+
 - `404` — Quote not found
 
 ---
@@ -428,24 +443,25 @@ Content-Type: application/json
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | Yes | Quote title |
-| `clientId` | string | Yes | Client UUID |
-| `currency` | string | No | 3-letter ISO code (defaults to workspace currency) |
-| `lineItems` | array | No | Array of line item objects |
+| Field       | Type   | Required | Description                                        |
+| ----------- | ------ | -------- | -------------------------------------------------- |
+| `title`     | string | Yes      | Quote title                                        |
+| `clientId`  | string | Yes      | Client UUID                                        |
+| `currency`  | string | No       | 3-letter ISO code (defaults to workspace currency) |
+| `lineItems` | array  | No       | Array of line item objects                         |
 
 Each line item:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Item name |
-| `description` | string | No | Item description |
-| `quantity` | number | Yes | Quantity (>= 0) |
-| `rate` | number | Yes | Unit price (>= 0) |
-| `taxRate` | number | No | Tax percentage (0-100) |
+| Field         | Type   | Required | Description            |
+| ------------- | ------ | -------- | ---------------------- |
+| `name`        | string | Yes      | Item name              |
+| `description` | string | No       | Item description       |
+| `quantity`    | number | Yes      | Quantity (>= 0)        |
+| `rate`        | number | Yes      | Unit price (>= 0)      |
+| `taxRate`     | number | No       | Tax percentage (0-100) |
 
 **Example:**
+
 ```json
 {
   "title": "Website Redesign",
@@ -464,6 +480,7 @@ Each line item:
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "c0ead122-ba22-4283-afa2-5d0b9ad6081e",
@@ -495,6 +512,7 @@ Each line item:
 ```
 
 **Errors:**
+
 - `400` — Validation error (missing title/clientId, invalid currency)
 - `404` — Client not found
 
@@ -511,26 +529,27 @@ Send only the fields you want to update.
 
 **Request Body:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | Quote title |
-| `notes` | string | Notes visible to client |
-| `terms` | string | Terms and conditions |
-| `status` | string | New status (valid transitions enforced) |
-| `lineItems` | array | Replaces all existing line items |
+| Field       | Type   | Description                             |
+| ----------- | ------ | --------------------------------------- |
+| `title`     | string | Quote title                             |
+| `notes`     | string | Notes visible to client                 |
+| `terms`     | string | Terms and conditions                    |
+| `status`    | string | New status (valid transitions enforced) |
+| `lineItems` | array  | Replaces all existing line items        |
 
 **Status Transitions:**
 
-| From | Allowed To |
-|------|------------|
-| `draft` | `sent` |
-| `sent` | `viewed`, `accepted`, `declined`, `expired` |
-| `viewed` | `accepted`, `declined`, `expired` |
-| `declined` | `draft` |
-| `expired` | `draft` |
-| `accepted` | (cannot change) |
+| From       | Allowed To                                  |
+| ---------- | ------------------------------------------- |
+| `draft`    | `sent`                                      |
+| `sent`     | `viewed`, `accepted`, `declined`, `expired` |
+| `viewed`   | `accepted`, `declined`, `expired`           |
+| `declined` | `draft`                                     |
+| `expired`  | `draft`                                     |
+| `accepted` | (cannot change)                             |
 
 **Example:**
+
 ```json
 {
   "title": "Website Redesign v2",
@@ -541,6 +560,7 @@ Send only the fields you want to update.
 **Response (200):** Updated quote object.
 
 **Errors:**
+
 - `400` — Invalid status transition, cannot modify accepted quotes
 - `404` — Quote not found
 
@@ -557,6 +577,7 @@ No request body needed. Creates a copy with title `"Original Title (Copy)"` and 
 **Response (201):** A new quote object with a new `id`, new `quoteNumber`, status set to `draft`, and all line items copied from the original.
 
 **Errors:**
+
 - `404` — Quote not found
 
 ---
@@ -572,12 +593,13 @@ Sends the quote to the client via email. Status is updated to `sent` only if the
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `message` | string | No | Custom message included in the email |
-| `recipients` | string[] | No | Additional email addresses (max 10) |
+| Field        | Type     | Required | Description                          |
+| ------------ | -------- | -------- | ------------------------------------ |
+| `message`    | string   | No       | Custom message included in the email |
+| `recipients` | string[] | No       | Additional email addresses (max 10)  |
 
 **Example:**
+
 ```json
 {
   "message": "Please review the attached quote."
@@ -585,6 +607,7 @@ Sends the quote to the client via email. Status is updated to `sent` only if the
 ```
 
 **Response (200):**
+
 ```json
 {
   "message": "Quote sent successfully",
@@ -594,6 +617,7 @@ Sends the quote to the client via email. Status is updated to `sent` only if the
 ```
 
 **Errors:**
+
 - `400` — Quote status must be `draft`, `sent`, or `viewed`; total cannot be zero
 - `404` — Quote not found
 - `502` — Email service failure
@@ -607,6 +631,7 @@ DELETE /api/v1/quotes/:id
 ```
 
 **Response (200):**
+
 ```json
 {
   "message": "Quote deleted"
@@ -614,6 +639,7 @@ DELETE /api/v1/quotes/:id
 ```
 
 **Errors:**
+
 - `404` — Quote not found
 
 ---
@@ -628,13 +654,13 @@ GET /api/v1/invoices
 
 **Query Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `page` | integer | Page number |
-| `limit` | integer | Items per page (max 100) |
-| `status` | string | Filter: `draft`, `sent`, `viewed`, `partial`, `paid`, `overdue`, `voided` |
-| `clientId` | string | Filter by client UUID |
-| `search` | string | Search by invoice title |
+| Parameter  | Type    | Description                                                               |
+| ---------- | ------- | ------------------------------------------------------------------------- |
+| `page`     | integer | Page number                                                               |
+| `limit`    | integer | Items per page (max 100)                                                  |
+| `status`   | string  | Filter: `draft`, `sent`, `viewed`, `partial`, `paid`, `overdue`, `voided` |
+| `clientId` | string  | Filter by client UUID                                                     |
+| `search`   | string  | Search by invoice title                                                   |
 
 **Response (200):** Paginated array of invoices (same structure as quotes, plus `amountPaid`, `amountDue`, `paidAt`, `voidedAt`).
 
@@ -647,6 +673,7 @@ GET /api/v1/invoices/:id
 ```
 
 **Response (200):**
+
 ```json
 {
   "id": "801b97f4-4253-4bf9-8254-e7f0f2d0a788",
@@ -693,6 +720,7 @@ GET /api/v1/invoices/:id
 ```
 
 **Errors:**
+
 - `404` — Invoice not found
 
 ---
@@ -706,19 +734,20 @@ Content-Type: application/json
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | Yes | Invoice title |
-| `clientId` | string | Yes | Client UUID |
-| `dueDate` | string | Yes | Due date in ISO format (e.g., `2026-04-30`) |
-| `currency` | string | No | 3-letter ISO code (defaults to workspace currency) |
-| `lineItems` | array | No | Array of line item objects |
-| `notes` | string | No | Notes visible to client |
-| `terms` | string | No | Terms and conditions |
+| Field       | Type   | Required | Description                                        |
+| ----------- | ------ | -------- | -------------------------------------------------- |
+| `title`     | string | Yes      | Invoice title                                      |
+| `clientId`  | string | Yes      | Client UUID                                        |
+| `dueDate`   | string | Yes      | Due date in ISO format (e.g., `2026-04-30`)        |
+| `currency`  | string | No       | 3-letter ISO code (defaults to workspace currency) |
+| `lineItems` | array  | No       | Array of line item objects                         |
+| `notes`     | string | No       | Notes visible to client                            |
+| `terms`     | string | No       | Terms and conditions                               |
 
 Line items follow the same format as quotes.
 
 **Example:**
+
 ```json
 {
   "title": "March Consulting",
@@ -739,6 +768,7 @@ Line items follow the same format as quotes.
 **Response (201):** Invoice object with auto-generated `invoiceNumber`, calculated totals, `amountPaid: 0`, and `status: "draft"`.
 
 **Errors:**
+
 - `400` — Validation error
 - `404` — Client not found
 
@@ -753,34 +783,36 @@ Content-Type: application/json
 
 **Request Body:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | Invoice title |
-| `notes` | string | Notes visible to client |
-| `terms` | string | Terms and conditions |
-| `dueDate` | string | Due date (ISO format) |
-| `status` | string | New status (valid transitions enforced) |
-| `lineItems` | array | Replaces all existing line items |
+| Field       | Type   | Description                             |
+| ----------- | ------ | --------------------------------------- |
+| `title`     | string | Invoice title                           |
+| `notes`     | string | Notes visible to client                 |
+| `terms`     | string | Terms and conditions                    |
+| `dueDate`   | string | Due date (ISO format)                   |
+| `status`    | string | New status (valid transitions enforced) |
+| `lineItems` | array  | Replaces all existing line items        |
 
 **Status Transitions:**
 
-| From | Allowed To |
-|------|------------|
-| `draft` | `sent` |
-| `sent` | `viewed`, `partial`, `paid`, `overdue`, `voided` |
-| `viewed` | `partial`, `paid`, `overdue`, `voided` |
-| `partial` | `paid`, `voided` |
-| `paid` | `voided` |
-| `overdue` | `paid`, `partial`, `voided` |
-| `voided` | (cannot change) |
+| From      | Allowed To                                       |
+| --------- | ------------------------------------------------ |
+| `draft`   | `sent`                                           |
+| `sent`    | `viewed`, `partial`, `paid`, `overdue`, `voided` |
+| `viewed`  | `partial`, `paid`, `overdue`, `voided`           |
+| `partial` | `paid`, `voided`                                 |
+| `paid`    | `voided`                                         |
+| `overdue` | `paid`, `partial`, `voided`                      |
+| `voided`  | (cannot change)                                  |
 
 **Restrictions:**
+
 - Cannot modify line items on `paid` or `voided` invoices
 - Cannot delete `paid` or `voided` invoices (must void instead)
 
 **Response (200):** Updated invoice object.
 
 **Errors:**
+
 - `400` — Invalid status transition, financial restriction
 - `404` — Invoice not found
 
@@ -797,12 +829,13 @@ Sends the invoice to the client via email.
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `message` | string | No | Custom message included in the email |
-| `recipients` | string[] | No | Additional email addresses (max 10) |
+| Field        | Type     | Required | Description                          |
+| ------------ | -------- | -------- | ------------------------------------ |
+| `message`    | string   | No       | Custom message included in the email |
+| `recipients` | string[] | No       | Additional email addresses (max 10)  |
 
 **Response (200):**
+
 ```json
 {
   "message": "Invoice sent successfully",
@@ -812,6 +845,7 @@ Sends the invoice to the client via email.
 ```
 
 **Errors:**
+
 - `400` — Invoice status must be `draft`, `sent`, or `viewed`; total cannot be zero
 - `404` — Invoice not found
 - `502` — Email service failure
@@ -829,11 +863,12 @@ Convert an **accepted** quote directly into an invoice. All line items, client i
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `dueDays` | integer | No | Days until due (0-365, default: 30) |
+| Field     | Type    | Required | Description                         |
+| --------- | ------- | -------- | ----------------------------------- |
+| `dueDays` | integer | No       | Days until due (0-365, default: 30) |
 
 **Example:**
+
 ```json
 {
   "dueDays": 14
@@ -843,6 +878,7 @@ Convert an **accepted** quote directly into an invoice. All line items, client i
 **Response (201):** Full invoice object created from the quote.
 
 **Errors:**
+
 - `400` — Quote is not in `accepted` status, or invoice already exists for this quote
 - `404` — Quote not found
 
@@ -855,6 +891,7 @@ DELETE /api/v1/invoices/:id
 ```
 
 **Response (200):**
+
 ```json
 {
   "message": "Invoice deleted"
@@ -862,6 +899,7 @@ DELETE /api/v1/invoices/:id
 ```
 
 **Errors:**
+
 - `400` — Cannot delete paid or partially paid invoices (void them instead)
 - `404` — Invoice not found
 
@@ -879,17 +917,17 @@ All errors follow a consistent format:
 
 ### HTTP Status Codes
 
-| Status | Meaning |
-|--------|---------|
-| `200` | Success |
-| `201` | Created |
-| `400` | Bad request (validation error, invalid status transition) |
-| `401` | Unauthorized (invalid or missing API key) |
-| `404` | Resource not found |
-| `409` | Conflict (e.g., duplicate email) |
-| `429` | Rate limit exceeded |
-| `502` | Upstream service failure (e.g., email delivery failed) |
-| `500` | Internal server error |
+| Status | Meaning                                                   |
+| ------ | --------------------------------------------------------- |
+| `200`  | Success                                                   |
+| `201`  | Created                                                   |
+| `400`  | Bad request (validation error, invalid status transition) |
+| `401`  | Unauthorized (invalid or missing API key)                 |
+| `404`  | Resource not found                                        |
+| `409`  | Conflict (e.g., duplicate email)                          |
+| `429`  | Rate limit exceeded                                       |
+| `502`  | Upstream service failure (e.g., email delivery failed)    |
+| `500`  | Internal server error                                     |
 
 ---
 

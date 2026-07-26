@@ -28,7 +28,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
       await expect(projectsParent).toBeVisible();
     });
 
-    test('TC-P2-NAV-002: Projects submenu should contain Quotes, Invoices, Contracts', async ({ page }) => {
+    test('TC-P2-NAV-002: Projects submenu should contain Quotes, Invoices, Contracts', async ({
+      page,
+    }) => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
@@ -54,7 +56,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
       expect(quotesVisible || invoicesVisible).toBe(true);
     });
 
-    test('TC-P2-NAV-003: Projects submenu should expand/collapse with chevron', async ({ page }) => {
+    test('TC-P2-NAV-003: Projects submenu should expand/collapse with chevron', async ({
+      page,
+    }) => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
@@ -65,9 +69,13 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
 
       if (await projectsButton.isVisible()) {
         // Look for chevron icon
-        const chevron = projectsButton.locator('svg').filter({
-          has: page.locator('path[d*="m9"]').or(page.locator('path[d*="l3"]')),
-        }).first().or(projectsButton.locator('[class*="chevron"], [data-testid*="chevron"]'));
+        const chevron = projectsButton
+          .locator('svg')
+          .filter({
+            has: page.locator('path[d*="m9"]').or(page.locator('path[d*="l3"]')),
+          })
+          .first()
+          .or(projectsButton.locator('[class*="chevron"], [data-testid*="chevron"]'));
 
         // Click to toggle
         await projectsButton.click();
@@ -90,7 +98,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
   });
 
   test.describe('Active State Highlighting', () => {
-    test('TC-P2-NAV-004: clicking Quotes should highlight both Projects parent and Quotes item', async ({ page }) => {
+    test('TC-P2-NAV-004: clicking Quotes should highlight both Projects parent and Quotes item', async ({
+      page,
+    }) => {
       await page.goto('/quotes');
       await page.waitForLoadState('networkidle');
 
@@ -101,9 +111,10 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
 
       if (await quotesLink.isVisible()) {
         // Check for active indicator (bg color, data attribute, or class)
-        const quotesClasses = await quotesLink.getAttribute('class') ?? '';
-        const quotesDataState = await quotesLink.getAttribute('data-active') ?? '';
-        const hasActiveClass = quotesClasses.includes('active') ||
+        const quotesClasses = (await quotesLink.getAttribute('class')) ?? '';
+        const quotesDataState = (await quotesLink.getAttribute('data-active')) ?? '';
+        const hasActiveClass =
+          quotesClasses.includes('active') ||
           quotesClasses.includes('bg-') ||
           quotesDataState === 'true';
 
@@ -112,7 +123,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
       }
     });
 
-    test('TC-P2-NAV-005: clicking Invoices should highlight both Projects parent and Invoices item', async ({ page }) => {
+    test('TC-P2-NAV-005: clicking Invoices should highlight both Projects parent and Invoices item', async ({
+      page,
+    }) => {
       await page.goto('/invoices');
       await page.waitForLoadState('networkidle');
 
@@ -127,7 +140,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
       }
     });
 
-    test('TC-P2-NAV-006: sub-items should remain visible when navigating within group', async ({ page }) => {
+    test('TC-P2-NAV-006: sub-items should remain visible when navigating within group', async ({
+      page,
+    }) => {
       await page.goto('/quotes');
       await page.waitForLoadState('networkidle');
 
@@ -161,7 +176,9 @@ test.describe('Sidebar Navigation Hierarchy - FR-P2-001', () => {
       const navItems = await sidebar.locator('a, button').allTextContents();
       const navItemsFiltered = navItems
         .map((text) => text.trim())
-        .filter((text) => expectedOrder.some((item) => text.toLowerCase().includes(item.toLowerCase())));
+        .filter((text) =>
+          expectedOrder.some((item) => text.toLowerCase().includes(item.toLowerCase()))
+        );
 
       // Verify Dashboard comes first
       const dashboardIndex = navItemsFiltered.findIndex((t) => /dashboard/i.test(t));
@@ -177,8 +194,13 @@ test.describe('Sidebar Collapse Behavior - FR-P2-002', () => {
       await page.waitForLoadState('networkidle');
 
       // Find sidebar toggle button
-      const sidebarToggle = page.locator('[data-sidebar="trigger"]')
-        .or(page.getByRole('button', { name: /toggle|collapse|menu/i }).filter({ has: page.locator('svg') }))
+      const sidebarToggle = page
+        .locator('[data-sidebar="trigger"]')
+        .or(
+          page
+            .getByRole('button', { name: /toggle|collapse|menu/i })
+            .filter({ has: page.locator('svg') })
+        )
         .first();
 
       if (await sidebarToggle.isVisible()) {
@@ -204,8 +226,13 @@ test.describe('Sidebar Collapse Behavior - FR-P2-002', () => {
       await page.waitForLoadState('networkidle');
 
       // Find and click sidebar toggle
-      const sidebarToggle = page.locator('[data-sidebar="trigger"]')
-        .or(page.getByRole('button', { name: /toggle|collapse|menu/i }).filter({ has: page.locator('svg') }))
+      const sidebarToggle = page
+        .locator('[data-sidebar="trigger"]')
+        .or(
+          page
+            .getByRole('button', { name: /toggle|collapse|menu/i })
+            .filter({ has: page.locator('svg') })
+        )
         .first();
 
       if (await sidebarToggle.isVisible()) {
@@ -230,8 +257,13 @@ test.describe('Sidebar Collapse Behavior - FR-P2-002', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
-      const sidebarToggle = page.locator('[data-sidebar="trigger"]')
-        .or(page.getByRole('button', { name: /toggle|collapse|menu/i }).filter({ has: page.locator('svg') }))
+      const sidebarToggle = page
+        .locator('[data-sidebar="trigger"]')
+        .or(
+          page
+            .getByRole('button', { name: /toggle|collapse|menu/i })
+            .filter({ has: page.locator('svg') })
+        )
         .first();
 
       if (await sidebarToggle.isVisible()) {
@@ -258,8 +290,13 @@ test.describe('Sidebar Collapse Behavior - FR-P2-002', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
-      const sidebarToggle = page.locator('[data-sidebar="trigger"]')
-        .or(page.getByRole('button', { name: /toggle|collapse|menu/i }).filter({ has: page.locator('svg') }))
+      const sidebarToggle = page
+        .locator('[data-sidebar="trigger"]')
+        .or(
+          page
+            .getByRole('button', { name: /toggle|collapse|menu/i })
+            .filter({ has: page.locator('svg') })
+        )
         .first();
 
       if (await sidebarToggle.isVisible()) {
@@ -311,8 +348,13 @@ test.describe('Sidebar Collapse Behavior - FR-P2-002', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('networkidle');
 
-      const sidebarToggle = page.locator('[data-sidebar="trigger"]')
-        .or(page.getByRole('button', { name: /toggle|collapse|menu/i }).filter({ has: page.locator('svg') }))
+      const sidebarToggle = page
+        .locator('[data-sidebar="trigger"]')
+        .or(
+          page
+            .getByRole('button', { name: /toggle|collapse|menu/i })
+            .filter({ has: page.locator('svg') })
+        )
         .first();
 
       if (await sidebarToggle.isVisible()) {
@@ -345,7 +387,8 @@ test.describe('Mobile Sidebar Behavior', () => {
     await page.waitForLoadState('networkidle');
 
     // On mobile, look for hamburger/menu button
-    const menuButton = page.getByRole('button', { name: /menu/i })
+    const menuButton = page
+      .getByRole('button', { name: /menu/i })
       .or(page.locator('[data-sidebar="trigger"]'))
       .or(page.locator('button:has(svg)').filter({ hasText: '' }).first());
 
@@ -356,7 +399,8 @@ test.describe('Mobile Sidebar Behavior', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    const menuButton = page.locator('[data-sidebar="trigger"]')
+    const menuButton = page
+      .locator('[data-sidebar="trigger"]')
       .or(page.getByRole('button', { name: /menu/i }))
       .first();
 
@@ -364,10 +408,16 @@ test.describe('Mobile Sidebar Behavior', () => {
       await menuButton.click();
 
       // Wait for the sidebar/sheet to appear
-      await page.getByRole('link', { name: /dashboard/i }).waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      await page
+        .getByRole('link', { name: /dashboard/i })
+        .waitFor({ state: 'visible', timeout: 3000 })
+        .catch(() => {});
 
       // Should show sidebar or sheet
-      const navVisible = await page.getByRole('link', { name: /dashboard/i }).isVisible().catch(() => false);
+      const navVisible = await page
+        .getByRole('link', { name: /dashboard/i })
+        .isVisible()
+        .catch(() => false);
 
       expect(navVisible).toBe(true);
     }

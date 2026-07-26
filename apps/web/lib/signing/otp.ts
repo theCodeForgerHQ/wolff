@@ -122,12 +122,16 @@ export async function verifySigningOtp(
   record.attempts++;
 
   // Constant-time comparison to prevent timing side-channel attacks
-  const codeMatch = record.code.length === code.length &&
+  const codeMatch =
+    record.code.length === code.length &&
     timingSafeEqual(Buffer.from(record.code), Buffer.from(code));
   if (!codeMatch) {
     if (fromRedis) await redisSet(key, record);
     else inMemoryStore.set(key, record);
-    return { valid: false, error: `Invalid code. ${MAX_ATTEMPTS - record.attempts} attempts remaining.` };
+    return {
+      valid: false,
+      error: `Invalid code. ${MAX_ATTEMPTS - record.attempts} attempts remaining.`,
+    };
   }
 
   // Mark as verified

@@ -19,16 +19,10 @@ export async function GET(request: Request) {
 
   // Bug #3: Require CRON_SECRET in ALL environments to prevent unauthorized access
   if (!cronSecret) {
-    return NextResponse.json(
-      { error: 'CRON_SECRET not configured' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
   if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -46,18 +40,23 @@ export async function GET(request: Request) {
       select: { id: true, email: true },
     });
     if (dirtyUsers.length > 0) {
-      logger.info({ count: dirtyUsers.length }, '[Demo Reset] Found duplicate demo user(s) with dirty email, cleaning up...');
+      logger.info(
+        { count: dirtyUsers.length },
+        '[Demo Reset] Found duplicate demo user(s) with dirty email, cleaning up...'
+      );
       // Ensure the clean user exists first
       const cleanUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
       for (const dirty of dirtyUsers) {
         // Transfer any workspace memberships from dirty user to clean user
         if (cleanUser) {
-          await prisma.workspaceMember.updateMany({
-            where: { userId: dirty.id },
-            data: { userId: cleanUser.id },
-          }).catch(() => {
-            // Ignore unique constraint errors (clean user already has membership)
-          });
+          await prisma.workspaceMember
+            .updateMany({
+              where: { userId: dirty.id },
+              data: { userId: cleanUser.id },
+            })
+            .catch(() => {
+              // Ignore unique constraint errors (clean user already has membership)
+            });
         }
         // Delete dirty user's memberships and then the user
         await prisma.workspaceMember.deleteMany({ where: { userId: dirty.id } });
@@ -68,10 +67,12 @@ export async function GET(request: Request) {
         });
         await prisma.user.delete({ where: { id: dirty.id } }).catch(() => {
           // May fail if there are other FK references; update email instead
-          prisma.user.update({
-            where: { id: dirty.id },
-            data: { email: `deleted-${dirty.id}@cleanup` },
-          }).catch(() => {});
+          prisma.user
+            .update({
+              where: { id: dirty.id },
+              data: { email: `deleted-${dirty.id}@cleanup` },
+            })
+            .catch(() => {});
         });
       }
     }
@@ -147,16 +148,39 @@ export async function GET(request: Request) {
     // These collide with seedDemoData() which reuses the same IDs
     const hardcodedIds = {
       contracts: ['demo-contract-1', 'demo-contract-2', 'demo-contract-3'],
-      contractInstances: ['demo-contract-instance-1', 'demo-contract-instance-2', 'demo-contract-instance-3'],
-      clients: ['demo-client-1', 'demo-client-2', 'demo-client-3', 'demo-client-4', 'demo-client-5', 'demo-client-6'],
-      projects: ['demo-project-1', 'demo-project-2', 'demo-project-3', 'demo-project-4', 'demo-project-5'],
+      contractInstances: [
+        'demo-contract-instance-1',
+        'demo-contract-instance-2',
+        'demo-contract-instance-3',
+      ],
+      clients: [
+        'demo-client-1',
+        'demo-client-2',
+        'demo-client-3',
+        'demo-client-4',
+        'demo-client-5',
+        'demo-client-6',
+      ],
+      projects: [
+        'demo-project-1',
+        'demo-project-2',
+        'demo-project-3',
+        'demo-project-4',
+        'demo-project-5',
+      ],
     };
     const hardcodedEmailIds = [
-      'demo-email-template-1', 'demo-email-template-2', 'demo-email-template-3',
-      'demo-email-template-4', 'demo-email-template-5', 'demo-email-template-6',
+      'demo-email-template-1',
+      'demo-email-template-2',
+      'demo-email-template-3',
+      'demo-email-template-4',
+      'demo-email-template-5',
+      'demo-email-template-6',
     ];
     await prisma.emailTemplate.deleteMany({ where: { id: { in: hardcodedEmailIds } } });
-    await prisma.contractInstance.deleteMany({ where: { id: { in: hardcodedIds.contractInstances } } });
+    await prisma.contractInstance.deleteMany({
+      where: { id: { in: hardcodedIds.contractInstances } },
+    });
     await prisma.contract.deleteMany({ where: { id: { in: hardcodedIds.contracts } } });
     await prisma.project.deleteMany({ where: { id: { in: hardcodedIds.projects } } });
     await prisma.client.deleteMany({ where: { id: { in: hardcodedIds.clients } } });
@@ -386,7 +410,8 @@ async function seedDemoData(workspaceId: string) {
       workspaceId,
       clientId: 'demo-client-1',
       name: 'Website Redesign 2024',
-      description: 'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
+      description:
+        'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
       isActive: true,
     },
     {
@@ -394,7 +419,8 @@ async function seedDemoData(workspaceId: string) {
       workspaceId,
       clientId: 'demo-client-2',
       name: 'E-commerce Platform',
-      description: 'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
+      description:
+        'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
       isActive: true,
     },
     {
@@ -402,7 +428,8 @@ async function seedDemoData(workspaceId: string) {
       workspaceId,
       clientId: 'demo-client-3',
       name: 'Brand Identity Package',
-      description: 'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
+      description:
+        'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
       isActive: true,
     },
     {
@@ -435,10 +462,38 @@ async function seedDemoData(workspaceId: string) {
   });
 
   const rateCards = [
-    { workspaceId, categoryId: category.id, name: 'UI/UX Design', rate: 150, unit: 'hour', pricingType: 'hourly' },
-    { workspaceId, categoryId: category.id, name: 'Brand Identity', rate: 125, unit: 'hour', pricingType: 'hourly' },
-    { workspaceId, categoryId: category.id, name: 'Web Development', rate: 175, unit: 'hour', pricingType: 'hourly' },
-    { workspaceId, categoryId: category.id, name: 'Logo Design Package', rate: 2500, unit: 'project', pricingType: 'fixed' },
+    {
+      workspaceId,
+      categoryId: category.id,
+      name: 'UI/UX Design',
+      rate: 150,
+      unit: 'hour',
+      pricingType: 'hourly',
+    },
+    {
+      workspaceId,
+      categoryId: category.id,
+      name: 'Brand Identity',
+      rate: 125,
+      unit: 'hour',
+      pricingType: 'hourly',
+    },
+    {
+      workspaceId,
+      categoryId: category.id,
+      name: 'Web Development',
+      rate: 175,
+      unit: 'hour',
+      pricingType: 'hourly',
+    },
+    {
+      workspaceId,
+      categoryId: category.id,
+      name: 'Logo Design Package',
+      rate: 2500,
+      unit: 'project',
+      pricingType: 'fixed',
+    },
   ];
 
   await prisma.rateCard.createMany({ data: rateCards });
@@ -454,9 +509,33 @@ async function seedDemoData(workspaceId: string) {
 
   await prisma.rateCard.createMany({
     data: [
-      { workspaceId, categoryId: photoCategory.id, name: 'Photo Session', description: '2-hour on-location shoot', rate: 800, unit: 'session', pricingType: 'fixed' },
-      { workspaceId, categoryId: photoCategory.id, name: 'Photo Editing', description: 'Color correction & retouching', rate: 25, unit: 'photo', pricingType: 'fixed' },
-      { workspaceId, categoryId: photoCategory.id, name: 'Digital Delivery', description: 'High-res files via gallery', rate: 100, unit: 'delivery', pricingType: 'fixed' },
+      {
+        workspaceId,
+        categoryId: photoCategory.id,
+        name: 'Photo Session',
+        description: '2-hour on-location shoot',
+        rate: 800,
+        unit: 'session',
+        pricingType: 'fixed',
+      },
+      {
+        workspaceId,
+        categoryId: photoCategory.id,
+        name: 'Photo Editing',
+        description: 'Color correction & retouching',
+        rate: 25,
+        unit: 'photo',
+        pricingType: 'fixed',
+      },
+      {
+        workspaceId,
+        categoryId: photoCategory.id,
+        name: 'Digital Delivery',
+        description: 'High-res files via gallery',
+        rate: 100,
+        unit: 'delivery',
+        pricingType: 'fixed',
+      },
     ],
   });
 
@@ -547,9 +626,7 @@ async function seedDemoData(workspaceId: string) {
     sentAt: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000),
     viewedAt: new Date(now.getTime() - 18 * 24 * 60 * 60 * 1000),
     declinedAt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
-    lineItems: [
-      { name: 'Monthly Design Retainer', quantity: 12, rate: 5000 },
-    ],
+    lineItems: [{ name: 'Monthly Design Retainer', quantity: 12, rate: 5000 }],
   });
 
   // Create sample invoices
@@ -564,9 +641,7 @@ async function seedDemoData(workspaceId: string) {
     dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
     paidAt: new Date(now.getTime() - 18 * 24 * 60 * 60 * 1000),
     amountPaid: 4500,
-    lineItems: [
-      { name: 'Website Design - Final', quantity: 1, rate: 4500 },
-    ],
+    lineItems: [{ name: 'Website Design - Final', quantity: 1, rate: 4500 }],
   });
 
   // Invoice 2: Sent (awaiting payment)
@@ -596,9 +671,7 @@ async function seedDemoData(workspaceId: string) {
     dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
     sentAt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
     viewedAt: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000),
-    lineItems: [
-      { name: 'Design Phase 1', quantity: 1, rate: 8500 },
-    ],
+    lineItems: [{ name: 'Design Phase 1', quantity: 1, rate: 8500 }],
   });
 
   // Invoice 4: Draft
@@ -610,9 +683,7 @@ async function seedDemoData(workspaceId: string) {
     status: 'draft',
     issueDate: now,
     dueDate: thirtyDaysFromNow,
-    lineItems: [
-      { name: 'Wireframes Completed', quantity: 1, rate: 3600 },
-    ],
+    lineItems: [{ name: 'Wireframes Completed', quantity: 1, rate: 3600 }],
   });
 
   // Update number sequences
@@ -787,7 +858,10 @@ Email: {{client_email}}</p>
       clientId: 'demo-client-1',
       status: 'signed',
       content: serviceAgreement.content
-        .replace('{{date}}', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString())
+        .replace(
+          '{{date}}',
+          new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
+        )
         .replace('{{client_name}}', 'TechStart Inc.')
         .replace('{{client_company}}', 'TechStart Inc.')
         .replace('{{client_email}}', 'projects@techstart.demo')
@@ -801,7 +875,8 @@ Email: {{client_email}}</p>
         type: 'drawn',
         name: 'John Smith',
         date: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000).toISOString(),
-        value: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        value:
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       },
       signerIpAddress: '192.168.1.100',
     },
@@ -835,10 +910,16 @@ Email: {{client_email}}</p>
         .replace('{{client_contact}}', 'Marcus Chen')
         .replace('{{start_date}}', now.toLocaleDateString())
         .replace('{{end_date}}', thirtyDaysFromNow.toLocaleDateString())
-        .replace('{{deliverables}}', 'App wireframes, high-fidelity mockups, design system documentation')
+        .replace(
+          '{{deliverables}}',
+          'App wireframes, high-fidelity mockups, design system documentation'
+        )
         .replace('{{milestone_1_date}}', now.toLocaleDateString())
         .replace('{{milestone_1_amount}}', '$3,600')
-        .replace('{{milestone_2_date}}', new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString())
+        .replace(
+          '{{milestone_2_date}}',
+          new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()
+        )
         .replace('{{milestone_2_amount}}', '$6,000')
         .replace('{{milestone_3_date}}', thirtyDaysFromNow.toLocaleDateString())
         .replace('{{milestone_3_amount}}', '$2,400'),
@@ -849,7 +930,6 @@ Email: {{client_email}}</p>
   await prisma.emailTemplate.createMany({
     data: [
       {
-
         workspaceId,
         type: 'quote_sent',
         name: 'Quote Sent',
@@ -872,7 +952,6 @@ Acme Design Studio</p>`,
         isDefault: true,
       },
       {
-
         workspaceId,
         type: 'quote_reminder',
         name: 'Quote Reminder',
@@ -893,7 +972,6 @@ Acme Design Studio</p>`,
         isDefault: true,
       },
       {
-
         workspaceId,
         type: 'invoice_sent',
         name: 'Invoice Sent',
@@ -921,7 +999,6 @@ Acme Design Studio</p>`,
         isDefault: true,
       },
       {
-
         workspaceId,
         type: 'payment_reminder',
         name: 'Payment Reminder',
@@ -944,7 +1021,6 @@ Acme Design Studio</p>`,
         isDefault: true,
       },
       {
-
         workspaceId,
         type: 'payment_received',
         name: 'Payment Confirmation',
@@ -963,7 +1039,6 @@ Acme Design Studio</p>`,
         isDefault: true,
       },
       {
-
         workspaceId,
         type: 'contract_sent',
         name: 'Contract for Signature',
@@ -1065,7 +1140,7 @@ async function createInvoiceWithLineItems(
   const subtotal = data.lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
   const amountPaid = data.amountPaid || 0;
 
-  const amountDue = (data.status === 'paid' || data.status === 'voided') ? 0 : subtotal - amountPaid;
+  const amountDue = data.status === 'paid' || data.status === 'voided' ? 0 : subtotal - amountPaid;
 
   const invoice = await prisma.invoice.create({
     data: {

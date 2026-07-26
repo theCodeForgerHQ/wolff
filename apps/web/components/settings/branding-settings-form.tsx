@@ -4,7 +4,18 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Check, Plus, Upload, X, Globe, Twitter, Linkedin, Instagram, Facebook, Youtube } from 'lucide-react';
+import {
+  Check,
+  Plus,
+  Upload,
+  X,
+  Globe,
+  Twitter,
+  Linkedin,
+  Instagram,
+  Facebook,
+  Youtube,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,28 +33,67 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const ACCENT_PRESETS = [
-  '#EF4444', '#F97316', '#F59E0B', '#22C55E',
-  '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899',
-  '#14B8A6', '#475569',
+  '#EF4444',
+  '#F97316',
+  '#F59E0B',
+  '#22C55E',
+  '#3B82F6',
+  '#6366F1',
+  '#8B5CF6',
+  '#EC4899',
+  '#14B8A6',
+  '#475569',
 ];
 
 const COUNTRY_OPTIONS = [
-  'United States', 'Canada', 'United Kingdom', 'Australia',
-  'Germany', 'France', 'Netherlands', 'India',
-  'Singapore', 'New Zealand', 'Japan', 'Brazil',
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Australia',
+  'Germany',
+  'France',
+  'Netherlands',
+  'India',
+  'Singapore',
+  'New Zealand',
+  'Japan',
+  'Brazil',
 ];
 
 const SOCIAL_PLATFORMS = [
   { id: 'website', label: 'Website', icon: Globe, placeholder: 'https://yourwebsite.com' },
-  { id: 'twitter', label: 'Twitter / X', icon: Twitter, placeholder: 'https://twitter.com/username' },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/company/name' },
-  { id: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/username' },
-  { id: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'https://facebook.com/pagename' },
+  {
+    id: 'twitter',
+    label: 'Twitter / X',
+    icon: Twitter,
+    placeholder: 'https://twitter.com/username',
+  },
+  {
+    id: 'linkedin',
+    label: 'LinkedIn',
+    icon: Linkedin,
+    placeholder: 'https://linkedin.com/company/name',
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    icon: Instagram,
+    placeholder: 'https://instagram.com/username',
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    icon: Facebook,
+    placeholder: 'https://facebook.com/pagename',
+  },
   { id: 'youtube', label: 'YouTube', icon: Youtube, placeholder: 'https://youtube.com/@channel' },
 ] as const;
 
 const brandingSchema = z.object({
-  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  accentColor: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
   businessName: z.string().min(1, 'Business name is required').max(200),
   email: z.email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
@@ -174,31 +224,38 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
         <CardHeader>
           <CardTitle>Logo</CardTitle>
           <CardDescription>
-            Your branding will appear across your website, invoices, and client portal.
-            Upload a transparent PNG up to 200 x 50 pixels. For best results, first crop any empty space.
+            Your branding will appear across your website, invoices, and client portal. Upload a
+            transparent PNG up to 200 x 50 pixels. For best results, first crop any empty space.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Light Background Logo</Label>
+              <Label className="text-muted-foreground text-sm">Light Background Logo</Label>
               <div
-                className="group relative flex h-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-background transition-colors hover:border-primary/50 hover:bg-muted/50"
+                className="border-border bg-background hover:border-primary/50 hover:bg-muted/50 group relative flex h-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors"
                 onClick={() => handleLogoUpload('light')}
               >
                 {lightLogo ? (
                   <>
-                    <img src={lightLogo} alt="Light logo" className="max-h-20 max-w-[180px] object-contain" />
+                    <img
+                      src={lightLogo}
+                      alt="Light logo"
+                      className="max-h-20 max-w-[180px] object-contain"
+                    />
                     <button
                       type="button"
-                      className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={(e) => { e.stopPropagation(); setLightLogo(null); }}
+                      className="bg-destructive text-destructive-foreground absolute right-2 top-2 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLightLogo(null);
+                      }}
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
                     <Upload className="h-6 w-6" />
                     <span className="text-sm">Upload Logo</span>
                   </div>
@@ -207,18 +264,25 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Dark Background Logo</Label>
+              <Label className="text-muted-foreground text-sm">Dark Background Logo</Label>
               <div
-                className="group relative flex h-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-zinc-900 transition-colors hover:border-primary/50"
+                className="border-border hover:border-primary/50 group relative flex h-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed bg-zinc-900 transition-colors"
                 onClick={() => handleLogoUpload('dark')}
               >
                 {darkLogo ? (
                   <>
-                    <img src={darkLogo} alt="Dark logo" className="max-h-20 max-w-[180px] object-contain" />
+                    <img
+                      src={darkLogo}
+                      alt="Dark logo"
+                      className="max-h-20 max-w-[180px] object-contain"
+                    />
                     <button
                       type="button"
-                      className="absolute right-2 top-2 rounded-full bg-destructive p-1 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={(e) => { e.stopPropagation(); setDarkLogo(null); }}
+                      className="bg-destructive text-destructive-foreground absolute right-2 top-2 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDarkLogo(null);
+                      }}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -245,7 +309,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="mb-3 block text-sm text-muted-foreground">
+            <Label className="text-muted-foreground mb-3 block text-sm">
               Choose from the options or pick your own.
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -256,12 +320,14 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                   onClick={() => form.setValue('accentColor', color)}
                   className={cn(
                     'relative h-9 w-9 rounded-full transition-all hover:scale-110',
-                    accentColor === color && 'ring-2 ring-offset-2 ring-offset-background'
+                    accentColor === color && 'ring-offset-background ring-2 ring-offset-2'
                   )}
-                  style={{
-                    backgroundColor: color,
-                    '--tw-ring-color': color,
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      backgroundColor: color,
+                      '--tw-ring-color': color,
+                    } as React.CSSProperties
+                  }
                 >
                   {accentColor === color && (
                     <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
@@ -311,7 +377,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                 placeholder="Your Business Name"
               />
               {form.formState.errors.businessName && (
-                <p className="text-sm text-destructive">
+                <p className="text-destructive text-sm">
                   {form.formState.errors.businessName.message}
                 </p>
               )}
@@ -329,11 +395,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                {...form.register('phone')}
-                placeholder="+1 (555) 000-0000"
-              />
+              <Input id="phone" {...form.register('phone')} placeholder="+1 (555) 000-0000" />
             </div>
 
             <div className="space-y-2">
@@ -349,11 +411,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="street">Business Address</Label>
-              <Input
-                id="street"
-                {...form.register('street')}
-                placeholder="123 Business Street"
-              />
+              <Input id="street" {...form.register('street')} placeholder="123 Business Street" />
             </div>
 
             <div className="space-y-2">
@@ -367,7 +425,9 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                 </SelectTrigger>
                 <SelectContent>
                   {COUNTRY_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -377,29 +437,17 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                {...form.register('city')}
-                placeholder="City"
-              />
+              <Input id="city" {...form.register('city')} placeholder="City" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="state">Province/Region</Label>
-              <Input
-                id="state"
-                {...form.register('state')}
-                placeholder="State / Province"
-              />
+              <Input id="state" {...form.register('state')} placeholder="State / Province" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="postalCode">Postal Code</Label>
-              <Input
-                id="postalCode"
-                {...form.register('postalCode')}
-                placeholder="12345"
-              />
+              <Input id="postalCode" {...form.register('postalCode')} placeholder="12345" />
             </div>
           </div>
         </CardContent>
@@ -428,7 +476,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
         </CardHeader>
         <CardContent>
           {socialLinks.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No social media links added yet. Click &quot;Add Social Media&quot; to get started.
             </p>
           ) : (
@@ -438,7 +486,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                 const Icon = platformInfo?.icon || Globe;
                 return (
                   <div key={index} className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-muted">
+                    <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-md border">
                       <Icon className="h-4 w-4" />
                     </div>
                     <Select
@@ -450,9 +498,12 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                       </SelectTrigger>
                       <SelectContent>
                         {SOCIAL_PLATFORMS.filter(
-                          (p) => p.id === link.platform || !socialLinks.some((l) => l.platform === p.id)
+                          (p) =>
+                            p.id === link.platform || !socialLinks.some((l) => l.platform === p.id)
                         ).map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -467,7 +518,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
                       variant="ghost"
                       size="icon"
                       onClick={() => removeSocialLink(index)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </Button>

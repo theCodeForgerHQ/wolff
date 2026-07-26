@@ -9,32 +9,64 @@
  */
 
 const ALLOWED_TAGS = [
-  'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'del',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li',
-  'a', 'span', 'div',
-  'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  'blockquote', 'pre', 'code',
-  'img', 'hr',
-  'sub', 'sup',
+  'p',
+  'br',
+  'strong',
+  'b',
+  'em',
+  'i',
+  'u',
+  's',
+  'del',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'ul',
+  'ol',
+  'li',
+  'a',
+  'span',
+  'div',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  'blockquote',
+  'pre',
+  'code',
+  'img',
+  'hr',
+  'sub',
+  'sup',
 ];
 
 // Bug #46: 'style' removed to prevent CSS-based data exfiltration
 const ALLOWED_ATTR = [
-  'href', 'target', 'rel', 'src', 'alt', 'width', 'height',
-  'class', 'id',
-  'colspan', 'rowspan',
+  'href',
+  'target',
+  'rel',
+  'src',
+  'alt',
+  'width',
+  'height',
+  'class',
+  'id',
+  'colspan',
+  'rowspan',
 ];
 
 // ---------------------------------------------------------------------------
 // Client-side: DOMPurify
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let purify: any = null;
 
 if (typeof window !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   purify = require('dompurify');
 }
 
@@ -74,14 +106,11 @@ function buildServerConfig() {
 }
 
 // Lazy-loaded so we don't pay the import cost on the client bundle
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let serverSanitize: ((html: string, options: any) => string) | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let serverConfig: any = null;
 
 function getServerSanitizer() {
   if (!serverSanitize) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     serverSanitize = require('sanitize-html');
     serverConfig = buildServerConfig();
   }

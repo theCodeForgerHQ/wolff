@@ -146,11 +146,13 @@ When adding new regression tests:
 ## Skipped Tests
 
 Many tests are marked with `.skip` because they require:
+
 - A running application
 - Pre-seeded test data
 - Valid authentication tokens
 
 To enable these tests:
+
 1. Set up the test environment
 2. Seed the required test data
 3. Remove the `.skip` modifier from the tests you want to run

@@ -9,12 +9,7 @@ import { updateQuote } from './actions';
  * Saves after a debounce period when changes are detected
  */
 export function useAutoSave(quoteId: string | null, debounceMs = 2000) {
-  const {
-    document,
-    isDirty,
-    setSaving,
-    markSaved,
-  } = useQuoteBuilderStore();
+  const { document, isDirty, setSaving, markSaved } = useQuoteBuilderStore();
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string | null>(null);
@@ -93,7 +88,7 @@ export function useAutoSave(quoteId: string | null, debounceMs = 2000) {
         if (typeof navigator.sendBeacon === 'function') {
           navigator.sendBeacon(
             `/api/quotes/${quoteId}/autosave`,
-            new Blob([payload], { type: 'application/json' }),
+            new Blob([payload], { type: 'application/json' })
           );
         }
         // Also backup to sessionStorage as a fallback
@@ -149,14 +144,8 @@ export function useUnsavedChangesWarning() {
  * Hook to handle keyboard shortcuts in the quote builder
  */
 export function useBuilderKeyboardShortcuts() {
-  const {
-    undo,
-    redo,
-    selectedBlockId,
-    removeBlock,
-    duplicateBlock,
-    togglePreviewMode,
-  } = useQuoteBuilderStore();
+  const { undo, redo, selectedBlockId, removeBlock, duplicateBlock, togglePreviewMode } =
+    useQuoteBuilderStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

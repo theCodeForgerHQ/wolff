@@ -24,7 +24,9 @@ export function SendQuoteButton({ quoteId }: { quoteId: string }) {
         if (result.emailSent) {
           toast.success('Quote sent and email delivered');
         } else {
-          toast.warning('Quote marked as sent, but email delivery failed. Please check your email configuration.');
+          toast.warning(
+            'Quote marked as sent, but email delivery failed. Please check your email configuration.'
+          );
         }
         router.refresh();
       } else {

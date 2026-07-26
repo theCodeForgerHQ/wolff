@@ -21,14 +21,8 @@ export default async function OnboardingPage() {
 
   // Check if Stripe is configured
   const stripeEnabled = !!(
-    process.env.STRIPE_SECRET_KEY &&
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   );
 
-  return (
-    <OnboardingWizard
-      initialProgress={progress}
-      stripeEnabled={stripeEnabled}
-    />
-  );
+  return <OnboardingWizard initialProgress={progress} stripeEnabled={stripeEnabled} />;
 }

@@ -33,13 +33,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!original) return apiError('Quote not found', 404);
 
     // Generate new quote number in a serializable transaction to prevent duplicates
-    const seq = await prisma.$transaction(async (tx) => {
-      return tx.numberSequence.upsert({
-        where: { workspaceId_type: { workspaceId, type: 'quote' } },
-        update: { currentValue: { increment: 1 } },
-        create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
-      });
-    }, { isolationLevel: 'Serializable' });
+    const seq = await prisma.$transaction(
+      async (tx) => {
+        return tx.numberSequence.upsert({
+          where: { workspaceId_type: { workspaceId, type: 'quote' } },
+          update: { currentValue: { increment: 1 } },
+          create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
+        });
+      },
+      { isolationLevel: 'Serializable' }
+    );
     const quoteNumber = `${seq.prefix || 'Q-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
 
     // Create duplicate
@@ -81,31 +84,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    return apiSuccess({
-      id: duplicate.id,
-      quoteNumber: duplicate.quoteNumber,
-      title: duplicate.title,
-      status: duplicate.status,
-      client: duplicate.client,
-      currency: duplicate.currency,
-      subtotal: toNumber(duplicate.subtotal),
-      discountType: duplicate.discountType,
-      discountValue: duplicate.discountValue ? toNumber(duplicate.discountValue) : null,
-      discountAmount: toNumber(duplicate.discountAmount),
-      taxTotal: toNumber(duplicate.taxTotal),
-      total: toNumber(duplicate.total),
-      lineItems: duplicate.lineItems.map((li) => ({
-        id: li.id,
-        name: li.name,
-        description: li.description,
-        quantity: toNumber(li.quantity),
-        rate: toNumber(li.rate),
-        amount: toNumber(li.amount),
-        taxRate: li.taxRate ? toNumber(li.taxRate) : null,
-        taxAmount: toNumber(li.taxAmount),
-      })),
-      createdAt: duplicate.createdAt,
-    }, 201);
+    return apiSuccess(
+      {
+        id: duplicate.id,
+        quoteNumber: duplicate.quoteNumber,
+        title: duplicate.title,
+        status: duplicate.status,
+        client: duplicate.client,
+        currency: duplicate.currency,
+        subtotal: toNumber(duplicate.subtotal),
+        discountType: duplicate.discountType,
+        discountValue: duplicate.discountValue ? toNumber(duplicate.discountValue) : null,
+        discountAmount: toNumber(duplicate.discountAmount),
+        taxTotal: toNumber(duplicate.taxTotal),
+        total: toNumber(duplicate.total),
+        lineItems: duplicate.lineItems.map((li) => ({
+          id: li.id,
+          name: li.name,
+          description: li.description,
+          quantity: toNumber(li.quantity),
+          rate: toNumber(li.rate),
+          amount: toNumber(li.amount),
+          taxRate: li.taxRate ? toNumber(li.taxRate) : null,
+          taxAmount: toNumber(li.taxAmount),
+        })),
+        createdAt: duplicate.createdAt,
+      },
+      201
+    );
   } catch (err) {
     logger.error({ err }, 'Duplicate quote API error');
     return apiError('Internal server error', 500);

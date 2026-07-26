@@ -9,13 +9,19 @@ import { QuoteListItem } from '@/lib/quotes/types';
 import { Pencil, Send, Link2, FileOutput, Copy, Download, Trash2 } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
-  draft: 'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+  draft:
+    'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
   sent: 'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
-  viewed: 'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
-  accepted: 'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
-  declined: 'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
-  expired: 'border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-950',
-  converted: 'border-purple-300 text-purple-600 bg-purple-50 dark:border-purple-600 dark:text-purple-400 dark:bg-purple-950',
+  viewed:
+    'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
+  accepted:
+    'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
+  declined:
+    'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
+  expired:
+    'border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-950',
+  converted:
+    'border-purple-300 text-purple-600 bg-purple-50 dark:border-purple-600 dark:text-purple-400 dark:bg-purple-950',
 };
 
 function formatCurrency(amount: number, currency: string = 'USD'): string {
@@ -23,10 +29,12 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
     style: 'currency',
     currency,
   }).formatToParts(amount);
-  return parts.map((p, i) => {
-    if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
-    return p.value;
-  }).join('');
+  return parts
+    .map((p, i) => {
+      if (p.type === 'currency' && parts[i + 1]?.type !== 'literal') return p.value + ' ';
+      return p.value;
+    })
+    .join('');
 }
 
 function formatDate(dateString: string): string {
@@ -50,8 +58,14 @@ interface QuoteColumnsOptions {
 
 export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<QuoteListItem>[] {
   const {
-    onView, onEdit, onDuplicate, onDelete, onDownload,
-    onSend, onCopyLink, onConvertToInvoice,
+    onView,
+    onEdit,
+    onDuplicate,
+    onDelete,
+    onDownload,
+    onSend,
+    onCopyLink,
+    onConvertToInvoice,
   } = options;
 
   return [
@@ -82,14 +96,12 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
     {
       id: 'Quote ID',
       accessorKey: 'quoteNumber',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Quote ID" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Quote ID" />,
       cell: ({ row }) => {
         return (
           <button
             type="button"
-            className="font-medium text-primary hover:underline text-left"
+            className="text-primary text-left font-medium hover:underline"
             onClick={(e) => {
               e.stopPropagation();
               onView?.(row.original);
@@ -102,9 +114,7 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
     },
     {
       accessorKey: 'status',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const status = row.getValue('status') as string;
 
@@ -123,16 +133,12 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
     },
     {
       accessorKey: 'client',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
       cell: ({ row }) => {
         const client = row.original.client;
 
         if (!client) {
-          return (
-            <div className="text-muted-foreground italic">No client</div>
-          );
+          return <div className="text-muted-foreground italic">No client</div>;
         }
 
         const initials = client.name
@@ -144,14 +150,12 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
 
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
               {initials}
             </div>
             <div>
               <div className="font-medium">{client.name}</div>
-              {client.email && (
-                <div className="text-sm text-muted-foreground">{client.email}</div>
-              )}
+              {client.email && <div className="text-muted-foreground text-sm">{client.email}</div>}
             </div>
           </div>
         );
@@ -168,36 +172,28 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
     },
     {
       accessorKey: 'total',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Amount" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
       // Bug #62: Use quote's currency field instead of hardcoded USD
       cell: ({ row }) => {
         return (
-          <div className="font-medium">{formatCurrency(row.getValue('total'), row.original.currency)}</div>
+          <div className="font-medium">
+            {formatCurrency(row.getValue('total'), row.original.currency)}
+          </div>
         );
       },
     },
     {
       id: 'Issue Date',
       accessorKey: 'issueDate',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Issue Date" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Issue Date" />,
       cell: ({ row }) => {
-        return (
-          <div className="text-muted-foreground">
-            {formatDate(row.original.issueDate)}
-          </div>
-        );
+        return <div className="text-muted-foreground">{formatDate(row.original.issueDate)}</div>;
       },
     },
     {
       id: 'Expires',
       accessorKey: 'expirationDate',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Expires" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Expires" />,
       cell: ({ row }) => {
         const expirationDate = row.original.expirationDate as string | null;
         return (
@@ -248,7 +244,8 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
             label: 'Duplicate',
             icon: <Copy className="mr-2 h-4 w-4" />,
             onClick: onDuplicate,
-            separator: !onConvertToInvoice || quote.status === 'converted' || quote.status === 'declined',
+            separator:
+              !onConvertToInvoice || quote.status === 'converted' || quote.status === 'declined',
           });
         }
         if (onDownload) {
@@ -268,12 +265,7 @@ export function getQuoteColumns(options: QuoteColumnsOptions = {}): ColumnDef<Qu
           });
         }
 
-        return (
-          <DataTableRowActions
-            row={quote}
-            actions={actions}
-          />
-        );
+        return <DataTableRowActions row={quote} actions={actions} />;
       },
     },
   ];

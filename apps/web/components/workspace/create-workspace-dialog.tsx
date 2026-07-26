@@ -77,7 +77,7 @@ export function CreateWorkspaceDialog({ trigger, onSuccess }: CreateWorkspaceDia
                 disabled={isLoading}
                 autoFocus
               />
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
           </div>
           <DialogFooter>

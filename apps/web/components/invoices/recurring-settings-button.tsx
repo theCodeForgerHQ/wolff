@@ -18,12 +18,7 @@ export function RecurringSettingsButton({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1"
-        onClick={() => setOpen(true)}
-      >
+      <Button variant="outline" size="sm" className="gap-1" onClick={() => setOpen(true)}>
         <RefreshCw className="h-3.5 w-3.5" />
         Settings
       </Button>
@@ -31,14 +26,18 @@ export function RecurringSettingsButton({
         invoiceId={invoiceId}
         open={open}
         onOpenChange={setOpen}
-        initialSettings={initialSettings ? {
-          enabled: initialSettings.enabled,
-          frequency: initialSettings.frequency,
-          startDate: initialSettings.startDate,
-          endDate: initialSettings.endDate,
-          noEndDate: initialSettings.noEndDate,
-          autoSend: initialSettings.autoSend,
-        } : null}
+        initialSettings={
+          initialSettings
+            ? {
+                enabled: initialSettings.enabled,
+                frequency: initialSettings.frequency,
+                startDate: initialSettings.startDate,
+                endDate: initialSettings.endDate,
+                noEndDate: initialSettings.noEndDate,
+                autoSend: initialSettings.autoSend,
+              }
+            : null
+        }
       />
     </>
   );

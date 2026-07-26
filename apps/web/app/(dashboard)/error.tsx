@@ -28,26 +28,22 @@ export default function DashboardError({
     <div className="flex min-h-[50vh] items-center justify-center p-6">
       <Card className="max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-6 w-6 text-destructive" />
+          <div className="bg-destructive/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <AlertTriangle className="text-destructive h-6 w-6" />
           </div>
           <CardTitle>Something went wrong</CardTitle>
-          <CardDescription>
-            We encountered an unexpected error. Please try again.
-          </CardDescription>
+          <CardDescription>We encountered an unexpected error. Please try again.</CardDescription>
         </CardHeader>
         {/* Low #73: Only show error details in development to prevent info leakage */}
         <CardContent>
-          <div className="rounded-md bg-muted p-3">
-            <p className="text-sm font-mono text-muted-foreground break-all">
+          <div className="bg-muted rounded-md p-3">
+            <p className="text-muted-foreground break-all font-mono text-sm">
               {process.env.NODE_ENV === 'development'
                 ? error.message || 'An unknown error occurred'
                 : 'An unexpected error occurred. Please try again or contact support.'}
             </p>
             {error.digest && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Reference: {error.digest}
-              </p>
+              <p className="text-muted-foreground mt-2 text-xs">Reference: {error.digest}</p>
             )}
           </div>
         </CardContent>

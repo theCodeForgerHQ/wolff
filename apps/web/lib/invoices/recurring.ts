@@ -79,7 +79,10 @@ export async function updateRecurringSettings(
 
   // Validate interval
   if (settings.enabled && !VALID_INTERVALS.includes(settings.frequency)) {
-    return { success: false, error: `Invalid frequency. Must be one of: ${VALID_INTERVALS.join(', ')}` };
+    return {
+      success: false,
+      error: `Invalid frequency. Must be one of: ${VALID_INTERVALS.join(', ')}`,
+    };
   }
 
   // Find the invoice and verify ownership
@@ -133,9 +136,7 @@ export async function updateRecurringSettings(
 /**
  * Get recurring settings for an invoice.
  */
-export async function getRecurringSettings(
-  invoiceId: string
-): Promise<{
+export async function getRecurringSettings(invoiceId: string): Promise<{
   enabled: boolean;
   frequency: string;
   startDate: string;

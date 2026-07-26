@@ -141,7 +141,9 @@ export const test = base.extend<TestDataFixtures>({
     if (await clientTrigger.isVisible()) {
       await clientTrigger.click();
       // Select from dropdown
-      const clientOption = page.getByRole('option').filter({ hasText: new RegExp(testClient.name, 'i') });
+      const clientOption = page
+        .getByRole('option')
+        .filter({ hasText: new RegExp(testClient.name, 'i') });
       if (await clientOption.isVisible()) {
         await clientOption.click();
       }
@@ -158,8 +160,8 @@ export const test = base.extend<TestDataFixtures>({
 
     // Get quote number from page
     const quoteNumberEl = page.locator('[data-testid="quote-number"]');
-    const quoteNumber = await quoteNumberEl.isVisible()
-      ? await quoteNumberEl.textContent() || 'QT-0001'
+    const quoteNumber = (await quoteNumberEl.isVisible())
+      ? (await quoteNumberEl.textContent()) || 'QT-0001'
       : 'QT-0001';
 
     const quoteData = {
@@ -198,7 +200,9 @@ export const test = base.extend<TestDataFixtures>({
     const clientTrigger = page.getByRole('combobox', { name: /client/i });
     if (await clientTrigger.isVisible()) {
       await clientTrigger.click();
-      const clientOption = page.getByRole('option').filter({ hasText: new RegExp(testClient.name, 'i') });
+      const clientOption = page
+        .getByRole('option')
+        .filter({ hasText: new RegExp(testClient.name, 'i') });
       if (await clientOption.isVisible()) {
         await clientOption.click();
       }
@@ -215,7 +219,10 @@ export const test = base.extend<TestDataFixtures>({
     if (await addItemButton.isVisible()) {
       await addItemButton.click();
       // Fill line item fields
-      const itemNameInput = page.locator('input').filter({ has: page.locator('[placeholder*="item"], [placeholder*="description"]') }).first();
+      const itemNameInput = page
+        .locator('input')
+        .filter({ has: page.locator('[placeholder*="item"], [placeholder*="description"]') })
+        .first();
       if (await itemNameInput.isVisible()) {
         await itemNameInput.fill(TEST_INVOICE.lineItems[0]!.name);
       }
@@ -230,8 +237,8 @@ export const test = base.extend<TestDataFixtures>({
     const id = url.split('/invoices/')[1]?.split('?')[0] || '';
 
     const invoiceNumberEl = page.locator('[data-testid="invoice-number"]');
-    const invoiceNumber = await invoiceNumberEl.isVisible()
-      ? await invoiceNumberEl.textContent() || 'INV-0001'
+    const invoiceNumber = (await invoiceNumberEl.isVisible())
+      ? (await invoiceNumberEl.textContent()) || 'INV-0001'
       : 'INV-0001';
 
     const invoiceData = {

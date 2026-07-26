@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SignatureData } from '@/lib/contracts/types';
 
 interface SignaturePadProps {
@@ -87,9 +81,7 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
     setHasDrawn(true);
   };
 
-  const draw = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
 
     const canvas = canvasRef.current;
@@ -152,8 +144,7 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
       <CardHeader>
         <CardTitle>Sign Contract</CardTitle>
         <CardDescription>
-          Please sign below to indicate your agreement to the terms of this
-          contract.
+          Please sign below to indicate your agreement to the terms of this contract.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -167,10 +158,7 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
           />
         </div>
 
-        <Tabs
-          value={signatureType}
-          onValueChange={(v) => setSignatureType(v as 'typed' | 'drawn')}
-        >
+        <Tabs value={signatureType} onValueChange={(v) => setSignatureType(v as 'typed' | 'drawn')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="typed" className="gap-2">
               <Type className="h-4 w-4" />
@@ -190,17 +178,14 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
                 value={typedSignature}
                 onChange={(e) => setTypedSignature(e.target.value)}
                 placeholder="Type your signature"
-                className="font-signature text-2xl h-14"
+                className="font-signature h-14 text-2xl"
                 style={{ fontFamily: "'Brush Script MT', cursive" }}
               />
             </div>
             {typedSignature && (
-              <div className="border rounded-lg p-4 bg-muted/30">
-                <p className="text-sm text-muted-foreground mb-2">Preview:</p>
-                <p
-                  className="text-3xl"
-                  style={{ fontFamily: "'Brush Script MT', cursive" }}
-                >
+              <div className="bg-muted/30 rounded-lg border p-4">
+                <p className="text-muted-foreground mb-2 text-sm">Preview:</p>
+                <p className="text-3xl" style={{ fontFamily: "'Brush Script MT', cursive" }}>
                   {typedSignature}
                 </p>
               </div>
@@ -211,22 +196,17 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Draw Your Signature</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={clearCanvas}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={clearCanvas}>
                   <Eraser className="mr-2 h-4 w-4" />
                   Clear
                 </Button>
               </div>
-              <div className="border rounded-lg overflow-hidden bg-white">
+              <div className="overflow-hidden rounded-lg border bg-white">
                 <canvas
                   ref={canvasRef}
                   width={500}
                   height={200}
-                  className="w-full h-[200px] cursor-crosshair touch-none"
+                  className="h-[200px] w-full cursor-crosshair touch-none"
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -236,17 +216,16 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
                   onTouchEnd={stopDrawing}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Use your mouse or finger to draw your signature above.
               </p>
             </div>
           </TabsContent>
         </Tabs>
 
-        <div className="text-xs text-muted-foreground">
-          By signing, you agree to the terms and conditions of this contract. Your
-          signature will be recorded along with a timestamp and your IP address for
-          verification purposes.
+        <div className="text-muted-foreground text-xs">
+          By signing, you agree to the terms and conditions of this contract. Your signature will be
+          recorded along with a timestamp and your IP address for verification purposes.
         </div>
       </CardContent>
     </Card>

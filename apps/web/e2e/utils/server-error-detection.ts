@@ -21,12 +21,7 @@ import { expect } from '@playwright/test';
 
 export const SERVER_ERROR_PATTERNS = {
   // Next.js error overlay text patterns
-  ERROR_OVERLAY: [
-    'Application error',
-    'Unhandled Runtime Error',
-    'Error: ',
-    'Server Error',
-  ],
+  ERROR_OVERLAY: ['Application error', 'Unhandled Runtime Error', 'Error: ', 'Server Error'],
 
   // HTTP error status text that may appear in page
   HTTP_ERRORS: [
@@ -50,20 +45,10 @@ export const SERVER_ERROR_PATTERNS = {
   ],
 
   // React error boundary fallback patterns
-  ERROR_BOUNDARY: [
-    'Something went wrong',
-    'An error occurred',
-    'Error loading',
-    'Failed to load',
-  ],
+  ERROR_BOUNDARY: ['Something went wrong', 'An error occurred', 'Error loading', 'Failed to load'],
 
   // Invalid rendered data patterns
-  INVALID_RENDERS: [
-    'undefined',
-    'null',
-    'NaN',
-    '[object Object]',
-  ],
+  INVALID_RENDERS: ['undefined', 'null', 'NaN', '[object Object]'],
 } as const;
 
 // ============================================================================
@@ -87,7 +72,7 @@ export interface ErrorDetectionResult {
  */
 export async function detectServerError(page: Page): Promise<ErrorDetectionResult> {
   const url = page.url();
-  const bodyText = await page.locator('body').textContent() || '';
+  const bodyText = (await page.locator('body').textContent()) || '';
   const pageContent = await page.content();
 
   // Check for error overlay
@@ -132,12 +117,7 @@ export async function detectServerError(page: Page): Promise<ErrorDetectionResul
   // Check for error boundaries
   for (const pattern of SERVER_ERROR_PATTERNS.ERROR_BOUNDARY) {
     // Only match if it looks like an error context (not just text on page)
-    const errorContextPatterns = [
-      `${pattern.toLowerCase()}`,
-      'error',
-      'failed',
-      'problem',
-    ];
+    const errorContextPatterns = [`${pattern.toLowerCase()}`, 'error', 'failed', 'problem'];
     const textLower = bodyText.toLowerCase();
 
     // Check if multiple error-related words appear together
@@ -170,7 +150,7 @@ export async function detectInvalidRenders(
   const results: ErrorDetectionResult[] = [];
 
   const locator = selector ? page.locator(selector) : page.locator('body');
-  const text = await locator.textContent() || '';
+  const text = (await locator.textContent()) || '';
 
   // Skip if selector doesn't exist
   if (selector && !(await locator.count())) {
@@ -196,9 +176,7 @@ export async function detectInvalidRenders(
         'null check',
       ];
       const textLower = text.toLowerCase();
-      const isAllowed = allowedContexts.some((ctx) =>
-        textLower.includes(ctx.toLowerCase())
-      );
+      const isAllowed = allowedContexts.some((ctx) => textLower.includes(ctx.toLowerCase()));
 
       if (!isAllowed) {
         results.push({
@@ -222,20 +200,17 @@ export async function detectInvalidRenders(
 /**
  * Assert that no server component crash occurred on the current page
  */
-export async function assertNoServerComponentCrash(
-  page: Page,
-  context?: string
-): Promise<void> {
+export async function assertNoServerComponentCrash(page: Page, context?: string): Promise<void> {
   const result = await detectServerError(page);
 
   if (result.hasError) {
     const contextStr = context ? ` [${context}]` : '';
     throw new Error(
       `Server Component Crash Detected${contextStr}\n` +
-      `URL: ${result.url}\n` +
-      `Error Type: ${result.errorType}\n` +
-      `Pattern: ${result.pattern}\n` +
-      `Context: ${result.context || 'N/A'}`
+        `URL: ${result.url}\n` +
+        `Error Type: ${result.errorType}\n` +
+        `Pattern: ${result.pattern}\n` +
+        `Context: ${result.context || 'N/A'}`
     );
   }
 }
@@ -251,20 +226,16 @@ export async function assertDataIntegrity(
   const invalidRenders = await detectInvalidRenders(page, selector);
 
   if (invalidRenders.length > 0) {
-    const issues = invalidRenders
-      .map((r) => `  - "${r.pattern}" found: ${r.context}`)
-      .join('\n');
+    const issues = invalidRenders.map((r) => `  - "${r.pattern}" found: ${r.context}`).join('\n');
 
     throw new Error(
-      `Data Integrity Violation in "${selector}"\n` +
-      `URL: ${page.url()}\n` +
-      `Issues:\n${issues}`
+      `Data Integrity Violation in "${selector}"\n` + `URL: ${page.url()}\n` + `Issues:\n${issues}`
     );
   }
 
   // Also check for specific patterns if provided
   if (patterns && patterns.length > 0) {
-    const text = await page.locator(selector).textContent() || '';
+    const text = (await page.locator(selector).textContent()) || '';
 
     for (const pattern of patterns) {
       expect(text).toContain(pattern);
@@ -294,8 +265,7 @@ export async function safeNavigate(
   // Check HTTP response status
   if (response && !response.ok() && response.status() >= 500) {
     throw new Error(
-      `Server Error Response: ${response.status()} ${response.statusText()}\n` +
-      `URL: ${url}`
+      `Server Error Response: ${response.status()} ${response.statusText()}\n` + `URL: ${url}`
     );
   }
 
@@ -329,9 +299,7 @@ export async function assertListPageIntegrity(
 
     if (count < config.minItemCount) {
       // This might be okay if there's no data, but log it
-      console.warn(
-        `List has ${count} items, expected at least ${config.minItemCount}`
-      );
+      console.warn(`List has ${count} items, expected at least ${config.minItemCount}`);
     }
   }
 
@@ -340,7 +308,7 @@ export async function assertListPageIntegrity(
   if (invalidRenders.length > 0) {
     throw new Error(
       `Data integrity issues in list at ${config.url}:\n` +
-      invalidRenders.map((r) => `  - ${r.pattern}: ${r.context}`).join('\n')
+        invalidRenders.map((r) => `  - ${r.pattern}: ${r.context}`).join('\n')
     );
   }
 }
@@ -373,7 +341,7 @@ export async function assertDetailPageIntegrity(
   if (invalidRenders.length > 0) {
     throw new Error(
       `Data integrity issues on detail page ${config.url}:\n` +
-      invalidRenders.map((r) => `  - ${r.pattern}: ${r.context}`).join('\n')
+        invalidRenders.map((r) => `  - ${r.pattern}: ${r.context}`).join('\n')
     );
   }
 }
@@ -405,10 +373,7 @@ export function monitorConsoleErrors(page: Page): () => string[] {
 /**
  * Assert no console errors occurred during test
  */
-export function assertNoConsoleErrors(
-  getErrors: () => string[],
-  allowedPatterns?: RegExp[]
-): void {
+export function assertNoConsoleErrors(getErrors: () => string[], allowedPatterns?: RegExp[]): void {
   const errors = getErrors();
 
   // Filter out allowed patterns

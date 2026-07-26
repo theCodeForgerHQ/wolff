@@ -133,7 +133,9 @@ async function main() {
           });
         }
 
-        console.log(`  ${inv.invoiceNumber}: "$${inv.total}" -> "$${update.subtotal}" (${update.title})`);
+        console.log(
+          `  ${inv.invoiceNumber}: "$${inv.total}" -> "$${update.subtotal}" (${update.title})`
+        );
       } else {
         console.log(`  ${inv.invoiceNumber}: "${inv.title}" $${inv.total} (no update defined)`);
       }
@@ -148,7 +150,9 @@ async function main() {
       await prisma.numberSequence.deleteMany({ where: { workspaceId: extraWorkspace.id } });
       // Check for quotes/invoices (should be none if the data was in the corrupted workspace)
       const extraQuotes = await prisma.quote.count({ where: { workspaceId: extraWorkspace.id } });
-      const extraInvoices = await prisma.invoice.count({ where: { workspaceId: extraWorkspace.id } });
+      const extraInvoices = await prisma.invoice.count({
+        where: { workspaceId: extraWorkspace.id },
+      });
       if (extraQuotes === 0 && extraInvoices === 0) {
         await prisma.rateCard.deleteMany({ where: { workspaceId: extraWorkspace.id } });
         await prisma.rateCardCategory.deleteMany({ where: { workspaceId: extraWorkspace.id } });
@@ -156,11 +160,15 @@ async function main() {
         await prisma.workspace.delete({ where: { id: extraWorkspace.id } });
         console.log(`\nCleaned up extra workspace: "test-workspace" (id: ${extraWorkspace.id})`);
       } else {
-        console.log(`\nExtra workspace "test-workspace" has ${extraQuotes} quotes and ${extraInvoices} invoices - skipping cleanup`);
+        console.log(
+          `\nExtra workspace "test-workspace" has ${extraQuotes} quotes and ${extraInvoices} invoices - skipping cleanup`
+        );
       }
     }
   } else {
-    console.log('\nNo corrupted workspace found (test user only in test-workspace and/or demo-workspace)');
+    console.log(
+      '\nNo corrupted workspace found (test user only in test-workspace and/or demo-workspace)'
+    );
   }
 
   // 6. Fix demo user name

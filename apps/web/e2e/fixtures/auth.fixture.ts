@@ -34,7 +34,10 @@ export const test = base.extend<AuthFixtures>({
     await page.waitForLoadState('networkidle');
 
     // Check if we're already logged in (session exists)
-    const isLoggedIn = await page.locator('[data-testid="user-menu"]').isVisible().catch(() => false);
+    const isLoggedIn = await page
+      .locator('[data-testid="user-menu"]')
+      .isVisible()
+      .catch(() => false);
 
     if (!isLoggedIn) {
       // Fill in login form using id selectors
@@ -57,7 +60,10 @@ export const test = base.extend<AuthFixtures>({
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
 
-    const isLoggedIn = await page.locator('[data-testid="user-menu"]').isVisible().catch(() => false);
+    const isLoggedIn = await page
+      .locator('[data-testid="user-menu"]')
+      .isVisible()
+      .catch(() => false);
 
     if (!isLoggedIn) {
       await page.fill('#email', ADMIN_USER.email);
@@ -120,9 +126,15 @@ export async function ensureTestUserExists(page: any): Promise<void> {
 
   if (!isLoggedIn) {
     // Check for error - user may not exist
-    const errorText = await page.locator('.text-destructive, [role="alert"]').textContent().catch(() => '');
+    const errorText = await page
+      .locator('.text-destructive, [role="alert"]')
+      .textContent()
+      .catch(() => '');
 
-    if (errorText?.toLowerCase().includes('invalid') || errorText?.toLowerCase().includes('incorrect')) {
+    if (
+      errorText?.toLowerCase().includes('invalid') ||
+      errorText?.toLowerCase().includes('incorrect')
+    ) {
       // Register new user
       await page.goto('/register');
       await page.waitForLoadState('networkidle');

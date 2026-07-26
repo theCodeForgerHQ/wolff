@@ -6,41 +6,58 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableColumnHeader } from '@/components/ui/data-table/data-table-column-header';
 import { DataTableRowActions, RowAction } from '@/components/ui/data-table/data-table-row-actions';
 import { ContractInstanceListItem } from '@/lib/contracts/types';
-import { FileText, Mail, Eye, CheckCircle2, Clock, Hourglass, Pencil, Send, Link2, Download, Trash2, PenLine, RefreshCw } from 'lucide-react';
+import {
+  FileText,
+  Mail,
+  Eye,
+  CheckCircle2,
+  Clock,
+  Hourglass,
+  Pencil,
+  Send,
+  Link2,
+  Download,
+  Trash2,
+  PenLine,
+  RefreshCw,
+} from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
-const statusConfig: Record<
-  string,
-  { label: string; className: string; icon: React.ReactNode }
-> = {
+const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   draft: {
     label: 'Draft',
-    className: 'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+    className:
+      'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
     icon: <FileText className="h-3 w-3" />,
   },
   sent: {
     label: 'Sent',
-    className: 'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
+    className:
+      'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
     icon: <Mail className="h-3 w-3" />,
   },
   viewed: {
     label: 'Viewed',
-    className: 'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
+    className:
+      'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
     icon: <Eye className="h-3 w-3" />,
   },
   pending: {
     label: 'Pending',
-    className: 'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
+    className:
+      'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
     icon: <Hourglass className="h-3 w-3" />,
   },
   signed: {
     label: 'Signed',
-    className: 'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
+    className:
+      'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
     icon: <CheckCircle2 className="h-3 w-3" />,
   },
   expired: {
     label: 'Expired',
-    className: 'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
+    className:
+      'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
     icon: <Clock className="h-3 w-3" />,
   },
 };
@@ -60,7 +77,17 @@ interface ContractColumnsOptions {
 export function getContractColumns(
   options: ContractColumnsOptions = {}
 ): ColumnDef<ContractInstanceListItem>[] {
-  const { onView, onDetails, onEdit, onSend, onCountersign, onResend, onCopyLink, onDownload, onDelete } = options;
+  const {
+    onView,
+    onDetails,
+    onEdit,
+    onSend,
+    onCountersign,
+    onResend,
+    onCopyLink,
+    onDownload,
+    onDelete,
+  } = options;
 
   return [
     {
@@ -90,19 +117,13 @@ export function getContractColumns(
     {
       id: 'contract',
       accessorKey: 'contractName',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Contract" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Contract" />,
       cell: ({ row }) => {
         const quoteName = row.original.quoteName;
         return (
           <div>
-            <div className="font-medium text-primary">
-              {row.original.contractName}
-            </div>
-            {quoteName && (
-              <div className="text-sm text-muted-foreground">{quoteName}</div>
-            )}
+            <div className="text-primary font-medium">{row.original.contractName}</div>
+            {quoteName && <div className="text-muted-foreground text-sm">{quoteName}</div>}
           </div>
         );
       },
@@ -111,21 +132,25 @@ export function getContractColumns(
         const contractName = (row.original.contractName as string).toLowerCase();
         const clientName = row.original.clientName.toLowerCase();
         const clientEmail = row.original.clientEmail?.toLowerCase() ?? '';
-        return contractName.includes(searchValue) || clientName.includes(searchValue) || clientEmail.includes(searchValue);
+        return (
+          contractName.includes(searchValue) ||
+          clientName.includes(searchValue) ||
+          clientEmail.includes(searchValue)
+        );
       },
     },
     {
       accessorKey: 'status',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const status = row.getValue('status') as string;
-        const config = statusConfig[status] || statusConfig.draft || {
-          label: 'Unknown',
-          className: 'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
-          icon: <FileText className="h-3 w-3" />,
-        };
+        const config = statusConfig[status] ||
+          statusConfig.draft || {
+            label: 'Unknown',
+            className:
+              'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+            icon: <FileText className="h-3 w-3" />,
+          };
 
         return (
           <Badge variant="outline" className={`gap-1 ${config.className}`}>
@@ -141,9 +166,7 @@ export function getContractColumns(
     {
       id: 'client',
       accessorKey: 'clientName',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
       cell: ({ row }) => {
         const clientName = row.original.clientName;
         const clientEmail = row.original.clientEmail;
@@ -156,14 +179,12 @@ export function getContractColumns(
 
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium">
               {initials}
             </div>
             <div>
               <div className="font-medium">{clientName}</div>
-              {clientEmail && (
-                <div className="text-sm text-muted-foreground">{clientEmail}</div>
-              )}
+              {clientEmail && <div className="text-muted-foreground text-sm">{clientEmail}</div>}
             </div>
           </div>
         );
@@ -172,15 +193,9 @@ export function getContractColumns(
     {
       id: 'created',
       accessorKey: 'createdAt',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Created" />,
       cell: ({ row }) => {
-        return (
-          <div className="text-muted-foreground">
-            {formatDate(row.original.createdAt)}
-          </div>
-        );
+        return <div className="text-muted-foreground">{formatDate(row.original.createdAt)}</div>;
       },
     },
     {
@@ -251,13 +266,7 @@ export function getContractColumns(
           });
         }
 
-        return (
-          <DataTableRowActions
-            row={contract}
-            actions={actions}
-            onDelete={onDelete}
-          />
-        );
+        return <DataTableRowActions row={contract} actions={actions} onDelete={onDelete} />;
       },
     },
   ];

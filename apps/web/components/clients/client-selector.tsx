@@ -6,11 +6,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { searchClients } from '@/lib/clients/actions';
 import Link from 'next/link';
 
@@ -102,16 +98,14 @@ export function ClientSelector({
         >
           {value ? (
             <div className="flex items-center gap-2 truncate">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 shrink-0">
+              <div className="bg-primary/10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                 {value.company ? (
-                  <Building2 className="h-3 w-3 text-primary" />
+                  <Building2 className="text-primary h-3 w-3" />
                 ) : (
-                  <User className="h-3 w-3 text-primary" />
+                  <User className="text-primary h-3 w-3" />
                 )}
               </div>
-              <span className="truncate">
-                {value.company || value.name}
-              </span>
+              <span className="truncate">{value.company || value.name}</span>
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -128,23 +122,19 @@ export function ClientSelector({
               placeholder="Type to search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-8 px-0"
+              className="h-8 border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
-            {isLoading && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
+            {isLoading && <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />}
           </div>
 
           {/* Results */}
           <div className="max-h-[200px] overflow-y-auto">
             {clients.length === 0 && !isLoading && search.length > 0 && (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                No clients found
-              </div>
+              <div className="text-muted-foreground py-6 text-center text-sm">No clients found</div>
             )}
 
             {clients.length === 0 && search.length === 0 && (
-              <div className="py-6 text-center text-sm text-muted-foreground">
+              <div className="text-muted-foreground py-6 text-center text-sm">
                 Start typing to search clients
               </div>
             )}
@@ -154,28 +144,22 @@ export function ClientSelector({
                 key={client.id}
                 onClick={() => handleSelect(client)}
                 className={cn(
-                  'flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors',
+                  'hover:bg-accent flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
                   value?.id === client.id && 'bg-accent'
                 )}
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
                   {client.company ? (
-                    <Building2 className="h-4 w-4 text-primary" />
+                    <Building2 className="text-primary h-4 w-4" />
                   ) : (
-                    <User className="h-4 w-4 text-primary" />
+                    <User className="text-primary h-4 w-4" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
-                    {client.company || client.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {client.email}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{client.company || client.name}</p>
+                  <p className="text-muted-foreground truncate text-xs">{client.email}</p>
                 </div>
-                {value?.id === client.id && (
-                  <Check className="h-4 w-4 shrink-0 text-primary" />
-                )}
+                {value?.id === client.id && <Check className="text-primary h-4 w-4 shrink-0" />}
               </button>
             ))}
           </div>
@@ -184,7 +168,7 @@ export function ClientSelector({
           <div className="border-t p-2">
             <Link
               href="/clients/new"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-accent rounded-md transition-colors"
+              className="text-primary hover:bg-accent flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add new client

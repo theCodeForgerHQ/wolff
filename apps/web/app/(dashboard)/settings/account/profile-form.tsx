@@ -68,7 +68,7 @@ export function ProfileForm({ initialName, initialEmail }: ProfileFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-md space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
@@ -78,21 +78,13 @@ export function ProfileForm({ initialName, initialEmail }: ProfileFormProps) {
           disabled={isLoading}
           {...register('name')}
         />
-        {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
-        )}
+        {errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          value={initialEmail}
-          disabled
-          className="bg-muted"
-        />
-        <p className="text-sm text-muted-foreground">
+        <Input id="email" type="email" value={initialEmail} disabled className="bg-muted" />
+        <p className="text-muted-foreground text-sm">
           Email cannot be changed. Contact support if you need to update it.
         </p>
       </div>

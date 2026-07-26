@@ -71,8 +71,9 @@ export default function ForgotPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-center text-sm text-muted-foreground">
-            Click the link in the email to reset your password. If you don&apos;t see it, check your spam folder.
+          <p className="text-muted-foreground text-center text-sm">
+            Click the link in the email to reset your password. If you don&apos;t see it, check your
+            spam folder.
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -117,9 +118,7 @@ export default function ForgotPasswordPage() {
               disabled={isLoading}
               {...register('email')}
             />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>

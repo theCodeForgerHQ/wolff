@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "img-src 'self' data: blob: https:",
           "font-src 'self' https://fonts.gstatic.com",
-          "frame-src https://js.stripe.com",
+          'frame-src https://js.stripe.com',
           `connect-src 'self' https://api.stripe.com${sentryOrigin ? ` ${sentryOrigin}` : ''}`,
           "object-src 'none'",
           "base-uri 'self'",
@@ -48,24 +48,15 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/q/:token*',
-        headers: [
-          ...securityHeaders,
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-        ],
+        headers: [...securityHeaders, { key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {
         source: '/i/:token*',
-        headers: [
-          ...securityHeaders,
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-        ],
+        headers: [...securityHeaders, { key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {
         source: '/c/:token*',
-        headers: [
-          ...securityHeaders,
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-        ],
+        headers: [...securityHeaders, { key: 'Referrer-Policy', value: 'no-referrer' }],
       },
     ];
   },

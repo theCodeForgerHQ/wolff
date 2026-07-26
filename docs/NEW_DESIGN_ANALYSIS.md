@@ -38,23 +38,25 @@ The screenshot shows a **split-view invoice editor** with:
 ## 3. File Structure Comparison
 
 ### Files only in designer's repo (not in ours):
-| File | Purpose | Risk to Add |
-|------|---------|-------------|
-| `components/dashboard/charts/metric-cards.tsx` | Dashboard metric cards | LOW — standalone UI |
-| `components/providers/font-size-provider.tsx` | Font size scaling provider | LOW — new feature |
-| `components/ui/chart.tsx` | Recharts wrapper component | LOW — shadcn utility |
-| `components/ui/form.tsx` | react-hook-form wrapper | LOW — shadcn utility |
-| `app/(dashboard)/settings/appearance/page.tsx` | Appearance settings page | LOW — new route |
-| `components/quotes/editor/QuoteEditor.tsx` | Split-view quote editor | MEDIUM — net-new UI |
-| `components/quotes/editor/sections/*.tsx` | Editor sub-sections | MEDIUM — net-new UI |
+
+| File                                           | Purpose                    | Risk to Add          |
+| ---------------------------------------------- | -------------------------- | -------------------- |
+| `components/dashboard/charts/metric-cards.tsx` | Dashboard metric cards     | LOW — standalone UI  |
+| `components/providers/font-size-provider.tsx`  | Font size scaling provider | LOW — new feature    |
+| `components/ui/chart.tsx`                      | Recharts wrapper component | LOW — shadcn utility |
+| `components/ui/form.tsx`                       | react-hook-form wrapper    | LOW — shadcn utility |
+| `app/(dashboard)/settings/appearance/page.tsx` | Appearance settings page   | LOW — new route      |
+| `components/quotes/editor/QuoteEditor.tsx`     | Split-view quote editor    | MEDIUM — net-new UI  |
+| `components/quotes/editor/sections/*.tsx`      | Editor sub-sections        | MEDIUM — net-new UI  |
 
 ### Files only in our repo (not in designer's):
-| File | Purpose | Status |
-|------|---------|--------|
+
+| File                                                       | Purpose           | Status                    |
+| ---------------------------------------------------------- | ----------------- | ------------------------- |
 | `app/(dashboard)/invoices/[id]/edit/edit-invoice-form.tsx` | Invoice edit form | KEEP — production feature |
-| `app/(dashboard)/quotes/[id]/builder/layout.tsx` | Builder layout | KEEP — production feature |
-| `app/(dashboard)/quotes/new/layout.tsx` | New quote layout | KEEP — production feature |
-| `app/(dashboard)/clients/new/layout.tsx` | New client layout | KEEP — production feature |
+| `app/(dashboard)/quotes/[id]/builder/layout.tsx`           | Builder layout    | KEEP — production feature |
+| `app/(dashboard)/quotes/new/layout.tsx`                    | New quote layout  | KEEP — production feature |
+| `app/(dashboard)/clients/new/layout.tsx`                   | New client layout | KEEP — production feature |
 
 ---
 
@@ -67,13 +69,17 @@ The screenshot shows a **split-view invoice editor** with:
 **Designer adds these extras:**
 
 1. **Font size scaling** (2 lines):
+
    ```css
    --font-size-scale: 1;
    /* and in html: */
-   html { font-size: calc(16px * var(--font-size-scale, 1)); }
+   html {
+     font-size: calc(16px * var(--font-size-scale, 1));
+   }
    ```
 
 2. **Gradient utilities** (~30 lines):
+
    ```css
    .gradient-primary { ... }
    .gradient-primary-subtle { ... }
@@ -99,13 +105,14 @@ The screenshot shows a **split-view invoice editor** with:
 ### Root layout (app/layout.tsx)
 
 **Differences:**
-| Aspect | Our Code | Designer's Code |
-|--------|----------|----------------|
-| FontSizeProvider | Not present | Wraps children + Toaster |
-| CSS import path | `@/styles/globals.css` | `@/styles/globals.css` |
-| Metadata | Identical | Identical |
-| JSON-LD | Identical | Identical |
-| Fonts | GeistSans + GeistMono | GeistSans + GeistMono |
+
+| Aspect           | Our Code               | Designer's Code          |
+| ---------------- | ---------------------- | ------------------------ |
+| FontSizeProvider | Not present            | Wraps children + Toaster |
+| CSS import path  | `@/styles/globals.css` | `@/styles/globals.css`   |
+| Metadata         | Identical              | Identical                |
+| JSON-LD          | Identical              | Identical                |
+| Fonts            | GeistSans + GeistMono  | GeistSans + GeistMono    |
 
 Only change: Designer wraps content in `<FontSizeProvider>`.
 
@@ -118,28 +125,31 @@ Only change: Designer wraps content in `<FontSizeProvider>`.
 ## 6. Dependency Comparison
 
 ### New dependencies in designer's repo:
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `html2canvas` | ^1.4.1 | Screenshot/PDF generation |
-| `jspdf` | ^4.1.0 | Client-side PDF generation |
-| `dotenv` | ^17.3.1 | Environment variable loading |
-| `tsx` (devDep) | ^4.19.0 | TypeScript execution |
+
+| Package        | Version | Purpose                      |
+| -------------- | ------- | ---------------------------- |
+| `html2canvas`  | ^1.4.1  | Screenshot/PDF generation    |
+| `jspdf`        | ^4.1.0  | Client-side PDF generation   |
+| `dotenv`       | ^17.3.1 | Environment variable loading |
+| `tsx` (devDep) | ^4.19.0 | TypeScript execution         |
 
 ### Version bumps in designer's repo:
-| Package | Ours | Designer's |
-|---------|------|-----------|
-| `@hookform/resolvers` | ^3.9.0 | ^3.10.0 |
-| `react-hook-form` | ^7.54.0 | ^7.71.1 |
-| `zod` | ^3.24.0 | ^3.25.76 |
-| `recharts` | ^2.15.0 | ^2.15.4 |
-| `@radix-ui/react-label` | ^2.1.0 | ^2.1.8 |
-| `@radix-ui/react-toast` | ^1.2.0 | ^1.2.15 |
+
+| Package                 | Ours    | Designer's |
+| ----------------------- | ------- | ---------- |
+| `@hookform/resolvers`   | ^3.9.0  | ^3.10.0    |
+| `react-hook-form`       | ^7.54.0 | ^7.71.1    |
+| `zod`                   | ^3.24.0 | ^3.25.76   |
+| `recharts`              | ^2.15.0 | ^2.15.4    |
+| `@radix-ui/react-label` | ^2.1.0  | ^2.1.8     |
+| `@radix-ui/react-toast` | ^1.2.0  | ^1.2.15    |
 
 ---
 
 ## 7. Key New UI Components in Designer's Repo
 
 ### QuoteEditor (split-view)
+
 - **Location:** `components/quotes/editor/QuoteEditor.tsx`
 - **Pattern:** 60/40 split with left form + right sticky preview
 - **Sub-sections:** DetailsSection, ItemsSection, TermsSection, NotesSection
@@ -147,12 +157,14 @@ Only change: Designer wraps content in `<FontSizeProvider>`.
 - **Preview tabs:** Payment | Email | PDF
 
 ### New Invoice Form (split-view)
+
 - **Location:** `app/(dashboard)/invoices/new/new-invoice-form.tsx`
 - **Pattern:** Same 60/40 split as QuoteEditor
 - **Fields:** Client selector, invoice number, dates, tax rate, line items table
 - **Preview:** Same 3-tab preview panel
 
 ### FontSizeProvider
+
 - **Location:** `components/providers/font-size-provider.tsx`
 - **Purpose:** Global font size scaling via CSS variable `--font-size-scale`
 - **Usage:** Wraps root layout for accessibility
@@ -164,6 +176,7 @@ Only change: Designer wraps content in `<FontSizeProvider>`.
 **WARNING: DO NOT COPY server actions from designer's repo.**
 
 Our server actions (`lib/*/actions.ts`) have been hardened through 6+ QA sessions:
+
 - Soft-delete filters on all queries
 - Workspace isolation on every query
 - Double-encoding fixes for contract variables
@@ -176,16 +189,16 @@ The designer's server actions may not include these fixes. Use ours as the sourc
 
 ## 9. Risk Assessment
 
-| Category | Risk Level | Notes |
-|----------|-----------|-------|
-| Prisma schema | NONE | Identical |
-| Tailwind config | NONE | Identical |
-| globals.css additions | LOW | Additive only (gradients, elevated style) |
-| Root layout change | LOW | Only adds FontSizeProvider wrapper |
-| New UI components | MEDIUM | Net-new code, needs integration with our server actions |
-| Server actions | HIGH | Must NOT be overwritten |
-| Package version bumps | MEDIUM | Could introduce breaking changes |
-| E2E tests | N/A | Designer's tests are not transferable |
+| Category              | Risk Level | Notes                                                   |
+| --------------------- | ---------- | ------------------------------------------------------- |
+| Prisma schema         | NONE       | Identical                                               |
+| Tailwind config       | NONE       | Identical                                               |
+| globals.css additions | LOW        | Additive only (gradients, elevated style)               |
+| Root layout change    | LOW        | Only adds FontSizeProvider wrapper                      |
+| New UI components     | MEDIUM     | Net-new code, needs integration with our server actions |
+| Server actions        | HIGH       | Must NOT be overwritten                                 |
+| Package version bumps | MEDIUM     | Could introduce breaking changes                        |
+| E2E tests             | N/A        | Designer's tests are not transferable                   |
 
 ---
 

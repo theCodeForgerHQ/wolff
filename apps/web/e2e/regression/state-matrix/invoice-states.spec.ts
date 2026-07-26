@@ -15,7 +15,9 @@ async function createDraftInvoice(page: import('@playwright/test').Page, title: 
   await page.waitForLoadState('networkidle');
 
   // Fill title using various possible selectors
-  const titleInput = page.locator('#title, input[name="title"], [data-testid="invoice-title"]').first();
+  const titleInput = page
+    .locator('#title, input[name="title"], [data-testid="invoice-title"]')
+    .first();
   const titleVisible = await titleInput.isVisible().catch(() => false);
   if (titleVisible) {
     await titleInput.fill(title);
@@ -51,7 +53,9 @@ async function createDraftInvoice(page: import('@playwright/test').Page, title: 
     await nameInput.fill('Test Service');
   }
 
-  const qtyInput = page.locator('input[name="lineItems.0.quantity"], input[name*="quantity"]').first();
+  const qtyInput = page
+    .locator('input[name="lineItems.0.quantity"], input[name*="quantity"]')
+    .first();
   const qtyVisible = await qtyInput.isVisible().catch(() => false);
   if (qtyVisible) {
     await qtyInput.fill('1');
@@ -95,7 +99,9 @@ test.describe('Invoice State Matrix Tests', () => {
       }
 
       // Check for status indicator
-      const statusBadge = page.locator('[data-testid="invoice-status"], .badge, [class*="status"]').first();
+      const statusBadge = page
+        .locator('[data-testid="invoice-status"], .badge, [class*="status"]')
+        .first();
       if (await statusBadge.isVisible()) {
         const statusText = await statusBadge.textContent();
         expect(statusText?.toLowerCase()).toMatch(/draft|sent|paid/i);
@@ -103,7 +109,7 @@ test.describe('Invoice State Matrix Tests', () => {
 
       // Try to send invoice if send button exists
       const sendButton = page.getByRole('button', { name: /send/i });
-      if (await sendButton.isVisible() && await sendButton.isEnabled()) {
+      if ((await sendButton.isVisible()) && (await sendButton.isEnabled())) {
         await sendButton.click();
 
         const sendDialog = page.getByRole('dialog');
@@ -143,13 +149,17 @@ test.describe('Invoice State Matrix Tests', () => {
         await page.waitForLoadState('networkidle');
 
         // Look for record payment button
-        const recordPaymentBtn = page.getByRole('button', { name: /record.*payment|add.*payment/i });
-        if (await recordPaymentBtn.isVisible() && await recordPaymentBtn.isEnabled()) {
+        const recordPaymentBtn = page.getByRole('button', {
+          name: /record.*payment|add.*payment/i,
+        });
+        if ((await recordPaymentBtn.isVisible()) && (await recordPaymentBtn.isEnabled())) {
           await recordPaymentBtn.click();
 
           const paymentDialog = page.getByRole('dialog');
           if (await paymentDialog.isVisible()) {
-            const amountInput = paymentDialog.locator('input[name="amount"], input[type="number"]').first();
+            const amountInput = paymentDialog
+              .locator('input[name="amount"], input[type="number"]')
+              .first();
             if (await amountInput.isVisible()) {
               await amountInput.fill('50');
             }
@@ -172,8 +182,10 @@ test.describe('Invoice State Matrix Tests', () => {
         await page.waitForLoadState('networkidle');
 
         // Look for record payment button
-        const recordPaymentBtn = page.getByRole('button', { name: /record.*payment|add.*payment|pay/i });
-        if (await recordPaymentBtn.isVisible() && await recordPaymentBtn.isEnabled()) {
+        const recordPaymentBtn = page.getByRole('button', {
+          name: /record.*payment|add.*payment|pay/i,
+        });
+        if ((await recordPaymentBtn.isVisible()) && (await recordPaymentBtn.isEnabled())) {
           await recordPaymentBtn.click();
 
           const paymentDialog = page.getByRole('dialog');
@@ -184,7 +196,9 @@ test.describe('Invoice State Matrix Tests', () => {
               await payInFull.check();
             } else {
               // Enter a large amount
-              const amountInput = paymentDialog.locator('input[name="amount"], input[type="number"]').first();
+              const amountInput = paymentDialog
+                .locator('input[name="amount"], input[type="number"]')
+                .first();
               if (await amountInput.isVisible()) {
                 await amountInput.fill('10000');
               }
@@ -221,9 +235,10 @@ test.describe('Invoice State Matrix Tests', () => {
         await page.waitForLoadState('networkidle');
 
         // Look for actions menu
-        const actionsButton = page.getByRole('button', { name: /action|more|menu/i }).or(
-          page.locator('button[aria-label*="action"], button[aria-label*="menu"]')
-        ).first();
+        const actionsButton = page
+          .getByRole('button', { name: /action|more|menu/i })
+          .or(page.locator('button[aria-label*="action"], button[aria-label*="menu"]'))
+          .first();
 
         if (await actionsButton.isVisible()) {
           await actionsButton.click();
@@ -305,13 +320,15 @@ test.describe('Invoice State Matrix Tests', () => {
         await invoiceLink.click();
 
         const recordPaymentBtn = page.getByRole('button', { name: /record.*payment/i });
-        if (await recordPaymentBtn.isVisible() && await recordPaymentBtn.isEnabled()) {
+        if ((await recordPaymentBtn.isVisible()) && (await recordPaymentBtn.isEnabled())) {
           await recordPaymentBtn.click();
 
           const paymentDialog = page.getByRole('dialog');
           if (await paymentDialog.isVisible()) {
             // Try to enter overpayment amount
-            const amountInput = paymentDialog.locator('input[name="amount"], input[type="number"]').first();
+            const amountInput = paymentDialog
+              .locator('input[name="amount"], input[type="number"]')
+              .first();
             if (await amountInput.isVisible()) {
               await amountInput.fill('999999');
 
@@ -400,7 +417,7 @@ test.describe('Invoice State Matrix Tests', () => {
 
         // Check if payment can clear status
         const recordPaymentBtn = page.getByRole('button', { name: /record.*payment|pay/i });
-        if (await recordPaymentBtn.isVisible() && await recordPaymentBtn.isEnabled()) {
+        if ((await recordPaymentBtn.isVisible()) && (await recordPaymentBtn.isEnabled())) {
           // Verify the button is available for payment
           await expect(recordPaymentBtn).toBeVisible();
         }

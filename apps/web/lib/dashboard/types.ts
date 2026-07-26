@@ -134,17 +134,17 @@ export interface ConversionFunnelData {
 
 // Payment aging buckets (for outstanding invoices)
 export interface PaymentAgingData {
-  current: number;      // Not yet due
-  days1to30: number;    // 1-30 days overdue
-  days31to60: number;   // 31-60 days overdue
-  days61to90: number;   // 61-90 days overdue
-  days90plus: number;   // 90+ days overdue
+  current: number; // Not yet due
+  days1to30: number; // 1-30 days overdue
+  days31to60: number; // 31-60 days overdue
+  days61to90: number; // 61-90 days overdue
+  days90plus: number; // 90+ days overdue
   totalOutstanding: number;
 }
 
 // Client distribution by region
 export interface ClientDistributionData {
-  region: string;       // State/Country name
+  region: string; // State/Country name
   clientCount: number;
   totalRevenue: number;
   quoteCount: number;
@@ -153,8 +153,8 @@ export interface ClientDistributionData {
 
 // Monthly comparison data
 export interface MonthlyComparisonData {
-  month: string;        // Format: 'Jan 2026'
-  monthKey: string;     // Format: '2026-01'
+  month: string; // Format: 'Jan 2026'
+  monthKey: string; // Format: '2026-01'
   revenue: number;
   quoteCount: number;
   invoiceCount: number;
@@ -166,11 +166,11 @@ export interface MonthlyComparisonData {
 
 // Forecast data point
 export interface ForecastDataPoint {
-  date: string;         // Format: 'yyyy-MM-dd' or 'yyyy-MM'
-  actual?: number;      // Actual historical value
-  forecast?: number;    // Projected value
-  lowerBound?: number;  // Confidence interval lower
-  upperBound?: number;  // Confidence interval upper
+  date: string; // Format: 'yyyy-MM-dd' or 'yyyy-MM'
+  actual?: number; // Actual historical value
+  forecast?: number; // Projected value
+  lowerBound?: number; // Confidence interval lower
+  upperBound?: number; // Confidence interval upper
   isProjection: boolean;
 }
 

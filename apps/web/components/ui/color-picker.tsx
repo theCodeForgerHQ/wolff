@@ -5,11 +5,7 @@ import { Paintbrush } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface ColorPickerProps {
   value?: string;
@@ -72,16 +68,10 @@ export function ColorPicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn(
-            'w-full justify-start text-left font-normal',
-            className
-          )}
+          className={cn('w-full justify-start text-left font-normal', className)}
           disabled={disabled}
         >
-          <div
-            className="mr-2 h-4 w-4 rounded border"
-            style={{ backgroundColor: color }}
-          />
+          <div className="mr-2 h-4 w-4 rounded border" style={{ backgroundColor: color }} />
           <span>{color}</span>
           <Paintbrush className="ml-auto h-4 w-4 opacity-50" />
         </Button>
@@ -114,7 +104,7 @@ export function ColorPicker({
                 className={cn(
                   'h-8 w-8 rounded-md border-2 transition-all hover:scale-110',
                   color === presetColor
-                    ? 'border-primary ring-2 ring-primary ring-offset-2'
+                    ? 'border-primary ring-primary ring-2 ring-offset-2'
                     : 'border-transparent'
                 )}
                 style={{ backgroundColor: presetColor }}

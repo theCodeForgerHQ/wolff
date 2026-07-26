@@ -26,13 +26,7 @@ export const INVALID_DATA_PATTERNS = {
   NULL_VALUES: ['undefined', 'null', '[object Object]', 'NaN'],
 
   // Common error indicators
-  ERROR_INDICATORS: [
-    'Error:',
-    'TypeError',
-    'ReferenceError',
-    'Cannot read',
-    'is not defined',
-  ],
+  ERROR_INDICATORS: ['Error:', 'TypeError', 'ReferenceError', 'Cannot read', 'is not defined'],
 
   // Invalid date formats
   INVALID_DATES: ['Invalid Date', 'NaN-NaN-NaN'],
@@ -76,11 +70,8 @@ export interface ListIntegrityConfig {
 /**
  * Assert no null/undefined values are rendered in the specified element
  */
-export async function assertNoNullRenders(
-  locator: Locator,
-  context: string
-): Promise<void> {
-  const text = await locator.textContent() || '';
+export async function assertNoNullRenders(locator: Locator, context: string): Promise<void> {
+  const text = (await locator.textContent()) || '';
   const violations: DataIntegrityViolation[] = [];
 
   for (const pattern of INVALID_DATA_PATTERNS.NULL_VALUES) {
@@ -100,9 +91,7 @@ export async function assertNoNullRenders(
       ];
 
       const textLower = text.toLowerCase();
-      const isAllowed = allowedContexts.some((ctx) =>
-        textLower.includes(ctx.toLowerCase())
-      );
+      const isAllowed = allowedContexts.some((ctx) => textLower.includes(ctx.toLowerCase()));
 
       if (!isAllowed) {
         violations.push({
@@ -116,13 +105,10 @@ export async function assertNoNullRenders(
   }
 
   if (violations.length > 0) {
-    const details = violations
-      .map((v) => `  - "${v.pattern}" found: ${v.context}`)
-      .join('\n');
+    const details = violations.map((v) => `  - "${v.pattern}" found: ${v.context}`).join('\n');
 
     throw new Error(
-      `Data integrity violation: Null values rendered in ${context}\n` +
-      `Violations:\n${details}`
+      `Data integrity violation: Null values rendered in ${context}\n` + `Violations:\n${details}`
     );
   }
 }
@@ -150,20 +136,16 @@ export async function assertCardDataIntegrity(
       ? card.locator(field.selector)
       : card.getByText(new RegExp(field.name, 'i'));
 
-    const fieldExists = await fieldLocator.count() > 0;
+    const fieldExists = (await fieldLocator.count()) > 0;
 
     if (!fieldExists && !field.allowEmpty) {
-      throw new Error(
-        `Required field missing: "${field.name}" not found in ${config.selector}`
-      );
+      throw new Error(`Required field missing: "${field.name}" not found in ${config.selector}`);
     }
 
     if (fieldExists && !field.allowEmpty) {
       const text = await fieldLocator.textContent();
       if (!text || text.trim() === '') {
-        throw new Error(
-          `Required field empty: "${field.name}" is empty in ${config.selector}`
-        );
+        throw new Error(`Required field empty: "${field.name}" is empty in ${config.selector}`);
       }
     }
   }
@@ -172,10 +154,7 @@ export async function assertCardDataIntegrity(
 /**
  * Assert a list has integrity (proper items, no null values)
  */
-export async function assertListIntegrity(
-  page: Page,
-  config: ListIntegrityConfig
-): Promise<void> {
+export async function assertListIntegrity(page: Page, config: ListIntegrityConfig): Promise<void> {
   const list = page.locator(config.listSelector);
 
   // Verify list exists
@@ -223,10 +202,7 @@ export async function assertListIntegrity(
 /**
  * Assert a client name field is valid (not null, not empty)
  */
-export async function assertValidClientName(
-  locator: Locator,
-  context: string
-): Promise<void> {
+export async function assertValidClientName(locator: Locator, context: string): Promise<void> {
   const text = await locator.textContent();
 
   if (!text) {
@@ -243,9 +219,7 @@ export async function assertValidClientName(
   const invalidPatterns = ['undefined', 'null', '[object Object]'];
   for (const pattern of invalidPatterns) {
     if (trimmed.toLowerCase() === pattern.toLowerCase()) {
-      throw new Error(
-        `Client name contains invalid value "${pattern}": ${context}`
-      );
+      throw new Error(`Client name contains invalid value "${pattern}": ${context}`);
     }
   }
 }
@@ -267,9 +241,7 @@ export async function assertValidCompanyName(
 
     for (const pattern of invalidPatterns) {
       if (trimmed.toLowerCase() === pattern.toLowerCase()) {
-        throw new Error(
-          `Company name contains invalid value "${pattern}": ${context}`
-        );
+        throw new Error(`Company name contains invalid value "${pattern}": ${context}`);
       }
     }
 
@@ -283,10 +255,7 @@ export async function assertValidCompanyName(
 /**
  * Assert a currency amount is valid
  */
-export async function assertValidCurrency(
-  locator: Locator,
-  context: string
-): Promise<void> {
+export async function assertValidCurrency(locator: Locator, context: string): Promise<void> {
   const text = await locator.textContent();
 
   if (!text) {
@@ -300,8 +269,7 @@ export async function assertValidCurrency(
   for (const pattern of invalidPatterns) {
     if (trimmed.includes(pattern)) {
       throw new Error(
-        `Currency contains invalid value "${pattern}": ${context}\n` +
-        `Full text: ${trimmed}`
+        `Currency contains invalid value "${pattern}": ${context}\n` + `Full text: ${trimmed}`
       );
     }
   }
@@ -312,20 +280,14 @@ export async function assertValidCurrency(
   const normalized = trimmed.replace(/[$€£¥,\s]/g, '');
 
   if (!/^\d+(\.\d+)?$/.test(normalized)) {
-    console.warn(
-      `Currency value may be invalid: ${context}\n` +
-      `Value: ${trimmed}`
-    );
+    console.warn(`Currency value may be invalid: ${context}\n` + `Value: ${trimmed}`);
   }
 }
 
 /**
  * Assert a date is valid
  */
-export async function assertValidDate(
-  locator: Locator,
-  context: string
-): Promise<void> {
+export async function assertValidDate(locator: Locator, context: string): Promise<void> {
   const text = await locator.textContent();
 
   if (!text) {
@@ -339,8 +301,7 @@ export async function assertValidDate(
   for (const pattern of invalidPatterns) {
     if (trimmed.includes(pattern)) {
       throw new Error(
-        `Date contains invalid value "${pattern}": ${context}\n` +
-        `Full text: ${trimmed}`
+        `Date contains invalid value "${pattern}": ${context}\n` + `Full text: ${trimmed}`
       );
     }
   }
@@ -376,9 +337,7 @@ export async function assertTableIntegrity(
     const headerText = await headers.allTextContents();
 
     for (const expected of config.expectedColumns) {
-      const found = headerText.some((h) =>
-        h.toLowerCase().includes(expected.toLowerCase())
-      );
+      const found = headerText.some((h) => h.toLowerCase().includes(expected.toLowerCase()));
       if (!found) {
         console.warn(`Expected column "${expected}" not found in table headers`);
       }
@@ -391,9 +350,7 @@ export async function assertTableIntegrity(
 
   if (config.minRows !== undefined && rowCount < config.minRows) {
     // This might be okay (empty table), but log it
-    console.warn(
-      `Table has ${rowCount} rows, expected at least ${config.minRows}`
-    );
+    console.warn(`Table has ${rowCount} rows, expected at least ${config.minRows}`);
   }
 
   // Check first few rows for data integrity
@@ -405,7 +362,7 @@ export async function assertTableIntegrity(
 
     for (let j = 0; j < cellCount; j++) {
       const cell = cells.nth(j);
-      const text = await cell.textContent() || '';
+      const text = (await cell.textContent()) || '';
 
       // Check for null values in cell
       for (const pattern of INVALID_DATA_PATTERNS.NULL_VALUES) {
@@ -413,8 +370,8 @@ export async function assertTableIntegrity(
         if (regex.test(text)) {
           throw new Error(
             `Data integrity violation in table row ${i + 1}, cell ${j + 1}\n` +
-            `Found: "${pattern}"\n` +
-            `Cell content: ${text}`
+              `Found: "${pattern}"\n` +
+              `Cell content: ${text}`
           );
         }
       }
@@ -440,7 +397,7 @@ export async function assertPageDataIntegrity(
   if (config?.focusSelectors && config.focusSelectors.length > 0) {
     for (const selector of config.focusSelectors) {
       const locator = page.locator(selector);
-      if (await locator.count() > 0) {
+      if ((await locator.count()) > 0) {
         await assertNoNullRenders(locator, selector);
       }
     }
@@ -449,19 +406,19 @@ export async function assertPageDataIntegrity(
 
   // Otherwise, check main content area
   const mainContent = page.locator('main, [role="main"], .content, #content');
-  const useMain = await mainContent.count() > 0;
+  const useMain = (await mainContent.count()) > 0;
 
   const checkLocator = useMain ? mainContent : page.locator('body');
 
   // Get full text (excluding certain elements)
-  let text = await checkLocator.textContent() || '';
+  let text = (await checkLocator.textContent()) || '';
 
   // Remove excluded areas
   if (config?.excludeSelectors) {
     for (const selector of config.excludeSelectors) {
       const excluded = page.locator(selector);
-      if (await excluded.count() > 0) {
-        const excludedText = await excluded.textContent() || '';
+      if ((await excluded.count()) > 0) {
+        const excludedText = (await excluded.textContent()) || '';
         text = text.replace(excludedText, '');
       }
     }
@@ -482,8 +439,8 @@ export async function assertPageDataIntegrity(
   if (violations.length > 0) {
     throw new Error(
       `Page data integrity violations:\n` +
-      violations.map((v) => `  - ${v}`).join('\n') +
-      `\nURL: ${page.url()}`
+        violations.map((v) => `  - ${v}`).join('\n') +
+        `\nURL: ${page.url()}`
     );
   }
 }

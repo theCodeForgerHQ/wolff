@@ -48,9 +48,7 @@ export function InvoiceDefaultsForm({ initialData }: InvoiceDefaultsFormProps) {
     <Card>
       <CardHeader>
         <CardTitle>Invoice Defaults</CardTitle>
-        <CardDescription>
-          Set default payment terms and messages for new invoices.
-        </CardDescription>
+        <CardDescription>Set default payment terms and messages for new invoices.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -99,7 +97,7 @@ export function InvoiceDefaultsForm({ initialData }: InvoiceDefaultsFormProps) {
             <div className="flex items-center justify-between">
               <div>
                 <Label>Late Fee</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Automatically apply late fees to overdue invoices
                 </p>
               </div>
@@ -132,7 +130,9 @@ export function InvoiceDefaultsForm({ initialData }: InvoiceDefaultsFormProps) {
                   <Input
                     type="number"
                     value={data.lateFeeValue}
-                    onChange={(e) => setData({ ...data, lateFeeValue: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setData({ ...data, lateFeeValue: parseFloat(e.target.value) || 0 })
+                    }
                     min={0}
                     step="0.01"
                     className="mt-1"
@@ -145,7 +145,7 @@ export function InvoiceDefaultsForm({ initialData }: InvoiceDefaultsFormProps) {
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label>Payment Reminders</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Send automatic reminders before and after due dates
               </p>
             </div>

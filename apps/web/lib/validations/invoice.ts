@@ -29,10 +29,7 @@ export const paymentMethodSchema = z.enum([
 export const createInvoiceSchema = z.object({
   clientId: idSchema,
   quoteId: idSchema.optional(), // If created from quote
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(200, 'Title must be less than 200 characters'),
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().max(5000).optional(),
   dueDate: z.coerce.date(),
   currency: z.string().length(3).default('USD'),

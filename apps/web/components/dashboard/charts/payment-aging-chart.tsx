@@ -1,21 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChartCard } from './chart-card';
-import {
-  AGING_COLORS,
-  formatChartCurrency,
-  formatFullCurrency,
-} from '@/lib/dashboard/chart-utils';
+import { AGING_COLORS, formatChartCurrency, formatFullCurrency } from '@/lib/dashboard/chart-utils';
 import type { PaymentAgingData } from '@/lib/dashboard/types';
 
 interface PaymentAgingChartProps {
@@ -56,9 +44,7 @@ export function PaymentAgingChart({
     <ChartCard
       title="Payment Aging"
       description={
-        isEmpty
-          ? undefined
-          : `Total Outstanding: ${formatFullCurrency(data.totalOutstanding)}`
+        isEmpty ? undefined : `Total Outstanding: ${formatFullCurrency(data.totalOutstanding)}`
       }
       className={className}
       isLoading={isLoading}
@@ -67,10 +53,7 @@ export function PaymentAgingChart({
     >
       <div style={{ height }} data-testid="payment-aging-chart">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
-          >
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
             <XAxis
               dataKey="name"
               tick={{ fontSize: 11 }}
@@ -96,8 +79,8 @@ export function PaymentAgingChart({
                     ? ((item.value / data.totalOutstanding) * 100).toFixed(1)
                     : '0';
                 return (
-                  <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
+                    <div className="mb-1 flex items-center gap-2">
                       <span
                         className="h-3 w-3 rounded-full"
                         style={{ backgroundColor: item.fill }}
@@ -107,9 +90,7 @@ export function PaymentAgingChart({
                     <p className="text-sm">
                       Amount: <span className="font-medium">{formatFullCurrency(item.value)}</span>
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {percentage}% of total
-                    </p>
+                    <p className="text-muted-foreground text-sm">{percentage}% of total</p>
                   </div>
                 );
               }}

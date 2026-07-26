@@ -52,9 +52,7 @@ export function ConversionFunnel({
     return STAGES.map((stage, index) => {
       const value = data[stage.key as keyof ConversionFunnelData];
       const prevStage = index > 0 ? STAGES[index - 1] : null;
-      const prevValue = prevStage
-        ? data[prevStage.key as keyof ConversionFunnelData]
-        : value;
+      const prevValue = prevStage ? data[prevStage.key as keyof ConversionFunnelData] : value;
       const conversionRate = prevValue > 0 ? (value / prevValue) * 100 : 0;
       const totalRate = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
@@ -79,7 +77,11 @@ export function ConversionFunnel({
   return (
     <ChartCard
       title="Conversion Funnel"
-      description={isEmpty ? undefined : `Quote-to-payment pipeline \u2022 ${formatPercentage(overallConversion)} end-to-end`}
+      description={
+        isEmpty
+          ? undefined
+          : `Quote-to-payment pipeline \u2022 ${formatPercentage(overallConversion)} end-to-end`
+      }
       className={className}
       isLoading={isLoading}
       isEmpty={isEmpty}
@@ -106,34 +108,28 @@ export function ConversionFunnel({
                 if (!active || !payload || !payload[0]) return null;
                 const item = payload[0].payload;
                 return (
-                  <div className="rounded-lg border bg-background px-3 py-2 shadow-md">
+                  <div className="bg-background rounded-lg border px-3 py-2 shadow-md">
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Count: <span className="font-medium">{item.value}</span>
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Step Rate: <span className="font-medium">{formatPercentage(item.conversionRate)}</span>
+                    <p className="text-muted-foreground text-sm">
+                      Step Rate:{' '}
+                      <span className="font-medium">{formatPercentage(item.conversionRate)}</span>
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Total Rate: <span className="font-medium">{formatPercentage(item.totalRate)}</span>
+                    <p className="text-muted-foreground text-sm">
+                      Total Rate:{' '}
+                      <span className="font-medium">{formatPercentage(item.totalRate)}</span>
                     </p>
                   </div>
                 );
               }}
             />
-            <Bar
-              dataKey="value"
-              radius={[0, 4, 4, 0]}
-              animationDuration={500}
-            >
+            <Bar dataKey="value" radius={[0, 4, 4, 0]} animationDuration={500}>
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
-              <LabelList
-                dataKey="value"
-                position="right"
-                className="fill-foreground text-xs"
-              />
+              <LabelList dataKey="value" position="right" className="fill-foreground text-xs" />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

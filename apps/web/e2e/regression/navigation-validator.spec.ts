@@ -71,7 +71,7 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
       const response = await page.goto(href);
       const status = response?.status() ?? 0;
 
-      if (status === 404 || await is404Page(page)) {
+      if (status === 404 || (await is404Page(page))) {
         brokenLinks.push(href);
       }
     }
@@ -89,7 +89,8 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
     const links = await getAllInternalLinks(page);
     const brokenLinks: string[] = [];
 
-    for (const href of links.slice(0, 10)) { // Limit to 10 to avoid timeout
+    for (const href of links.slice(0, 10)) {
+      // Limit to 10 to avoid timeout
       // Skip dynamic IDs that might not exist
       if (href.match(/\/[a-f0-9-]{36}$/)) continue;
 
@@ -97,7 +98,7 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
         const response = await page.goto(href, { timeout: 60000, waitUntil: 'domcontentloaded' });
         const status = response?.status() ?? 0;
 
-        if (status === 404 || await is404Page(page)) {
+        if (status === 404 || (await is404Page(page))) {
           brokenLinks.push(href);
         }
       } catch {
@@ -125,18 +126,30 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
     const hrefs: string[] = [];
 
     // Open user menu - try multiple selectors since it might be named differently
-    const userMenu = page.getByTestId('user-menu').or(page.getByRole('button', { name: /user|profile|account|TU/i })).first();
+    const userMenu = page
+      .getByTestId('user-menu')
+      .or(page.getByRole('button', { name: /user|profile|account|TU/i }))
+      .first();
     if (await userMenu.isVisible({ timeout: 5000 }).catch(() => false)) {
       await userMenu.click();
       // Wait for dropdown to appear
-      await page.locator('[role="menu"]').first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      await page
+        .locator('[role="menu"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 3000 })
+        .catch(() => {});
 
       // Collect all hrefs first to avoid stale element issues
-      const dropdownLinkElements = page.locator('[role="menu"] a[href^="/"], [role="menuitem"][data-href^="/"]');
+      const dropdownLinkElements = page.locator(
+        '[role="menu"] a[href^="/"], [role="menuitem"][data-href^="/"]'
+      );
       const count = await dropdownLinkElements.count();
 
       for (let i = 0; i < count; i++) {
-        const href = await dropdownLinkElements.nth(i).getAttribute('href').catch(() => null);
+        const href = await dropdownLinkElements
+          .nth(i)
+          .getAttribute('href')
+          .catch(() => null);
         if (href && !hrefs.includes(href)) {
           hrefs.push(href);
         }
@@ -149,7 +162,7 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
         const response = await page.goto(href, { timeout: 60000, waitUntil: 'domcontentloaded' });
         const status = response?.status() ?? 0;
 
-        if (status === 404 || await is404Page(page)) {
+        if (status === 404 || (await is404Page(page))) {
           brokenLinks.push(href);
         }
       } catch {
@@ -170,12 +183,7 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
     await page.goto('/dashboard', { timeout: 60000 });
     await page.waitForLoadState('networkidle');
 
-    const quickActionLinks = [
-      '/quotes/new',
-      '/invoices/new',
-      '/clients/new',
-      '/rate-cards/new',
-    ];
+    const quickActionLinks = ['/quotes/new', '/invoices/new', '/clients/new', '/rate-cards/new'];
 
     const brokenLinks: string[] = [];
 
@@ -184,7 +192,7 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
         const response = await page.goto(href, { timeout: 60000, waitUntil: 'domcontentloaded' });
         const status = response?.status() ?? 0;
 
-        if (status === 404 || await is404Page(page)) {
+        if (status === 404 || (await is404Page(page))) {
           brokenLinks.push(href);
         }
       } catch (error: unknown) {
@@ -215,7 +223,10 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
     const count = await settingsLinkElements.count();
 
     for (let i = 0; i < count; i++) {
-      const href = await settingsLinkElements.nth(i).getAttribute('href').catch(() => null);
+      const href = await settingsLinkElements
+        .nth(i)
+        .getAttribute('href')
+        .catch(() => null);
       if (href && !hrefs.includes(href)) {
         hrefs.push(href);
       }
@@ -232,8 +243,9 @@ test.describe('Navigation Validator - Dead Link Prevention', () => {
         const status = response?.status() ?? 0;
 
         // Check if this is a role-restricted link that redirects
-        const isRoleRestricted = roleRestrictedLinks.some(r => href.includes(r));
-        const redirectedToSettings = page.url().endsWith('/settings') || page.url().includes('/settings?');
+        const isRoleRestricted = roleRestrictedLinks.some((r) => href.includes(r));
+        const redirectedToSettings =
+          page.url().endsWith('/settings') || page.url().includes('/settings?');
 
         // Only count as broken if it's 404 AND not a role-based redirect
         if (status === 404) {
@@ -282,7 +294,7 @@ test.describe('Navigation Validator - List to Detail Navigation', () => {
         await page.waitForLoadState('networkidle');
 
         const link = page.locator('a[href^="/quotes/"]').filter({ hasNotText: /new/i }).nth(i);
-        if (!await link.isVisible({ timeout: 5000 }).catch(() => false)) continue;
+        if (!(await link.isVisible({ timeout: 5000 }).catch(() => false))) continue;
 
         const href = await link.getAttribute('href');
         await link.click();
@@ -318,7 +330,7 @@ test.describe('Navigation Validator - List to Detail Navigation', () => {
         await page.waitForLoadState('networkidle');
 
         const link = page.locator('a[href^="/invoices/"]').filter({ hasNotText: /new/i }).nth(i);
-        if (!await link.isVisible({ timeout: 5000 }).catch(() => false)) continue;
+        if (!(await link.isVisible({ timeout: 5000 }).catch(() => false))) continue;
 
         const href = await link.getAttribute('href');
         await link.click();
@@ -354,7 +366,7 @@ test.describe('Navigation Validator - List to Detail Navigation', () => {
         await page.waitForLoadState('networkidle');
 
         const link = page.locator('a[href^="/clients/"]').filter({ hasNotText: /new/i }).nth(i);
-        if (!await link.isVisible({ timeout: 5000 }).catch(() => false)) continue;
+        if (!(await link.isVisible({ timeout: 5000 }).catch(() => false))) continue;
 
         const href = await link.getAttribute('href');
         await link.click();
@@ -390,7 +402,7 @@ test.describe('Navigation Validator - List to Detail Navigation', () => {
         await page.waitForLoadState('networkidle');
 
         const link = page.locator('a[href^="/rate-cards/"]').filter({ hasNotText: /new/i }).nth(i);
-        if (!await link.isVisible({ timeout: 5000 }).catch(() => false)) continue;
+        if (!(await link.isVisible({ timeout: 5000 }).catch(() => false))) continue;
 
         const href = await link.getAttribute('href');
         await link.click();
@@ -426,7 +438,7 @@ test.describe('Navigation Validator - List to Detail Navigation', () => {
         await page.waitForLoadState('networkidle');
 
         const link = page.locator('a[href^="/projects/"]').filter({ hasNotText: /new/i }).nth(i);
-        if (!await link.isVisible({ timeout: 5000 }).catch(() => false)) continue;
+        if (!(await link.isVisible({ timeout: 5000 }).catch(() => false))) continue;
 
         const href = await link.getAttribute('href');
         await link.click();
@@ -471,13 +483,20 @@ test.describe('Navigation Validator - Cross-Module Links', () => {
       if (await createQuoteLink.isVisible({ timeout: 5000 }).catch(() => false)) {
         const href = await createQuoteLink.getAttribute('href');
         try {
-          const response = await page.goto(href ?? '/quotes/new', { timeout: 60000, waitUntil: 'domcontentloaded' });
+          const response = await page.goto(href ?? '/quotes/new', {
+            timeout: 60000,
+            waitUntil: 'domcontentloaded',
+          });
 
           expect(response?.status(), 'Create Quote link should not 404').not.toBe(404);
-          expect(await is404Page(page), 'Create Quote page should not show 404 content').toBe(false);
+          expect(await is404Page(page), 'Create Quote page should not show 404 content').toBe(
+            false
+          );
         } catch {
           // Timeout - still check for 404 content
-          expect(await is404Page(page), 'Create Quote page should not show 404 content').toBe(false);
+          expect(await is404Page(page), 'Create Quote page should not show 404 content').toBe(
+            false
+          );
         }
       }
 
@@ -490,13 +509,20 @@ test.describe('Navigation Validator - Cross-Module Links', () => {
       if (await createInvoiceLink.isVisible({ timeout: 5000 }).catch(() => false)) {
         const href = await createInvoiceLink.getAttribute('href');
         try {
-          const response = await page.goto(href ?? '/invoices/new', { timeout: 60000, waitUntil: 'domcontentloaded' });
+          const response = await page.goto(href ?? '/invoices/new', {
+            timeout: 60000,
+            waitUntil: 'domcontentloaded',
+          });
 
           expect(response?.status(), 'Create Invoice link should not 404').not.toBe(404);
-          expect(await is404Page(page), 'Create Invoice page should not show 404 content').toBe(false);
+          expect(await is404Page(page), 'Create Invoice page should not show 404 content').toBe(
+            false
+          );
         } catch {
           // Timeout - still check for 404 content
-          expect(await is404Page(page), 'Create Invoice page should not show 404 content').toBe(false);
+          expect(await is404Page(page), 'Create Invoice page should not show 404 content').toBe(
+            false
+          );
         }
       }
     }

@@ -81,8 +81,7 @@ export function DataTableToolbar<TData>({
     };
   }, []);
 
-  const isFiltered =
-    table.getState().columnFilters.length > 0 || searchValue.length > 0;
+  const isFiltered = table.getState().columnFilters.length > 0 || searchValue.length > 0;
 
   const statusColumn = statusOptions?.length ? table.getColumn(statusFilterKey) : null;
   const currentStatusFilter = statusColumn?.getFilterValue() as string | undefined;
@@ -93,7 +92,7 @@ export function DataTableToolbar<TData>({
         {/* Show dropdown - page size selector */}
         {showPageSizeSelector && (
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Show</span>
+            <span className="text-muted-foreground text-sm">Show</span>
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => table.setPageSize(Number(value))}
@@ -113,7 +112,7 @@ export function DataTableToolbar<TData>({
         )}
         {filterKey && (
           <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder={filterPlaceholder}
               value={searchValue}
@@ -187,7 +186,7 @@ export function DataTableToolbar<TData>({
       <div className="flex items-center space-x-2">
         {table.getFilteredSelectedRowModel().rows.length > 0 && (
           <>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {table.getFilteredSelectedRowModel().rows.length} of{' '}
               {table.getFilteredRowModel().rows.length} row(s) selected.
             </div>

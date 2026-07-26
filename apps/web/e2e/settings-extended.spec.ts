@@ -70,7 +70,7 @@ test.describe('Settings - Email Templates', () => {
       await page.goto('/settings/emails');
 
       const templateList = page.locator('[class*="card"], [class*="Card"], table');
-      if (await templateList.count() > 0) {
+      if ((await templateList.count()) > 0) {
         await expect(templateList.first()).toBeVisible();
       }
     });
@@ -87,12 +87,7 @@ test.describe('Settings - Email Templates', () => {
     test('should show template types', async ({ page }) => {
       await page.goto('/settings/emails');
 
-      const templateTypes = [
-        /quote.*sent/i,
-        /invoice.*sent/i,
-        /payment.*received/i,
-        /reminder/i,
-      ];
+      const templateTypes = [/quote.*sent/i, /invoice.*sent/i, /payment.*received/i, /reminder/i];
 
       let foundType = false;
       for (const type of templateTypes) {

@@ -188,7 +188,8 @@ export const COMMON_TIMEZONES = [
 ] as const;
 
 // Custom field types
-export type CustomFieldType = 'text' | 'number' | 'date' | 'dropdown' | 'multiselect' | 'checkbox' | 'url' | 'email';
+export type CustomFieldType =
+  'text' | 'number' | 'date' | 'dropdown' | 'multiselect' | 'checkbox' | 'url' | 'email';
 export type CustomFieldEntity = 'quote' | 'invoice' | 'client' | 'project';
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
@@ -236,11 +237,25 @@ export interface IntegrationData {
 
 // Webhook types
 export type WebhookEvent =
-  | 'quote.created' | 'quote.sent' | 'quote.accepted' | 'quote.declined' | 'quote.expired'
-  | 'invoice.created' | 'invoice.sent' | 'invoice.paid' | 'invoice.overdue' | 'invoice.voided'
-  | 'client.created' | 'client.updated' | 'client.deleted'
-  | 'project.created' | 'project.updated' | 'project.completed'
-  | 'payment.received' | 'payment.refunded' | 'payment.failed';
+  | 'quote.created'
+  | 'quote.sent'
+  | 'quote.accepted'
+  | 'quote.declined'
+  | 'quote.expired'
+  | 'invoice.created'
+  | 'invoice.sent'
+  | 'invoice.paid'
+  | 'invoice.overdue'
+  | 'invoice.voided'
+  | 'client.created'
+  | 'client.updated'
+  | 'client.deleted'
+  | 'project.created'
+  | 'project.updated'
+  | 'project.completed'
+  | 'payment.received'
+  | 'payment.refunded'
+  | 'payment.failed';
 
 export const WEBHOOK_EVENT_LABELS: Record<WebhookEvent, string> = {
   'quote.created': 'Created',

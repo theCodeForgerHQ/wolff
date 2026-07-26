@@ -5,11 +5,7 @@ import { DemoBannerWrapper } from './demo-banner';
  * Server component that checks demo mode and provides the banner
  * Add this to your dashboard layout to show the demo banner
  */
-export async function DemoModeProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export async function DemoModeProvider({ children }: { children: React.ReactNode }) {
   const isDemo = await isDemoSession();
 
   return (
@@ -33,8 +29,6 @@ export async function getDemoStatus(): Promise<{
 
   return {
     isDemo,
-    message: isDemo
-      ? 'You are using a demo account. Data resets daily.'
-      : null,
+    message: isDemo ? 'You are using a demo account. Data resets daily.' : null,
   };
 }

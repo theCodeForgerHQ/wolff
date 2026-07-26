@@ -6,13 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { updateContractSettings } from '@/lib/contracts/actions';
 import type { ContractSettingsData } from '@/lib/contracts/types';
 
@@ -40,17 +34,15 @@ export function ContractSettingsForm({ initialData }: ContractSettingsFormProps)
     <Card>
       <CardHeader>
         <CardTitle>Contract Settings</CardTitle>
-        <CardDescription>
-          Configure how contracts are signed and processed.
-        </CardDescription>
+        <CardDescription>Configure how contracts are signed and processed.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="auto-countersign">Auto Countersign</Label>
-            <p className="text-sm text-muted-foreground">
-              Automatically apply your business signature after the client signs.
-              When disabled, contracts will require manual countersigning.
+            <p className="text-muted-foreground text-sm">
+              Automatically apply your business signature after the client signs. When disabled,
+              contracts will require manual countersigning.
             </p>
           </div>
           <Switch

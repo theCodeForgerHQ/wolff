@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Pre-validate all rows before the transaction
-    const validRows: Array<{ index: number; row: typeof clients[number] }> = [];
+    const validRows: Array<{ index: number; row: (typeof clients)[number] }> = [];
 
     for (let i = 0; i < clients.length; i++) {
       const row = clients[i]!;
@@ -158,10 +158,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return apiSuccess({
-      message: `Import complete: ${result.success} created, ${result.skipped} skipped, ${result.failed} failed`,
-      ...result,
-    }, 201);
+    return apiSuccess(
+      {
+        message: `Import complete: ${result.success} created, ${result.skipped} skipped, ${result.failed} failed`,
+        ...result,
+      },
+      201
+    );
   } catch (err) {
     logger.error({ err }, 'Client import API error');
     return apiError('Internal server error', 500);

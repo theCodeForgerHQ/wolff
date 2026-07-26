@@ -43,7 +43,7 @@ export function ChartCard({
         <div>
           <CardTitle className="text-base font-medium">{title}</CardTitle>
           {description && (
-            <CardDescription className="text-xs mt-0.5">{description}</CardDescription>
+            <CardDescription className="mt-0.5 text-xs">{description}</CardDescription>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -75,13 +75,7 @@ export function ChartCard({
         </div>
       </CardHeader>
       <CardContent className="flex-1 pt-0">
-        {isLoading ? (
-          <ChartSkeleton />
-        ) : isEmpty ? (
-          <ChartEmpty message={emptyMessage} />
-        ) : (
-          children
-        )}
+        {isLoading ? <ChartSkeleton /> : isEmpty ? <ChartEmpty message={emptyMessage} /> : children}
       </CardContent>
     </Card>
   );
@@ -90,11 +84,11 @@ export function ChartCard({
 function ChartSkeleton() {
   return (
     <div className="flex h-[300px] items-center justify-center" data-testid="chart-skeleton">
-      <div className="space-y-3 w-full">
-        <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-        <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
-        <div className="h-32 w-full animate-pulse rounded bg-muted" />
-        <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+      <div className="w-full space-y-3">
+        <div className="bg-muted h-4 w-3/4 animate-pulse rounded" />
+        <div className="bg-muted h-4 w-1/2 animate-pulse rounded" />
+        <div className="bg-muted h-32 w-full animate-pulse rounded" />
+        <div className="bg-muted h-4 w-2/3 animate-pulse rounded" />
       </div>
     </div>
   );
@@ -106,9 +100,9 @@ function ChartEmpty({ message }: { message: string }) {
       className="flex h-[300px] flex-col items-center justify-center text-center"
       data-testid="chart-empty"
     >
-      <div className="rounded-full bg-muted p-3 mb-3">
+      <div className="bg-muted mb-3 rounded-full p-3">
         <svg
-          className="h-6 w-6 text-muted-foreground"
+          className="text-muted-foreground h-6 w-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -121,7 +115,7 @@ function ChartEmpty({ message }: { message: string }) {
           />
         </svg>
       </div>
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <p className="text-muted-foreground text-sm">{message}</p>
     </div>
   );
 }

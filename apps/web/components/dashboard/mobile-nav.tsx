@@ -5,13 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, FileText, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { navItems } from './nav';
 import { useState } from 'react';
 
@@ -68,26 +62,24 @@ export function MobileNav() {
                     <item.icon className="h-4 w-4 shrink-0" />
                     <span className="flex-1 text-left">{item.title}</span>
                     <ChevronDown
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        isExpanded && 'rotate-180'
-                      )}
+                      className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')}
                     />
                   </button>
                   {isExpanded && (
-                    <div className="ml-[22px] flex flex-col gap-0.5 mt-0.5">
+                    <div className="ml-[22px] mt-0.5 flex flex-col gap-0.5">
                       {item.children.map((child) => {
-                        const isChildItemActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                        const isChildItemActive =
+                          pathname === child.href || pathname.startsWith(`${child.href}/`);
                         return (
                           <Link
                             key={child.href}
                             href={child.href}
                             onClick={() => setOpen(false)}
                             className={cn(
-                              'relative rounded-md px-3 py-2 text-sm transition-colors border-l-2',
+                              'relative rounded-md border-l-2 px-3 py-2 text-sm transition-colors',
                               isChildItemActive
-                                ? 'border-primary bg-primary/10 font-medium text-foreground'
-                                : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                                ? 'border-primary bg-primary/10 text-foreground font-medium'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground border-transparent'
                             )}
                           >
                             {child.title}

@@ -23,18 +23,19 @@ test.describe('Critical Journey: Quote Creation Flow', () => {
     await page.waitForLoadState('networkidle');
 
     // Step 2: Verify client selection exists (Issue 5)
-    const clientSelector =
-      page.locator('[data-testid="client-select"]').or(
-        page.getByLabel(/client/i)
-      ).or(
-        page.getByRole('combobox', { name: /client/i })
-      );
+    const clientSelector = page
+      .locator('[data-testid="client-select"]')
+      .or(page.getByLabel(/client/i))
+      .or(page.getByRole('combobox', { name: /client/i }));
 
     // Client selection should be available
     await clientSelector.isVisible().catch(async () => {
       // Alternative: Check for client section in properties panel
       const propertiesPanel = page.locator('[data-testid="properties-panel"]');
-      return propertiesPanel.getByText(/client/i).isVisible().catch(() => false);
+      return propertiesPanel
+        .getByText(/client/i)
+        .isVisible()
+        .catch(() => false);
     });
 
     // Step 3: Add some content
@@ -63,8 +64,14 @@ test.describe('Critical Journey: Quote Creation Flow', () => {
 
       // Verify save action occurred
       const urlChanged = !page.url().includes('/new');
-      const toastShown = await page.getByText(/saved|created|success/i).isVisible().catch(() => false);
-      const errorShown = await page.getByText(/error|failed/i).isVisible().catch(() => false);
+      const toastShown = await page
+        .getByText(/saved|created|success/i)
+        .isVisible()
+        .catch(() => false);
+      const errorShown = await page
+        .getByText(/error|failed/i)
+        .isVisible()
+        .catch(() => false);
 
       // Save should do SOMETHING (not just console.log)
       const saveWorked = saveTriggered || urlChanged || toastShown;
@@ -97,8 +104,7 @@ test.describe('Critical Journey: Quote Creation Flow', () => {
 
     // Check if content persisted (either in localStorage or autosave)
     const pageContent = await page.content();
-    const contentPersisted = pageContent.includes(testId) ||
-      pageContent.includes('persist-test');
+    const contentPersisted = pageContent.includes(testId) || pageContent.includes('persist-test');
 
     // Note: If using server-side autosave, might redirect to saved quote
     const redirectedToSaved = page.url().match(/\/quotes\/[a-f0-9-]+/);
@@ -136,7 +142,10 @@ test.describe('Critical Journey: Quote to Invoice Conversion', () => {
         await page.waitForLoadState('networkidle');
 
         // Should navigate to invoice page (not 404)
-        const is404 = await page.getByText(/page not found|404/i).isVisible().catch(() => false);
+        const is404 = await page
+          .getByText(/page not found|404/i)
+          .isVisible()
+          .catch(() => false);
         expect(is404, 'Convert to invoice should not show 404').toBe(false);
 
         // Should be on an invoice-related page
@@ -150,12 +159,22 @@ test.describe('Critical Journey: Quote to Invoice Conversion', () => {
     await page.waitForLoadState('networkidle');
 
     // Should not be a 404 page
-    const is404 = await page.getByText(/page not found|404/i).isVisible().catch(() => false);
+    const is404 = await page
+      .getByText(/page not found|404/i)
+      .isVisible()
+      .catch(() => false);
     expect(is404, '/invoices/new should not be 404').toBe(false);
 
     // Should show invoice creation UI
-    const hasForm = await page.locator('form, [data-testid="invoice-form"]').isVisible().catch(() => false);
-    const hasEditor = await page.locator('[contenteditable], input').first().isVisible().catch(() => false);
+    const hasForm = await page
+      .locator('form, [data-testid="invoice-form"]')
+      .isVisible()
+      .catch(() => false);
+    const hasEditor = await page
+      .locator('[contenteditable], input')
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     expect(hasForm || hasEditor, 'Invoice creation page should have form/editor').toBe(true);
   });
@@ -179,19 +198,39 @@ test.describe('Critical Journey: Client Management Flow', () => {
       await page.waitForLoadState('networkidle');
 
       // Check for various forms of validation feedback
-      const hasFieldError = await page.locator('.text-destructive, [class*="error"], [aria-invalid="true"]').count() > 0;
-      const hasToast = await page.locator('[data-sonner-toast], [role="status"]').isVisible().catch(() => false);
-      const hasErrorText = await page.getByText(/required|error|invalid|please fill/i).isVisible().catch(() => false);
-      const hasRequiredIndicator = await page.locator('label:has-text("*")').count() > 0;
+      const hasFieldError =
+        (await page.locator('.text-destructive, [class*="error"], [aria-invalid="true"]').count()) >
+        0;
+      const hasToast = await page
+        .locator('[data-sonner-toast], [role="status"]')
+        .isVisible()
+        .catch(() => false);
+      const hasErrorText = await page
+        .getByText(/required|error|invalid|please fill/i)
+        .isVisible()
+        .catch(() => false);
+      const hasRequiredIndicator = (await page.locator('label:has-text("*")').count()) > 0;
 
       // Check if form submitted (URL changed or success message)
       const submitted = !page.url().includes('/new');
-      const hasSuccess = await page.getByText(/success|created/i).isVisible().catch(() => false);
+      const hasSuccess = await page
+        .getByText(/success|created/i)
+        .isVisible()
+        .catch(() => false);
 
       // Some form of feedback should exist (validation error, required indicator, or successful submission)
-      const hasFeedback = hasFieldError || hasToast || hasErrorText || hasRequiredIndicator || submitted || hasSuccess;
+      const hasFeedback =
+        hasFieldError ||
+        hasToast ||
+        hasErrorText ||
+        hasRequiredIndicator ||
+        submitted ||
+        hasSuccess;
 
-      expect(hasFeedback, 'Form should provide some feedback (validation error, required field indicator, or submit)').toBe(true);
+      expect(
+        hasFeedback,
+        'Form should provide some feedback (validation error, required field indicator, or submit)'
+      ).toBe(true);
     }
   });
 
@@ -222,7 +261,10 @@ test.describe('Critical Journey: Client Management Flow', () => {
       }
 
       // Page should not show errors
-      const hasError = await page.getByText(/error|crashed/i).isVisible().catch(() => false);
+      const hasError = await page
+        .getByText(/error|crashed/i)
+        .isVisible()
+        .catch(() => false);
       expect(hasError, 'Page should not show errors after scrolling').toBe(false);
     }
   });
@@ -265,13 +307,23 @@ test.describe('Critical Journey: Client Management Flow', () => {
 
       // Check for various outcomes
       const urlChanged = !page.url().includes('/new');
-      const hasValidationError = await page.locator('.text-destructive').count() > 0;
-      const hasToast = await page.locator('[data-sonner-toast]').isVisible().catch(() => false);
-      const hasSuccessMessage = await page.getByText(/created|saved|success/i).isVisible().catch(() => false);
-      const hasErrorMessage = await page.getByText(/error|failed/i).isVisible().catch(() => false);
+      const hasValidationError = (await page.locator('.text-destructive').count()) > 0;
+      const hasToast = await page
+        .locator('[data-sonner-toast]')
+        .isVisible()
+        .catch(() => false);
+      const hasSuccessMessage = await page
+        .getByText(/created|saved|success/i)
+        .isVisible()
+        .catch(() => false);
+      const hasErrorMessage = await page
+        .getByText(/error|failed/i)
+        .isVisible()
+        .catch(() => false);
 
       // Any feedback is acceptable - the key is that something happened
-      const hasFeedback = urlChanged || hasValidationError || hasToast || hasSuccessMessage || hasErrorMessage;
+      const hasFeedback =
+        urlChanged || hasValidationError || hasToast || hasSuccessMessage || hasErrorMessage;
 
       expect(hasFeedback, 'Client creation should provide some feedback').toBe(true);
     }
@@ -339,7 +391,9 @@ test.describe('Critical Journey: Quote Builder Block Operations', () => {
       await addBlockButton.click();
 
       const afterAddCount = await blocks.count();
-      expect(afterAddCount, 'Adding block should increase count').toBeGreaterThanOrEqual(initialCount);
+      expect(afterAddCount, 'Adding block should increase count').toBeGreaterThanOrEqual(
+        initialCount
+      );
     }
 
     // Try to duplicate a block
@@ -354,7 +408,11 @@ test.describe('Critical Journey: Quote Builder Block Operations', () => {
       if (await moreButton.isVisible()) {
         await moreButton.click();
         // Wait for dropdown menu to appear
-        await page.locator('[role="menu"], [role="menuitem"]').first().waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+        await page
+          .locator('[role="menu"], [role="menuitem"]')
+          .first()
+          .waitFor({ state: 'visible', timeout: 2000 })
+          .catch(() => {});
       }
 
       if (await duplicateButton.isVisible()) {
@@ -362,7 +420,9 @@ test.describe('Critical Journey: Quote Builder Block Operations', () => {
         await duplicateButton.click();
 
         const afterDuplicate = await blocks.count();
-        expect(afterDuplicate, 'Duplicating block should increase count').toBeGreaterThanOrEqual(beforeDuplicate);
+        expect(afterDuplicate, 'Duplicating block should increase count').toBeGreaterThanOrEqual(
+          beforeDuplicate
+        );
       }
     }
   });
@@ -389,9 +449,13 @@ test.describe('Critical Journey: Theme and UI Settings', () => {
       await themeToggle.click();
       // Wait for theme class to change on html element
       if (wasDark) {
-        await expect(page.locator('html:not(.dark)')).toBeAttached({ timeout: 2000 }).catch(() => {});
+        await expect(page.locator('html:not(.dark)'))
+          .toBeAttached({ timeout: 2000 })
+          .catch(() => {});
       } else {
-        await expect(page.locator('html.dark')).toBeAttached({ timeout: 2000 }).catch(() => {});
+        await expect(page.locator('html.dark'))
+          .toBeAttached({ timeout: 2000 })
+          .catch(() => {});
       }
 
       // Check theme changed
@@ -435,13 +499,23 @@ test.describe('Critical Journey: Help and Support', () => {
     // If it's a 200, should have help content
     if (status === 200) {
       // Should not be 404 page content
-      const is404 = await page.getByText(/page not found/i).isVisible().catch(() => false);
+      const is404 = await page
+        .getByText(/page not found/i)
+        .isVisible()
+        .catch(() => false);
       expect(is404, '/help should not show 404 content').toBe(false);
 
       // Should have some content (heading or help-related text)
       const hasContent =
-        await page.getByRole('heading').first().isVisible().catch(() => false) ||
-        await page.locator('#main-content').isVisible().catch(() => false);
+        (await page
+          .getByRole('heading')
+          .first()
+          .isVisible()
+          .catch(() => false)) ||
+        (await page
+          .locator('#main-content')
+          .isVisible()
+          .catch(() => false));
 
       expect(hasContent, 'Help page should have visible content').toBe(true);
     }
@@ -479,12 +553,18 @@ test.describe('Critical Journey: Help and Support', () => {
         // Now check if help page works
         const finalUrl = page.url();
         if (finalUrl.includes('/help')) {
-          const is404 = await page.getByText(/page not found/i).isVisible().catch(() => false);
+          const is404 = await page
+            .getByText(/page not found/i)
+            .isVisible()
+            .catch(() => false);
           expect(is404, 'Help page should not show 404').toBe(false);
         }
 
         // Test passes if we can reach help page (directly or via link)
-        expect(page.url().includes('/help') || !stayedOnDashboard, 'Should be able to access help page').toBe(true);
+        expect(
+          page.url().includes('/help') || !stayedOnDashboard,
+          'Should be able to access help page'
+        ).toBe(true);
       }
     }
   });

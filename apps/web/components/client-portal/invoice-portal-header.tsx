@@ -10,10 +10,15 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 export function InvoiceStatusBadge({ status }: { status: string }) {
-  const defaultStyle = { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-300' };
+  const defaultStyle = {
+    bg: 'bg-blue-100 dark:bg-blue-900',
+    text: 'text-blue-700 dark:text-blue-300',
+  };
   const style = statusColors[status] ?? defaultStyle;
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}
+    >
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );

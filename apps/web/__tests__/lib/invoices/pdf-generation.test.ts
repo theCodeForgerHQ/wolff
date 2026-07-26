@@ -34,7 +34,8 @@ function validatePdfData(data: Partial<PdfInvoiceData>): ValidationResult {
 
   if (!data.invoiceNumber) errors.push('Invoice number required');
   if (!data.clientName) errors.push('Client name required');
-  if (!data.lineItems || data.lineItems.length === 0) errors.push('At least one line item required');
+  if (!data.lineItems || data.lineItems.length === 0)
+    errors.push('At least one line item required');
 
   if (data.lineItems) {
     for (let i = 0; i < data.lineItems.length; i++) {

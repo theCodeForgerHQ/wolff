@@ -14,15 +14,7 @@ import {
 } from '@/lib/validations/invoice';
 
 describe('invoiceStatusSchema', () => {
-  const validStatuses = [
-    'draft',
-    'sent',
-    'viewed',
-    'paid',
-    'partial',
-    'overdue',
-    'voided',
-  ];
+  const validStatuses = ['draft', 'sent', 'viewed', 'paid', 'partial', 'overdue', 'voided'];
 
   it.each(validStatuses)('accepts valid status: %s', (status) => {
     const result = invoiceStatusSchema.safeParse(status);
@@ -164,9 +156,7 @@ describe('updateInvoiceSchema', () => {
   it('allows updating line items', () => {
     const result = updateInvoiceSchema.safeParse({
       id: '550e8400-e29b-41d4-a716-446655440000',
-      lineItems: [
-        { id: '1', name: 'New item', quantity: 1, rate: 1000 },
-      ],
+      lineItems: [{ id: '1', name: 'New item', quantity: 1, rate: 1000 }],
     });
     expect(result.success).toBe(true);
   });

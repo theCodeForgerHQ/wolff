@@ -33,10 +33,12 @@ const themes = {
   'default-blue': {
     name: 'Default + Blue',
     tagline: 'Official Shadcn',
-    description: 'The official shadcn/ui blue theme. Trust & reliability for professional services, financial tools, and business applications.',
+    description:
+      'The official shadcn/ui blue theme. Trust & reliability for professional services, financial tools, and business applications.',
     badge: 'Official',
     icon: Zap,
-    heroGradient: 'from-blue-50/80 via-slate-50 to-white dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-950',
+    heroGradient:
+      'from-blue-50/80 via-slate-50 to-white dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-950',
     logoGradient: 'from-blue-600 to-blue-700',
     accentColor: 'blue',
     // Light mode CSS (HSL format - official shadcn blue)
@@ -99,10 +101,12 @@ const themes = {
   claude: {
     name: 'Claude',
     tagline: 'Anthropic Inspired',
-    description: 'Warm terracotta orange that feels human. Cream backgrounds that invite conversation. Intelligence that feels approachable.',
+    description:
+      'Warm terracotta orange that feels human. Cream backgrounds that invite conversation. Intelligence that feels approachable.',
     badge: 'AI-Native',
     icon: Sparkles,
-    heroGradient: 'from-orange-50/80 via-amber-50/50 to-white dark:from-stone-950 dark:via-orange-950/20 dark:to-stone-950',
+    heroGradient:
+      'from-orange-50/80 via-amber-50/50 to-white dark:from-stone-950 dark:via-orange-950/20 dark:to-stone-950',
     logoGradient: 'from-orange-500 to-amber-600',
     accentColor: 'orange',
     // Light mode - warm terracotta with cream backgrounds
@@ -165,10 +169,12 @@ const themes = {
   supabase: {
     name: 'Supabase',
     tagline: 'Developer Native',
-    description: 'That distinctive green that says "database operations just work." Clean, modern aesthetics for developer tools and technical products.',
+    description:
+      'That distinctive green that says "database operations just work." Clean, modern aesthetics for developer tools and technical products.',
     badge: 'Dev-Friendly',
     icon: Database,
-    heroGradient: 'from-emerald-50/80 via-teal-50/30 to-white dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950',
+    heroGradient:
+      'from-emerald-50/80 via-teal-50/30 to-white dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950',
     logoGradient: 'from-emerald-500 to-teal-600',
     accentColor: 'emerald',
     // Light mode - clean with emerald primary
@@ -241,9 +247,27 @@ const stats = [
 
 const recentQuotes = [
   { id: 'Q-2024-001', client: 'Acme Corp', amount: '$12,500', status: 'sent', date: '2 hours ago' },
-  { id: 'Q-2024-002', client: 'TechStart Inc', amount: '$8,750', status: 'viewed', date: '5 hours ago' },
-  { id: 'Q-2024-003', client: 'Design Studio', amount: '$3,200', status: 'accepted', date: '1 day ago' },
-  { id: 'Q-2024-004', client: 'Global Media', amount: '$15,000', status: 'draft', date: '2 days ago' },
+  {
+    id: 'Q-2024-002',
+    client: 'TechStart Inc',
+    amount: '$8,750',
+    status: 'viewed',
+    date: '5 hours ago',
+  },
+  {
+    id: 'Q-2024-003',
+    client: 'Design Studio',
+    amount: '$3,200',
+    status: 'accepted',
+    date: '1 day ago',
+  },
+  {
+    id: 'Q-2024-004',
+    client: 'Global Media',
+    amount: '$15,000',
+    status: 'draft',
+    date: '2 days ago',
+  },
 ];
 
 const statusConfig = {
@@ -278,17 +302,17 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         }
       `}</style>
 
-      <div className={`min-h-screen bg-linear-to-br ${theme.heroGradient}`}>
+      <div className={`bg-linear-to-br min-h-screen ${theme.heroGradient}`}>
         {/* Theme Switcher Banner */}
-        <div className="bg-foreground text-background py-3 border-b border-border/10">
-          <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-foreground text-background border-border/10 border-b py-3">
+          <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 sm:flex-row">
             <div className="flex items-center gap-3">
               <span className="text-sm opacity-70">Viewing:</span>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground">
+              <span className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold">
                 <ThemeIcon className="h-3.5 w-3.5" />
                 {theme.name}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded bg-background/20 text-background/80">
+              <span className="bg-background/20 text-background/80 rounded px-2 py-0.5 text-xs">
                 {theme.tagline}
               </span>
             </div>
@@ -298,7 +322,7 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
                 <Link
                   key={t}
                   href={`/theme-showcase/${t}`}
-                  className="px-3 py-1.5 rounded-md text-sm font-medium bg-background/10 hover:bg-background/20 transition-colors"
+                  className="bg-background/10 hover:bg-background/20 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
                 >
                   {themes[t].name}
                 </Link>
@@ -308,34 +332,46 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         </div>
 
         {/* Header */}
-        <header className="border-b border-border bg-background/80 backdrop-blur-xs sticky top-0 z-50">
+        <header className="border-border bg-background/80 backdrop-blur-xs sticky top-0 z-50 border-b">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
+            <div className="flex h-16 items-center justify-between">
               <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-2.5">
-                  <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${theme.logoGradient} flex items-center justify-center shadow-sm`}>
+                  <div
+                    className={`bg-linear-to-br h-9 w-9 rounded-lg ${theme.logoGradient} flex items-center justify-center shadow-sm`}
+                  >
                     <FileText className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-foreground">Wolff</span>
+                  <span className="text-foreground text-xl font-bold">Wolff</span>
                 </Link>
-                <nav className="hidden md:flex items-center gap-1">
-                  <span className="px-3 py-2 text-sm font-medium text-primary bg-primary/10 rounded-md">Dashboard</span>
-                  <span className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md cursor-pointer transition-colors">Quotes</span>
-                  <span className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md cursor-pointer transition-colors">Invoices</span>
-                  <span className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md cursor-pointer transition-colors">Clients</span>
+                <nav className="hidden items-center gap-1 md:flex">
+                  <span className="text-primary bg-primary/10 rounded-md px-3 py-2 text-sm font-medium">
+                    Dashboard
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors">
+                    Quotes
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors">
+                    Invoices
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors">
+                    Clients
+                  </span>
                 </nav>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-muted border border-border">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Search...</span>
-                  <kbd className="px-1.5 py-0.5 text-xs bg-background rounded border border-border font-mono">⌘K</kbd>
+                <div className="bg-muted border-border hidden items-center gap-2 rounded-lg border px-3 py-2 sm:flex">
+                  <Search className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground text-sm">Search...</span>
+                  <kbd className="bg-background border-border rounded border px-1.5 py-0.5 font-mono text-xs">
+                    ⌘K
+                  </kbd>
                 </div>
-                <button className="relative p-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                  <Bell className="h-5 w-5 text-muted-foreground" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                <button className="hover:bg-muted hover:border-border relative rounded-lg border border-transparent p-2 transition-colors">
+                  <Bell className="text-muted-foreground h-5 w-5" />
+                  <span className="bg-primary absolute right-1.5 top-1.5 h-2 w-2 rounded-full" />
                 </button>
-                <div className="w-9 h-9 rounded-full bg-linear-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm font-semibold shadow-sm">
+                <div className="bg-linear-to-br from-primary to-primary/70 text-primary-foreground flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold shadow-sm">
                   JD
                 </div>
               </div>
@@ -346,68 +382,78 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8">
           {/* Page Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Welcome back, here&apos;s your business overview.</p>
+              <h1 className="text-foreground text-2xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                Welcome back, here&apos;s your business overview.
+              </p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm">
+            <button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 rounded-lg px-4 py-2.5 font-medium shadow-sm transition-colors">
               <Plus className="h-4 w-4" />
               New Quote
             </button>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
               <div
                 key={stat.label}
-                className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-card border-border rounded-xl border p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2.5 rounded-lg bg-primary/10">
-                    <stat.icon className="h-5 w-5 text-primary" />
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="bg-primary/10 rounded-lg p-2.5">
+                    <stat.icon className="text-primary h-5 w-5" />
                   </div>
-                  <span className={`flex items-center gap-1 text-sm font-medium ${stat.up ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                    {stat.up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                  <span
+                    className={`flex items-center gap-1 text-sm font-medium ${stat.up ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
+                  >
+                    {stat.up ? (
+                      <TrendingUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <TrendingDown className="h-3.5 w-3.5" />
+                    )}
                     {stat.change}
                   </span>
                 </div>
-                <div className="text-2xl font-bold text-card-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                <div className="text-card-foreground text-2xl font-bold">{stat.value}</div>
+                <div className="text-muted-foreground mt-1 text-sm">{stat.label}</div>
               </div>
             ))}
           </div>
 
           {/* Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Recent Quotes */}
-            <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-sm">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-lg font-semibold text-card-foreground">Recent Quotes</h2>
-                <button className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">View All</button>
+            <div className="bg-card border-border rounded-xl border shadow-sm lg:col-span-2">
+              <div className="border-border flex items-center justify-between border-b p-6">
+                <h2 className="text-card-foreground text-lg font-semibold">Recent Quotes</h2>
+                <button className="text-primary hover:text-primary/80 text-sm font-medium transition-colors">
+                  View All
+                </button>
               </div>
-              <div className="divide-y divide-border">
+              <div className="divide-border divide-y">
                 {recentQuotes.map((quote) => {
                   const status = statusConfig[quote.status as keyof typeof statusConfig];
                   return (
-                    <div key={quote.id} className="p-4 hover:bg-muted/50 transition-colors">
+                    <div key={quote.id} className="hover:bg-muted/50 p-4 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                            <status.icon className="h-5 w-5 text-muted-foreground" />
+                          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-lg">
+                            <status.icon className="text-muted-foreground h-5 w-5" />
                           </div>
                           <div>
-                            <div className="font-medium text-card-foreground">{quote.client}</div>
-                            <div className="text-sm text-muted-foreground">{quote.id}</div>
+                            <div className="text-card-foreground font-medium">{quote.client}</div>
+                            <div className="text-muted-foreground text-sm">{quote.id}</div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold text-card-foreground">{quote.amount}</div>
-                          <div className="text-sm text-muted-foreground">{quote.date}</div>
+                          <div className="text-card-foreground font-semibold">{quote.amount}</div>
+                          <div className="text-muted-foreground text-sm">{quote.date}</div>
                         </div>
-                        <button className="p-2 rounded-lg hover:bg-muted">
-                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                        <button className="hover:bg-muted rounded-lg p-2">
+                          <MoreHorizontal className="text-muted-foreground h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -419,18 +465,18 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
             {/* Quick Actions + Revenue Chart */}
             <div className="space-y-6">
               {/* Quick Actions */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-card-foreground mb-4">Quick Actions</h2>
+              <div className="bg-card border-border rounded-xl border p-6 shadow-sm">
+                <h2 className="text-card-foreground mb-4 text-lg font-semibold">Quick Actions</h2>
                 <div className="space-y-3">
-                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 text-primary transition-all">
+                  <button className="border-primary/30 hover:border-primary hover:bg-primary/5 text-primary flex w-full items-center gap-3 rounded-lg border-2 border-dashed px-4 py-3 transition-all">
                     <FileText className="h-5 w-5" />
                     <span className="font-medium">Create Quote</span>
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <button className="border-border hover:bg-muted text-muted-foreground hover:text-foreground flex w-full items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
                     <Users className="h-5 w-5" />
                     <span className="font-medium">Add Client</span>
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <button className="border-border hover:bg-muted text-muted-foreground hover:text-foreground flex w-full items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
                     <Download className="h-5 w-5" />
                     <span className="font-medium">Export Report</span>
                   </button>
@@ -438,16 +484,18 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
               </div>
 
               {/* Mini Chart */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-card-foreground mb-4">Revenue Trend</h2>
-                <div className="flex items-end justify-between h-32 gap-2">
+              <div className="bg-card border-border rounded-xl border p-6 shadow-sm">
+                <h2 className="text-card-foreground mb-4 text-lg font-semibold">Revenue Trend</h2>
+                <div className="flex h-32 items-end justify-between gap-2">
                   {[40, 65, 45, 80, 55, 90, 70].map((height, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div key={i} className="flex flex-1 flex-col items-center gap-1">
                       <div
-                        className="w-full rounded-t bg-primary/80 hover:bg-primary transition-colors"
+                        className="bg-primary/80 hover:bg-primary w-full rounded-t transition-colors"
                         style={{ height: `${height}%` }}
                       />
-                      <span className="text-xs text-muted-foreground">{['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -456,50 +504,58 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
           </div>
 
           {/* Feature Showcase */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className={`p-6 rounded-xl bg-linear-to-br ${theme.logoGradient} text-white shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-2">Visual Quote Builder</h3>
-              <p className="text-white/80 text-sm mb-4">Drag-and-drop blocks to create stunning quotes in minutes.</p>
-              <button className="flex items-center gap-2 text-sm font-medium bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div
+              className={`bg-linear-to-br rounded-xl p-6 ${theme.logoGradient} text-white shadow-lg`}
+            >
+              <h3 className="mb-2 text-lg font-semibold">Visual Quote Builder</h3>
+              <p className="mb-4 text-sm text-white/80">
+                Drag-and-drop blocks to create stunning quotes in minutes.
+              </p>
+              <button className="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/30">
                 Try it now
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-6 rounded-xl bg-card border border-border shadow-sm">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Check className="h-5 w-5 text-primary" />
+            <div className="bg-card border-border rounded-xl border p-6 shadow-sm">
+              <div className="bg-primary/10 mb-4 flex h-10 w-10 items-center justify-center rounded-lg">
+                <Check className="text-primary h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-card-foreground mb-2">E-Signatures</h3>
-              <p className="text-muted-foreground text-sm">Get quotes signed online with legally binding signatures.</p>
+              <h3 className="text-card-foreground mb-2 text-lg font-semibold">E-Signatures</h3>
+              <p className="text-muted-foreground text-sm">
+                Get quotes signed online with legally binding signatures.
+              </p>
             </div>
-            <div className="p-6 rounded-xl bg-card border border-border shadow-sm">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <CreditCard className="h-5 w-5 text-primary" />
+            <div className="bg-card border-border rounded-xl border p-6 shadow-sm">
+              <div className="bg-primary/10 mb-4 flex h-10 w-10 items-center justify-center rounded-lg">
+                <CreditCard className="text-primary h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-card-foreground mb-2">Accept Payments</h3>
-              <p className="text-muted-foreground text-sm">Get paid faster with integrated Stripe payments.</p>
+              <h3 className="text-card-foreground mb-2 text-lg font-semibold">Accept Payments</h3>
+              <p className="text-muted-foreground text-sm">
+                Get paid faster with integrated Stripe payments.
+              </p>
             </div>
           </div>
 
           {/* Theme Info Card */}
-          <div className="mt-12 p-8 rounded-2xl bg-card border border-border shadow-sm">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="bg-card border-border mt-12 rounded-2xl border p-8 shadow-sm">
+            <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg bg-linear-to-br ${theme.logoGradient}`}>
+                <div className="mb-3 flex items-center gap-3">
+                  <div className={`bg-linear-to-br rounded-lg p-2 ${theme.logoGradient}`}>
                     <ThemeIcon className="h-5 w-5 text-white" />
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                  <span className="bg-primary/10 text-primary rounded-full px-2.5 py-1 text-xs font-semibold">
                     {theme.badge}
                   </span>
                 </div>
-                <h2 className="text-2xl font-bold text-card-foreground mb-2">{theme.name} Theme</h2>
+                <h2 className="text-card-foreground mb-2 text-2xl font-bold">{theme.name} Theme</h2>
                 <p className="text-muted-foreground max-w-2xl">{theme.description}</p>
               </div>
               <div className="flex items-center gap-3">
                 <Link
                   href="/"
-                  className="px-6 py-3 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-6 py-3 font-medium shadow-sm transition-colors"
                 >
                   Use This Theme
                 </Link>
@@ -507,36 +563,36 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
             </div>
 
             {/* Color Palette Preview */}
-            <div className="mt-8 pt-6 border-t border-border">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Color Palette</h3>
+            <div className="border-border mt-8 border-t pt-6">
+              <h3 className="text-muted-foreground mb-4 text-sm font-medium">Color Palette</h3>
               <div className="flex flex-wrap gap-3">
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-primary shadow-sm" />
-                  <span className="text-xs text-muted-foreground">Primary</span>
+                  <div className="bg-primary h-12 w-12 rounded-lg shadow-sm" />
+                  <span className="text-muted-foreground text-xs">Primary</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-secondary border border-border" />
-                  <span className="text-xs text-muted-foreground">Secondary</span>
+                  <div className="bg-secondary border-border h-12 w-12 rounded-lg border" />
+                  <span className="text-muted-foreground text-xs">Secondary</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-muted border border-border" />
-                  <span className="text-xs text-muted-foreground">Muted</span>
+                  <div className="bg-muted border-border h-12 w-12 rounded-lg border" />
+                  <span className="text-muted-foreground text-xs">Muted</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-accent border border-border" />
-                  <span className="text-xs text-muted-foreground">Accent</span>
+                  <div className="bg-accent border-border h-12 w-12 rounded-lg border" />
+                  <span className="text-muted-foreground text-xs">Accent</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-background border border-border" />
-                  <span className="text-xs text-muted-foreground">Background</span>
+                  <div className="bg-background border-border h-12 w-12 rounded-lg border" />
+                  <span className="text-muted-foreground text-xs">Background</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-card border border-border" />
-                  <span className="text-xs text-muted-foreground">Card</span>
+                  <div className="bg-card border-border h-12 w-12 rounded-lg border" />
+                  <span className="text-muted-foreground text-xs">Card</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-lg bg-destructive" />
-                  <span className="text-xs text-muted-foreground">Destructive</span>
+                  <div className="bg-destructive h-12 w-12 rounded-lg" />
+                  <span className="text-muted-foreground text-xs">Destructive</span>
                 </div>
               </div>
             </div>
@@ -544,18 +600,18 @@ export default function ThemeShowcasePage({ params }: { params: Promise<{ theme:
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-border bg-card mt-16">
+        <footer className="border-border bg-card mt-16 border-t">
           <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-md bg-linear-to-br ${theme.logoGradient} flex items-center justify-center`}>
+                <div
+                  className={`bg-linear-to-br h-7 w-7 rounded-md ${theme.logoGradient} flex items-center justify-center`}
+                >
                   <FileText className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-semibold text-foreground">Wolff</span>
+                <span className="text-foreground font-semibold">Wolff</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Theme showcase for stakeholder review
-              </p>
+              <p className="text-muted-foreground text-sm">Theme showcase for stakeholder review</p>
             </div>
           </div>
         </footer>

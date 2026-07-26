@@ -14,22 +14,22 @@ This plan outlines the remaining implementation work for Wolff MVP. The foundati
 
 ## Phase Completion Status
 
-| Phase | Feature | Status | Priority |
-|-------|---------|--------|----------|
-| 6.1-6.5 | Foundation | ✅ 100% | - |
-| 6.6 | Quote Builder | ✅ 100% | - |
-| 6.7 | Client Portal | ❌ 0% | P0 |
-| 6.8 | Invoices Module | ❌ 0% | P0 |
-| 6.9 | Payments & Stripe | ❌ 0% | P0 |
-| 6.10 | Rate Card System | ❌ 0% | P1 |
-| 6.11 | Clients Module | ❌ 0% | P1 |
-| 6.12 | Contracts Module | ❌ 0% | P1 |
-| 6.13 | Dashboard Widgets | ❌ 0% | P1 |
-| 6.14 | Settings | ❌ 0% | P1 |
-| 6.15 | Email System | ❌ 0% | P1 |
-| 6.16 | Background Jobs | ❌ 0% | P2 |
-| 6.17 | File Storage & PDFs | ❌ 0% | P1 |
-| 6.18 | Onboarding Flow | ❌ 0% | P2 |
+| Phase   | Feature             | Status  | Priority |
+| ------- | ------------------- | ------- | -------- |
+| 6.1-6.5 | Foundation          | ✅ 100% | -        |
+| 6.6     | Quote Builder       | ✅ 100% | -        |
+| 6.7     | Client Portal       | ❌ 0%   | P0       |
+| 6.8     | Invoices Module     | ❌ 0%   | P0       |
+| 6.9     | Payments & Stripe   | ❌ 0%   | P0       |
+| 6.10    | Rate Card System    | ❌ 0%   | P1       |
+| 6.11    | Clients Module      | ❌ 0%   | P1       |
+| 6.12    | Contracts Module    | ❌ 0%   | P1       |
+| 6.13    | Dashboard Widgets   | ❌ 0%   | P1       |
+| 6.14    | Settings            | ❌ 0%   | P1       |
+| 6.15    | Email System        | ❌ 0%   | P1       |
+| 6.16    | Background Jobs     | ❌ 0%   | P2       |
+| 6.17    | File Storage & PDFs | ❌ 0%   | P1       |
+| 6.18    | Onboarding Flow     | ❌ 0%   | P2       |
 
 ---
 
@@ -38,9 +38,11 @@ This plan outlines the remaining implementation work for Wolff MVP. The foundati
 **Goal:** Enable clients to view, accept, and sign quotes publicly.
 
 ### 1.1 Public Quote View Page
+
 **Location:** `apps/web/app/q/[token]/page.tsx`
 
 Tasks:
+
 - [ ] Create public quote view route
 - [ ] Fetch quote by access token
 - [ ] Display quote content (read-only block rendering)
@@ -49,9 +51,11 @@ Tasks:
 - [ ] Mobile-responsive layout
 
 ### 1.2 Quote Acceptance Flow
+
 **Location:** `apps/web/components/client-portal/`
 
 Tasks:
+
 - [ ] Create acceptance confirmation dialog
 - [ ] Add decline option with reason field
 - [ ] Update quote status on accept/decline
@@ -59,9 +63,11 @@ Tasks:
 - [ ] Log acceptance event with timestamp, IP, user agent
 
 ### 1.3 E-Signature Capture
+
 **Location:** `apps/web/components/client-portal/signature-pad.tsx`
 
 Tasks:
+
 - [ ] Install `react-signature-canvas` package
 - [ ] Create signature pad component
 - [ ] Add clear/redo functionality
@@ -70,18 +76,22 @@ Tasks:
 - [ ] Validate signature before acceptance
 
 ### 1.4 Client Comments/Questions
+
 **Location:** `apps/web/components/client-portal/quote-comments.tsx`
 
 Tasks:
+
 - [ ] Create comment thread UI
 - [ ] Add server action for posting comments
 - [ ] Real-time comment updates (optional)
 - [ ] Email notification on new comments
 
 ### 1.5 PDF Generation for Quotes
+
 **Location:** `packages/pdf-templates/`
 
 Tasks:
+
 - [ ] Install `@react-pdf/renderer` and `puppeteer`
 - [ ] Create quote PDF template
 - [ ] Add download button to client portal
@@ -89,6 +99,7 @@ Tasks:
 - [ ] Store generated PDFs (optional caching)
 
 ### Sprint 1 Dependencies to Install
+
 ```bash
 pnpm add react-signature-canvas @types/react-signature-canvas
 pnpm add @react-pdf/renderer
@@ -102,9 +113,11 @@ pnpm add puppeteer
 **Goal:** Full invoice lifecycle from creation to client view.
 
 ### 2.1 Invoice List Page
+
 **Location:** `apps/web/app/(dashboard)/invoices/page.tsx`
 
 Tasks:
+
 - [ ] Create invoices route and page
 - [ ] Add sidebar navigation link
 - [ ] Fetch invoices from database
@@ -113,9 +126,11 @@ Tasks:
 - [ ] Display invoice cards with status badges
 
 ### 2.2 Invoice Builder
+
 **Location:** `apps/web/components/invoices/`
 
 Tasks:
+
 - [ ] Reuse quote builder architecture
 - [ ] Create invoice-specific blocks (payment terms, due date)
 - [ ] Add invoice header with invoice number
@@ -124,9 +139,11 @@ Tasks:
 - [ ] Add auto-save functionality
 
 ### 2.3 Quote-to-Invoice Conversion
+
 **Location:** `apps/web/lib/invoices/actions.ts`
 
 Tasks:
+
 - [ ] Create `convertQuoteToInvoice` server action
 - [ ] Copy quote line items to invoice
 - [ ] Link invoice to original quote
@@ -135,9 +152,11 @@ Tasks:
 - [ ] Add conversion button to quote detail page
 
 ### 2.4 Invoice Status Workflow
+
 **Location:** `apps/web/lib/invoices/`
 
 Tasks:
+
 - [ ] Implement status transitions (draft → sent → viewed → paid)
 - [ ] Create status update server actions
 - [ ] Add status badges and indicators
@@ -145,9 +164,11 @@ Tasks:
 - [ ] Handle partial payment status
 
 ### 2.5 Invoice Detail Page
+
 **Location:** `apps/web/app/(dashboard)/invoices/[id]/page.tsx`
 
 Tasks:
+
 - [ ] Create invoice detail route
 - [ ] Display invoice information
 - [ ] Show payment history
@@ -155,9 +176,11 @@ Tasks:
 - [ ] Display timeline of events
 
 ### 2.6 Invoice Public View
+
 **Location:** `apps/web/app/i/[token]/page.tsx`
 
 Tasks:
+
 - [ ] Create public invoice route
 - [ ] Display invoice with payment button
 - [ ] Show payment history
@@ -167,6 +190,7 @@ Tasks:
 ### 2.7 Invoice PDF Generation
 
 Tasks:
+
 - [ ] Create invoice PDF template
 - [ ] Include payment instructions
 - [ ] Add company branding
@@ -179,9 +203,11 @@ Tasks:
 **Goal:** Accept payments via Stripe Connect.
 
 ### 3.1 Stripe Connect Setup
+
 **Location:** `apps/web/lib/stripe/`
 
 Tasks:
+
 - [ ] Create Stripe utility functions
 - [ ] Implement Stripe Connect onboarding flow
 - [ ] Store Stripe account ID in workspace
@@ -189,9 +215,11 @@ Tasks:
 - [ ] Handle account status (pending, active, restricted)
 
 ### 3.2 Payment Links Generation
+
 **Location:** `apps/web/lib/payments/`
 
 Tasks:
+
 - [ ] Create payment intent for invoice
 - [ ] Generate Stripe checkout session
 - [ ] Add payment link to invoice
@@ -200,6 +228,7 @@ Tasks:
 ### 3.3 Deposit Collection Flow
 
 Tasks:
+
 - [ ] Add deposit percentage to quotes
 - [ ] Calculate deposit amount
 - [ ] Create deposit payment link
@@ -208,15 +237,18 @@ Tasks:
 ### 3.4 Milestone Payments
 
 Tasks:
+
 - [ ] Create payment schedule UI
 - [ ] Define milestone amounts
 - [ ] Generate separate payment links per milestone
 - [ ] Track milestone completion
 
 ### 3.5 Webhook Handling
+
 **Location:** `apps/web/app/api/webhooks/stripe/route.ts`
 
 Tasks:
+
 - [ ] Create Stripe webhook endpoint
 - [ ] Verify webhook signature
 - [ ] Handle `payment_intent.succeeded`
@@ -227,12 +259,14 @@ Tasks:
 ### 3.6 Payment Confirmation
 
 Tasks:
+
 - [ ] Send payment confirmation email
 - [ ] Update invoice page with payment info
 - [ ] Generate receipt/confirmation number
 - [ ] Notify workspace owner
 
 ### Sprint 3 Dependencies
+
 ```bash
 pnpm add stripe @stripe/stripe-js
 ```
@@ -242,9 +276,11 @@ pnpm add stripe @stripe/stripe-js
 ## Sprint 4: Supporting Features
 
 ### 4.1 Clients Module
+
 **Location:** `apps/web/app/(dashboard)/clients/`
 
 Tasks:
+
 - [ ] Create clients list page
 - [ ] Add client detail page
 - [ ] Implement client CRUD server actions
@@ -255,9 +291,11 @@ Tasks:
 - [ ] Client search and filter
 
 ### 4.2 Rate Cards System
+
 **Location:** `apps/web/app/(dashboard)/rate-cards/`
 
 Tasks:
+
 - [ ] Create rate cards list page
 - [ ] Add rate card categories CRUD
 - [ ] Implement rate card items CRUD
@@ -266,9 +304,11 @@ Tasks:
 - [ ] Version rate cards
 
 ### 4.3 Email System
+
 **Location:** `packages/email-templates/`
 
 Tasks:
+
 - [ ] Install `@react-email/components` and `resend`
 - [ ] Create email template components
 - [ ] Quote sent notification template
@@ -279,9 +319,11 @@ Tasks:
 - [ ] Log sent emails
 
 ### 4.4 Dashboard Widgets
+
 **Location:** `apps/web/components/dashboard/widgets/`
 
 Tasks:
+
 - [ ] Revenue overview card
 - [ ] Outstanding invoices widget
 - [ ] Recent quotes widget
@@ -291,6 +333,7 @@ Tasks:
 - [ ] Activity feed
 
 ### Sprint 4 Dependencies
+
 ```bash
 pnpm add @react-email/components resend
 ```
@@ -300,9 +343,11 @@ pnpm add @react-email/components resend
 ## Sprint 5: Settings, Polish & Launch Prep
 
 ### 5.1 Settings Pages
+
 **Location:** `apps/web/app/(dashboard)/settings/`
 
 Tasks:
+
 - [ ] Business profile settings
 - [ ] Branding settings (logo, colors)
 - [ ] Email template customization
@@ -312,9 +357,11 @@ Tasks:
 - [ ] User profile settings
 
 ### 5.2 Onboarding Flow
+
 **Location:** `apps/web/app/(dashboard)/onboarding/`
 
 Tasks:
+
 - [ ] Welcome wizard
 - [ ] Business profile setup step
 - [ ] First client creation
@@ -322,9 +369,11 @@ Tasks:
 - [ ] Template gallery
 
 ### 5.3 Testing
+
 **Location:** `apps/web/__tests__/`
 
 Tasks:
+
 - [ ] Unit tests for utilities (Vitest)
 - [ ] Integration tests for API routes
 - [ ] E2E tests for critical flows (Playwright)
@@ -337,6 +386,7 @@ Tasks:
 ### 5.4 Documentation
 
 Tasks:
+
 - [ ] README with setup instructions
 - [ ] Self-hosting guide
 - [ ] Docker deployment guide
@@ -477,6 +527,7 @@ pnpm add uploadthing @uploadthing/react
 ```
 
 ### Already Installed
+
 - Stripe (`stripe`, `@stripe/stripe-js`)
 - Recharts (charts)
 - Tiptap (rich text)
@@ -499,13 +550,13 @@ pnpm add uploadthing @uploadthing/react
 
 ## Estimated Effort
 
-| Sprint | Features | Estimated Effort |
-|--------|----------|-----------------|
-| Sprint 1 | Client Portal | Medium |
-| Sprint 2 | Invoices Core | Medium-High |
-| Sprint 3 | Payments | Medium |
-| Sprint 4 | Supporting Features | Medium |
-| Sprint 5 | Polish & Launch | Medium |
+| Sprint   | Features            | Estimated Effort |
+| -------- | ------------------- | ---------------- |
+| Sprint 1 | Client Portal       | Medium           |
+| Sprint 2 | Invoices Core       | Medium-High      |
+| Sprint 3 | Payments            | Medium           |
+| Sprint 4 | Supporting Features | Medium           |
+| Sprint 5 | Polish & Launch     | Medium           |
 
 ---
 
@@ -518,4 +569,4 @@ pnpm add uploadthing @uploadthing/react
 
 ---
 
-*This plan should be updated as features are completed.*
+_This plan should be updated as features are completed._

@@ -16,12 +16,17 @@ const businessSchema = z.object({
   businessName: z.string().min(1, 'Business name is required'),
   email: z.email('Valid email is required'),
   phone: z.string().optional(),
-  website: z.string().transform((val) => {
-    if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
-      return `https://${val}`;
-    }
-    return val;
-  }).pipe(z.url('Please enter a valid URL')).optional().or(z.literal('')),
+  website: z
+    .string()
+    .transform((val) => {
+      if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+        return `https://${val}`;
+      }
+      return val;
+    })
+    .pipe(z.url('Please enter a valid URL'))
+    .optional()
+    .or(z.literal('')),
   street: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -77,12 +82,12 @@ export function OnboardingBusinessStep({ onNext, initialComplete }: OnboardingBu
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="text-center mb-6">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
-          <Building2 className="h-6 w-6 text-primary" />
+      <div className="mb-6 text-center">
+        <div className="bg-primary/10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full">
+          <Building2 className="text-primary h-6 w-6" />
         </div>
         <h3 className="text-lg font-semibold">Tell us about your business</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           This information will appear on your quotes and invoices
         </p>
       </div>
@@ -90,13 +95,9 @@ export function OnboardingBusinessStep({ onNext, initialComplete }: OnboardingBu
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="businessName">Business Name *</Label>
-          <Input
-            id="businessName"
-            {...register('businessName')}
-            placeholder="Your Company Name"
-          />
+          <Input id="businessName" {...register('businessName')} placeholder="Your Company Name" />
           {errors.businessName && (
-            <p className="text-sm text-destructive">{errors.businessName.message}</p>
+            <p className="text-destructive text-sm">{errors.businessName.message}</p>
           )}
         </div>
 
@@ -108,40 +109,23 @@ export function OnboardingBusinessStep({ onNext, initialComplete }: OnboardingBu
             {...register('email')}
             placeholder="hello@yourcompany.com"
           />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="phone">Phone Number</Label>
-          <Input
-            id="phone"
-            {...register('phone')}
-            placeholder="+1 (555) 123-4567"
-          />
+          <Input id="phone" {...register('phone')} placeholder="+1 (555) 123-4567" />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="website">Website</Label>
-          <Input
-            id="website"
-            {...register('website')}
-            placeholder="https://yourcompany.com"
-          />
-          {errors.website && (
-            <p className="text-sm text-destructive">{errors.website.message}</p>
-          )}
+          <Input id="website" {...register('website')} placeholder="https://yourcompany.com" />
+          {errors.website && <p className="text-destructive text-sm">{errors.website.message}</p>}
         </div>
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="street">Street Address</Label>
-          <Textarea
-            id="street"
-            {...register('street')}
-            placeholder="123 Main Street"
-            rows={2}
-          />
+          <Textarea id="street" {...register('street')} placeholder="123 Main Street" rows={2} />
         </div>
 
         <div className="space-y-2">
@@ -165,7 +149,7 @@ export function OnboardingBusinessStep({ onNext, initialComplete }: OnboardingBu
         </div>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       <div className="flex justify-end pt-4">
         <Button type="submit" disabled={isPending}>

@@ -13,13 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ContractVariable } from '@/lib/contracts/types';
 
 interface VariableManagerProps {
@@ -89,13 +83,13 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
       <CardHeader>
         <CardTitle>Variables</CardTitle>
         <CardDescription>
-          Define variables that can be customized when creating contracts from this
-          template. Use {'{{variableKey}}'} syntax in your content.
+          Define variables that can be customized when creating contracts from this template. Use{' '}
+          {'{{variableKey}}'} syntax in your content.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {variables.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-muted-foreground py-4 text-center text-sm">
             No variables defined yet. Add a variable to make your template dynamic.
           </p>
         ) : (
@@ -104,12 +98,12 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
             {variables.map((variable, index) => (
               <div
                 key={getStableId(index)}
-                className="flex items-start gap-2 p-3 border rounded-lg bg-muted/30"
+                className="bg-muted/30 flex items-start gap-2 rounded-lg border p-3"
               >
-                <div className="cursor-move text-muted-foreground pt-2">
+                <div className="text-muted-foreground cursor-move pt-2">
                   <GripVertical className="h-4 w-4" />
                 </div>
-                <div className="flex-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1">
                     <Label className="text-xs">Label</Label>
                     <Input
@@ -128,9 +122,7 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
                     <Label className="text-xs">Key</Label>
                     <Input
                       value={variable.key}
-                      onChange={(e) =>
-                        updateVariable(index, { key: e.target.value })
-                      }
+                      onChange={(e) => updateVariable(index, { key: e.target.value })}
                       placeholder="variable_key"
                       className="font-mono text-sm"
                     />
@@ -159,9 +151,7 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
                     <Label className="text-xs">Default Value</Label>
                     <Input
                       value={variable.defaultValue || ''}
-                      onChange={(e) =>
-                        updateVariable(index, { defaultValue: e.target.value })
-                      }
+                      onChange={(e) => updateVariable(index, { defaultValue: e.target.value })}
                       placeholder="Default value"
                     />
                   </div>
@@ -170,9 +160,7 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
                   <div className="flex items-center gap-1">
                     <Switch
                       checked={variable.required || false}
-                      onCheckedChange={(checked) =>
-                        updateVariable(index, { required: checked })
-                      }
+                      onCheckedChange={(checked) => updateVariable(index, { required: checked })}
                     />
                     <Label className="text-xs">Required</Label>
                   </div>
@@ -180,7 +168,7 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive h-8 w-8"
                     onClick={() => removeVariable(index)}
                   >
                     <Trash2 className="h-4 w-4" />

@@ -3,7 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
   const mockPrisma: Record<string, any> = {
     workspace: { findUnique: vi.fn() },
-    invoice: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
+    invoice: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
+    },
     businessProfile: { findUnique: vi.fn() },
     invoiceLineItem: { deleteMany: vi.fn() },
     invoiceEvent: { create: vi.fn() },
@@ -22,13 +28,32 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@/lib/services/email', () => ({ sendInvoiceSentEmail: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/notifications/actions', () => ({ createNotification: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/utils', () => ({ formatCurrency: vi.fn((v: number) => `$${v.toFixed(2)}`), toNumber: (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0), getBaseUrl: () => 'http://localhost:3000' }));
-vi.mock('@/lib/routes', () => ({ ROUTES: { quotes: '/quotes', invoices: '/invoices', quoteDetail: (id: string) => `/quotes/${id}`, invoiceDetail: (id: string) => `/invoices/${id}` } }));
+vi.mock('@/lib/services/email', () => ({
+  sendInvoiceSentEmail: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/lib/notifications/actions', () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/lib/utils', () => ({
+  formatCurrency: vi.fn((v: number) => `$${v.toFixed(2)}`),
+  toNumber: (v: unknown) => (v === null || v === undefined ? 0 : Number(v) || 0),
+  getBaseUrl: () => 'http://localhost:3000',
+}));
+vi.mock('@/lib/routes', () => ({
+  ROUTES: {
+    quotes: '/quotes',
+    invoices: '/invoices',
+    quoteDetail: (id: string) => `/quotes/${id}`,
+    invoiceDetail: (id: string) => `/invoices/${id}`,
+  },
+}));
 vi.mock('@/lib/events/emitter', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('@/lib/workspace/get-current-workspace', () => ({ getCurrentUserWorkspace: mockGetCurrentUserWorkspace }));
-vi.mock('@/lib/invoices/internal', () => ({ generateInvoiceNumber: vi.fn().mockResolvedValue('INV-0001') }));
+vi.mock('@/lib/workspace/get-current-workspace', () => ({
+  getCurrentUserWorkspace: mockGetCurrentUserWorkspace,
+}));
+vi.mock('@/lib/invoices/internal', () => ({
+  generateInvoiceNumber: vi.fn().mockResolvedValue('INV-0001'),
+}));
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
@@ -82,9 +107,7 @@ describe('Invoice Actions', () => {
         clientId: 'client-1',
         title: 'Monthly Services',
         dueDate: '2024-02-15',
-        lineItems: [
-          { name: 'Service A', quantity: 2, rate: 100 },
-        ],
+        lineItems: [{ name: 'Service A', quantity: 2, rate: 100 }],
       });
 
       expect(result.success).toBe(true);
@@ -166,7 +189,16 @@ describe('Invoice Actions', () => {
         notes: 'notes',
         terms: 'terms',
         lineItems: [
-          { name: 'Dev', description: null, quantity: 10, rate: 100, amount: 1000, taxRate: 10, taxAmount: 100, sortOrder: 0 },
+          {
+            name: 'Dev',
+            description: null,
+            quantity: 10,
+            rate: 100,
+            amount: 1000,
+            taxRate: 10,
+            taxAmount: 100,
+            sortOrder: 0,
+          },
         ],
         client: { id: 'client-1', name: 'Acme' },
       });
@@ -226,9 +258,17 @@ describe('Invoice Actions', () => {
       const now = new Date();
       mockPrisma.invoice.findMany.mockResolvedValue([
         {
-          id: 'inv-1', invoiceNumber: 'INV-0001', title: 'Test', status: 'draft',
-          total: 100, amountPaid: 0, amountDue: 100, issueDate: now, dueDate: now,
-          client: { id: 'c1', name: 'Acme', email: 'a@b.com', company: null }, createdAt: now,
+          id: 'inv-1',
+          invoiceNumber: 'INV-0001',
+          title: 'Test',
+          status: 'draft',
+          total: 100,
+          amountPaid: 0,
+          amountDue: 100,
+          issueDate: now,
+          dueDate: now,
+          client: { id: 'c1', name: 'Acme', email: 'a@b.com', company: null },
+          createdAt: now,
         },
       ]);
 
@@ -251,9 +291,17 @@ describe('Invoice Actions', () => {
       const pastDate = new Date('2020-01-01');
       mockPrisma.invoice.findMany.mockResolvedValue([
         {
-          id: 'inv-1', invoiceNumber: 'INV-0001', title: 'Test', status: 'sent',
-          total: 100, amountPaid: 0, amountDue: 100, issueDate: new Date(), dueDate: pastDate,
-          client: { id: 'c1', name: 'Acme', email: null, company: null }, createdAt: new Date(),
+          id: 'inv-1',
+          invoiceNumber: 'INV-0001',
+          title: 'Test',
+          status: 'sent',
+          total: 100,
+          amountPaid: 0,
+          amountDue: 100,
+          issueDate: new Date(),
+          dueDate: pastDate,
+          client: { id: 'c1', name: 'Acme', email: null, company: null },
+          createdAt: new Date(),
         },
       ]);
 

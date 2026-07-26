@@ -19,14 +19,16 @@ interface ChangePasswordInput {
 
 export async function changePassword(input: ChangePasswordInput): Promise<ActionResult> {
   try {
-
     const session = await auth();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
     // Rate limit: 5 attempts per 15 minutes per user
-    const rl = await checkRateLimit(`change-password:${session.user.id}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+    const rl = await checkRateLimit(`change-password:${session.user.id}`, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
     if (rl.limited) {
       return { success: false, error: 'Too many attempts. Please try again in 15 minutes.' };
     }
@@ -65,7 +67,8 @@ export async function changePassword(input: ChangePasswordInput): Promise<Action
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/.test(input.newPassword)) {
       return {
         success: false,
-        error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        error:
+          'Password must contain at least one uppercase letter, one lowercase letter, and one number',
       };
     }
 
@@ -103,7 +106,6 @@ interface UpdateProfileInput {
 
 export async function updateProfile(input: UpdateProfileInput): Promise<ActionResult> {
   try {
-
     const session = await auth();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
