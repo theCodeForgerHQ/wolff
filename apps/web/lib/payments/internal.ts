@@ -411,9 +411,12 @@ export async function processPaymentWebhook(
       return { success: false };
     }
 
-    // Prevent duplicate webhook processing - skip if already completed or failed
-    if (payment.status === 'completed' || payment.status === 'failed') {
-      logger.info({ paymentIntentId }, 'Payment already processed, skipping duplicate webhook');
+    // A credited payment is final: a repeated success must not credit the
+    // invoice again, and a decline event that arrives late must not undo it.
+    // `failed` is not final. Stripe reuses the PaymentIntent when the client
+    // retries with another card, so a success can follow a decline.
+    if (payment.status === 'completed' || payment.status === 'refunded') {
+      logger.info({ paymentIntentId }, 'Payment already settled, skipping webhook');
       return { success: true };
     }
 
