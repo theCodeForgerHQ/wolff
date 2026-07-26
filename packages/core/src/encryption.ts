@@ -4,7 +4,7 @@
  * Falls back to plaintext if ENCRYPTION_KEY is not set (dev mode).
  */
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import { logger } from '@/lib/logger';
+import { logger } from './logger';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // GCM standard

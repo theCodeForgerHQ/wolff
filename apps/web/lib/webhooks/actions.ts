@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type { DomainEventType } from '@/lib/events/types';
-import { encrypt } from '@/lib/encryption';
+import { encrypt } from '@wolff/core/encryption';
 
 /** All valid event types for webhook subscriptions */
 const VALID_EVENT_TYPES: DomainEventType[] = [

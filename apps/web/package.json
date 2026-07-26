@@ -24,6 +24,7 @@
     "@dnd-kit/sortable": "^9.0.0",
     "@dnd-kit/utilities": "^3.2.0",
     "@hookform/resolvers": "^5.9.1",
+    "@wolff/core": "workspace:*",
     "@wolff/database": "workspace:*",
     "@wolff/types": "workspace:*",
     "@wolff/ui": "workspace:*",

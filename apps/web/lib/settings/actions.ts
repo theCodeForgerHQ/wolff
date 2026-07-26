@@ -29,7 +29,7 @@ import type {
 } from './types';
 import { ROUTES } from '@/lib/routes';
 import { toNumber, getBaseUrl } from '@/lib/utils';
-import { encrypt, decrypt } from '@/lib/encryption';
+import { encrypt, decrypt } from '@wolff/core/encryption';
 
 // ============================================
 // WORKSPACE ACTIONS

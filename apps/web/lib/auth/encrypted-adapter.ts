@@ -5,7 +5,7 @@
  */
 import type { Adapter, AdapterAccount } from 'next-auth/adapters';
 import { prisma, type PrismaClient } from '@wolff/database';
-import { encrypt, decrypt, isEncryptionEnabled } from '@/lib/encryption';
+import { encrypt, decrypt, isEncryptionEnabled } from '@wolff/core/encryption';
 import { WolffPrismaAdapter } from './prisma-adapter';
 
 function encryptTokens(account: AdapterAccount): AdapterAccount {

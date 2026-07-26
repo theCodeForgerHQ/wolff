@@ -3,7 +3,7 @@ import { prisma } from '@wolff/database';
 import { domainEvents } from '@/lib/events/emitter';
 import type { DomainEvent, DomainEventType } from '@/lib/events/types';
 import { logger } from '@/lib/logger';
-import { decrypt } from '@/lib/encryption';
+import { decrypt } from '@wolff/core/encryption';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS = [1000, 4000, 16000]; // Exponential backoff in ms

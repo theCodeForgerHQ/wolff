@@ -1,0 +1,22 @@
+{
+  "name": "@wolff/core",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./encryption": "./src/encryption.ts",
+    "./logger": "./src/logger.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.2"
+  }
+}
