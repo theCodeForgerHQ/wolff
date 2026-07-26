@@ -25,6 +25,7 @@ COPY packages/ui/package.json ./packages/ui/
 COPY packages/utils/package.json ./packages/utils/
 COPY packages/types/package.json ./packages/types/
 COPY packages/core/package.json ./packages/core/
+COPY packages/contracts/package.json ./packages/contracts/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -47,7 +48,8 @@ RUN mkdir -p node_modules/@wolff && \
     ln -sf ../../../packages/ui node_modules/@wolff/ui && \
     ln -sf ../../../packages/utils node_modules/@wolff/utils && \
     ln -sf ../../../packages/types node_modules/@wolff/types && \
-    ln -sf ../../../packages/core node_modules/@wolff/core
+    ln -sf ../../../packages/core node_modules/@wolff/core && \
+    ln -sf ../../../packages/contracts node_modules/@wolff/contracts
 
 # Generate Prisma client (Prisma 7 reads packages/database/prisma.config.ts)
 RUN cd packages/database && ../../node_modules/.bin/prisma generate
