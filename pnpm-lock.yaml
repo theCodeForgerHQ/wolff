@@ -392,6 +392,12 @@ importers:
 
   packages/core:
     dependencies:
+      '@wolff/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@wolff/database':
+        specifier: workspace:*
+        version: link:../database
       pino:
         specifier: ^10.3.1
         version: 10.3.1
