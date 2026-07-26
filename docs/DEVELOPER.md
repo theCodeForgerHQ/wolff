@@ -1424,8 +1424,7 @@ docker-compose up -d
 
 1. Check existing documentation in `/docs` and `/specs`
 2. Search GitHub Issues
-3. Review `CLAUDE.md` for AI-assisted development guidelines
-4. Check the `CONSTITUTION.md` for project principles
+3. Check the `CONSTITUTION.md` for project principles
 
 ---
 
