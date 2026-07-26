@@ -80,11 +80,11 @@ describe('Duplicate Payment Prevention', () => {
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('skips processing when payment already failed', async () => {
+  it('skips processing when payment was already refunded', async () => {
     mockPrisma.payment.findFirst.mockResolvedValue({
       id: 'pay-1',
       stripePaymentIntentId: 'pi_test_123',
-      status: 'failed',
+      status: 'refunded',
       amount: 100,
       invoiceId: 'inv-1',
       invoice: {
