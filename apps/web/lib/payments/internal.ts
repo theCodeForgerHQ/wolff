@@ -217,6 +217,7 @@ export async function createInvoicePaymentIntent(
     await prisma.payment.create({
       data: {
         invoiceId: invoice.id,
+        workspaceId: invoice.workspaceId,
         amount: amountToPay,
         currency,
         paymentMethod: 'card',

@@ -24,7 +24,8 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "backfill:api-key-scopes": "tsx scripts/backfill-api-key-scopes.ts"
+    "backfill:api-key-scopes": "tsx scripts/backfill-api-key-scopes.ts",
+    "backfill:workspace-ids": "tsx scripts/backfill-workspace-ids.ts"
   },
   "dependencies": {
     "@wolff/contracts": "workspace:*",

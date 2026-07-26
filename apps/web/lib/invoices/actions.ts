@@ -1127,6 +1127,7 @@ export async function recordPayment(
     const payment = await tx.payment.create({
       data: {
         invoiceId,
+        workspaceId: workspace.id,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
         status: 'completed',

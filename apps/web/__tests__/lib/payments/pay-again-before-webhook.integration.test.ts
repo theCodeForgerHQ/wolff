@@ -81,6 +81,7 @@ describe.skipIf(!url)('Pay clicked again before the webhook lands (Postgres)', (
         amountDue: 250,
         payments: {
           create: {
+            workspaceId,
             amount: 250,
             currency: 'usd',
             paymentMethod: 'card',

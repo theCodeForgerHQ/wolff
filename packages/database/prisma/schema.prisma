@@ -169,6 +169,8 @@ model Workspace {
   invoiceTemplates   InvoiceTemplate[]
   savedLineItems     SavedLineItem[]
   apiKeys            ApiKey[]
+  payments           Payment[]
+  webhookDeliveries  WebhookDelivery[]
 
   @@index([slug])
   @@index([ownerId])
@@ -611,6 +613,10 @@ model InvoiceEvent {
 model Payment {
   id                    String    @id @default(uuid())
   invoiceId             String    @map("invoice_id")
+  // Copied from the invoice so payments can be listed and guarded per
+  // workspace without a join. Nullable until the release that stops the
+  // previous one from writing rows without it.
+  workspaceId           String?   @map("workspace_id")
   amount                Decimal   @db.Decimal(12, 2)
   currency              String    @default("USD") @db.VarChar(3)
   paymentMethod         String    @map("payment_method") @db.VarChar(20)
@@ -630,9 +636,11 @@ model Payment {
 
   // HIGH #18: Restrict deletion — invoices with payments cannot be deleted
   invoice          Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   paymentSchedules PaymentSchedule[]
 
   @@index([invoiceId])
+  @@index([workspaceId, createdAt])
   @@index([status])
   @@index([stripePaymentIntentId])
   @@index([createdAt(sort: Desc)])
@@ -1107,20 +1115,24 @@ model WebhookEndpoint {
 }
 
 model WebhookDelivery {
-  id         String    @id @default(uuid())
-  endpointId String    @map("endpoint_id")
-  eventType  String    @map("event_type") @db.VarChar(50)
-  payload    Json
-  status     String    @default("pending") @db.VarChar(20)
-  statusCode Int?      @map("status_code")
-  response   String?   @db.Text
-  attempts   Int       @default(0)
-  nextRetry  DateTime? @map("next_retry")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id          String    @id @default(uuid())
+  endpointId  String    @map("endpoint_id")
+  // Copied from the endpoint; nullable for the same reason as on Payment.
+  workspaceId String?   @map("workspace_id")
+  eventType   String    @map("event_type") @db.VarChar(50)
+  payload     Json
+  status      String    @default("pending") @db.VarChar(20)
+  statusCode  Int?      @map("status_code")
+  response    String?   @db.Text
+  attempts    Int       @default(0)
+  nextRetry   DateTime? @map("next_retry")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  endpoint  WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  workspace Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([endpointId])
+  @@index([workspaceId, createdAt])
   @@index([status, nextRetry])
   @@map("webhook_deliveries")
 }

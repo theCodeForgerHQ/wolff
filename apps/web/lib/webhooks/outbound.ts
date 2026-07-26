@@ -19,6 +19,7 @@ function computeSignature(payload: string, secret: string): string {
  * Deliver a webhook event to a single endpoint.
  */
 async function deliverToEndpoint(
+  workspaceId: string,
   endpointId: string,
   endpointUrl: string,
   secret: string,
@@ -36,6 +37,7 @@ async function deliverToEndpoint(
   const delivery = await prisma.webhookDelivery.create({
     data: {
       endpointId,
+      workspaceId,
       eventType: event.type,
       payload: JSON.parse(payloadJson),
       status: 'pending',
@@ -162,7 +164,7 @@ async function handleDomainEvent(event: DomainEvent): Promise<void> {
   // Deliver in parallel, don't let one failure block others
   await Promise.allSettled(
     endpoints.map((endpoint) =>
-      deliverToEndpoint(endpoint.id, endpoint.url, decrypt(endpoint.secret), event)
+      deliverToEndpoint(workspaceId, endpoint.id, endpoint.url, decrypt(endpoint.secret), event)
     )
   );
 }
