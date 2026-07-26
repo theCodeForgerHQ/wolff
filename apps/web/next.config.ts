@@ -13,7 +13,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Bug #20: Enable standalone output for Docker production builds
   output: process.env.DOCKER_BUILD === '1' ? 'standalone' : undefined,
-  transpilePackages: ['@wolff/ui', '@wolff/utils', '@wolff/types', '@wolff/core'],
+  transpilePackages: [
+    '@wolff/ui',
+    '@wolff/utils',
+    '@wolff/types',
+    '@wolff/core',
+    '@wolff/contracts',
+  ],
   // Bug #23: Prevent access token leakage via referrer headers on portal pages
   async headers() {
     // Bug #5: Security headers for all routes (mirrors vercel.json for Docker/self-hosted deployments)

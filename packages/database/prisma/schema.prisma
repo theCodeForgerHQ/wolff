@@ -1027,20 +1027,34 @@ model SavedLineItem {
 // ============================================
 
 model ApiKey {
-  id          String    @id @default(uuid())
-  workspaceId String    @map("workspace_id")
-  name        String    @db.VarChar(100)
-  keyHash     String    @unique @map("key_hash")
-  keyPrefix   String    @map("key_prefix") @db.VarChar(12)
-  lastUsedAt  DateTime? @map("last_used_at")
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  revokedAt   DateTime? @map("revoked_at")
+  id              String     @id @default(uuid())
+  workspaceId     String     @map("workspace_id")
+  name            String     @db.VarChar(100)
+  keyHash         String     @unique @map("key_hash")
+  keyPrefix       String     @map("key_prefix") @db.VarChar(12)
+  // Secret keys act for the workspace from a server. Publishable keys are
+  // embedded in a browser, so they carry an origin allowlist and may only
+  // hold the two public scopes.
+  kind            ApiKeyKind @default(secret)
+  scopes          String[]   @default([])
+  allowedOrigins  String[]   @default([]) @map("allowed_origins")
+  rateLimitPerMin Int        @default(120) @map("rate_limit_per_min")
+  lastUsedAt      DateTime?  @map("last_used_at")
+  expiresAt       DateTime?  @map("expires_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  revokedAt       DateTime?  @map("revoked_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@map("api_keys")
+}
+
+enum ApiKeyKind {
+  secret
+  publishable
+
+  @@map("api_key_kind")
 }
 
 // ============================================

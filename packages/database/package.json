@@ -22,9 +22,12 @@
     "seed:e2e:cleanup": "tsx prisma/seed-e2e-production.ts --cleanup",
     "seed:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
     "lint": "eslint .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "backfill:api-key-scopes": "tsx scripts/backfill-api-key-scopes.ts"
   },
   "dependencies": {
+    "@wolff/contracts": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "bcryptjs": "^2.4.3",
@@ -34,6 +37,7 @@
     "@types/bcryptjs": "^2.4.6",
     "prisma": "7.10.0",
     "tsx": "^4.19.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.0.2"
   }
 }

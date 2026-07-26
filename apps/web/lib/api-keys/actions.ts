@@ -2,6 +2,7 @@
 
 import { randomBytes, createHash } from 'crypto';
 import { prisma } from '@wolff/database';
+import { LEGACY_KEY_SCOPES } from '@wolff/contracts';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 
@@ -47,6 +48,8 @@ export async function generateApiKey(data: {
       name: data.name.trim(),
       keyHash,
       keyPrefix,
+      // No scope picker yet: a new key can do what keys could always do.
+      scopes: [...LEGACY_KEY_SCOPES],
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
     },
   });
