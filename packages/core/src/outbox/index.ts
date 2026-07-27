@@ -1,5 +1,5 @@
 import { Prisma } from '@wolff/database';
-import type { Db, DbOrTx } from '../context';
+import type { Db } from '../context';
 
 /**
  * Transactional outbox. A business change and the event that
@@ -36,9 +36,19 @@ export interface RelayedOutboxEvent {
 const STALE_AFTER_MS = 10 * 60_000;
 const MAX_ERROR_LENGTH = 2_000;
 
+/** Any client or transaction client, guarded or not, that can insert an outbox row. */
+export interface OutboxWriter {
+  outboxEvent: {
+    create(args: {
+      data: Prisma.OutboxEventUncheckedCreateInput;
+      select: { id: true };
+    }): PromiseLike<{ id: string }>;
+  };
+}
+
 /** Call with the transaction client of the change the event belongs to. */
 export async function writeOutboxEvent(
-  tx: DbOrTx,
+  tx: OutboxWriter,
   input: OutboxEventInput
 ): Promise<{ id: string }> {
   return tx.outboxEvent.create({

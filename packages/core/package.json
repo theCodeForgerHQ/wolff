@@ -8,7 +8,8 @@
     "./context": "./src/context.ts",
     "./auth/api-keys": "./src/auth/api-keys.ts",
     "./brand": "./src/brand.ts",
-    "./outbox": "./src/outbox/index.ts"
+    "./outbox": "./src/outbox/index.ts",
+    "./payments": "./src/payments/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
