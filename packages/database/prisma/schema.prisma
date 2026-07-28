@@ -1194,16 +1194,21 @@ model InvoiceTemplate {
 // ============================================
 
 model WebhookEndpoint {
-  id          String   @id @default(uuid())
-  workspaceId String   @map("workspace_id")
-  name        String   @default("") @db.VarChar(200)
-  url         String   @db.VarChar(500)
+  id           String    @id @default(uuid())
+  workspaceId  String    @map("workspace_id")
+  name         String    @default("") @db.VarChar(200)
+  url          String    @db.VarChar(500)
   // AES-256-GCM ciphertext of the signing secret (about 120 characters).
-  secret      String   @db.Text
-  events      String[] @default([])
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  secret       String    @db.Text
+  events       String[]  @default([])
+  isActive     Boolean   @default(true) @map("is_active")
+  // The version of the payload format this endpoint receives.
+  apiVersion   String    @default("2026-10") @map("api_version") @db.VarChar(10)
+  // Deliveries in a row that used all their attempts. 20 disables the endpoint.
+  failureCount Int       @default(0) @map("failure_count")
+  disabledAt   DateTime? @map("disabled_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   deliveries WebhookDelivery[]
