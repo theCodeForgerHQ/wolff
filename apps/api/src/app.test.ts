@@ -52,7 +52,7 @@ describe('API shell', () => {
   });
 
   it('answers an unknown route with the error envelope', async () => {
-    const res = await request(app()).get('/v1/nope');
+    const res = await request(app()).get('/nope');
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({

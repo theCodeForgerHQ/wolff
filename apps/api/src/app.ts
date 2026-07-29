@@ -5,9 +5,13 @@ import { pinoHttp } from 'pino-http';
 import type { Db } from '@wolff/core/context';
 import { logger as defaultLogger, REDACT_PATHS, type Logger } from '@wolff/core/logger';
 import type { ApiConfig } from './config';
+import type { Store } from 'express-rate-limit';
+import { apiKeyRateLimit, requireApiKey } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
+import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
 import { internalRoutes } from './routes/internal';
+import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 
 export interface AppDeps {
   db: Db;
@@ -17,6 +21,8 @@ export interface AppDeps {
   report?: (error: unknown) => void;
   /** Where used service-token ids are remembered. Redis when instances share traffic. */
   replayCache?: ReplayCache;
+  /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
+  rateLimitStore?: Store;
   /** Adds routes before the 404 handler. Used by tests. */
   extend?: (router: Router) => void;
 }
@@ -70,9 +76,21 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache()));
 
+  // The public API. Every route acts in the workspace of the key it was
+  // called with; nothing below reads a workspace from the request itself.
+  const v1 = Router();
+  v1.use(requireApiKey(db), apiKeyRateLimit(deps.rateLimitStore), idempotency(db));
+  v1.use(
+    webhookEndpointRoutes(db, {
+      // http is tolerated outside production so a local receiver can be used.
+      requireHttps: config.NODE_ENV !== 'development',
+    })
+  );
+
   const router = Router();
   deps.extend?.(router);
   app.use(router);
+  app.use('/v1', v1);
 
   app.use(notFound);
   app.use(errorHandler(logger, deps.report));
