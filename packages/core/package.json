@@ -12,7 +12,9 @@
     "./payments": "./src/payments/index.ts",
     "./webhooks": "./src/webhooks/index.ts",
     "./errors": "./src/errors.ts",
-    "./pagination": "./src/pagination.ts"
+    "./pagination": "./src/pagination.ts",
+    "./invoices": "./src/invoices/index.ts",
+    "./email": "./src/email/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

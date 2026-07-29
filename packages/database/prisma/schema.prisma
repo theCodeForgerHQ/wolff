@@ -532,6 +532,10 @@ model Invoice {
   recurringAutoSend  Boolean   @default(false) @map("recurring_auto_send")
   nextRecurringDate  DateTime? @map("next_recurring_date") @db.Date
   parentInvoiceId    String?   @map("parent_invoice_id")
+  // The period a generated invoice covers ("2026-10", "2026-W41"). With the
+  // partial unique index on (parent_invoice_id, recurring_period_key) from the
+  // migration, a parent gets at most one child per period.
+  recurringPeriodKey String?   @map("recurring_period_key") @db.VarChar(10)
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
   deletedAt          DateTime? @map("deleted_at")

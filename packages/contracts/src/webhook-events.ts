@@ -7,6 +7,7 @@ export const WEBHOOK_EVENT_TYPES = [
   'invoice.created',
   'invoice.sent',
   'invoice.paid',
+  'invoice.overdue',
   'invoice.voided',
   'payment.received',
   'payment.refunded',
