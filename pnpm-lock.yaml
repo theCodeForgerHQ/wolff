@@ -473,6 +473,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.0
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
       testcontainers:
         specifier: 12.2.0
         version: 12.2.0
