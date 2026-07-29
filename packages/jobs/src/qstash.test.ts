@@ -73,6 +73,22 @@ describe('QStash signature verification', () => {
     expect(await verify(await build())).toBe(false);
   });
 
+  it('keeps using the configured keys when QSTASH_DEV is set in the environment', async () => {
+    // The SDK's dev mode swaps in the publicly known keys of its local dev
+    // server. An environment variable must not be able to switch that on.
+    process.env.QSTASH_DEV = 'true';
+    try {
+      const inDevEnv = createQStashVerifier({ currentSigningKey: CURRENT, nextSigningKey: NEXT });
+
+      expect(await inDevEnv({ signature: await sign(), body, url: URL })).toBe(true);
+      expect(
+        await inDevEnv({ signature: await sign({ key: 'someone-else' }), body, url: URL })
+      ).toBe(false);
+    } finally {
+      delete process.env.QSTASH_DEV;
+    }
+  });
+
   it('cannot be built without signing keys', () => {
     expect(() => createQStashVerifier({ currentSigningKey: '', nextSigningKey: NEXT })).toThrow();
     expect(() =>

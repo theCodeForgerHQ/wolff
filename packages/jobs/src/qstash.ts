@@ -58,7 +58,10 @@ export function createQStashVerifier(keys: {
   if (!keys.currentSigningKey || !keys.nextSigningKey) {
     throw new Error('QStash signing keys are required to accept pushed jobs');
   }
-  const receiver = new Receiver(keys);
+  // devMode is switched off explicitly. Left undefined, the SDK reads
+  // QSTASH_DEV from the environment and, when set, ignores these keys in
+  // favour of the public keys of its local dev server.
+  const receiver = new Receiver({ ...keys, devMode: false });
 
   return async ({ signature, body, url }) => {
     if (!signature) return false;
