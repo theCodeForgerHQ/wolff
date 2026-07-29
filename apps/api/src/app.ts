@@ -6,6 +6,8 @@ import type { Db } from '@wolff/core/context';
 import { logger as defaultLogger, REDACT_PATHS, type Logger } from '@wolff/core/logger';
 import type { ApiConfig } from './config';
 import { errorHandler, notFound } from './middleware/error';
+import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
+import { internalRoutes } from './routes/internal';
 
 export interface AppDeps {
   db: Db;
@@ -13,6 +15,8 @@ export interface AppDeps {
   logger?: Logger;
   /** Reports an unexpected error to the error tracker. */
   report?: (error: unknown) => void;
+  /** Where used service-token ids are remembered. Redis when instances share traffic. */
+  replayCache?: ReplayCache;
   /** Adds routes before the 404 handler. Used by tests. */
   extend?: (router: Router) => void;
 }
@@ -63,6 +67,8 @@ export function createApp(deps: AppDeps): Express {
     })
   );
   app.use(express.json({ limit: JSON_LIMIT }));
+
+  app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache()));
 
   const router = Router();
   deps.extend?.(router);
