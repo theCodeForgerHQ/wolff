@@ -5,7 +5,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./bullmq": "./src/bullmq.ts",
-    "./qstash": "./src/qstash.ts"
+    "./qstash": "./src/qstash.ts",
+    "./testing/redis": "./src/testing/redis.ts"
   },
   "scripts": {
     "lint": "eslint .",
