@@ -12,6 +12,7 @@ import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
 import { internalRoutes } from './routes/internal';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
+import { webhookRoutes } from './webhooks';
 
 export interface AppDeps {
   db: Db;
@@ -21,6 +22,8 @@ export interface AppDeps {
   report?: (error: unknown) => void;
   /** Where used service-token ids are remembered. Redis when instances share traffic. */
   replayCache?: ReplayCache;
+  /** Told about outbox events a request wrote, once it committed (push dispatch). */
+  onOutboxEvents?: (ids: string[]) => void;
   /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
   rateLimitStore?: Store;
   /** Adds routes before the 404 handler. Used by tests. */
@@ -64,6 +67,10 @@ export function createApp(deps: AppDeps): Express {
       res.status(503).json({ status: 'unavailable', checks: { database: 'down' } });
     }
   });
+
+  // Provider webhooks: mounted before the JSON parser because their
+  // signatures cover the raw body, and before CORS because no browser calls them.
+  app.use('/webhooks', webhookRoutes({ db, config, onOutboxEvents: deps.onOutboxEvents }));
 
   // Private routes are called by the web app's origin only. No wildcard.
   app.use(

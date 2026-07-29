@@ -47,7 +47,7 @@ export type RecordOutcome =
 export async function recordProviderEvent(
   db: Db,
   input: RecordProviderEventInput
-): Promise<{ outcome: RecordOutcome; id: string }> {
+): Promise<{ outcome: RecordOutcome; id: string; outboxEventId?: string }> {
   return db.$unscoped.$transaction(async (tx) => {
     const inserted = await tx.providerWebhookEvent.createMany({
       data: {
@@ -77,8 +77,8 @@ export async function recordProviderEvent(
       });
 
     if (inserted.count === 1) {
-      if (input.outbox) await queue();
-      return { outcome: 'recorded' as const, id: row.id };
+      const queued = input.outbox ? await queue() : undefined;
+      return { outcome: 'recorded' as const, id: row.id, outboxEventId: queued?.id };
     }
     if (row.status === 'processed') return { outcome: 'duplicate' as const, id: row.id };
     if (!input.outbox) return { outcome: 'redriven' as const, id: row.id };
@@ -91,8 +91,8 @@ export async function recordProviderEvent(
       },
     });
     if (waiting > 0) return { outcome: 'duplicate' as const, id: row.id };
-    await queue();
-    return { outcome: 'redriven' as const, id: row.id };
+    const queued = await queue();
+    return { outcome: 'redriven' as const, id: row.id, outboxEventId: queued.id };
   });
 }
 
