@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
 import {
+  OutboxRelayAborted,
   completeOutboxEvent,
   failOutboxEvent,
   relayOutboxBatch,
@@ -91,6 +92,62 @@ describe.skipIf(!url)('outbox (Postgres)', () => {
     const [row] = await rows();
     expect(row).toMatchObject({ status: 'pending', attempts: 1, enqueuedAt: null });
     expect(row!.lastError).toContain('ECONNREFUSED');
+  });
+
+  it('waits longer before each new attempt at an event that keeps failing', async () => {
+    newType();
+    await write('a');
+    const now = new Date(Date.now() + 60_000);
+    const fail = async () => {
+      throw new Error('no handler');
+    };
+
+    await relayOutboxBatch(db, fail, { types: [type], now });
+    const [first] = await rows();
+    // Not due again yet, so the next pass leaves it alone.
+    const skipped = await relayOutboxBatch(db, fail, { types: [type], now });
+    await relayOutboxBatch(db, fail, { types: [type], now: first!.availableAt });
+    const [second] = await rows();
+
+    expect(skipped).toEqual({ enqueued: 0, failed: 0 });
+    expect(first!.availableAt.getTime() - now.getTime()).toBe(2_000);
+    expect(second!.attempts).toBe(2);
+    expect(second!.availableAt.getTime() - first!.availableAt.getTime()).toBe(4_000);
+  });
+
+  it('stops the pass at an error that says the queue is unreachable', async () => {
+    newType();
+    for (const id of ['a', 'b', 'c']) await write(id);
+    const tried: string[] = [];
+
+    const result = await relayOutboxBatch(
+      db,
+      async (event) => {
+        tried.push(event.aggregateId);
+        throw new OutboxRelayAborted(new Error('Redis did not answer'));
+      },
+      { types: [type] }
+    );
+
+    // One attempt, not three timeouts in a row inside one transaction.
+    expect(tried).toHaveLength(1);
+    expect(result).toEqual({ enqueued: 0, failed: 1 });
+    const after = await rows();
+    expect(after.map((r) => r.attempts).sort()).toEqual([0, 0, 1]);
+    expect(after.find((r) => r.attempts === 1)!.lastError).toBe('Redis did not answer');
+  });
+
+  it('relays only the named events when asked to', async () => {
+    newType();
+    const wanted = await write('wanted');
+    await write('other');
+    const enqueued: string[] = [];
+
+    await relayOutboxBatch(db, async (event) => void enqueued.push(event.aggregateId), {
+      ids: [wanted.id],
+    });
+
+    expect(enqueued).toEqual(['wanted']);
   });
 
   it('does not hand the same event to two relays running at once', async () => {

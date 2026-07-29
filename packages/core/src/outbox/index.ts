@@ -70,11 +70,33 @@ export interface RelayOptions {
   now?: Date;
   /** Restrict the batch to these event types. */
   types?: string[];
+  /** Restrict the batch to these events, e.g. the ones a request just wrote. */
+  ids?: string[];
+}
+
+/**
+ * Thrown by the enqueue callback when the queue itself cannot be reached.
+ * The relay records it on the event and ends the pass: trying the rest of
+ * the batch would only repeat the same timeout inside one transaction.
+ */
+export class OutboxRelayAborted extends Error {
+  constructor(readonly cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'OutboxRelayAborted';
+  }
+}
+
+const MAX_RETRY_DELAY_MS = 5 * 60_000;
+
+/** 2 s, 4 s, 8 s … capped at 5 minutes. */
+function retryDelayMs(attemptsAfterThisOne: number): number {
+  return Math.min(1_000 * 2 ** attemptsAfterThisOne, MAX_RETRY_DELAY_MS);
 }
 
 /**
  * Hands due `pending` events to `enqueue` and marks those that were accepted
- * `enqueued`. Rows are locked with SKIP LOCKED for the length of the batch,
+ * `enqueued`. A failed one stays pending and is retried after a growing delay.
+ * Rows are locked with SKIP LOCKED for the length of the batch,
  * so relays running side by side take different rows. If the process dies
  * after enqueueing and before the commit, the rows stay `pending` and are
  * enqueued again; the queue dedupes on the job id `outbox:<id>`.
@@ -89,13 +111,16 @@ export async function relayOutboxBatch(
   const typeFilter = options.types?.length
     ? Prisma.sql`AND type IN (${Prisma.join(options.types)})`
     : Prisma.empty;
+  const idFilter = options.ids?.length
+    ? Prisma.sql`AND id IN (${Prisma.join(options.ids)})`
+    : Prisma.empty;
 
   return db.$unscoped.$transaction(async (tx) => {
     const batch = await tx.$queryRaw<RelayedOutboxEvent[]>`
       SELECT id, workspace_id AS "workspaceId", type, aggregate_type AS "aggregateType",
              aggregate_id AS "aggregateId", payload, trace_id AS "traceId", attempts
       FROM outbox_events
-      WHERE status = 'pending' AND available_at <= ${now} ${typeFilter}
+      WHERE status = 'pending' AND available_at <= ${now} ${typeFilter} ${idFilter}
       ORDER BY available_at, created_at
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED`;
@@ -111,11 +136,18 @@ export async function relayOutboxBatch(
         });
         enqueued += 1;
       } catch (error) {
+        // Stays pending, and is not looked at again until the delay has passed,
+        // so an event that cannot be enqueued does not spin every pass.
         await tx.outboxEvent.update({
           where: { id: event.id },
-          data: { attempts: { increment: 1 }, lastError: describe(error) },
+          data: {
+            attempts: { increment: 1 },
+            lastError: describe(error),
+            availableAt: new Date(now.getTime() + retryDelayMs(event.attempts + 1)),
+          },
         });
         failed += 1;
+        if (error instanceof OutboxRelayAborted) break;
       }
     }
     return { enqueued, failed };
