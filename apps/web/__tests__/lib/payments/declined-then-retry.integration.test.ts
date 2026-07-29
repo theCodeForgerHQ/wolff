@@ -64,6 +64,7 @@ describe.skipIf(!url)(
           amountDue: 250,
           payments: {
             create: {
+              workspaceId,
               amount: 250,
               currency: 'usd',
               paymentMethod: 'card',

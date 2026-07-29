@@ -1,13 +1,11 @@
 'use server';
 
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import { prisma } from '@wolff/database';
+import { LEGACY_KEY_SCOPES } from '@wolff/contracts';
+import { LEGACY_SECRET_PREFIX, hashApiKey } from '@wolff/core/auth/api-keys';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
-
-function hashKey(key: string): string {
-  return createHash('sha256').update(key).digest('hex');
-}
 
 export interface ApiKeyListItem {
   id: string;
@@ -37,8 +35,9 @@ export async function generateApiKey(data: {
 
   // Generate a secure random key with prefix
   const rawBytes = randomBytes(32);
-  const rawKey = `qc_sk_${rawBytes.toString('hex')}`;
-  const keyHash = hashKey(rawKey);
+  // Keys keep the original prefix until the product rename.
+  const rawKey = `${LEGACY_SECRET_PREFIX}${rawBytes.toString('hex')}`;
+  const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.slice(0, 10);
 
   await prisma.apiKey.create({
@@ -47,6 +46,8 @@ export async function generateApiKey(data: {
       name: data.name.trim(),
       keyHash,
       keyPrefix,
+      // No scope picker yet: a new key can do what keys could always do.
+      scopes: [...LEGACY_KEY_SCOPES],
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
     },
   });

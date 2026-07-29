@@ -1,15 +1,11 @@
-import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@wolff/database';
+import { authenticateApiKey } from '@wolff/core/auth/api-keys';
+import { coreDb } from '@/lib/core-db';
 import { checkRateLimit, getRateLimitHeaders, defaultRateLimitOptions } from '@/lib/rate-limit';
 
 export interface ApiContext {
   workspaceId: string;
   apiKeyId: string;
-}
-
-function hashKey(key: string): string {
-  return createHash('sha256').update(key).digest('hex');
 }
 
 /**
@@ -43,40 +39,17 @@ export async function authenticateApiRequest(
     };
   }
 
-  const rawKey = authHeader.slice(7);
-  if (!rawKey || !rawKey.startsWith('qc_sk_')) {
-    return {
-      error: NextResponse.json({ error: 'Invalid API key format' }, { status: 401 }),
-    };
+  const result = await authenticateApiKey(coreDb, authHeader.slice(7));
+  if (!result.ok || result.key.kind !== 'secret') {
+    const message =
+      !result.ok && result.reason === 'malformed'
+        ? 'Invalid API key format'
+        : !result.ok && result.reason === 'expired'
+          ? 'API key has expired'
+          : 'Invalid or revoked API key';
+    return { error: NextResponse.json({ error: message }, { status: 401 }) };
   }
-
-  // Look up the key by hash
-  const keyHash = hashKey(rawKey);
-  const apiKey = await prisma.apiKey.findUnique({
-    where: { keyHash },
-    select: { id: true, workspaceId: true, revokedAt: true, expiresAt: true },
-  });
-
-  if (!apiKey || apiKey.revokedAt) {
-    return {
-      error: NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 }),
-    };
-  }
-
-  // Check expiry with 5-second grace period for clock skew (key must be expired by 5s before rejection)
-  if (apiKey.expiresAt && apiKey.expiresAt.getTime() + 5000 < Date.now()) {
-    return {
-      error: NextResponse.json({ error: 'API key has expired' }, { status: 401 }),
-    };
-  }
-
-  // Update lastUsedAt (fire and forget — don't block the request)
-  prisma.apiKey
-    .update({
-      where: { id: apiKey.id },
-      data: { lastUsedAt: new Date() },
-    })
-    .catch(() => {});
+  const apiKey = result.key;
 
   return {
     context: {

@@ -4,7 +4,17 @@
   "private": true,
   "exports": {
     "./encryption": "./src/encryption.ts",
-    "./logger": "./src/logger.ts"
+    "./logger": "./src/logger.ts",
+    "./context": "./src/context.ts",
+    "./auth/api-keys": "./src/auth/api-keys.ts",
+    "./brand": "./src/brand.ts",
+    "./outbox": "./src/outbox/index.ts",
+    "./payments": "./src/payments/index.ts",
+    "./webhooks": "./src/webhooks/index.ts",
+    "./errors": "./src/errors.ts",
+    "./pagination": "./src/pagination.ts",
+    "./invoices": "./src/invoices/index.ts",
+    "./email": "./src/email/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -12,6 +22,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@wolff/contracts": "workspace:*",
+    "@wolff/database": "workspace:*",
     "pino": "^10.3.1"
   },
   "devDependencies": {

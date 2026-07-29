@@ -1015,9 +1015,7 @@ export async function getTopClientsByRevenue(
 }
 
 // Get client lifetime values
-export async function getClientLTVData(
-  limit: number = 5
-): Promise<{
+export async function getClientLTVData(limit: number = 5): Promise<{
   clients: {
     id: string;
     name: string;
