@@ -26,6 +26,7 @@ COPY packages/utils/package.json ./packages/utils/
 COPY packages/types/package.json ./packages/types/
 COPY packages/core/package.json ./packages/core/
 COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/jobs/package.json ./packages/jobs/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile

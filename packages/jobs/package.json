@@ -1,0 +1,24 @@
+{
+  "name": "@wolff/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wolff/contracts": "workspace:*",
+    "@wolff/core": "workspace:*",
+    "@wolff/database": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.2"
+  }
+}

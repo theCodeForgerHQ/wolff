@@ -1,0 +1,207 @@
+import { createHash } from 'node:crypto';
+import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
+import {
+  findDueRecurringInvoices,
+  generateRecurringInvoice,
+  markOverdueInvoices,
+  scanInvoiceReminders,
+} from '@wolff/core/invoices';
+import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
+import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
+import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
+import type { JobContext, JobType, Processor } from '../types';
+
+/**
+ * One processor per job type. Each is idempotent: it may run again after a
+ * crash, a retry or a duplicate delivery, and the second run changes nothing.
+ */
+const reconcilePayment: Processor<'payments.reconcile'> = async (ctx, { eventRowId }) => {
+  await processProviderEvent(ctx.db, eventRowId);
+};
+
+const fanOutWebhooks: Processor<'webhooks.fanout'> = async (ctx, { outboxEventId }) => {
+  // The outbox relay's own rows: read without a workspace, then act inside it.
+  const event = await ctx.db.$unscoped.outboxEvent.findUnique({ where: { id: outboxEventId } });
+  if (!event?.workspaceId) return;
+  await fanOutDomainEvent(ctx.db, {
+    id: event.id,
+    workspaceId: event.workspaceId,
+    type: event.type,
+    payload: event.payload,
+    createdAt: event.createdAt,
+  });
+};
+
+const deliver: Processor<'webhooks.deliver'> = async (ctx, job) => {
+  await deliverWebhook(ctx.db, job, {
+    transport: ctx.webhooks,
+    requireHttps: ctx.requireHttpsWebhooks,
+    now: ctx.now(),
+  });
+};
+
+const sendEmail: Processor<'email.send'> = async (ctx, { scheduledEmailId, workspaceId }) => {
+  const email = await ctx.db.scheduledEmail.findFirst({
+    where: { id: scheduledEmailId, workspaceId },
+  });
+  if (!email || email.status !== 'pending') return;
+
+  try {
+    await ctx.email.send({
+      to: email.recipientEmail,
+      subject: email.subject,
+      html: email.body,
+      idempotencyKey: `email:${email.id}`,
+    });
+  } catch (error) {
+    await ctx.db.scheduledEmail.updateMany({
+      where: { id: email.id, workspaceId },
+      data: {
+        retryCount: { increment: 1 },
+        errorMessage: (error instanceof Error ? error.message : String(error)).slice(0, 2_000),
+      },
+    });
+    throw error;
+  }
+  await ctx.db.scheduledEmail.updateMany({
+    where: { id: email.id, workspaceId, status: 'pending' },
+    data: { status: 'sent', sentAt: ctx.now(), errorMessage: null },
+  });
+};
+
+/** The same id for the same payment, so a repeated job stores one email. */
+function receiptId(paymentId: string): string {
+  const hex = createHash('sha256').update(`receipt:${paymentId}`).digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+const sendPaymentReceipt: Processor<'email.payment_received'> = async (ctx, job) => {
+  const { paymentId, workspaceId } = job;
+  const payment = await ctx.db.payment.findFirst({
+    where: { id: paymentId, workspaceId },
+    include: {
+      invoice: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          currency: true,
+          client: { select: { name: true, email: true } },
+          workspace: {
+            select: { name: true, businessProfile: { select: { businessName: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!payment || !payment.invoice.client.email) return;
+
+  const { invoice } = payment;
+  const rendered = renderPaymentReceived({
+    clientName: invoice.client.name,
+    invoiceNumber: invoice.invoiceNumber,
+    businessName: invoice.workspace.businessProfile?.businessName || invoice.workspace.name,
+    amount: formatMoney(Number(payment.amount), invoice.currency),
+    receiptUrl: payment.stripeReceiptUrl,
+  });
+  const id = receiptId(payment.id);
+  await ctx.db.scheduledEmail.createMany({
+    data: {
+      id,
+      workspaceId,
+      type: 'payment_received',
+      entityType: 'invoice',
+      entityId: invoice.id,
+      recipientEmail: invoice.client.email,
+      recipientName: invoice.client.name,
+      subject: rendered.subject,
+      body: rendered.html,
+      scheduledFor: ctx.now(),
+    },
+    skipDuplicates: true,
+  });
+  await sendEmail(ctx, { scheduledEmailId: id, workspaceId });
+};
+
+const generateRecurring: Processor<'recurring.generate'> = async (ctx) => {
+  for (const due of await findDueRecurringInvoices(ctx.db, ctx.now())) {
+    await ctx.dispatch({
+      type: 'recurring.invoice',
+      payload: due,
+      jobId: `rec:${due.parentInvoiceId}:${due.periodKey}`,
+    });
+  }
+};
+
+const generateRecurringOne: Processor<'recurring.invoice'> = async (ctx, job) => {
+  await generateRecurringInvoice(
+    { db: ctx.db, workspaceId: job.workspaceId },
+    job.parentInvoiceId,
+    job.periodKey,
+    ctx.now()
+  );
+};
+
+const scanReminders: Processor<'reminders.scan'> = async (ctx) => {
+  await scanInvoiceReminders(ctx.db, { now: ctx.now(), appUrl: ctx.appUrl });
+};
+
+const markOverdue: Processor<'invoices.mark_overdue'> = async (ctx) => {
+  await markOverdueInvoices(ctx.db, ctx.now());
+};
+
+/** Where a rendered document is stored. Same document state, same key. */
+export function pdfKey(input: {
+  workspaceId: string;
+  documentType: string;
+  documentId: string;
+  updatedAt: Date;
+}): string {
+  return `pdfs/${input.workspaceId}/${input.documentType}/${input.documentId}-${input.updatedAt.getTime()}.pdf`;
+}
+
+const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
+  const { documentType, documentId, workspaceId } = job;
+  const where = { id: documentId, workspaceId };
+  const select = { accessToken: true, updatedAt: true } as const;
+  const document =
+    documentType === 'invoice'
+      ? await ctx.db.invoice.findFirst({ where, select })
+      : await ctx.db.quote.findFirst({ where, select });
+  if (!document) return;
+
+  const base = ctx.appUrl.replace(/\/$/, '');
+  const path = documentType === 'invoice' ? 'i' : 'q';
+  const pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
+  const key = pdfKey({ workspaceId, documentType, documentId, updatedAt: document.updatedAt });
+  await ctx.storage.put(key, pdf, 'application/pdf');
+
+  if (documentType === 'invoice') {
+    // updateMany leaves updatedAt alone, so the key stays valid for this state.
+    await ctx.db.$unscoped.$executeRaw`
+      UPDATE invoices SET pdf_url = ${key} WHERE id = ${documentId} AND workspace_id = ${workspaceId}`;
+  } else {
+    await ctx.db.$unscoped.$executeRaw`
+      UPDATE quotes SET pdf_url = ${key} WHERE id = ${documentId} AND workspace_id = ${workspaceId}`;
+  }
+};
+
+const sweepOutbox: Processor<'outbox.sweep'> = async (ctx) => {
+  await requeueStaleOutboxEvents(ctx.db, { now: ctx.now() });
+  await redriveStaleProviderEvents(ctx.db, { now: ctx.now() });
+};
+
+export const processors: { [T in JobType]: Processor<T> } = {
+  'payments.reconcile': reconcilePayment,
+  'webhooks.fanout': fanOutWebhooks,
+  'webhooks.deliver': deliver,
+  'email.send': sendEmail,
+  'email.payment_received': sendPaymentReceipt,
+  'recurring.generate': generateRecurring,
+  'recurring.invoice': generateRecurringOne,
+  'reminders.scan': scanReminders,
+  'invoices.mark_overdue': markOverdue,
+  'pdf.render': renderPdf,
+  'outbox.sweep': sweepOutbox,
+};
+
+export type { JobContext };
