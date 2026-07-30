@@ -214,7 +214,17 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/webhook-endpoints (Postgres)', () => {
 
       const results = await Promise.all([post(a, key), post(a, key)]);
 
-      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      // Which one wins, and whether the other arrives while the first is
+      // still running (409) or after it finished (a replay), depends on
+      // timing. Either way exactly one endpoint exists and every 201 is the
+      // same response.
+      const statuses = results.map((r) => r.status).sort();
+      expect([
+        [201, 201],
+        [201, 409],
+      ]).toContainEqual(statuses);
+      const created = results.filter((r) => r.status === 201).map((r) => r.body.data.id);
+      expect(new Set(created).size).toBe(1);
       expect(await base.webhookEndpoint.count({ where: { workspaceId: a.id } })).toBe(1);
     });
 
