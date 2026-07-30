@@ -6,7 +6,8 @@
     ".": "./src/index.ts",
     "./bullmq": "./src/bullmq.ts",
     "./qstash": "./src/qstash.ts",
-    "./testing/redis": "./src/testing/redis.ts"
+    "./testing/redis": "./src/testing/redis.ts",
+    "./ports": "./src/ports/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -14,12 +15,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1143.0",
     "@wolff/contracts": "workspace:*",
     "@wolff/core": "workspace:*",
     "@wolff/database": "workspace:*",
+    "@sparticuz/chromium": "153.0.0",
     "@upstash/qstash": "2.12.0",
     "bullmq": "6.3.10",
     "ioredis": "6.0.0",
+    "puppeteer-core": "25.12.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
