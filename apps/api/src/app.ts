@@ -11,6 +11,7 @@ import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
 import { internalRoutes } from './routes/internal';
+import { jobRoutes, type JobRunDeps } from './routes/jobs';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
 
@@ -22,6 +23,8 @@ export interface AppDeps {
   report?: (error: unknown) => void;
   /** Where used service-token ids are remembered. Redis when instances share traffic. */
   replayCache?: ReplayCache;
+  /** Enables `/jobs/run/:type`. Absent: the route refuses every request. */
+  jobs?: JobRunDeps;
   /** Told about outbox events a request wrote, once it committed (push dispatch). */
   onOutboxEvents?: (ids: string[]) => void;
   /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
@@ -71,6 +74,8 @@ export function createApp(deps: AppDeps): Express {
   // Provider webhooks: mounted before the JSON parser because their
   // signatures cover the raw body, and before CORS because no browser calls them.
   app.use('/webhooks', webhookRoutes({ db, config, onOutboxEvents: deps.onOutboxEvents }));
+
+  app.use('/jobs', jobRoutes(config, deps.jobs));
 
   // Private routes are called by the web app's origin only. No wildcard.
   app.use(
