@@ -5,7 +5,9 @@
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi:gen": "tsx scripts/generate-openapi.ts",
+    "openapi:postman": "npx openapi-to-postmanv2 -s openapi.json -o ../../docs/api/postman_collection.json -p"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",

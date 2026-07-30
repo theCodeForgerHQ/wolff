@@ -1,3 +1,4 @@
+import { apiReference } from '@scalar/express-api-reference';
 import cors from 'cors';
 import express, { Router, type Express } from 'express';
 import helmet from 'helmet';
@@ -10,6 +11,7 @@ import { apiKeyRateLimit, requireApiKey } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
+import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
 import { jobRoutes, type JobRunDeps } from './routes/jobs';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
@@ -70,6 +72,18 @@ export function createApp(deps: AppDeps): Express {
       res.status(503).json({ status: 'unavailable', checks: { database: 'down' } });
     }
   });
+
+  // Public API documentation. No authentication required.
+  app.get('/openapi.json', (_req, res) => {
+    res.json(generateOpenAPIDocument({ serverUrl: config.PUBLIC_API_URL }));
+  });
+  app.use(
+    '/docs',
+    apiReference({
+      url: '/openapi.json',
+      pageTitle: 'Wolff API Reference',
+    })
+  );
 
   // Provider webhooks: mounted before the JSON parser because their
   // signatures cover the raw body, and before CORS because no browser calls them.
