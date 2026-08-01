@@ -92,10 +92,8 @@ SHADOW_DATABASE_URL=postgresql://wolff:wolff_dev_only@localhost:5432/wolff_shado
    and Node libraries, but trace context is not explicitly propagated in
    the BullMQ job data or QStash headers. The DoD is marked partial and
    deferred to Phase 6.
-2. **Redis in local compose**: `docker-compose.yml` does not yet include
-   Redis. Local development currently uses the no-op dispatcher warning;
-   add a Redis service to run the worker locally. Deferred to a small
-   follow-up before Phase 3.
+2. ~~Redis in local compose~~: Added in the closing commit; `docker compose
+up` now includes Redis on `localhost:6379`.
 3. **Full `/api/v1` parity port**: explicitly Phase 6b in the spec; the
    existing Next `/api/v1` routes remain in place.
 4. **services/ai**: not built in this phase; Phase 5.
