@@ -21,6 +21,15 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis for BullMQ queues and rate-limit counters
+  redis:
+    image: redis:7-alpine
+    container_name: wolff-redis
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:6379:6379'
+    command: redis-server --maxmemory-policy noeviction
+
   # Mailpit for email testing in development
   # NOTE: Dev-only — do NOT use in production. Insecure auth is enabled for local testing.
   mailpit:

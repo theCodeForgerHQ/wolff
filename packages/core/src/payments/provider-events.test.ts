@@ -147,7 +147,8 @@ describe.skipIf(!url)('provider webhook events (Postgres)', () => {
     const viaNew = await record(event, true);
 
     expect(viaOld.outcome).toBe('recorded');
-    expect(viaNew).toEqual({ outcome: 'redriven', id: viaOld.id });
+    expect(viaNew).toMatchObject({ outcome: 'redriven', id: viaOld.id });
+    expect(viaNew.outboxEventId).toBeTruthy();
 
     const outcomes = await Promise.all([
       processProviderEvent(db, viaOld.id),

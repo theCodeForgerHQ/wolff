@@ -303,7 +303,15 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
         where: { id: event.outboxId },
         data: { enqueuedAt: new Date(Date.now() - 11 * 60_000) },
       });
-      await dispatcher.dispatch({ type: 'outbox.sweep', payload: {}, jobId: `sweep:${n}` });
+      // The connection may still be reconnecting to the new Redis.
+      await until(
+        () =>
+          dispatcher.dispatch({ type: 'outbox.sweep', payload: {}, jobId: `sweep:${n}` }).then(
+            () => true,
+            () => false
+          ),
+        'the sweep job to be accepted'
+      );
       await until(
         async () => (await outboxStatus(event.outboxId)) === 'pending',
         'the sweeper to requeue'

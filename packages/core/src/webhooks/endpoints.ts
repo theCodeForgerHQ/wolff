@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { isWebhookEventType } from '@wolff/contracts';
 import type { CoreContext } from '../context';
 import { encrypt } from '../encryption';
@@ -145,5 +145,50 @@ export async function retryWebhookDelivery(ctx: CoreContext, deliveryId: string)
       payload: { deliveryId, workspaceId: ctx.workspaceId },
     });
     return true;
+  });
+}
+
+export const TEST_EVENT_TYPE = 'webhook.test';
+
+/**
+ * Queues a test delivery to one endpoint, whatever it is subscribed to.
+ * Returns the delivery id, or null when the endpoint does not exist in this
+ * workspace.
+ */
+export async function sendTestWebhook(
+  ctx: CoreContext,
+  endpointId: string
+): Promise<string | null> {
+  return ctx.db.$transaction(async (tx) => {
+    const endpoint = await tx.webhookEndpoint.findFirst({
+      where: { id: endpointId, workspaceId: ctx.workspaceId },
+      select: { id: true, apiVersion: true },
+    });
+    if (!endpoint) return null;
+
+    const eventId = randomUUID();
+    const delivery = await tx.webhookDelivery.create({
+      data: {
+        endpointId: endpoint.id,
+        workspaceId: ctx.workspaceId,
+        eventType: TEST_EVENT_TYPE,
+        payload: {
+          id: eventId,
+          type: TEST_EVENT_TYPE,
+          apiVersion: endpoint.apiVersion,
+          payload: { message: 'This is a test event.' },
+          timestamp: new Date().toISOString(),
+        },
+      },
+      select: { id: true },
+    });
+    await writeOutboxEvent(tx, {
+      workspaceId: ctx.workspaceId,
+      type: DELIVER_EVENT_TYPE,
+      aggregateType: DELIVERY_AGGREGATE,
+      aggregateId: delivery.id,
+      payload: { deliveryId: delivery.id, workspaceId: ctx.workspaceId },
+    });
+    return delivery.id;
   });
 }
