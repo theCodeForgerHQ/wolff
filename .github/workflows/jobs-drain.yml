@@ -1,0 +1,48 @@
+name: jobs-drain
+
+on:
+  schedule:
+    # Every 15 minutes while the repo is private; switch to '*/5 * * * *'
+    # once it is public and GitHub's 5-minute minimum applies.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: jobs-drain
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: pnpm/action-setup@a7487c4f8ef6a9e88ffd8b66b8d1b3c75c5e5b24 # v4.1.0
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Drain queues
+        run: pnpm --filter @wolff/api worker:drain
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          STORAGE_PROVIDER: ${{ secrets.STORAGE_PROVIDER }}
+          STORAGE_ENDPOINT: ${{ secrets.STORAGE_ENDPOINT }}
+          STORAGE_BUCKET: ${{ secrets.STORAGE_BUCKET }}
+          STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
+          STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
