@@ -1143,6 +1143,10 @@ async function seedDemoWorkspace() {
     where: { invoice: { workspaceId: demoWorkspace.id } },
   });
   await prisma.notification.deleteMany({ where: { workspaceId: demoWorkspace.id } });
+  await prisma.paymentSchedule.deleteMany({
+    where: { invoice: { workspaceId: demoWorkspace.id } },
+  });
+  await prisma.payment.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   await prisma.invoice.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   await prisma.quote.deleteMany({ where: { workspaceId: demoWorkspace.id } });
   // Also clean up any cross-workspace references to demo clients
