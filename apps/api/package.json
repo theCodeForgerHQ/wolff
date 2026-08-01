@@ -9,6 +9,8 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "dev": "tsx src/server.ts",
+    "worker": "tsx src/worker.ts",
+    "worker:drain": "tsx src/worker-drain.ts",
     "openapi:gen": "tsx scripts/generate-openapi.ts",
     "openapi:postman": "npx openapi-to-postmanv2 -s openapi.json -o ../../docs/api/postman_collection.json -p"
   },

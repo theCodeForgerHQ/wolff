@@ -11,6 +11,7 @@ import { apiKeyRateLimit, requireApiKey } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
+import { metricsHandler } from './observability';
 import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
 import { jobRoutes, type JobRunDeps } from './routes/jobs';
@@ -84,6 +85,7 @@ export function createApp(deps: AppDeps): Express {
       pageTitle: 'Wolff API Reference',
     })
   );
+  app.get('/metrics', metricsHandler);
 
   // Provider webhooks: mounted before the JSON parser because their
   // signatures cover the raw body, and before CORS because no browser calls them.

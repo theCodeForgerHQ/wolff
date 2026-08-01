@@ -20,6 +20,7 @@ import type { Job, JobContext, JobDispatcher } from '@wolff/jobs';
 import type { Db } from '@wolff/core/context';
 import { logger } from '@wolff/core/logger';
 import type { Express } from 'express';
+import { initObservability } from './observability';
 
 export interface BootstrapDeps {
   app: Express;
@@ -109,6 +110,7 @@ function createStorage(config: ApiConfig): JobContext['storage'] {
 }
 
 export function bootstrap(config: ApiConfig): BootstrapDeps {
+  const { report } = initObservability(config);
   const base = createPrisma(process.env.DATABASE_URL);
   const db = withTenantGuard(base, { mode: 'throw' });
   const redis = createRedisConnection(config.REDIS_URL);
@@ -153,7 +155,7 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     },
   };
 
-  const app = createApp(appDeps);
+  const app = createApp({ ...appDeps, report });
 
   return {
     app,

@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { createApp } from '../app';
+import { bootstrap } from '../bootstrap';
 import { loadConfig } from '../config';
 
 describe('/openapi.json and /docs', () => {
   const config = loadConfig({ ...process.env, NODE_ENV: 'test' });
-  const app = createApp({ db: {} as never, config });
+  const { app, close } = bootstrap(config);
+
+  afterAll(async () => {
+    await close();
+  });
 
   it('serves the OpenAPI document without authentication', async () => {
     const res = await request(app).get('/openapi.json');
@@ -22,5 +26,13 @@ describe('/openapi.json and /docs', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('scalar');
     expect(res.text).toContain('/openapi.json');
+  });
+
+  it('serves Prometheus metrics without authentication', async () => {
+    const res = await request(app).get('/metrics');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('wolff_');
+    expect(res.get('content-type')).toContain('text/plain');
   });
 });

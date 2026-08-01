@@ -1,0 +1,66 @@
+import * as Sentry from '@sentry/node';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import {
+  collectDefaultMetrics,
+  Gauge,
+  register as prometheusRegister,
+} from '@prometheus-io/client';
+import type { RequestHandler } from 'express';
+import type { ApiConfig } from './config';
+
+let otelSdk: NodeSDK | undefined;
+
+export function initObservability(config: ApiConfig): { report: (error: unknown) => void } {
+  const report = (error: unknown) => {
+    if (error) {
+      Sentry.captureException(error);
+      console.error(error);
+    }
+  };
+
+  if (config.SENTRY_DSN) {
+    Sentry.init({
+      dsn: config.SENTRY_DSN,
+      environment: config.NODE_ENV,
+      release: config.GIT_SHA,
+      tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+    });
+  }
+
+  if (config.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    otelSdk = new NodeSDK({
+      resource: resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: 'wolff-api',
+        [ATTR_SERVICE_VERSION]: config.GIT_SHA ?? '0.1.0',
+      }),
+      traceExporter: new OTLPTraceExporter({ url: config.OTEL_EXPORTER_OTLP_ENDPOINT }),
+      instrumentations: [getNodeAutoInstrumentations()],
+    });
+    otelSdk.start();
+  }
+
+  collectDefaultMetrics({ register: prometheusRegister, prefix: 'wolff_' });
+
+  new Gauge({
+    name: 'wolff_app_info',
+    help: 'Application version and environment',
+    labelNames: ['version', 'environment'],
+    registers: [prometheusRegister],
+  }).set({ version: config.GIT_SHA ?? '0.1.0', environment: config.NODE_ENV }, 1);
+
+  return { report };
+}
+
+export async function shutdownObservability(): Promise<void> {
+  await Sentry.close(2000).catch(() => {});
+  await otelSdk?.shutdown().catch(() => {});
+}
+
+export const metricsHandler: RequestHandler = async (_req, res) => {
+  res.set('Content-Type', prometheusRegister.contentType);
+  res.send(await prometheusRegister.metrics());
+};
