@@ -1,0 +1,169 @@
+import { createPrisma, withTenantGuard } from '@wolff/database';
+import { createRedis } from '@wolff/jobs/bullmq';
+import { BullMQDispatcher, createJobQueue } from '@wolff/jobs/bullmq';
+import { QStashDispatcher, createQStashVerifier } from '@wolff/jobs/qstash';
+import { Client as QStashClient } from '@upstash/qstash';
+import { type Redis } from 'ioredis';
+import { createApp, type AppDeps } from './app';
+import type { ApiConfig } from './config';
+import { redisRateLimitStore } from './middleware/auth';
+import { MemoryReplayCache, RedisReplayCache } from './middleware/service-jwt';
+import { createHttpTransport } from '@wolff/core/webhooks';
+import {
+  createChromiumPdfRenderer,
+  createLocalStorage,
+  createLogEmailTransport,
+  createResendTransport,
+  createS3Storage,
+} from '@wolff/jobs/ports';
+import type { Job, JobContext, JobDispatcher } from '@wolff/jobs';
+import type { Db } from '@wolff/core/context';
+import { logger } from '@wolff/core/logger';
+import type { Express } from 'express';
+
+export interface BootstrapDeps {
+  app: Express;
+  db: Db;
+  redis?: Redis;
+  appDeps: AppDeps;
+  jobContext: JobContext;
+  close: () => Promise<void>;
+}
+
+function createRedisConnection(url: string | undefined): Redis | undefined {
+  if (!url) return undefined;
+  return createRedis(url);
+}
+
+function createReplayCache(redis?: Redis) {
+  return redis ? new RedisReplayCache(redis) : new MemoryReplayCache();
+}
+
+function createRateLimitStore(redis?: Redis) {
+  return redis ? redisRateLimitStore(redis) : undefined;
+}
+
+class NoOpDispatcher implements JobDispatcher {
+  async dispatch(job: Job): Promise<void> {
+    logger.warn(
+      { jobType: job.type, jobId: job.jobId },
+      'No job dispatcher configured; job dropped'
+    );
+  }
+}
+
+function createJobDispatcher(config: ApiConfig, redis?: Redis): JobDispatcher {
+  if (config.JOB_DISPATCHER === 'qstash') {
+    if (
+      !config.QSTASH_TOKEN ||
+      !config.QSTASH_CURRENT_SIGNING_KEY ||
+      !config.QSTASH_NEXT_SIGNING_KEY
+    ) {
+      logger.warn('QStash dispatcher selected but keys are missing; jobs will be dropped');
+      return new NoOpDispatcher();
+    }
+    return new QStashDispatcher({
+      client: new QStashClient({ token: config.QSTASH_TOKEN }),
+      apiUrl: config.PUBLIC_API_URL,
+    });
+  }
+  if (!redis) {
+    logger.warn('BullMQ dispatcher selected but REDIS_URL is missing; jobs will be dropped');
+    return new NoOpDispatcher();
+  }
+  return new BullMQDispatcher(createJobQueue(redis));
+}
+
+function createJobRunDeps(config: ApiConfig, ctx: JobContext, redis?: Redis): AppDeps['jobs'] {
+  if (!config.QSTASH_CURRENT_SIGNING_KEY || !config.QSTASH_NEXT_SIGNING_KEY) return undefined;
+  return {
+    verify: createQStashVerifier({
+      currentSigningKey: config.QSTASH_CURRENT_SIGNING_KEY,
+      nextSigningKey: config.QSTASH_NEXT_SIGNING_KEY,
+    }),
+    context: ctx,
+  };
+}
+
+function createEmailTransport(config: ApiConfig): JobContext['email'] {
+  if (config.RESEND_API_KEY && config.EMAIL_FROM) {
+    return createResendTransport({ apiKey: config.RESEND_API_KEY, from: config.EMAIL_FROM });
+  }
+  return createLogEmailTransport((entry) => logger.info(entry, 'email would be sent'));
+}
+
+function createStorage(config: ApiConfig): JobContext['storage'] {
+  const provider = process.env.STORAGE_PROVIDER ?? 'local';
+  if (provider === 's3' || provider === 'cloudflare') {
+    const bucket = process.env.STORAGE_BUCKET;
+    if (!bucket) throw new Error('STORAGE_BUCKET is required for S3 storage');
+    return createS3Storage({
+      bucket,
+      region: process.env.STORAGE_REGION ?? 'us-east-1',
+      endpoint: process.env.STORAGE_ENDPOINT,
+      accessKeyId: process.env.STORAGE_ACCESS_KEY,
+      secretAccessKey: process.env.STORAGE_SECRET_KEY,
+    });
+  }
+  return createLocalStorage(process.env.STORAGE_LOCAL_PATH ?? './uploads');
+}
+
+export function bootstrap(config: ApiConfig): BootstrapDeps {
+  const base = createPrisma(process.env.DATABASE_URL);
+  const db = withTenantGuard(base, { mode: 'throw' });
+  const redis = createRedisConnection(config.REDIS_URL);
+  const replayCache = createReplayCache(redis);
+  const rateLimitStore = createRateLimitStore(redis);
+
+  const jobContext: JobContext = {
+    db,
+    dispatch: () => Promise.resolve(),
+    email: createEmailTransport(config),
+    webhooks: createHttpTransport({ allowPrivateAddresses: config.NODE_ENV === 'development' }),
+    pdf: createChromiumPdfRenderer({ executablePath: process.env.CHROME_EXECUTABLE_PATH }),
+    storage: createStorage(config),
+    appUrl: config.APP_URL,
+    requireHttpsWebhooks: config.NODE_ENV !== 'development',
+    now: () => new Date(),
+  };
+
+  const dispatcher = createJobDispatcher(config, redis);
+  jobContext.dispatch = (job) => dispatcher.dispatch(job);
+
+  const appDeps: AppDeps = {
+    db,
+    config,
+    replayCache,
+    rateLimitStore,
+    jobs: createJobRunDeps(config, jobContext, redis),
+    onOutboxEvents: (ids) => {
+      // Fire and forget: the outbox row is the record; a failed dispatch is
+      // reconciled by the relay/sweeper.
+      for (const id of ids) {
+        dispatcher
+          .dispatch({
+            type: 'webhooks.fanout',
+            payload: { outboxEventId: id },
+            jobId: `outbox:${id}`,
+          })
+          .catch((error: unknown) => {
+            logger.error({ err: error, outboxEventId: id }, 'Failed to dispatch outbox fanout job');
+          });
+      }
+    },
+  };
+
+  const app = createApp(appDeps);
+
+  return {
+    app,
+    db,
+    redis,
+    appDeps,
+    jobContext,
+    close: async () => {
+      await redis?.quit();
+      await base.$disconnect();
+    },
+  };
+}
