@@ -1,0 +1,369 @@
+{
+  "description": "Golden vectors for the GST engine, checked against CBIC Rule 46 and published CA worked examples. Reviewer: chartered accountant worked examples for Indian GST invoicing.",
+  "cases": [
+    {
+      "name": "intra-state single rate",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Logo design",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 10000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 10000,
+        "cgstTotal": 900,
+        "sgstTotal": 900,
+        "igstTotal": 0,
+        "total": 11800
+      }
+    },
+    {
+      "name": "inter-state",
+      "supplierStateCode": "33",
+      "placeOfSupply": "29",
+      "lines": [
+        {
+          "description": "Website",
+          "hsnSac": "998314",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 50000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "inter",
+        "taxableTotal": 50000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 9000,
+        "total": 59000
+      }
+    },
+    {
+      "name": "mixed-rate invoice + HSN summary",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Design",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 10000,
+          "gstRate": 18
+        },
+        {
+          "description": "Hosting",
+          "hsnSac": "998315",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 5000,
+          "gstRate": 5
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 15000,
+        "cgstTotal": 1025,
+        "sgstTotal": 1025,
+        "igstTotal": 0,
+        "total": 17050,
+        "hsnSummaryCount": 2
+      }
+    },
+    {
+      "name": "export with LUT",
+      "supplierStateCode": "33",
+      "placeOfSupply": null,
+      "isExport": true,
+      "hasLut": true,
+      "lines": [
+        {
+          "description": "Consulting USD",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 100000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "export",
+        "taxableTotal": 100000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 0,
+        "total": 100000
+      }
+    },
+    {
+      "name": "export without LUT",
+      "supplierStateCode": "33",
+      "placeOfSupply": null,
+      "isExport": true,
+      "hasLut": false,
+      "lines": [
+        {
+          "description": "Consulting USD",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 100000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "export",
+        "taxableTotal": 100000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 18000,
+        "total": 118000
+      }
+    },
+    {
+      "name": "SEZ with LUT",
+      "supplierStateCode": "33",
+      "placeOfSupply": null,
+      "isSez": true,
+      "hasLut": true,
+      "lines": [
+        {
+          "description": "SEZ services",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 200000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "sez",
+        "taxableTotal": 200000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 0,
+        "total": 200000
+      }
+    },
+    {
+      "name": "SEZ without LUT",
+      "supplierStateCode": "33",
+      "placeOfSupply": null,
+      "isSez": true,
+      "hasLut": false,
+      "lines": [
+        {
+          "description": "SEZ services",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 200000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "sez",
+        "taxableTotal": 200000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 36000,
+        "total": 236000
+      }
+    },
+    {
+      "name": "reverse charge",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "reverseCharge": true,
+      "lines": [
+        {
+          "description": "Legal services",
+          "hsnSac": "998211",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 25000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 25000,
+        "cgstTotal": 2250,
+        "sgstTotal": 2250,
+        "igstTotal": 0,
+        "total": 29500
+      }
+    },
+    {
+      "name": "unregistered B2C <= 50k",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Small job",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 40000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 40000,
+        "cgstTotal": 3600,
+        "sgstTotal": 3600,
+        "igstTotal": 0,
+        "total": 47200
+      }
+    },
+    {
+      "name": "unregistered B2C > 50k requires address",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Large job",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 60000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 60000,
+        "cgstTotal": 5400,
+        "sgstTotal": 5400,
+        "igstTotal": 0,
+        "total": 70800
+      }
+    },
+    {
+      "name": "place-of-supply override",
+      "supplierStateCode": "33",
+      "placeOfSupply": "29",
+      "lines": [
+        {
+          "description": "Inter-state override",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 10000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "inter",
+        "taxableTotal": 10000,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 1800,
+        "total": 11800
+      }
+    },
+    {
+      "name": "discount before tax",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Design with discount",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 10000,
+          "discount": 1000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 9000,
+        "cgstTotal": 810,
+        "sgstTotal": 810,
+        "igstTotal": 0,
+        "total": 10620
+      }
+    },
+    {
+      "name": "rounding edge 100.05 @ 18%",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Rounding test",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 100.05,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 100.05,
+        "cgstTotal": 9.01,
+        "sgstTotal": 9.0,
+        "igstTotal": 0,
+        "total": 118.06
+      }
+    },
+    {
+      "name": "inter-state rounding edge",
+      "supplierStateCode": "33",
+      "placeOfSupply": "29",
+      "lines": [
+        {
+          "description": "Rounding test",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 1,
+          "rate": 100.05,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "inter",
+        "taxableTotal": 100.05,
+        "cgstTotal": 0,
+        "sgstTotal": 0,
+        "igstTotal": 18.01,
+        "total": 118.06
+      }
+    },
+    {
+      "name": "quantity > 1",
+      "supplierStateCode": "33",
+      "placeOfSupply": "33",
+      "lines": [
+        {
+          "description": "Hours",
+          "hsnSac": "998311",
+          "itemType": "services",
+          "quantity": 10,
+          "rate": 1000,
+          "gstRate": 18
+        }
+      ],
+      "expected": {
+        "supplyType": "intra",
+        "taxableTotal": 10000,
+        "cgstTotal": 900,
+        "sgstTotal": 900,
+        "igstTotal": 0,
+        "total": 11800
+      }
+    }
+  ]
+}

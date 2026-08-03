@@ -519,6 +519,9 @@ importers:
       '@wolff/database':
         specifier: workspace:*
         version: link:../database
+      decimal.js:
+        specifier: ^10.6.0
+        version: 10.6.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -526,6 +529,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.0
+      fast-check:
+        specifier: ^3.23.2
+        version: 3.23.2
       typescript:
         specifier: 5.9.3
         version: 5.9.3
