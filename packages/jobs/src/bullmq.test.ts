@@ -331,6 +331,7 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
       db,
       dispatcher,
       intervalMs: 50,
+      relay: { ids: mine },
       onError: (e) => errors.push(e),
     });
 

@@ -136,6 +136,8 @@ jobs:
         run: |
           pnpm --filter @wolff/api openapi:gen
           git diff --exit-code apps/api/openapi.json
+      - name: Postman collection generation must work
+        run: pnpm --filter @wolff/api openapi:postman
 
   e2e:
     name: E2E (flows + visual)
