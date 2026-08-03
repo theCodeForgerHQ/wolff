@@ -145,7 +145,13 @@ export async function POST(request: NextRequest) {
   const seq = await prisma.$transaction(
     async (tx) => {
       return tx.numberSequence.upsert({
-        where: { workspaceId_type: { workspaceId, type: 'quote' } },
+        where: {
+          workspaceId_type_financialYear: {
+            workspaceId,
+            type: 'quote',
+            financialYear: null as unknown as string,
+          },
+        },
         update: { currentValue: { increment: 1 } },
         create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
       });
