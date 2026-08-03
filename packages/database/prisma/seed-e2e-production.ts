@@ -63,9 +63,10 @@ async function seedE2EProductionData() {
   // Ensure number sequences exist
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: workspace.id,
         type: 'quote',
+        financialYear: null,
       },
     },
     update: {},
@@ -80,9 +81,10 @@ async function seedE2EProductionData() {
 
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: workspace.id,
         type: 'invoice',
+        financialYear: null,
       },
     },
     update: {},
