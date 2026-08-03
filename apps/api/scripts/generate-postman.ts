@@ -1,10 +1,12 @@
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 const specPath = resolve(process.cwd(), 'openapi.json');
 const outPath = resolve(process.cwd(), '../../docs/api/postman_collection.json');
+
+mkdirSync(dirname(outPath), { recursive: true });
 
 // Generate the raw collection with openapi-to-postmanv2.
 execSync(`npx openapi-to-postmanv2 -s ${specPath} -o ${outPath} -p`, {

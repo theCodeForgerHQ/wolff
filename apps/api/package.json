@@ -11,7 +11,7 @@
     "dev": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",
     "worker:drain": "tsx src/worker-drain.ts",
-    "openapi:gen": "tsx scripts/generate-openapi.ts",
+    "openapi:gen": "tsx scripts/generate-openapi.ts && prettier --write openapi.json",
     "openapi:postman": "tsx scripts/generate-postman.ts"
   },
   "dependencies": {
