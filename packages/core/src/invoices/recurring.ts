@@ -74,11 +74,46 @@ function isDuplicatePeriod(error: unknown): boolean {
 }
 
 async function nextInvoiceNumber(tx: Prisma.TransactionClient, workspaceId: string) {
-  const sequence = await tx.numberSequence.upsert({
-    where: { workspaceId_type: { workspaceId, type: 'invoice' } },
-    update: { currentValue: { increment: 1 } },
-    create: { workspaceId, type: 'invoice', prefix: 'INV', currentValue: 1, padding: 4 },
-  });
+  // The composite unique key includes financial_year, which is nullable for
+  // non-GST workspaces. Prisma's generated input type does not allow null in
+  // the compound key, so we lock the row with a raw query and upsert by id.
+  const [existing] = await tx.$queryRaw<
+    Array<{
+      id: string;
+      prefix: string | null;
+      suffix: string | null;
+      padding: number;
+      current_value: number;
+    }>
+  >`
+    SELECT id, prefix, suffix, padding, current_value FROM number_sequences
+    WHERE workspace_id = ${workspaceId} AND type = ${'invoice'} AND financial_year IS NULL
+    FOR UPDATE`;
+
+  let sequence: {
+    prefix: string | null;
+    suffix: string | null;
+    padding: number;
+    currentValue: number;
+  };
+  if (existing) {
+    const updated = await tx.numberSequence.update({
+      where: { id: existing.id },
+      data: { currentValue: { increment: 1 } },
+    });
+    sequence = updated;
+  } else {
+    sequence = await tx.numberSequence.create({
+      data: {
+        workspaceId,
+        type: 'invoice',
+        financialYear: null,
+        prefix: 'INV',
+        currentValue: 1,
+        padding: 4,
+      },
+    });
+  }
   const parts = [
     (sequence.prefix || 'INV').replace(/-$/, ''),
     String(sequence.currentValue).padStart(sequence.padding, '0'),
