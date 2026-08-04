@@ -1,4 +1,5 @@
-import type { DbOrTx } from '../context';
+import { CoreError } from '../errors';
+import type { CoreContext, DbOrTx } from '../context';
 
 export const DEFAULT_PIPELINE_NAME = 'Sales Pipeline';
 
@@ -133,4 +134,113 @@ export async function replacePipelineStages(
       include: { stages: { orderBy: { position: 'asc' } } },
     });
   });
+}
+
+export interface CreatePipelineInput {
+  name: string;
+  stages: Array<{
+    name: string;
+    position: number;
+    probability: number;
+    kind: 'open' | 'won' | 'lost';
+  }>;
+}
+
+export async function listPipelines(ctx: CoreContext) {
+  const { db, workspaceId } = ctx;
+  const pipelines = await db.pipeline.findMany({
+    where: { workspaceId },
+    include: { stages: { orderBy: { position: 'asc' } } },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (pipelines.length === 0) {
+    await ensureDefaultPipeline(db, workspaceId);
+    return db.pipeline.findMany({
+      where: { workspaceId },
+      include: { stages: { orderBy: { position: 'asc' } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+  return pipelines;
+}
+
+export async function getPipeline(ctx: CoreContext, id: string) {
+  const { db, workspaceId } = ctx;
+  const pipeline = await db.pipeline.findFirst({
+    where: { id, workspaceId },
+    include: { stages: { orderBy: { position: 'asc' } } },
+  });
+  if (!pipeline) {
+    await ensureDefaultPipeline(db, workspaceId);
+    return db.pipeline.findFirst({
+      where: { id, workspaceId },
+      include: { stages: { orderBy: { position: 'asc' } } },
+    });
+  }
+  return pipeline;
+}
+
+export async function createPipeline(ctx: CoreContext, input: CreatePipelineInput) {
+  const { db, workspaceId } = ctx;
+  return db.pipeline.create({
+    data: {
+      workspaceId,
+      name: input.name,
+      stages: {
+        create: input.stages.map((s) => ({
+          workspaceId,
+          name: s.name,
+          position: s.position,
+          probability: s.probability,
+          kind: s.kind,
+        })),
+      },
+    },
+    include: { stages: { orderBy: { position: 'asc' } } },
+  });
+}
+
+export interface UpdatePipelineInput {
+  name?: string;
+  isDefault?: boolean;
+}
+
+export async function updatePipeline(ctx: CoreContext, id: string, input: UpdatePipelineInput) {
+  const { db, workspaceId } = ctx;
+  const existing = await db.pipeline.findFirst({ where: { id, workspaceId } });
+  if (!existing) return null;
+
+  return db.$transaction(async (tx) => {
+    if (input.isDefault && !existing.isDefault) {
+      await tx.pipeline.updateMany({
+        where: { workspaceId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+    return tx.pipeline.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.isDefault !== undefined && { isDefault: input.isDefault }),
+      },
+      include: { stages: { orderBy: { position: 'asc' } } },
+    });
+  });
+}
+
+export async function replaceStages(
+  ctx: CoreContext,
+  pipelineId: string,
+  stages: Array<{
+    id?: string;
+    name: string;
+    position: number;
+    probability: number;
+    kind: 'open' | 'won' | 'lost';
+  }>
+) {
+  const { db, workspaceId } = ctx;
+  const pipeline = await getPipeline(ctx, pipelineId);
+  if (!pipeline) throw new CoreError('not_found', 'Pipeline not found');
+  return replacePipelineStages(db, workspaceId, pipelineId, stages);
 }

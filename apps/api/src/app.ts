@@ -15,6 +15,9 @@ import { metricsHandler } from './observability';
 import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
 import { jobRoutes, type JobRunDeps } from './routes/jobs';
+import { dealRoutes } from './routes/v1/deals';
+import { leadRoutes } from './routes/v1/leads';
+import { pipelineRoutes } from './routes/v1/pipelines';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
 
@@ -114,6 +117,9 @@ export function createApp(deps: AppDeps): Express {
       requireHttps: config.NODE_ENV !== 'development',
     })
   );
+  v1.use(leadRoutes(db));
+  v1.use(pipelineRoutes(db));
+  v1.use(dealRoutes(db));
 
   const router = Router();
   deps.extend?.(router);

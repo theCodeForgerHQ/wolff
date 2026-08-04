@@ -1,4 +1,6 @@
+import { CoreError } from '../errors';
 import type { CoreContext, DbOrTx } from '../context';
+import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
 
 export interface MoveDealInput {
   dealId: string;
@@ -133,7 +135,7 @@ export async function createDeal(
       value: input.value ?? 0,
       currency: input.currency ?? 'USD',
       expectedCloseDate: input.expectedCloseDate,
-      ownerId: input.ownerId ?? actorId,
+      ownerId: input.ownerId ?? null,
     },
   });
 
@@ -152,4 +154,74 @@ export async function createDeal(
   });
 
   return { dealId: deal.id };
+}
+
+export interface ListDealsQuery {
+  limit: number;
+  cursor?: string;
+}
+
+export async function listDeals(ctx: CoreContext, query: ListDealsQuery) {
+  const { db, workspaceId } = ctx;
+  const limit = Math.min(query.limit, 100);
+
+  const rows = await db.deal.findMany({
+    where: { workspaceId, deletedAt: null, ...afterCursor(query.cursor) },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit + 1,
+  });
+
+  return toCursorPage(rows, limit);
+}
+
+export async function getDeal(ctx: CoreContext, id: string) {
+  const { db, workspaceId } = ctx;
+  return db.deal.findFirst({
+    where: { id, workspaceId, deletedAt: null },
+  });
+}
+
+export interface UpdateDealInput {
+  title?: string;
+  stageId?: string;
+  value?: number;
+  currency?: string;
+  expectedCloseDate?: Date | null;
+  ownerId?: string | null;
+}
+
+export async function updateDeal(ctx: CoreContext, id: string, input: UpdateDealInput) {
+  const { db, workspaceId } = ctx;
+  const existing = await db.deal.findFirst({ where: { id, workspaceId, deletedAt: null } });
+  if (!existing) return null;
+
+  if (input.stageId) {
+    const stage = await db.stage.findFirst({
+      where: { id: input.stageId, pipelineId: existing.pipelineId, workspaceId },
+    });
+    if (!stage) throw new CoreError('not_found', 'Stage not found in pipeline');
+  }
+
+  return db.deal.update({
+    where: { id },
+    data: {
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.stageId !== undefined && { stageId: input.stageId }),
+      ...(input.value !== undefined && { value: input.value }),
+      ...(input.currency !== undefined && { currency: input.currency }),
+      ...(input.expectedCloseDate !== undefined && {
+        expectedCloseDate: input.expectedCloseDate,
+      }),
+      ...(input.ownerId !== undefined && { ownerId: input.ownerId }),
+    },
+  });
+}
+
+export async function deleteDeal(ctx: CoreContext, id: string) {
+  const { db, workspaceId } = ctx;
+  const existing = await db.deal.findFirst({ where: { id, workspaceId, deletedAt: null } });
+  if (!existing) return false;
+
+  await db.deal.update({ where: { id }, data: { deletedAt: new Date() } });
+  return true;
 }
