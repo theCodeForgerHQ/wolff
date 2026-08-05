@@ -66,7 +66,7 @@ export async function createQuoteFromDeal(
   });
 
   await db.deal.update({
-    where: { id: deal.id },
+    where: { id: deal.id, workspaceId },
     data: { quoteId: quote.id },
   });
 

@@ -89,7 +89,7 @@ export async function convertLead(
   // Pick the target stage: explicit, or the first open stage, or the first
   // stage as a fallback.
   const stages = await db.stage.findMany({
-    where: { pipelineId },
+    where: { pipelineId, workspaceId },
     orderBy: { position: 'asc' },
   });
   const targetStage = input.stageId
@@ -150,7 +150,7 @@ export async function convertLead(
     });
 
     await tx.lead.update({
-      where: { id: existing.id },
+      where: { id: existing.id, workspaceId },
       data: {
         status: 'converted',
         clientId: client.id,
@@ -259,7 +259,7 @@ export async function updateLead(ctx: CoreContext, id: string, input: UpdateLead
 
   try {
     return await db.lead.update({
-      where: { id },
+      where: { id, workspaceId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.email !== undefined && { email: data.email }),
@@ -286,7 +286,7 @@ export async function deleteLead(ctx: CoreContext, id: string) {
   if (!existing) return false;
 
   await db.lead.update({
-    where: { id },
+    where: { id, workspaceId },
     data: { deletedAt: new Date(), email: null },
   });
   return true;
@@ -349,8 +349,7 @@ export async function importLeads(
         keys.push(`email:${row.email.toLowerCase()}`);
       if (input.dedupeBy.includes('phone') && row.phone) keys.push(`phone:${row.phone}`);
 
-      const seenKey = keys[0] ?? `name:${row.name}`;
-      if (seen.has(seenKey)) {
+      if (keys.some((key) => seen.has(key))) {
         result.skipped++;
         continue;
       }
@@ -369,7 +368,7 @@ export async function importLeads(
 
       if (existing) {
         await db.lead.update({
-          where: { id: existing.id },
+          where: { id: existing.id, workspaceId },
           data: {
             name: row.name,
             ...(row.email !== undefined && { email: row.email }),
