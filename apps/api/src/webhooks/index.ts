@@ -1,9 +1,11 @@
 import express, { Router, type Request, type Response } from 'express';
 import Stripe from 'stripe';
 import type { Db } from '@wolff/core/context';
+import { decrypt } from '@wolff/core/encryption';
 import { recordProviderEvent } from '@wolff/core/payments';
 import type { ApiConfig } from '../config';
 import { sendError } from '../http';
+import { verifyRazorpaySignature } from './razorpay';
 
 /**
  * Inbound provider webhooks. Each handler verifies the signature
@@ -63,11 +65,52 @@ export function webhookRoutes(deps: WebhookDeps): Router {
   router.post('/stripe', stripeHandler(deps.config.STRIPE_WEBHOOK_SECRET));
   router.post('/stripe/connect', stripeHandler(deps.config.STRIPE_CONNECT_WEBHOOK_SECRET));
 
-  // Razorpay-ready: the route and the signature check exist. Workspaces
-  // cannot store a Razorpay webhook secret until Phase 3 adds the columns, so
-  // there is nothing to verify against yet.
-  router.post('/razorpay/:workspaceId', (_req, res) => {
-    sendError(res, 'not_configured', 'Razorpay webhooks are not configured');
+  router.post('/razorpay/:workspaceId', async (req, res) => {
+    const workspaceId = req.params.workspaceId;
+    const rawBody = req.body as Buffer;
+    const signature = req.get('X-Razorpay-Signature');
+    const eventId = req.get('X-Razorpay-Event-Id');
+
+    const settings = await deps.db.$unscoped.paymentSettings.findUnique({
+      where: { workspaceId },
+      select: { razorpayWebhookSecretEnc: true },
+    });
+    const secret = settings?.razorpayWebhookSecretEnc
+      ? decrypt(settings.razorpayWebhookSecretEnc)
+      : undefined;
+
+    if (!secret) {
+      return sendError(
+        res,
+        'not_configured',
+        'Razorpay webhooks are not configured for this workspace'
+      );
+    }
+
+    if (!signature || !eventId) {
+      return sendError(res, 'validation_error', 'Missing Razorpay signature or event id');
+    }
+
+    if (!verifyRazorpaySignature(rawBody, signature, secret)) {
+      return sendError(res, 'validation_error', 'Invalid Razorpay webhook signature');
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      return sendError(res, 'validation_error', 'Invalid JSON body');
+    }
+
+    const result = await recordProviderEvent(deps.db, {
+      provider: 'razorpay',
+      eventId,
+      type: (payload as Record<string, unknown>).event?.toString() ?? 'unknown',
+      payload,
+      outbox: true,
+    });
+    if (result.outboxEventId) deps.onOutboxEvents?.([result.outboxEventId]);
+    res.json({ received: true, ...(result.outcome === 'duplicate' ? { duplicate: true } : {}) });
   });
 
   return router;

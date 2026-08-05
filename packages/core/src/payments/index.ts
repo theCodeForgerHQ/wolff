@@ -6,3 +6,4 @@ export {
   applyRefund,
   applyStripeEvent,
 } from './apply-stripe-event';
+export { applyRazorpayEvent } from './apply-razorpay-event';
