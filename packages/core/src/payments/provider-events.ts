@@ -1,6 +1,7 @@
 import type { Prisma } from '@wolff/database';
 import type { Db } from '../context';
 import { writeOutboxEvent } from '../outbox';
+import { applyRazorpayEvent } from './apply-razorpay-event';
 import { applyStripeEvent } from './apply-stripe-event';
 
 /**
@@ -117,6 +118,7 @@ export async function processProviderEvent(db: Db, eventRowId: string): Promise<
         select: { payload: true },
       });
       if (row.provider === 'stripe') await applyStripeEvent(tx, event.payload);
+      else if (row.provider === 'razorpay') await applyRazorpayEvent(tx, event.payload);
       else throw new Error(`No handler for provider ${row.provider}`);
 
       await tx.providerWebhookEvent.update({

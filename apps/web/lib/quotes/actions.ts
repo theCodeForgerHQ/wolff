@@ -82,7 +82,13 @@ async function generateQuoteNumber(workspaceId: string): Promise<string> {
   // At 1000 quotes/day, this supports ~5,800 years of operation.
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.numberSequence.upsert({
-      where: { workspaceId_type: { workspaceId, type: 'quote' } },
+      where: {
+        workspaceId_type_financialYear: {
+          workspaceId,
+          type: 'quote',
+          financialYear: null as unknown as string,
+        },
+      },
       update: { currentValue: { increment: 1 } },
       create: {
         workspaceId,
@@ -123,7 +129,13 @@ export async function getNextQuoteNumber(): Promise<string> {
   const { workspace } = await getActiveWorkspace();
 
   const seq = await prisma.numberSequence.findUnique({
-    where: { workspaceId_type: { workspaceId: workspace.id, type: 'quote' } },
+    where: {
+      workspaceId_type_financialYear: {
+        workspaceId: workspace.id,
+        type: 'quote',
+        financialYear: null as unknown as string,
+      },
+    },
   });
 
   const nextValue = (seq?.currentValue ?? 0) + 1;

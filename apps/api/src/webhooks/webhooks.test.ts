@@ -223,3 +223,141 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Stripe webhooks (Postgres)', () => 
     expect(res.body.error.code).toBe('not_configured');
   });
 });
+
+describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () => {
+  const { base, db } = testDb();
+  const run = randomUUID().replace(/-/g, '');
+  const recorded: string[] = [];
+  const app = createApp({
+    db,
+    config: testConfig(),
+    onOutboxEvents: (ids) => void recorded.push(...ids),
+  });
+  let workspaceId = '';
+  const secret = 'rzp_webhook_secret';
+  let n = 0;
+
+  const payload = (event = 'payment.captured') =>
+    JSON.stringify({
+      event,
+      payload: {
+        payment: {
+          entity: {
+            id: `pay_${run}_${++n}`,
+            order_id: `order_${run}_${n}`,
+            amount: 25_000,
+            method: 'upi',
+          },
+        },
+      },
+    });
+
+  const post = (
+    body: string,
+    options: { signature?: string | null; eventId?: string | null } = {}
+  ) => {
+    const req = request(app)
+      .post(`/webhooks/razorpay/${workspaceId}`)
+      .set('Content-Type', 'application/json');
+    if (options.eventId !== null)
+      req.set('X-Razorpay-Event-Id', options.eventId ?? `evt_${run}_${++n}`);
+    if (options.signature !== null) {
+      req.set(
+        'X-Razorpay-Signature',
+        options.signature ?? createHmac('sha256', secret).update(body).digest('hex')
+      );
+    }
+    return req.send(body);
+  };
+
+  beforeAll(async () => {
+    recorded.length = 0;
+    const workspace = await base.workspace.create({
+      data: {
+        name: 'Razorpay Webhooks',
+        slug: `razorpay-webhooks-${run}`,
+        paymentSettings: { create: { razorpayWebhookSecretEnc: secret } },
+      },
+    });
+    workspaceId = workspace.id;
+  });
+
+  afterEach(async () => {
+    const events = await base.providerWebhookEvent.findMany({
+      where: { eventId: { startsWith: `evt_${run}` } },
+      select: { id: true },
+    });
+    await base.outboxEvent.deleteMany({ where: { aggregateId: { in: events.map((e) => e.id) } } });
+    await base.providerWebhookEvent.deleteMany({ where: { id: { in: events.map((e) => e.id) } } });
+  });
+
+  afterAll(async () => {
+    await base.paymentSettings.deleteMany({ where: { workspaceId } });
+    await base.workspace.deleteMany({ where: { id: workspaceId } });
+    await base.$disconnect();
+  });
+
+  it('stores a signed event with its reconcile job and acknowledges it', async () => {
+    const body = payload();
+
+    const res = await post(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+    const rows = await base.providerWebhookEvent.findMany({
+      where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      provider: 'razorpay',
+      type: 'payment.captured',
+      status: 'received',
+    });
+    const jobs = await base.outboxEvent.findMany({ where: { aggregateId: rows[0]!.id } });
+    expect(jobs.map((j) => [j.type, j.status])).toEqual([['payment.reconcile', 'pending']]);
+    expect(recorded).toContain(jobs[0]!.id);
+  });
+
+  it('acknowledges a redelivery without storing or queueing it again', async () => {
+    const body = payload();
+
+    await post(body, { eventId: 'evt_redrive_1' });
+    const again = await post(body, { eventId: 'evt_redrive_1' });
+
+    expect(again.status).toBe(200);
+    expect(again.body).toEqual({ received: true, duplicate: true });
+    const rows = await base.providerWebhookEvent.findMany({
+      where: { provider: 'razorpay', eventId: 'evt_redrive_1' },
+    });
+    expect(rows).toHaveLength(1);
+    expect(await base.outboxEvent.count({ where: { aggregateId: rows[0]!.id } })).toBe(1);
+  });
+
+  it.each([
+    ['no signature header', { signature: null }],
+    [
+      'a signature made with another secret',
+      { signature: createHmac('sha256', 'other').update(payload()).digest('hex') },
+    ],
+    [
+      'a changed body',
+      { signature: createHmac('sha256', secret).update(payload()).digest('hex') },
+      true,
+    ],
+  ])('refuses an event with %s and stores nothing', async (_name, options, mutateBody = false) => {
+    const body = payload();
+    const sendBody = mutateBody ? `${body} ` : body;
+
+    const res = await post(sendBody, options as { signature?: string | null });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'validation_error', message: expect.any(String) },
+    });
+    const rows = await base.providerWebhookEvent.findMany({
+      where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+    });
+    expect(rows).toHaveLength(0);
+  });
+});

@@ -91,7 +91,11 @@ export async function GET(request: Request) {
         const seqResult = await prisma.$transaction(async (tx) => {
           const updated = await tx.numberSequence.upsert({
             where: {
-              workspaceId_type: { workspaceId: parent.workspaceId, type: 'invoice' },
+              workspaceId_type_financialYear: {
+                workspaceId: parent.workspaceId,
+                type: 'invoice',
+                financialYear: null as unknown as string,
+              },
             },
             update: { currentValue: { increment: 1 } },
             create: {

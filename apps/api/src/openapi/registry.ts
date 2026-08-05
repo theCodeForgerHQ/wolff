@@ -1,14 +1,40 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
   apiErrorSchema,
+  bulkLeadActionSchema,
+  convertLeadSchema,
+  convertedLeadSchema,
+  createDealSchema,
+  createLeadSchema,
+  createPaymentLinkSchema,
+  createPipelineSchema,
+  createQuoteFromDealSchema,
   createWebhookEndpointSchema,
   createdWebhookEndpointSchema,
   cursorEnvelope,
   cursorQuerySchema,
+  dealListQuerySchema,
+  dealSchema,
   deletedSchema,
   errorEnvelopeSchema,
+  gstOutwardSupplyRowSchema,
+  importLeadsResultSchema,
+  importLeadsSchema,
+  leadListQuerySchema,
+  leadSchema,
+  moveDealSchema,
+  paymentLinkResponseSchema,
+  pipelineSchema,
+  pipelineStageRowSchema,
   queuedDeliverySchema,
+  quoteFromDealSchema,
+  receivablesAgeingRowSchema,
+  replaceStagesSchema,
+  revenueMonthlyRowSchema,
   successEnvelope,
+  updateDealSchema,
+  updateLeadSchema,
+  updatePipelineSchema,
   webhookDeliverySchema,
   webhookEndpointSchema,
   z,
@@ -22,6 +48,16 @@ registry.register('WebhookEndpoint', webhookEndpointSchema);
 registry.register('CreatedWebhookEndpoint', createdWebhookEndpointSchema);
 registry.register('WebhookDelivery', webhookDeliverySchema);
 registry.register('CreateWebhookEndpoint', createWebhookEndpointSchema);
+registry.register('ReceivablesAgeingRow', receivablesAgeingRowSchema);
+registry.register('RevenueMonthlyRow', revenueMonthlyRowSchema);
+registry.register('GstOutwardSupplyRow', gstOutwardSupplyRowSchema);
+registry.register('PipelineStageRow', pipelineStageRowSchema);
+registry.register('CreatePaymentLink', createPaymentLinkSchema);
+registry.register('PaymentLinkResponse', paymentLinkResponseSchema);
+registry.register('CreateQuoteFromDeal', createQuoteFromDealSchema);
+registry.register('QuoteFromDeal', quoteFromDealSchema);
+registry.register('ImportLeads', importLeadsSchema);
+registry.register('ImportLeadsResult', importLeadsResultSchema);
 
 const listWebhookEndpoints = registry.registerPath({
   method: 'get',
@@ -226,6 +262,837 @@ const retryWebhookDelivery = registry.registerPath({
   },
 });
 
+registry.register('Lead', leadSchema);
+registry.register('CreateLead', createLeadSchema);
+registry.register('UpdateLead', updateLeadSchema);
+registry.register('Pipeline', pipelineSchema);
+registry.register('CreatePipeline', createPipelineSchema);
+registry.register('UpdatePipeline', updatePipelineSchema);
+registry.register('ReplaceStages', replaceStagesSchema);
+registry.register('Deal', dealSchema);
+registry.register('CreateDeal', createDealSchema);
+registry.register('UpdateDeal', updateDealSchema);
+registry.register('MoveDeal', moveDealSchema);
+registry.register('BulkLeadAction', bulkLeadActionSchema);
+registry.register('ConvertLead', convertLeadSchema);
+registry.register('ConvertedLead', convertedLeadSchema);
+
+const idParam = z.object({ id: z.string().uuid() });
+
+const listLeads = registry.registerPath({
+  method: 'get',
+  path: '/v1/leads',
+  tags: ['CRM'],
+  summary: 'List leads',
+  request: { query: leadListQuerySchema },
+  responses: {
+    200: {
+      description: 'Cursor-paginated leads',
+      content: {
+        'application/json': { schema: cursorEnvelope(leadSchema).openapi('ListLeadsResponse') },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const createLead = registry.registerPath({
+  method: 'post',
+  path: '/v1/leads',
+  tags: ['CRM'],
+  summary: 'Create a lead',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: createLeadSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Lead created',
+      content: {
+        'application/json': { schema: successEnvelope(leadSchema).openapi('CreateLeadResponse') },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    409: {
+      description: 'A lead with this email already exists',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getLead = registry.registerPath({
+  method: 'get',
+  path: '/v1/leads/{id}',
+  tags: ['CRM'],
+  summary: 'Get a lead',
+  request: { params: idParam.openapi('LeadId') },
+  responses: {
+    200: {
+      description: 'Lead',
+      content: {
+        'application/json': { schema: successEnvelope(leadSchema).openapi('GetLeadResponse') },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Lead not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const updateLead = registry.registerPath({
+  method: 'patch',
+  path: '/v1/leads/{id}',
+  tags: ['CRM'],
+  summary: 'Update a lead',
+  request: {
+    params: idParam.openapi('LeadId'),
+    body: { required: true, content: { 'application/json': { schema: updateLeadSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Lead updated',
+      content: {
+        'application/json': { schema: successEnvelope(leadSchema).openapi('UpdateLeadResponse') },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Lead not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    409: {
+      description: 'A lead with this email already exists',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const deleteLead = registry.registerPath({
+  method: 'delete',
+  path: '/v1/leads/{id}',
+  tags: ['CRM'],
+  summary: 'Delete a lead',
+  request: { params: idParam.openapi('LeadId') },
+  responses: {
+    200: {
+      description: 'Lead deleted',
+      content: {
+        'application/json': {
+          schema: successEnvelope(deletedSchema).openapi('DeleteLeadResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Lead not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const bulkLeads = registry.registerPath({
+  method: 'post',
+  path: '/v1/leads/bulk',
+  tags: ['CRM'],
+  summary: 'Bulk lead actions',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: bulkLeadActionSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Bulk action applied',
+      content: {
+        'application/json': {
+          schema: successEnvelope(z.object({ updated: z.number().int() })).openapi(
+            'BulkLeadsResponse'
+          ),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const importLeadsPath = registry.registerPath({
+  method: 'post',
+  path: '/v1/leads/import',
+  tags: ['CRM'],
+  summary: 'Import leads with deduplication',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: importLeadsSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Leads imported',
+      content: {
+        'application/json': {
+          schema: successEnvelope(importLeadsResultSchema).openapi('ImportLeadsResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const convertLead = registry.registerPath({
+  method: 'post',
+  path: '/v1/leads/{id}/convert',
+  tags: ['CRM'],
+  summary: 'Convert a lead to a client and deal',
+  request: {
+    params: idParam.openapi('LeadId'),
+    body: { required: true, content: { 'application/json': { schema: convertLeadSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Lead converted',
+      content: {
+        'application/json': {
+          schema: successEnvelope(convertedLeadSchema).openapi('ConvertLeadResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the required scopes',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Lead not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const listPipelines = registry.registerPath({
+  method: 'get',
+  path: '/v1/pipelines',
+  tags: ['CRM'],
+  summary: 'List pipelines',
+  responses: {
+    200: {
+      description: 'Pipelines',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineSchema.array()).openapi('ListPipelinesResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const createPipeline = registry.registerPath({
+  method: 'post',
+  path: '/v1/pipelines',
+  tags: ['CRM'],
+  summary: 'Create a pipeline',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: createPipelineSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Pipeline created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineSchema).openapi('CreatePipelineResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getPipeline = registry.registerPath({
+  method: 'get',
+  path: '/v1/pipelines/{id}',
+  tags: ['CRM'],
+  summary: 'Get a pipeline',
+  request: { params: idParam.openapi('PipelineId') },
+  responses: {
+    200: {
+      description: 'Pipeline',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineSchema).openapi('GetPipelineResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Pipeline not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const updatePipeline = registry.registerPath({
+  method: 'patch',
+  path: '/v1/pipelines/{id}',
+  tags: ['CRM'],
+  summary: 'Update a pipeline',
+  request: {
+    params: idParam.openapi('PipelineId'),
+    body: { required: true, content: { 'application/json': { schema: updatePipelineSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Pipeline updated',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineSchema).openapi('UpdatePipelineResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Pipeline not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const replaceStages = registry.registerPath({
+  method: 'put',
+  path: '/v1/pipelines/{id}/stages',
+  tags: ['CRM'],
+  summary: 'Replace pipeline stages',
+  request: {
+    params: idParam.openapi('PipelineId'),
+    body: { required: true, content: { 'application/json': { schema: replaceStagesSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Stages replaced',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineSchema).openapi('ReplaceStagesResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Pipeline not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const listDeals = registry.registerPath({
+  method: 'get',
+  path: '/v1/deals',
+  tags: ['CRM'],
+  summary: 'List deals',
+  request: { query: dealListQuerySchema },
+  responses: {
+    200: {
+      description: 'Cursor-paginated deals',
+      content: {
+        'application/json': { schema: cursorEnvelope(dealSchema).openapi('ListDealsResponse') },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const createDeal = registry.registerPath({
+  method: 'post',
+  path: '/v1/deals',
+  tags: ['CRM'],
+  summary: 'Create a deal',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: createDealSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Deal created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(z.object({ dealId: z.string().uuid() })).openapi(
+            'CreateDealResponse'
+          ),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getDeal = registry.registerPath({
+  method: 'get',
+  path: '/v1/deals/{id}',
+  tags: ['CRM'],
+  summary: 'Get a deal',
+  request: { params: idParam.openapi('DealId') },
+  responses: {
+    200: {
+      description: 'Deal',
+      content: {
+        'application/json': { schema: successEnvelope(dealSchema).openapi('GetDealResponse') },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const updateDeal = registry.registerPath({
+  method: 'patch',
+  path: '/v1/deals/{id}',
+  tags: ['CRM'],
+  summary: 'Update a deal',
+  request: {
+    params: idParam.openapi('DealId'),
+    body: { required: true, content: { 'application/json': { schema: updateDealSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Deal updated',
+      content: {
+        'application/json': { schema: successEnvelope(dealSchema).openapi('UpdateDealResponse') },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal or stage not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const deleteDeal = registry.registerPath({
+  method: 'delete',
+  path: '/v1/deals/{id}',
+  tags: ['CRM'],
+  summary: 'Delete a deal',
+  request: { params: idParam.openapi('DealId') },
+  responses: {
+    200: {
+      description: 'Deal deleted',
+      content: {
+        'application/json': {
+          schema: successEnvelope(deletedSchema).openapi('DeleteDealResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const moveDeal = registry.registerPath({
+  method: 'post',
+  path: '/v1/deals/{id}/move',
+  tags: ['CRM'],
+  summary: 'Move a deal to a new stage',
+  request: {
+    params: idParam.openapi('DealId'),
+    body: { required: true, content: { 'application/json': { schema: moveDealSchema } } },
+  },
+  responses: {
+    200: {
+      description: 'Deal moved',
+      content: {
+        'application/json': {
+          schema: successEnvelope(
+            z.object({
+              dealId: z.string().uuid(),
+              previousStageId: z.string().uuid(),
+              newStageId: z.string().uuid(),
+              wonAt: z.string().datetime().nullable(),
+              lostAt: z.string().datetime().nullable(),
+            })
+          ).openapi('MoveDealResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `deals:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal or stage not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const createQuoteFromDealPath = registry.registerPath({
+  method: 'post',
+  path: '/v1/deals/{id}/quote',
+  tags: ['Deals'],
+  summary: 'Create a draft quote from a deal',
+  description: 'Creates a draft quote linked to the deal and updates the deal.quoteId.',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      description: 'Optional quote title and expiration date',
+      required: false,
+      content: { 'application/json': { schema: createQuoteFromDealSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Quote created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(quoteFromDealSchema).openapi('QuoteFromDealResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Invalid request',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the required scopes',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal not found',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    409: {
+      description: 'Deal already has a quote',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    422: {
+      description: 'Deal has no client',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const createInvoicePaymentLink = registry.registerPath({
+  method: 'post',
+  path: '/v1/invoices/{id}/payment-links',
+  tags: ['Invoices'],
+  summary: 'Create a payment link for an invoice',
+  description:
+    'Returns a Stripe Checkout URL or Razorpay order for the invoice. Idempotency-Key required.',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      description: 'Optional provider override',
+      required: false,
+      content: { 'application/json': { schema: createPaymentLinkSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Payment link created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(paymentLinkResponseSchema).openapi('PaymentLinkResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Invalid request or invoice state',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the required scopes',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Invoice not found',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    501: {
+      description: 'Requested payment provider is not configured',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getReceivablesAgeingReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/receivables-ageing',
+  tags: ['Reports'],
+  summary: 'Receivables ageing report',
+  responses: {
+    200: {
+      description: 'Ageing buckets',
+      content: {
+        'application/json': {
+          schema: successEnvelope(receivablesAgeingRowSchema.array()).openapi(
+            'ReceivablesAgeingResponse'
+          ),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getRevenueReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/revenue',
+  tags: ['Reports'],
+  summary: 'Monthly revenue report',
+  responses: {
+    200: {
+      description: 'Monthly revenue by currency',
+      content: {
+        'application/json': {
+          schema: successEnvelope(revenueMonthlyRowSchema.array()).openapi('RevenueResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getGstSummaryReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/gst-summary',
+  tags: ['Reports'],
+  summary: 'GST outward supplies report',
+  responses: {
+    200: {
+      description: 'GSTR-1 style outward supplies',
+      content: {
+        'application/json': {
+          schema: successEnvelope(gstOutwardSupplyRowSchema.array()).openapi('GstSummaryResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getPipelineReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/pipeline',
+  tags: ['Reports'],
+  summary: 'Pipeline stage transitions report',
+  responses: {
+    200: {
+      description: 'Current pipeline snapshot',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineStageRowSchema.array()).openapi('PipelineReportResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
 // Keep the registered operation objects reachable for any future middleware that
 // wants to attach metadata to the live routes.
 export const operations = {
@@ -235,4 +1102,29 @@ export const operations = {
   sendTestWebhook,
   listWebhookDeliveries,
   retryWebhookDelivery,
+  listLeads,
+  createLead,
+  getLead,
+  updateLead,
+  deleteLead,
+  bulkLeads,
+  importLeadsPath,
+  convertLead,
+  listPipelines,
+  createPipeline,
+  getPipeline,
+  updatePipeline,
+  replaceStages,
+  listDeals,
+  createDeal,
+  getDeal,
+  updateDeal,
+  deleteDeal,
+  moveDeal,
+  createQuoteFromDealPath,
+  createInvoicePaymentLink,
+  getReceivablesAgeingReport,
+  getRevenueReport,
+  getGstSummaryReport,
+  getPipelineReport,
 };

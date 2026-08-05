@@ -17,7 +17,13 @@ function generateAccessToken(): string {
 export async function generateInvoiceNumber(workspaceId: string): Promise<string> {
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.numberSequence.upsert({
-      where: { workspaceId_type: { workspaceId, type: 'invoice' } },
+      where: {
+        workspaceId_type_financialYear: {
+          workspaceId,
+          type: 'invoice',
+          financialYear: null as unknown as string,
+        },
+      },
       update: { currentValue: { increment: 1 } },
       create: {
         workspaceId,
@@ -50,7 +56,13 @@ export async function generateInvoiceNumber(workspaceId: string): Promise<string
 export async function generateCreditNoteNumber(workspaceId: string): Promise<string> {
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.numberSequence.upsert({
-      where: { workspaceId_type: { workspaceId, type: 'credit_note' } },
+      where: {
+        workspaceId_type_financialYear: {
+          workspaceId,
+          type: 'credit_note',
+          financialYear: null as unknown as string,
+        },
+      },
       update: { currentValue: { increment: 1 } },
       create: {
         workspaceId,

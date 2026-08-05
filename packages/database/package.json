@@ -17,6 +17,7 @@
     "migrate:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "seed:demo": "tsx prisma/seed-demo.ts",
     "seed:prod": "tsx prisma/seed-production.ts",
     "seed:e2e": "tsx prisma/seed-e2e-production.ts",
     "seed:e2e:cleanup": "tsx prisma/seed-e2e-production.ts --cleanup",
@@ -35,6 +36,7 @@
     "dotenv": "^18.0.4"
   },
   "devDependencies": {
+    "@faker-js/faker": "9.7.0",
     "@types/bcryptjs": "^2.4.6",
     "prisma": "7.10.0",
     "tsx": "^4.19.0",

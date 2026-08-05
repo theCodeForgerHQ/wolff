@@ -119,9 +119,10 @@ async function seedProductionDemo() {
   // Create number sequences
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: demoWorkspace.id,
         type: 'quote',
+        financialYear: null,
       },
     },
     update: {},
@@ -136,9 +137,10 @@ async function seedProductionDemo() {
 
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: demoWorkspace.id,
         type: 'invoice',
+        financialYear: null,
       },
     },
     update: {},

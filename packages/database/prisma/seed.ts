@@ -341,9 +341,10 @@ async function main() {
   // Create number sequences
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: workspace.id,
         type: 'quote',
+        financialYear: null,
       },
     },
     update: { prefix: 'Q' },
@@ -358,9 +359,10 @@ async function main() {
 
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: workspace.id,
         type: 'invoice',
+        financialYear: null,
       },
     },
     update: { prefix: 'INV' },
@@ -912,11 +914,23 @@ async function main() {
 
   // Update number sequences to match seeded data
   await prisma.numberSequence.update({
-    where: { workspaceId_type: { workspaceId: workspace.id, type: 'quote' } },
+    where: {
+      workspaceId_type_financialYear: {
+        workspaceId: workspace.id,
+        type: 'quote',
+        financialYear: null,
+      },
+    },
     data: { currentValue: 6 },
   });
   await prisma.numberSequence.update({
-    where: { workspaceId_type: { workspaceId: workspace.id, type: 'invoice' } },
+    where: {
+      workspaceId_type_financialYear: {
+        workspaceId: workspace.id,
+        type: 'invoice',
+        financialYear: null,
+      },
+    },
     data: { currentValue: 14 },
   });
 
@@ -1207,9 +1221,10 @@ async function seedDemoWorkspace() {
   // Create number sequences for demo
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: demoWorkspace.id,
         type: 'quote',
+        financialYear: null,
       },
     },
     update: { currentValue: 6, prefix: 'Q' },
@@ -1224,9 +1239,10 @@ async function seedDemoWorkspace() {
 
   await prisma.numberSequence.upsert({
     where: {
-      workspaceId_type: {
+      workspaceId_type_financialYear: {
         workspaceId: demoWorkspace.id,
         type: 'invoice',
+        financialYear: null,
       },
     },
     update: { currentValue: 8, prefix: 'INV' },
