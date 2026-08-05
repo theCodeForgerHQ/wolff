@@ -16,7 +16,8 @@
     "./invoices": "./src/invoices/index.ts",
     "./email": "./src/email/index.ts",
     "./crm": "./src/crm/index.ts",
-    "./gst": "./src/gst/index.ts"
+    "./gst": "./src/gst/index.ts",
+    "./reports": "./src/reports/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
