@@ -14,7 +14,7 @@ export interface ReceivablesAgeingRow {
   currency: string;
   total: number;
   amountDue: number;
-  dueDate: Date;
+  dueDate: string;
   daysOverdue: number;
   bucket: string;
 }
@@ -43,14 +43,14 @@ export async function getReceivablesAgeing(
     currency: r.currency,
     total: Number(r.total),
     amountDue: Number(r.amount_due),
-    dueDate: r.due_date,
+    dueDate: r.due_date.toISOString(),
     daysOverdue: r.days_overdue,
     bucket: r.bucket,
   }));
 }
 
 export interface RevenueMonthlyRow {
-  month: Date;
+  month: string;
   currency: string;
   revenue: number;
   paymentCount: number;
@@ -66,7 +66,7 @@ export async function getRevenueMonthly(db: Db, workspaceId: string): Promise<Re
     }[]
   >`SELECT * FROM v_revenue_monthly WHERE workspace_id = ${workspaceId} ORDER BY month`;
   return rows.map((r) => ({
-    month: r.month,
+    month: r.month.toISOString(),
     currency: r.currency,
     revenue: Number(r.revenue),
     paymentCount: Number(r.payment_count),
@@ -76,7 +76,7 @@ export async function getRevenueMonthly(db: Db, workspaceId: string): Promise<Re
 export interface GstOutwardSupplyRow {
   invoiceId: string;
   invoiceNumber: string;
-  issueDate: Date;
+  issueDate: string;
   supplyType: string;
   reverseCharge: boolean;
   supplierGstin: string | null;
@@ -117,7 +117,7 @@ export async function getGstOutwardSupplies(
   return rows.map((r) => ({
     invoiceId: r.invoice_id,
     invoiceNumber: r.invoice_number,
-    issueDate: r.issue_date,
+    issueDate: r.issue_date.toISOString(),
     supplyType: r.supply_type,
     reverseCharge: r.reverse_charge,
     supplierGstin: r.supplier_gstin,
@@ -148,10 +148,10 @@ export interface PipelineStageRow {
   leadId: string | null;
   clientId: string | null;
   ownerId: string | null;
-  expectedCloseDate: Date | null;
-  dealCreatedAt: Date;
-  wonAt: Date | null;
-  lostAt: Date | null;
+  expectedCloseDate: string | null;
+  dealCreatedAt: string;
+  wonAt: string | null;
+  lostAt: string | null;
 }
 
 export async function getPipelineStageTransitions(
@@ -195,9 +195,9 @@ export async function getPipelineStageTransitions(
     leadId: r.lead_id,
     clientId: r.client_id,
     ownerId: r.owner_id,
-    expectedCloseDate: r.expected_close_date,
-    dealCreatedAt: r.deal_created_at,
-    wonAt: r.won_at,
-    lostAt: r.lost_at,
+    expectedCloseDate: r.expected_close_date?.toISOString() ?? null,
+    dealCreatedAt: r.deal_created_at.toISOString(),
+    wonAt: r.won_at?.toISOString() ?? null,
+    lostAt: r.lost_at?.toISOString() ?? null,
   }));
 }

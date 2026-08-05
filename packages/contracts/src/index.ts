@@ -4,3 +4,4 @@ export * from './scopes';
 export * from './webhook-events';
 export * from './webhook-endpoints';
 export * from './crm';
+export * from './reports';

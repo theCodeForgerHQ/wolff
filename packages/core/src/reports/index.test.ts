@@ -127,6 +127,7 @@ describe.skipIf(!url)('reports from SQL views (Postgres)', () => {
       invoiceId,
       invoiceNumber: `INV-${run}`,
       amountDue: 118,
+      dueDate: expect.any(String),
       bucket: expect.stringMatching(/^bucket_/),
     });
   });

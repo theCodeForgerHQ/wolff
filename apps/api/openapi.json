@@ -214,6 +214,231 @@
           "credit_note.issued"
         ]
       },
+      "ReceivablesAgeingRow": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "invoiceNumber": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "amountDue": {
+            "type": "number"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "daysOverdue": {
+            "type": "number"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": ["current", "bucket_0_30", "bucket_31_60", "bucket_61_90", "bucket_90_plus"]
+          }
+        },
+        "required": [
+          "invoiceId",
+          "clientId",
+          "invoiceNumber",
+          "currency",
+          "total",
+          "amountDue",
+          "dueDate",
+          "daysOverdue",
+          "bucket"
+        ]
+      },
+      "RevenueMonthlyRow": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "revenue": {
+            "type": "number"
+          },
+          "paymentCount": {
+            "type": "number"
+          }
+        },
+        "required": ["month", "currency", "revenue", "paymentCount"]
+      },
+      "GstOutwardSupplyRow": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string"
+          },
+          "invoiceNumber": {
+            "type": "string"
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "supplyType": {
+            "type": "string"
+          },
+          "reverseCharge": {
+            "type": "boolean"
+          },
+          "supplierGstin": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientGstin": {
+            "type": "string",
+            "nullable": true
+          },
+          "hsnSac": {
+            "type": "string",
+            "nullable": true
+          },
+          "gstRate": {
+            "type": "number",
+            "nullable": true
+          },
+          "taxableValue": {
+            "type": "number"
+          },
+          "cgstAmount": {
+            "type": "number"
+          },
+          "sgstAmount": {
+            "type": "number"
+          },
+          "igstAmount": {
+            "type": "number"
+          },
+          "cessAmount": {
+            "type": "number"
+          },
+          "lineTotal": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "invoiceId",
+          "invoiceNumber",
+          "issueDate",
+          "supplyType",
+          "reverseCharge",
+          "supplierGstin",
+          "recipientGstin",
+          "hsnSac",
+          "gstRate",
+          "taxableValue",
+          "cgstAmount",
+          "sgstAmount",
+          "igstAmount",
+          "cessAmount",
+          "lineTotal"
+        ]
+      },
+      "PipelineStageRow": {
+        "type": "object",
+        "properties": {
+          "dealId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "pipelineId": {
+            "type": "string"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "stageName": {
+            "type": "string"
+          },
+          "stagePosition": {
+            "type": "number"
+          },
+          "stageKind": {
+            "type": "string"
+          },
+          "probability": {
+            "type": "number"
+          },
+          "leadId": {
+            "type": "string",
+            "nullable": true
+          },
+          "clientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "expectedCloseDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "dealCreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "wonAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "lostAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "dealId",
+          "title",
+          "value",
+          "currency",
+          "pipelineId",
+          "pipelineName",
+          "stageId",
+          "stageName",
+          "stagePosition",
+          "stageKind",
+          "probability",
+          "leadId",
+          "clientId",
+          "ownerId",
+          "expectedCloseDate",
+          "dealCreatedAt",
+          "wonAt",
+          "lostAt"
+        ]
+      },
       "Lead": {
         "type": "object",
         "properties": {
@@ -1252,6 +1477,289 @@
               }
             },
             "required": ["dealId", "previousStageId", "newStageId", "wonAt", "lostAt"]
+          }
+        },
+        "required": ["success", "data"]
+      },
+      "ReceivablesAgeingResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoiceId": {
+                  "type": "string"
+                },
+                "clientId": {
+                  "type": "string"
+                },
+                "invoiceNumber": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "total": {
+                  "type": "number"
+                },
+                "amountDue": {
+                  "type": "number"
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "daysOverdue": {
+                  "type": "number"
+                },
+                "bucket": {
+                  "type": "string",
+                  "enum": [
+                    "current",
+                    "bucket_0_30",
+                    "bucket_31_60",
+                    "bucket_61_90",
+                    "bucket_90_plus"
+                  ]
+                }
+              },
+              "required": [
+                "invoiceId",
+                "clientId",
+                "invoiceNumber",
+                "currency",
+                "total",
+                "amountDue",
+                "dueDate",
+                "daysOverdue",
+                "bucket"
+              ]
+            }
+          }
+        },
+        "required": ["success", "data"]
+      },
+      "RevenueResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "month": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "revenue": {
+                  "type": "number"
+                },
+                "paymentCount": {
+                  "type": "number"
+                }
+              },
+              "required": ["month", "currency", "revenue", "paymentCount"]
+            }
+          }
+        },
+        "required": ["success", "data"]
+      },
+      "GstSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoiceId": {
+                  "type": "string"
+                },
+                "invoiceNumber": {
+                  "type": "string"
+                },
+                "issueDate": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "supplyType": {
+                  "type": "string"
+                },
+                "reverseCharge": {
+                  "type": "boolean"
+                },
+                "supplierGstin": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "recipientGstin": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "hsnSac": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "gstRate": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "taxableValue": {
+                  "type": "number"
+                },
+                "cgstAmount": {
+                  "type": "number"
+                },
+                "sgstAmount": {
+                  "type": "number"
+                },
+                "igstAmount": {
+                  "type": "number"
+                },
+                "cessAmount": {
+                  "type": "number"
+                },
+                "lineTotal": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "invoiceId",
+                "invoiceNumber",
+                "issueDate",
+                "supplyType",
+                "reverseCharge",
+                "supplierGstin",
+                "recipientGstin",
+                "hsnSac",
+                "gstRate",
+                "taxableValue",
+                "cgstAmount",
+                "sgstAmount",
+                "igstAmount",
+                "cessAmount",
+                "lineTotal"
+              ]
+            }
+          }
+        },
+        "required": ["success", "data"]
+      },
+      "PipelineReportResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dealId": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "pipelineId": {
+                  "type": "string"
+                },
+                "pipelineName": {
+                  "type": "string"
+                },
+                "stageId": {
+                  "type": "string"
+                },
+                "stageName": {
+                  "type": "string"
+                },
+                "stagePosition": {
+                  "type": "number"
+                },
+                "stageKind": {
+                  "type": "string"
+                },
+                "probability": {
+                  "type": "number"
+                },
+                "leadId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "clientId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "ownerId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "expectedCloseDate": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                },
+                "dealCreatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "wonAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                },
+                "lostAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "dealId",
+                "title",
+                "value",
+                "currency",
+                "pipelineId",
+                "pipelineName",
+                "stageId",
+                "stageName",
+                "stagePosition",
+                "stageKind",
+                "probability",
+                "leadId",
+                "clientId",
+                "ownerId",
+                "expectedCloseDate",
+                "dealCreatedAt",
+                "wonAt",
+                "lostAt"
+              ]
+            }
           }
         },
         "required": ["success", "data"]
@@ -2818,6 +3326,158 @@
           },
           "404": {
             "description": "Deal or stage not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/receivables-ageing": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Receivables ageing report",
+        "responses": {
+          "200": {
+            "description": "Ageing buckets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivablesAgeingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the `reports:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/revenue": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Monthly revenue report",
+        "responses": {
+          "200": {
+            "description": "Monthly revenue by currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the `reports:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/gst-summary": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "GST outward supplies report",
+        "responses": {
+          "200": {
+            "description": "GSTR-1 style outward supplies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GstSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the `reports:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/pipeline": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Pipeline stage transitions report",
+        "responses": {
+          "200": {
+            "description": "Current pipeline snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineReportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the `reports:read` scope",
             "content": {
               "application/json": {
                 "schema": {

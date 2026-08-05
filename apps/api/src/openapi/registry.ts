@@ -15,12 +15,16 @@ import {
   dealSchema,
   deletedSchema,
   errorEnvelopeSchema,
+  gstOutwardSupplyRowSchema,
   leadListQuerySchema,
   leadSchema,
   moveDealSchema,
   pipelineSchema,
+  pipelineStageRowSchema,
   queuedDeliverySchema,
+  receivablesAgeingRowSchema,
   replaceStagesSchema,
+  revenueMonthlyRowSchema,
   successEnvelope,
   updateDealSchema,
   updateLeadSchema,
@@ -38,6 +42,10 @@ registry.register('WebhookEndpoint', webhookEndpointSchema);
 registry.register('CreatedWebhookEndpoint', createdWebhookEndpointSchema);
 registry.register('WebhookDelivery', webhookDeliverySchema);
 registry.register('CreateWebhookEndpoint', createWebhookEndpointSchema);
+registry.register('ReceivablesAgeingRow', receivablesAgeingRowSchema);
+registry.register('RevenueMonthlyRow', revenueMonthlyRowSchema);
+registry.register('GstOutwardSupplyRow', gstOutwardSupplyRowSchema);
+registry.register('PipelineStageRow', pipelineStageRowSchema);
 
 const listWebhookEndpoints = registry.registerPath({
   method: 'get',
@@ -842,6 +850,108 @@ const moveDeal = registry.registerPath({
   },
 });
 
+const getReceivablesAgeingReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/receivables-ageing',
+  tags: ['Reports'],
+  summary: 'Receivables ageing report',
+  responses: {
+    200: {
+      description: 'Ageing buckets',
+      content: {
+        'application/json': {
+          schema: successEnvelope(receivablesAgeingRowSchema.array()).openapi(
+            'ReceivablesAgeingResponse'
+          ),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getRevenueReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/revenue',
+  tags: ['Reports'],
+  summary: 'Monthly revenue report',
+  responses: {
+    200: {
+      description: 'Monthly revenue by currency',
+      content: {
+        'application/json': {
+          schema: successEnvelope(revenueMonthlyRowSchema.array()).openapi('RevenueResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getGstSummaryReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/gst-summary',
+  tags: ['Reports'],
+  summary: 'GST outward supplies report',
+  responses: {
+    200: {
+      description: 'GSTR-1 style outward supplies',
+      content: {
+        'application/json': {
+          schema: successEnvelope(gstOutwardSupplyRowSchema.array()).openapi('GstSummaryResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const getPipelineReport = registry.registerPath({
+  method: 'get',
+  path: '/v1/reports/pipeline',
+  tags: ['Reports'],
+  summary: 'Pipeline stage transitions report',
+  responses: {
+    200: {
+      description: 'Current pipeline snapshot',
+      content: {
+        'application/json': {
+          schema: successEnvelope(pipelineStageRowSchema.array()).openapi('PipelineReportResponse'),
+        },
+      },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `reports:read` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
 // Keep the registered operation objects reachable for any future middleware that
 // wants to attach metadata to the live routes.
 export const operations = {
@@ -869,4 +979,8 @@ export const operations = {
   updateDeal,
   deleteDeal,
   moveDeal,
+  getReceivablesAgeingReport,
+  getRevenueReport,
+  getGstSummaryReport,
+  getPipelineReport,
 };
