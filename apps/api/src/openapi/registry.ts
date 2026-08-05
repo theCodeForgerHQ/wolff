@@ -18,6 +18,8 @@ import {
   deletedSchema,
   errorEnvelopeSchema,
   gstOutwardSupplyRowSchema,
+  importLeadsResultSchema,
+  importLeadsSchema,
   leadListQuerySchema,
   leadSchema,
   moveDealSchema,
@@ -54,6 +56,8 @@ registry.register('CreatePaymentLink', createPaymentLinkSchema);
 registry.register('PaymentLinkResponse', paymentLinkResponseSchema);
 registry.register('CreateQuoteFromDeal', createQuoteFromDealSchema);
 registry.register('QuoteFromDeal', quoteFromDealSchema);
+registry.register('ImportLeads', importLeadsSchema);
+registry.register('ImportLeadsResult', importLeadsResultSchema);
 
 const listWebhookEndpoints = registry.registerPath({
   method: 'get',
@@ -446,6 +450,38 @@ const bulkLeads = registry.registerPath({
           schema: successEnvelope(z.object({ updated: z.number().int() })).openapi(
             'BulkLeadsResponse'
           ),
+        },
+      },
+    },
+    400: {
+      description: 'Validation error',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the `leads:write` scope',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
+const importLeadsPath = registry.registerPath({
+  method: 'post',
+  path: '/v1/leads/import',
+  tags: ['CRM'],
+  summary: 'Import leads with deduplication',
+  request: {
+    body: { required: true, content: { 'application/json': { schema: importLeadsSchema } } },
+  },
+  responses: {
+    201: {
+      description: 'Leads imported',
+      content: {
+        'application/json': {
+          schema: successEnvelope(importLeadsResultSchema).openapi('ImportLeadsResponse'),
         },
       },
     },
@@ -1072,6 +1108,7 @@ export const operations = {
   updateLead,
   deleteLead,
   bulkLeads,
+  importLeadsPath,
   convertLead,
   listPipelines,
   createPipeline,

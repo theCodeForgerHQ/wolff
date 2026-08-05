@@ -103,6 +103,44 @@ export const convertLeadSchema = z
   .strict()
   .openapi('ConvertLead');
 
+export const importLeadRowSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    email: z.string().trim().email().max(255).optional(),
+    phone: z.string().trim().max(30).optional(),
+    company: z.string().trim().max(200).optional(),
+    source: leadSourceSchema.default('import'),
+    status: leadStatusSchema.default('new'),
+    score: z.number().int().min(0).max(100).optional(),
+    message: z.string().trim().max(5000).optional(),
+    ownerId: z.string().uuid().optional(),
+  })
+  .strict()
+  .openapi('ImportLeadRow');
+
+export const importLeadsSchema = z
+  .object({
+    leads: z.array(importLeadRowSchema).min(1).max(1000),
+    dedupeBy: z
+      .array(z.enum(['email', 'phone']))
+      .min(1)
+      .max(2)
+      .default(['email']),
+  })
+  .strict()
+  .openapi('ImportLeads');
+
+export type ImportLeadsInput = z.infer<typeof importLeadsSchema>;
+
+export const importLeadsResultSchema = z
+  .object({
+    created: z.number().int(),
+    updated: z.number().int(),
+    skipped: z.number().int(),
+    errors: z.number().int(),
+  })
+  .openapi('ImportLeadsResult');
+
 export type ConvertLeadRequest = z.infer<typeof convertLeadSchema>;
 
 export const convertedLeadSchema = z

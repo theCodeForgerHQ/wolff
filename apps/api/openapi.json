@@ -540,6 +540,103 @@
         },
         "required": ["quoteId", "quoteNumber"]
       },
+      "ImportLeads": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportLeadRow"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "dedupeBy": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["email", "phone"]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "default": ["email"]
+          }
+        },
+        "required": ["leads"],
+        "additionalProperties": false
+      },
+      "ImportLeadRow": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "source": {
+            "$ref": "#/components/schemas/LeadSource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LeadStatus"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "LeadSource": {
+        "type": "string",
+        "enum": ["manual", "widget", "api", "import"],
+        "default": "import"
+      },
+      "LeadStatus": {
+        "type": "string",
+        "enum": ["new", "contacted", "qualified", "disqualified", "converted"],
+        "default": "new"
+      },
+      "ImportLeadsResult": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "integer"
+          },
+          "errors": {
+            "type": "integer"
+          }
+        },
+        "required": ["created", "updated", "skipped", "errors"]
+      },
       "Lead": {
         "type": "object",
         "properties": {
@@ -638,14 +735,6 @@
           "updatedAt",
           "deletedAt"
         ]
-      },
-      "LeadSource": {
-        "type": "string",
-        "enum": ["manual", "widget", "api", "import"]
-      },
-      "LeadStatus": {
-        "type": "string",
-        "enum": ["new", "contacted", "qualified", "disqualified", "converted"]
       },
       "CreateLead": {
         "type": "object",
@@ -1381,6 +1470,19 @@
               }
             },
             "required": ["updated"]
+          }
+        },
+        "required": ["success", "data"]
+      },
+      "ImportLeadsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ImportLeadsResult"
           }
         },
         "required": ["success", "data"]
@@ -2637,6 +2739,64 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BulkLeadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the `leads:write` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/leads/import": {
+      "post": {
+        "tags": ["CRM"],
+        "summary": "Import leads with deduplication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportLeads"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Leads imported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportLeadsResponse"
                 }
               }
             }

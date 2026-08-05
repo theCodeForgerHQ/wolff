@@ -4,6 +4,8 @@ import {
   convertLeadSchema,
   createLeadSchema,
   idParamSchema,
+  importLeadsSchema,
+  importLeadsResultSchema,
   leadListQuerySchema,
   updateLeadSchema,
 } from '@wolff/contracts';
@@ -14,6 +16,7 @@ import {
   createLead,
   deleteLead,
   getLead,
+  importLeads,
   listLeads,
   updateLead,
 } from '@wolff/core/crm';
@@ -100,6 +103,23 @@ export function leadRoutes(db: Db): Router {
       value: input.value,
     });
     sendData(res, result);
+  });
+
+  router.post('/leads/import', requireScopes('leads:write'), async (req, res) => {
+    const input = importLeadsSchema.parse(req.body);
+    const result = await importLeads(ctxOf(req), {
+      leads: input.leads.map((row) => ({
+        ...row,
+        email: row.email ?? null,
+        phone: row.phone ?? null,
+        company: row.company ?? null,
+        score: row.score ?? null,
+        message: row.message ?? null,
+        ownerId: row.ownerId ?? null,
+      })),
+      dedupeBy: input.dedupeBy,
+    });
+    sendData(res, importLeadsResultSchema.parse(result), 201);
   });
 
   router.post(

@@ -292,6 +292,125 @@ export async function deleteLead(ctx: CoreContext, id: string) {
   return true;
 }
 
+export interface ImportLeadsInput {
+  leads: Array<{
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    company?: string | null;
+    source?: 'manual' | 'widget' | 'api' | 'import';
+    status?: 'new' | 'contacted' | 'qualified' | 'disqualified' | 'converted';
+    score?: number | null;
+    message?: string | null;
+    ownerId?: string | null;
+  }>;
+  dedupeBy: Array<'email' | 'phone'>;
+}
+
+export interface ImportLeadsResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+}
+
+function normalizeImportRow(
+  row: ImportLeadsInput['leads'][number]
+): ImportLeadsInput['leads'][number] {
+  const copy = { ...row };
+  if (copy.email === '') copy.email = null;
+  if (copy.phone === '') copy.phone = null;
+  if (copy.company === '') copy.company = null;
+  if (copy.message === '') copy.message = null;
+  return copy;
+}
+
+/**
+ * Imports leads into a workspace with email/phone deduplication. Existing
+ * leads are updated; new leads are created. Errors on individual rows are
+ * counted but do not fail the whole batch.
+ */
+export async function importLeads(
+  ctx: CoreContext,
+  input: ImportLeadsInput
+): Promise<ImportLeadsResult> {
+  const { db, workspaceId } = ctx;
+  const result: ImportLeadsResult = { created: 0, updated: 0, skipped: 0, errors: 0 };
+
+  // Track keys seen in this batch so duplicate imports do not create multiple
+  // rows for the same contact.
+  const seen = new Set<string>();
+
+  for (const raw of input.leads) {
+    const row = normalizeImportRow(raw);
+    try {
+      const keys: string[] = [];
+      if (input.dedupeBy.includes('email') && row.email)
+        keys.push(`email:${row.email.toLowerCase()}`);
+      if (input.dedupeBy.includes('phone') && row.phone) keys.push(`phone:${row.phone}`);
+
+      const seenKey = keys[0] ?? `name:${row.name}`;
+      if (seen.has(seenKey)) {
+        result.skipped++;
+        continue;
+      }
+
+      const where: Prisma.LeadWhereInput = { workspaceId, deletedAt: null };
+      const orConditions: Prisma.LeadWhereInput[] = [];
+      if (input.dedupeBy.includes('email') && row.email) {
+        orConditions.push({ email: { equals: row.email, mode: 'insensitive' } });
+      }
+      if (input.dedupeBy.includes('phone') && row.phone) {
+        orConditions.push({ phone: row.phone });
+      }
+      if (orConditions.length > 0) where.OR = orConditions;
+
+      const existing = orConditions.length > 0 ? await db.lead.findFirst({ where }) : null;
+
+      if (existing) {
+        await db.lead.update({
+          where: { id: existing.id },
+          data: {
+            name: row.name,
+            ...(row.email !== undefined && { email: row.email }),
+            ...(row.phone !== undefined && { phone: row.phone }),
+            ...(row.company !== undefined && { company: row.company }),
+            source: 'import',
+            ...(row.status !== undefined &&
+              existing.status !== 'converted' && { status: row.status }),
+            ...(row.score !== undefined && { score: row.score }),
+            ...(row.message !== undefined && { message: row.message }),
+            ...(row.ownerId !== undefined && { ownerId: row.ownerId }),
+          },
+        });
+        result.updated++;
+      } else {
+        await db.lead.create({
+          data: {
+            workspaceId,
+            name: row.name,
+            email: row.email ?? null,
+            phone: row.phone ?? null,
+            company: row.company ?? null,
+            source: row.source ?? 'import',
+            status: row.status ?? 'new',
+            score: row.score ?? null,
+            message: row.message ?? null,
+            ownerId: row.ownerId ?? null,
+          },
+        });
+        result.created++;
+      }
+
+      keys.forEach((k) => seen.add(k));
+    } catch {
+      result.errors++;
+    }
+  }
+
+  return result;
+}
+
 export interface BulkLeadResult {
   updated: number;
 }

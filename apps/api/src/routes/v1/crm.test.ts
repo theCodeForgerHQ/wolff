@@ -188,6 +188,54 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes (Postgres)', () => {
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('insufficient_scope');
     });
+
+    it('imports leads and dedupes by email', async () => {
+      const first = await as(a)
+        .post('/v1/leads/import')
+        .send({
+          leads: [
+            { name: 'Priya Sharma', email: 'priya@example.com', company: 'Kaveri', status: 'new' },
+            { name: 'John Doe', email: 'john@example.com', phone: '+1234567890' },
+          ],
+        });
+      expect(first.status).toBe(201);
+      expect(first.body.data).toEqual({ created: 2, updated: 0, skipped: 0, errors: 0 });
+
+      const second = await as(a)
+        .post('/v1/leads/import')
+        .send({
+          leads: [
+            {
+              name: 'Priya S',
+              email: 'priya@example.com',
+              company: 'Kaveri Studio',
+              status: 'contacted',
+            },
+            { name: 'Jane Doe', email: 'jane@example.com' },
+          ],
+        });
+      expect(second.status).toBe(201);
+      expect(second.body.data).toEqual({ created: 1, updated: 1, skipped: 0, errors: 0 });
+
+      const list = await as(a).get('/v1/leads?q=Kaveri');
+      expect(list.status).toBe(200);
+      expect(list.body.data).toHaveLength(1);
+      expect(list.body.data[0].company).toBe('Kaveri Studio');
+      expect(list.body.data[0].status).toBe('contacted');
+    });
+
+    it('skips duplicate leads within the same import batch', async () => {
+      const res = await as(a)
+        .post('/v1/leads/import')
+        .send({
+          leads: [
+            { name: 'One', email: 'dup@example.com' },
+            { name: 'Two', email: 'dup@example.com' },
+          ],
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.data).toEqual({ created: 1, updated: 0, skipped: 1, errors: 0 });
+    });
   });
 
   describe('/pipelines', () => {
