@@ -5,7 +5,7 @@ import { createTestWorkspace, testApp, testDb, type TestWorkspace } from '../../
 
 const auth = (ws: TestWorkspace) => 'Bearer ' + ws.key;
 
-describe('/v1 reports routes (Postgres)', () => {
+describe.skipIf(!process.env.TEST_DATABASE_URL)('/v1 reports routes (Postgres)', () => {
   const { base, db } = testDb();
   const app = testApp(db);
   let ws: TestWorkspace;
