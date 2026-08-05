@@ -90,27 +90,32 @@ export async function createStripeCheckout(
   }
 
   const amount = toSmallestCurrencyUnit(invoice.total);
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: invoice.currency.toLowerCase(),
-            product_data: { name: `Invoice ${invoice.invoiceNumber}` },
-            unit_amount: amount,
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: invoice.currency.toLowerCase(),
+              product_data: { name: `Invoice ${invoice.invoiceNumber}` },
+              unit_amount: amount,
+            },
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      customer_email: invoice.client?.email ?? undefined,
-      success_url: `${appUrl}/invoices/${invoice.id}/paid?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/invoices/${invoice.id}`,
-      metadata: { invoiceId: invoice.id },
-    },
-    { stripeAccount: settings.stripeAccountId }
-  );
+        ],
+        customer_email: invoice.client?.email ?? undefined,
+        success_url: `${appUrl}/invoices/${invoice.id}/paid?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/invoices/${invoice.id}`,
+        metadata: { invoiceId: invoice.id },
+      },
+      { stripeAccount: settings.stripeAccountId }
+    );
+  } catch {
+    throw new CoreError('provider_error', 'Stripe checkout creation failed');
+  }
 
   if (!session.url) {
     throw new CoreError('internal_error', 'Stripe did not return a checkout URL');
@@ -137,12 +142,17 @@ export async function createRazorpayOrder(
   }
 
   const amount = toSmallestCurrencyUnit(invoice.total);
-  const order = await razorpay.orders.create({
-    amount,
-    currency: invoice.currency.toUpperCase(),
-    receipt: invoice.id.slice(0, 40),
-    notes: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
-  });
+  let order: { id?: string };
+  try {
+    order = await razorpay.orders.create({
+      amount,
+      currency: invoice.currency.toUpperCase(),
+      receipt: invoice.id.slice(0, 40),
+      notes: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+    });
+  } catch {
+    throw new CoreError('provider_error', 'Razorpay order creation failed');
+  }
 
   if (!order.id) {
     throw new CoreError('internal_error', 'Razorpay did not return an order id');
