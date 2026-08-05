@@ -439,6 +439,79 @@
           "lostAt"
         ]
       },
+      "CreatePaymentLink": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/PaymentProvider"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaymentProvider": {
+        "type": "string",
+        "enum": ["stripe", "razorpay"]
+      },
+      "PaymentLinkResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": ["stripe"]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "sessionId": {
+                "type": "string"
+              }
+            },
+            "required": ["provider", "url", "sessionId"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": ["razorpay"]
+              },
+              "orderId": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "keyId": {
+                "type": "string"
+              },
+              "prefill": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "contact": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "required": ["provider", "orderId", "amount", "currency", "keyId", "prefill"]
+          }
+        ]
+      },
       "Lead": {
         "type": "object",
         "properties": {
@@ -3326,6 +3399,97 @@
           },
           "404": {
             "description": "Deal or stage not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invoices/{id}/payment-links": {
+      "post": {
+        "tags": ["Invoices"],
+        "summary": "Create a payment link for an invoice",
+        "description": "Returns a Stripe Checkout URL or Razorpay order for the invoice. Idempotency-Key required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Optional provider override",
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentLink"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment link created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentLinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or invoice state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API key lacks the required scopes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Requested payment provider is not configured",
             "content": {
               "application/json": {
                 "schema": {

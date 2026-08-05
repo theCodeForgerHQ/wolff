@@ -6,6 +6,7 @@ import {
   convertedLeadSchema,
   createDealSchema,
   createLeadSchema,
+  createPaymentLinkSchema,
   createPipelineSchema,
   createWebhookEndpointSchema,
   createdWebhookEndpointSchema,
@@ -19,6 +20,7 @@ import {
   leadListQuerySchema,
   leadSchema,
   moveDealSchema,
+  paymentLinkResponseSchema,
   pipelineSchema,
   pipelineStageRowSchema,
   queuedDeliverySchema,
@@ -46,6 +48,8 @@ registry.register('ReceivablesAgeingRow', receivablesAgeingRowSchema);
 registry.register('RevenueMonthlyRow', revenueMonthlyRowSchema);
 registry.register('GstOutwardSupplyRow', gstOutwardSupplyRowSchema);
 registry.register('PipelineStageRow', pipelineStageRowSchema);
+registry.register('CreatePaymentLink', createPaymentLinkSchema);
+registry.register('PaymentLinkResponse', paymentLinkResponseSchema);
 
 const listWebhookEndpoints = registry.registerPath({
   method: 'get',
@@ -850,6 +854,53 @@ const moveDeal = registry.registerPath({
   },
 });
 
+const createInvoicePaymentLink = registry.registerPath({
+  method: 'post',
+  path: '/v1/invoices/{id}/payment-links',
+  tags: ['Invoices'],
+  summary: 'Create a payment link for an invoice',
+  description:
+    'Returns a Stripe Checkout URL or Razorpay order for the invoice. Idempotency-Key required.',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      description: 'Optional provider override',
+      required: false,
+      content: { 'application/json': { schema: createPaymentLinkSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Payment link created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(paymentLinkResponseSchema).openapi('PaymentLinkResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Invalid request or invoice state',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the required scopes',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Invoice not found',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    501: {
+      description: 'Requested payment provider is not configured',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
 const getReceivablesAgeingReport = registry.registerPath({
   method: 'get',
   path: '/v1/reports/receivables-ageing',
@@ -979,6 +1030,7 @@ export const operations = {
   updateDeal,
   deleteDeal,
   moveDeal,
+  createInvoicePaymentLink,
   getReceivablesAgeingReport,
   getRevenueReport,
   getGstSummaryReport,

@@ -16,11 +16,13 @@ import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
 import { jobRoutes, type JobRunDeps } from './routes/jobs';
 import { dealRoutes } from './routes/v1/deals';
+import { invoiceRoutes } from './routes/v1/invoices';
 import { leadRoutes } from './routes/v1/leads';
 import { pipelineRoutes } from './routes/v1/pipelines';
 import { reportRoutes } from './routes/v1/reports';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
+import type { PaymentProviderClients } from './payments/provider';
 
 export interface AppDeps {
   db: Db;
@@ -36,6 +38,10 @@ export interface AppDeps {
   onOutboxEvents?: (ids: string[]) => void;
   /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
   rateLimitStore?: Store;
+  /** Injected Stripe/Razorpay clients for tests. Defaults to env-configured clients. */
+  paymentClients?: PaymentProviderClients;
+  /** Public app URL used to build checkout success/cancel URLs. */
+  appUrl?: string;
   /** Adds routes before the 404 handler. Used by tests. */
   extend?: (router: Router) => void;
 }
@@ -121,6 +127,7 @@ export function createApp(deps: AppDeps): Express {
   v1.use(leadRoutes(db));
   v1.use(pipelineRoutes(db));
   v1.use(dealRoutes(db));
+  v1.use(invoiceRoutes(db, { paymentClients: deps.paymentClients, appUrl: config.APP_URL }));
   v1.use(reportRoutes(db));
 
   const router = Router();
