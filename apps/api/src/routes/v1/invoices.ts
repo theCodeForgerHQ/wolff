@@ -9,6 +9,7 @@ import { CoreError } from '@wolff/core/errors';
 import '../../context';
 import { sendData, sendError } from '../../http';
 import { requireScopes } from '../../middleware/auth';
+import { requireIdempotencyKey } from '../../middleware/idempotency';
 import {
   createPaymentLink,
   type PaymentProviderClients,
@@ -47,6 +48,7 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
   router.post(
     '/invoices/:id/payment-links',
     requireScopes('payments:write', 'invoices:read'),
+    requireIdempotencyKey(),
     async (req, res) => {
       const parsed = idParamSchema.safeParse(req.params);
       const input = createPaymentLinkSchema.parse(req.body);
@@ -96,20 +98,8 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
           }
         );
 
-        await db.payment.create({
-          data: {
-            workspaceId,
-            invoiceId: invoice.id,
-            amount: invoice.total,
-            currency: invoice.currency,
-            status: 'pending',
-            provider: link.provider,
-            providerOrderId: link.provider === 'stripe' ? link.sessionId : link.orderId,
-            paymentMethod: 'online',
-            processedAt: new Date(),
-          },
-        });
-
+        // A Payment row is created only when the provider confirms funds via
+        // webhook; a payment link is not a payment itself.
         sendData(res, paymentLinkResponseSchema.parse(link));
       } catch (error) {
         if (error instanceof CoreError) {
