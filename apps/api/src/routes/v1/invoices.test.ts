@@ -28,7 +28,6 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
   };
   const app = testApp(db, {
     paymentClients: { stripe: stripe as never, razorpay: razorpay as never },
-    appUrl: 'https://app.example.test',
   });
   let ws: TestWorkspace;
   let clientId: string;

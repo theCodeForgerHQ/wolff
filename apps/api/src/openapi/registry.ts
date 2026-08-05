@@ -8,6 +8,7 @@ import {
   createLeadSchema,
   createPaymentLinkSchema,
   createPipelineSchema,
+  createQuoteFromDealSchema,
   createWebhookEndpointSchema,
   createdWebhookEndpointSchema,
   cursorEnvelope,
@@ -24,6 +25,7 @@ import {
   pipelineSchema,
   pipelineStageRowSchema,
   queuedDeliverySchema,
+  quoteFromDealSchema,
   receivablesAgeingRowSchema,
   replaceStagesSchema,
   revenueMonthlyRowSchema,
@@ -50,6 +52,8 @@ registry.register('GstOutwardSupplyRow', gstOutwardSupplyRowSchema);
 registry.register('PipelineStageRow', pipelineStageRowSchema);
 registry.register('CreatePaymentLink', createPaymentLinkSchema);
 registry.register('PaymentLinkResponse', paymentLinkResponseSchema);
+registry.register('CreateQuoteFromDeal', createQuoteFromDealSchema);
+registry.register('QuoteFromDeal', quoteFromDealSchema);
 
 const listWebhookEndpoints = registry.registerPath({
   method: 'get',
@@ -854,6 +858,56 @@ const moveDeal = registry.registerPath({
   },
 });
 
+const createQuoteFromDealPath = registry.registerPath({
+  method: 'post',
+  path: '/v1/deals/{id}/quote',
+  tags: ['Deals'],
+  summary: 'Create a draft quote from a deal',
+  description: 'Creates a draft quote linked to the deal and updates the deal.quoteId.',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      description: 'Optional quote title and expiration date',
+      required: false,
+      content: { 'application/json': { schema: createQuoteFromDealSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Quote created',
+      content: {
+        'application/json': {
+          schema: successEnvelope(quoteFromDealSchema).openapi('QuoteFromDealResponse'),
+        },
+      },
+    },
+    400: {
+      description: 'Invalid request',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    401: {
+      description: 'Invalid or missing API key',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    403: {
+      description: 'API key lacks the required scopes',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    404: {
+      description: 'Deal not found',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    409: {
+      description: 'Deal already has a quote',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    422: {
+      description: 'Deal has no client',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+  },
+});
+
 const createInvoicePaymentLink = registry.registerPath({
   method: 'post',
   path: '/v1/invoices/{id}/payment-links',
@@ -1030,6 +1084,7 @@ export const operations = {
   updateDeal,
   deleteDeal,
   moveDeal,
+  createQuoteFromDealPath,
   createInvoicePaymentLink,
   getReceivablesAgeingReport,
   getRevenueReport,

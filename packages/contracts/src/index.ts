@@ -5,4 +5,5 @@ export * from './webhook-events';
 export * from './webhook-endpoints';
 export * from './crm';
 export * from './payments';
+export * from './quotes';
 export * from './reports';

@@ -336,5 +336,40 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes (Postgres)', () => {
       const cross = await as(b).get(`/v1/deals/${dealId}`);
       expect(cross.status).toBe(404);
     });
+
+    it('creates a draft quote from a deal', async () => {
+      const key = await issueKey(base, a.id, {
+        scopes: ['deals:read', 'deals:write', 'quotes:write'],
+      });
+      const pipeline = await defaultPipeline(a);
+      const client = await makeClient(a);
+      const create = await request(app)
+        .post('/v1/deals')
+        .set('Authorization', 'Bearer ' + key.key)
+        .send({
+          pipelineId: pipeline.id,
+          stageId: pipeline.stages[0].id,
+          clientId: client.id,
+          title: 'Website project',
+          value: 5000,
+          currency: 'INR',
+        });
+      expect(create.status).toBe(201);
+      const dealId = create.body.data.dealId;
+
+      const quote = await request(app)
+        .post(`/v1/deals/${dealId}/quote`)
+        .set('Authorization', 'Bearer ' + key.key)
+        .send({ title: 'Website quote' });
+      expect(quote.status).toBe(201);
+      expect(quote.body.data).toMatchObject({
+        quoteNumber: expect.stringMatching(/^QT-/),
+      });
+
+      const deal = await request(app)
+        .get(`/v1/deals/${dealId}`)
+        .set('Authorization', 'Bearer ' + key.key);
+      expect(deal.body.data.quoteId).toBe(quote.body.data.quoteId);
+    });
   });
 });

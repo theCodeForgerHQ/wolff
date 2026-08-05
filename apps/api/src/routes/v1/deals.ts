@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import {
   createDealSchema,
+  createQuoteFromDealSchema,
   dealListQuerySchema,
   idParamSchema,
   moveDealSchema,
+  quoteFromDealSchema,
   updateDealSchema,
 } from '@wolff/contracts';
 import type { Db } from '@wolff/core/context';
 import { createDeal, deleteDeal, getDeal, listDeals, moveDeal, updateDeal } from '@wolff/core/crm';
+import { createQuoteFromDeal } from '@wolff/core/quotes';
+import { CoreError } from '@wolff/core/errors';
 import '../../context';
 import { sendData, sendError } from '../../http';
 import { requireScopes } from '../../middleware/auth';
@@ -104,6 +108,31 @@ export function dealRoutes(db: Db): Router {
       throw error;
     }
   });
+
+  router.post(
+    '/deals/:id/quote',
+    requireScopes('deals:write', 'quotes:write'),
+    async (req, res) => {
+      const parsed = idParamSchema.safeParse(req.params);
+      const input = createQuoteFromDealSchema.parse(req.body);
+      if (!parsed.success) return notFound(res);
+
+      try {
+        const result = await createQuoteFromDeal(ctxOf(req), {
+          dealId: parsed.data.id,
+          ...(input.title && { title: input.title }),
+          ...(input.expirationDate && { expirationDate: new Date(input.expirationDate) }),
+        });
+        sendData(res, quoteFromDealSchema.parse(result), 201);
+      } catch (error) {
+        if (error instanceof CoreError) {
+          return sendError(res, error.code, error.message);
+        }
+        if (error instanceof Error && error.message === 'Deal not found') return notFound(res);
+        throw error;
+      }
+    }
+  );
 
   return router;
 }
