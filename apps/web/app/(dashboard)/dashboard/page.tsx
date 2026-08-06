@@ -4,6 +4,9 @@ import { StatsCards } from '@/components/dashboard/stats-cards';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { RecentQuotes, RecentInvoices } from '@/components/dashboard/recent-items';
 import { AnalyticsSection } from '@/components/dashboard/analytics-section';
+import { PaymentAgingChart } from '@/components/dashboard/charts';
+import { GstSummaryCard } from '@/components/dashboard/gst-summary-card';
+import { PipelineSummaryCard } from '@/components/dashboard/pipeline-summary-card';
 import { getDashboardData } from '@/lib/dashboard/actions';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
 
@@ -40,6 +43,13 @@ async function DashboardContent() {
       {/* Revenue Chart (full width) */}
       <AnalyticsSection revenueData={data.revenueData} currency={currency} />
 
+      {/* CRM / GST / Aging summary row */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <PaymentAgingChart data={data.paymentAging} className="lg:col-span-1" />
+        <GstSummaryCard data={data.gstSummary} currency={currency} />
+        <PipelineSummaryCard data={data.pipelineSummary} currency={currency} />
+      </div>
+
       {/* Activity + Recent Items (2-column layout) */}
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-2">
@@ -66,6 +76,13 @@ function DashboardSkeleton() {
 
       {/* Analytics Section Skeleton */}
       <Skeleton className="h-[350px]" />
+
+      {/* CRM / GST / Aging summary row skeleton */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80" />
+      </div>
 
       {/* Activity + Recent Items Skeleton */}
       <div className="grid gap-6 lg:grid-cols-5">

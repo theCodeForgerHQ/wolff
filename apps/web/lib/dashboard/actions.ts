@@ -1,6 +1,8 @@
 'use server';
 
-import { prisma } from '@wolff/database';
+import { prisma, withTenantGuard } from '@wolff/database';
+
+const db = withTenantGuard(prisma);
 import { subDays, subMonths, startOfDay, format } from 'date-fns';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type {
@@ -18,6 +20,11 @@ import type {
 import { toNumber } from '@/lib/utils';
 import { getExchangeRates, convertToBase } from '@/lib/currency/exchange-rates';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
+import {
+  getReceivablesAgeing,
+  getGstOutwardSupplies,
+  getPipelineStageTransitions,
+} from '@wolff/core/reports';
 
 // Get period start date
 function getPeriodStartDate(period: DashboardPeriod): Date | null {
@@ -572,6 +579,101 @@ export async function getRevenueSparkline(): Promise<RevenueSparklinePoint[]> {
   return result;
 }
 
+// Receivables ageing buckets from the SQL view
+export async function getReceivablesAgeingSummary(): Promise<PaymentAgingData> {
+  const { workspaceId } = await getCurrentUserWorkspace();
+  const rows = await getReceivablesAgeing(db, workspaceId);
+  const result: PaymentAgingData = {
+    current: 0,
+    days1to30: 0,
+    days31to60: 0,
+    days61to90: 0,
+    days90plus: 0,
+    totalOutstanding: 0,
+  };
+  for (const r of rows) {
+    result.totalOutstanding += r.amountDue;
+    switch (r.bucket) {
+      case 'current':
+        result.current += r.amountDue;
+        break;
+      case 'bucket_0_30':
+        result.days1to30 += r.amountDue;
+        break;
+      case 'bucket_31_60':
+        result.days31to60 += r.amountDue;
+        break;
+      case 'bucket_61_90':
+        result.days61to90 += r.amountDue;
+        break;
+      case 'bucket_90_plus':
+        result.days90plus += r.amountDue;
+        break;
+    }
+  }
+  return result;
+}
+
+// GST outward supplies summary for the workspace
+export async function getGstSummary() {
+  const { workspaceId } = await getCurrentUserWorkspace();
+  const rows = await getGstOutwardSupplies(db, workspaceId);
+  if (rows.length === 0) return null;
+  return rows.reduce(
+    (acc, r) => ({
+      taxableValue: acc.taxableValue + r.taxableValue,
+      cgstAmount: acc.cgstAmount + r.cgstAmount,
+      sgstAmount: acc.sgstAmount + r.sgstAmount,
+      igstAmount: acc.igstAmount + r.igstAmount,
+      cessAmount: acc.cessAmount + r.cessAmount,
+      invoiceCount: acc.invoiceCount + 1,
+    }),
+    {
+      taxableValue: 0,
+      cgstAmount: 0,
+      sgstAmount: 0,
+      igstAmount: 0,
+      cessAmount: 0,
+      invoiceCount: 0,
+    }
+  );
+}
+
+// Pipeline stage totals for the default pipeline
+export async function getPipelineSummary() {
+  const { workspaceId } = await getCurrentUserWorkspace();
+  const rows = await getPipelineStageTransitions(db, workspaceId);
+  const map = new Map<
+    string,
+    { stageName: string; position: number; dealCount: number; totalValue: number; currency: string }
+  >();
+  for (const r of rows) {
+    const existing = map.get(r.stageId);
+    if (existing) {
+      existing.dealCount += 1;
+      existing.totalValue += r.value;
+    } else {
+      map.set(r.stageId, {
+        stageName: r.stageName,
+        position: r.stagePosition,
+        dealCount: 1,
+        totalValue: r.value,
+        currency: r.currency,
+      });
+    }
+  }
+  return Array.from(map.entries())
+    .map(([stageId, v]) => ({
+      stageId,
+      stageName: v.stageName,
+      position: v.position,
+      dealCount: v.dealCount,
+      totalValue: v.totalValue,
+      currency: v.currency,
+    }))
+    .sort((a, b) => a.position - b.position);
+}
+
 // Get all dashboard data
 export async function getDashboardData(): Promise<DashboardData> {
   const [
@@ -583,6 +685,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     recentActivity,
     revenueData,
     revenueSparkline,
+    paymentAging,
+    gstSummary,
+    pipelineSummary,
   ] = await Promise.all([
     getDashboardStats(),
     getQuoteStatusCounts(),
@@ -592,6 +697,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     getRecentActivity(10),
     getRevenueData('30d'),
     getRevenueSparkline(),
+    getReceivablesAgeingSummary(),
+    getGstSummary(),
+    getPipelineSummary(),
   ]);
 
   return {
@@ -603,6 +711,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     recentActivity,
     revenueData,
     revenueSparkline,
+    paymentAging,
+    gstSummary,
+    pipelineSummary,
   };
 }
 
