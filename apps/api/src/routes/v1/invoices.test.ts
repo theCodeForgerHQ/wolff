@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { processProviderEvent, recordProviderEvent } from '@wolff/core/payments';
 import {
   TEST_DATABASE_URL,
   createTestWorkspace,
@@ -17,13 +18,15 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         create: async () => ({
           id: 'cs_test_123',
           url: 'https://checkout.stripe.com/pay/cs_test_123',
+          payment_intent: 'pi_test_123',
         }),
       },
     },
   };
+  let orderCounter = 0;
   const razorpay = {
     orders: {
-      create: async () => ({ id: 'order_123' }),
+      create: async () => ({ id: `order_${++orderCounter}` }),
     },
   };
   const app = testApp(db, {
@@ -83,7 +86,17 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     });
   });
 
+  beforeEach(async () => {
+    await base.providerWebhookEvent.deleteMany({
+      where: { eventId: { startsWith: 'evt_reconcile_' } },
+    });
+    await base.payment.deleteMany({ where: { workspaceId: ws.id } });
+  });
+
   afterAll(async () => {
+    await base.providerWebhookEvent.deleteMany({
+      where: { eventId: { startsWith: 'evt_reconcile_' } },
+    });
     await base.payment.deleteMany({ where: { workspaceId: ws.id } });
     await base.invoice.deleteMany({ where: { workspaceId: ws.id } });
     await base.client.deleteMany({ where: { workspaceId: ws.id } });
@@ -97,15 +110,22 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
       provider: 'razorpay',
-      orderId: 'order_123',
+      orderId: 'order_1',
       amount: 118000,
       currency: 'INR',
       keyId: 'rzp_test_123',
     });
 
-    // A payment link does not create a Payment row; the webhook does.
+    // A pending Payment row is created so the webhook can reconcile.
     const payments = await base.payment.findMany({ where: { workspaceId: ws.id } });
-    expect(payments).toHaveLength(0);
+    expect(payments).toHaveLength(1);
+    const razorpayPayment = payments[0]!;
+    expect(razorpayPayment).toMatchObject({
+      status: 'pending',
+      provider: 'razorpay',
+      providerOrderId: 'order_1',
+    });
+    expect(Number(razorpayPayment.amount)).toBe(1180);
   });
 
   it('creates a Stripe checkout session when provider is stripe', async () => {
@@ -118,6 +138,16 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
       url: 'https://checkout.stripe.com/pay/cs_test_123',
       sessionId: 'cs_test_123',
     });
+
+    const payments = await base.payment.findMany({ where: { workspaceId: ws.id } });
+    expect(payments).toHaveLength(1);
+    const stripePayment = payments[0]!;
+    expect(stripePayment).toMatchObject({
+      status: 'pending',
+      provider: 'stripe',
+      stripePaymentIntentId: 'pi_test_123',
+    });
+    expect(Number(stripePayment.amount)).toBe(1180);
   });
 
   it('rejects payment links for paid invoices', async () => {
@@ -159,5 +189,43 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     const res = await as(ws.key).post(`/v1/invoices/${invoiceId}/payment-links`).send({});
     expect(res.status).toBe(200);
     await base.workspace.deleteMany({ where: { id: other.id } });
+  });
+
+  it('marks the invoice paid when the Razorpay webhook for the order is processed', async () => {
+    const link = await as(ws.key).post(`/v1/invoices/${invoiceId}/payment-links`).send({});
+    expect(link.status).toBe(200);
+    const orderId = link.body.data.orderId as string;
+
+    const event = {
+      event: 'order.paid',
+      payload: {
+        order: { entity: { id: orderId } },
+        payment: {
+          entity: {
+            id: 'pay_reconcile_1',
+            order_id: orderId,
+            amount: 118000,
+            method: 'upi',
+          },
+        },
+      },
+    };
+    const { id } = await recordProviderEvent(db, {
+      provider: 'razorpay',
+      eventId: `evt_reconcile_${orderId}`,
+      type: event.event,
+      payload: event,
+      outbox: false,
+    });
+
+    expect(await processProviderEvent(db, id)).toBe('processed');
+
+    const invoice = await base.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    expect(invoice.status).toBe('paid');
+    expect(Number(invoice.amountPaid)).toBe(1180);
+    expect(Number(invoice.amountDue)).toBe(0);
+    const payment = await base.payment.findFirstOrThrow({ where: { invoiceId } });
+    expect(payment.status).toBe('completed');
+    expect(payment.providerPaymentId).toBe('pay_reconcile_1');
   });
 });
