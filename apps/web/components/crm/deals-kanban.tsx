@@ -52,6 +52,7 @@ function DealCard({
       style={style}
       {...listeners}
       {...attributes}
+      data-testid="deal-card"
       className={`bg-card cursor-grab rounded-lg border p-3 shadow-sm active:cursor-grabbing ${
         isOverlay ? 'rotate-2 shadow-lg' : ''
       }`}
