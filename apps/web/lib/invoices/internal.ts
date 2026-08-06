@@ -4,7 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
-import { prisma, type Prisma } from '@wolff/database';
+import { prisma, type Prisma, incrementNumberSequence } from '@wolff/database';
 
 /** Generate a cryptographically secure access token */
 function generateAccessToken(): string {
@@ -16,22 +16,10 @@ function generateAccessToken(): string {
  */
 export async function generateInvoiceNumber(workspaceId: string): Promise<string> {
   const result = await prisma.$transaction(async (tx) => {
-    const updated = await tx.numberSequence.upsert({
-      where: {
-        workspaceId_type_financialYear: {
-          workspaceId,
-          type: 'invoice',
-          financialYear: null as unknown as string,
-        },
-      },
-      update: { currentValue: { increment: 1 } },
-      create: {
-        workspaceId,
-        type: 'invoice',
-        prefix: 'INV',
-        currentValue: 1,
-        padding: 4,
-      },
+    const updated = await incrementNumberSequence(tx, workspaceId, 'invoice', null, {
+      prefix: 'INV',
+      currentValue: 1,
+      padding: 4,
     });
     return {
       prefix: updated.prefix || 'INV',
@@ -55,22 +43,10 @@ export async function generateInvoiceNumber(workspaceId: string): Promise<string
  */
 export async function generateCreditNoteNumber(workspaceId: string): Promise<string> {
   const result = await prisma.$transaction(async (tx) => {
-    const updated = await tx.numberSequence.upsert({
-      where: {
-        workspaceId_type_financialYear: {
-          workspaceId,
-          type: 'credit_note',
-          financialYear: null as unknown as string,
-        },
-      },
-      update: { currentValue: { increment: 1 } },
-      create: {
-        workspaceId,
-        type: 'credit_note',
-        prefix: 'CN',
-        currentValue: 1,
-        padding: 4,
-      },
+    const updated = await incrementNumberSequence(tx, workspaceId, 'credit_note', null, {
+      prefix: 'CN',
+      currentValue: 1,
+      padding: 4,
     });
     return {
       prefix: updated.prefix || 'CN',

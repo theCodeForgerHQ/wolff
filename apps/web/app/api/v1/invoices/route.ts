@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@wolff/database';
+import { prisma, incrementNumberSequence } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber } from '@/lib/utils';
 
@@ -145,23 +145,14 @@ export async function POST(request: NextRequest) {
     if (!project) return apiError('Project not found', 404);
   }
 
-  // Generate invoice number in a serializable transaction to prevent duplicates
-  const seq = await prisma.$transaction(
-    async (tx) => {
-      return tx.numberSequence.upsert({
-        where: {
-          workspaceId_type_financialYear: {
-            workspaceId,
-            type: 'invoice',
-            financialYear: null as unknown as string,
-          },
-        },
-        update: { currentValue: { increment: 1 } },
-        create: { workspaceId, type: 'invoice', prefix: 'INV-', currentValue: 1, padding: 4 },
-      });
-    },
-    { isolationLevel: 'Serializable' }
-  );
+  // Generate invoice number in a transaction to prevent duplicates
+  const seq = await prisma.$transaction(async (tx) => {
+    return incrementNumberSequence(tx, workspaceId, 'invoice', null, {
+      prefix: 'INV-',
+      currentValue: 1,
+      padding: 4,
+    });
+  });
   const invoiceNumber = `${seq.prefix || 'INV-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
 
   const items = lineItems || [];

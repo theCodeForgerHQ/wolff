@@ -73,6 +73,7 @@ function DealCard({
       </div>
       {onCreateQuote && (
         <Button
+          data-testid="create-quote-button"
           variant="ghost"
           size="sm"
           className="mt-2 h-7 w-full text-xs"
