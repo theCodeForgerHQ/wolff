@@ -10,8 +10,12 @@ import {
   convertLead as convertLeadCore,
   getLead as getLeadCore,
   listLeads as listLeadsCore,
+  ensureDefaultPipeline,
+  moveDeal as moveDealCore,
+  createDeal as createDealCore,
 } from '@wolff/core/crm';
 import { ROUTES } from '@/lib/routes';
+import { toNumber } from '@/lib/utils';
 import type {
   LeadFilter,
   PaginatedLeads,
@@ -21,6 +25,9 @@ import type {
   UpdateLeadInput,
   ConvertLeadInput,
   ConvertLeadResult,
+  DealsBoard,
+  DealListItem,
+  MoveDealInput,
 } from './types';
 
 const db = withTenantGuard(prisma);
@@ -142,4 +149,75 @@ export async function convertLead(
 export async function listLeadsCursor(cursor?: string, limit = 25) {
   const ctx = await getContext();
   return listLeadsCore(ctx, { limit, cursor });
+}
+
+// ============================================
+// Deals
+// ============================================
+
+export async function getDealsBoard(): Promise<DealsBoard> {
+  const ctx = await getContext();
+  const { pipelineId } = await ensureDefaultPipeline(ctx.db, ctx.workspaceId);
+
+  const pipeline = await ctx.db.pipeline.findFirstOrThrow({
+    where: { id: pipelineId, workspaceId: ctx.workspaceId },
+    include: { stages: { orderBy: { position: 'asc' } } },
+  });
+
+  const deals = await ctx.db.deal.findMany({
+    where: { pipelineId, workspaceId: ctx.workspaceId, deletedAt: null },
+    include: {
+      client: { select: { name: true } },
+      owner: { select: { name: true } },
+    },
+    orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+  });
+
+  return {
+    pipelineId,
+    pipelineName: pipeline.name,
+    stages: pipeline.stages.map((s) => ({
+      id: s.id,
+      name: s.name,
+      position: s.position,
+      probability: s.probability,
+      kind: s.kind as DealsBoard['stages'][number]['kind'],
+    })),
+    deals: deals.map((d) => ({
+      id: d.id,
+      title: d.title,
+      value: toNumber(d.value),
+      currency: d.currency,
+      stageId: d.stageId,
+      clientName: d.client?.name ?? null,
+      ownerName: d.owner?.name ?? null,
+      expectedCloseDate: d.expectedCloseDate,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+    })),
+  };
+}
+
+export async function moveDeal(input: MoveDealInput): Promise<void> {
+  const ctx = await getContext();
+  await moveDealCore(ctx, input);
+  revalidatePath(ROUTES.deals);
+}
+
+export async function createDeal(input: {
+  stageId: string;
+  clientId?: string;
+  leadId?: string;
+  title: string;
+  value?: number;
+  currency?: string;
+  expectedCloseDate?: Date;
+}): Promise<{ dealId: string }> {
+  const ctx = await getContext();
+  const result = await createDealCore(ctx, {
+    ...input,
+    pipelineId: (await ensureDefaultPipeline(ctx.db, ctx.workspaceId)).pipelineId,
+  });
+  revalidatePath(ROUTES.deals);
+  return result;
 }

@@ -74,3 +74,50 @@ export interface ConvertLeadResult {
   dealId: string;
   leadId: string;
 }
+
+export type DealStatus = 'open' | 'won' | 'lost';
+
+export interface DealStage {
+  id: string;
+  name: string;
+  position: number;
+  probability: number;
+  kind: 'open' | 'won' | 'lost';
+}
+
+export interface DealListItem {
+  id: string;
+  title: string;
+  value: number;
+  currency: string;
+  stageId: string;
+  clientName: string | null;
+  ownerName: string | null;
+  expectedCloseDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DealsBoard {
+  pipelineId: string;
+  pipelineName: string;
+  stages: DealStage[];
+  deals: DealListItem[];
+}
+
+export interface MoveDealInput {
+  dealId: string;
+  stageId: string;
+  position?: number;
+}
+
+export interface CreateDealInput {
+  stageId: string;
+  clientId?: string;
+  leadId?: string;
+  title: string;
+  value?: number;
+  currency?: string;
+  expectedCloseDate?: Date;
+  ownerId?: string;
+}
