@@ -17,6 +17,7 @@
 
 import 'dotenv/config';
 import { createPrisma } from '../src/client';
+import { upsertNumberSequence } from './seed-helpers';
 
 const prisma = createPrisma();
 
@@ -61,40 +62,19 @@ async function seedE2EProductionData() {
   console.log(`✓ Found workspace: ${workspace.name} (${workspace.slug})`);
 
   // Ensure number sequences exist
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'quote',
-        financialYear: null,
-      },
-    },
-    update: {},
-    create: {
-      workspaceId: workspace.id,
-      type: 'quote',
-      prefix: 'Q-',
-      currentValue: 100,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: workspace.id,
+    type: 'quote',
+    prefix: 'Q-',
+    currentValue: 100,
+    padding: 4,
   });
-
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'invoice',
-        financialYear: null,
-      },
-    },
-    update: {},
-    create: {
-      workspaceId: workspace.id,
-      type: 'invoice',
-      prefix: 'INV-',
-      currentValue: 100,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: workspace.id,
+    type: 'invoice',
+    prefix: 'INV-',
+    currentValue: 100,
+    padding: 4,
   });
   console.log('✓ Number sequences ready');
 

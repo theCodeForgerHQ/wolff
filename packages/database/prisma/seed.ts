@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createPrisma } from '../src/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { upsertNumberSequence } from './seed-helpers';
 
 const prisma = createPrisma();
 
@@ -339,40 +340,19 @@ async function main() {
   console.log('Created/Updated test contracts');
 
   // Create number sequences
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'quote',
-        financialYear: null,
-      },
-    },
-    update: { prefix: 'Q' },
-    create: {
-      workspaceId: workspace.id,
-      type: 'quote',
-      prefix: 'Q',
-      currentValue: 0,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: workspace.id,
+    type: 'quote',
+    prefix: 'Q',
+    currentValue: 0,
+    padding: 4,
   });
-
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'invoice',
-        financialYear: null,
-      },
-    },
-    update: { prefix: 'INV' },
-    create: {
-      workspaceId: workspace.id,
-      type: 'invoice',
-      prefix: 'INV',
-      currentValue: 0,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: workspace.id,
+    type: 'invoice',
+    prefix: 'INV',
+    currentValue: 0,
+    padding: 4,
   });
   console.log('Created/Updated number sequences');
 
@@ -913,26 +893,21 @@ async function main() {
   }
 
   // Update number sequences to match seeded data
-  await prisma.numberSequence.update({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'quote',
-        financialYear: null,
-      },
-    },
-    data: { currentValue: 6 },
+  const quoteSeq = await prisma.numberSequence.findFirst({
+    where: { workspaceId: workspace.id, type: 'quote', financialYear: null },
   });
-  await prisma.numberSequence.update({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'invoice',
-        financialYear: null,
-      },
-    },
-    data: { currentValue: 14 },
+  if (quoteSeq) {
+    await prisma.numberSequence.update({ where: { id: quoteSeq.id }, data: { currentValue: 6 } });
+  }
+  const invoiceSeq = await prisma.numberSequence.findFirst({
+    where: { workspaceId: workspace.id, type: 'invoice', financialYear: null },
   });
+  if (invoiceSeq) {
+    await prisma.numberSequence.update({
+      where: { id: invoiceSeq.id },
+      data: { currentValue: 14 },
+    });
+  }
 
   console.log('Database seeding completed!');
 
@@ -1219,40 +1194,19 @@ async function seedDemoWorkspace() {
   console.log('Created/Updated demo business profile');
 
   // Create number sequences for demo
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: demoWorkspace.id,
-        type: 'quote',
-        financialYear: null,
-      },
-    },
-    update: { currentValue: 6, prefix: 'Q' },
-    create: {
-      workspaceId: demoWorkspace.id,
-      type: 'quote',
-      prefix: 'Q',
-      currentValue: 6,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: demoWorkspace.id,
+    type: 'quote',
+    prefix: 'Q',
+    currentValue: 6,
+    padding: 4,
   });
-
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: demoWorkspace.id,
-        type: 'invoice',
-        financialYear: null,
-      },
-    },
-    update: { currentValue: 8, prefix: 'INV' },
-    create: {
-      workspaceId: demoWorkspace.id,
-      type: 'invoice',
-      prefix: 'INV',
-      currentValue: 8,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: demoWorkspace.id,
+    type: 'invoice',
+    prefix: 'INV',
+    currentValue: 8,
+    padding: 4,
   });
 
   // Create demo clients

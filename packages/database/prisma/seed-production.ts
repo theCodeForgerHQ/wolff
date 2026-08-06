@@ -14,6 +14,7 @@
 import 'dotenv/config';
 import { createPrisma } from '../src/client';
 import bcrypt from 'bcryptjs';
+import { upsertNumberSequence } from './seed-helpers';
 
 const prisma = createPrisma();
 
@@ -117,40 +118,19 @@ async function seedProductionDemo() {
   console.log('✓ Business profile created/updated');
 
   // Create number sequences
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: demoWorkspace.id,
-        type: 'quote',
-        financialYear: null,
-      },
-    },
-    update: {},
-    create: {
-      workspaceId: demoWorkspace.id,
-      type: 'quote',
-      prefix: 'Q-',
-      currentValue: 5,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: demoWorkspace.id,
+    type: 'quote',
+    prefix: 'Q-',
+    currentValue: 5,
+    padding: 4,
   });
-
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
-        workspaceId: demoWorkspace.id,
-        type: 'invoice',
-        financialYear: null,
-      },
-    },
-    update: {},
-    create: {
-      workspaceId: demoWorkspace.id,
-      type: 'invoice',
-      prefix: 'INV-',
-      currentValue: 4,
-      padding: 4,
-    },
+  await upsertNumberSequence(prisma, {
+    workspaceId: demoWorkspace.id,
+    type: 'invoice',
+    prefix: 'INV-',
+    currentValue: 4,
+    padding: 4,
   });
   console.log('✓ Number sequences created/updated');
 
