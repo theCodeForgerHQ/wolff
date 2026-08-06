@@ -93,4 +93,5 @@ SELECT
     d.deleted_at
 FROM deals d
 JOIN pipelines p ON p.id = d.pipeline_id
-JOIN pipeline_stages s ON s.id = d.stage_id;
+JOIN pipeline_stages s ON s.id = d.stage_id
+WHERE d.deleted_at IS NULL;

@@ -99,7 +99,7 @@ export async function applyPaymentSucceeded(
   const total = Number(payment.invoice.total);
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId },
     data: {
       status: 'completed',
       workspaceId,
@@ -166,7 +166,7 @@ export async function applyPaymentFailed(tx: Tx, paymentIntentId: string): Promi
   if (!payment || payment.status !== 'pending') return;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId: payment.invoice.workspaceId },
     data: { status: 'failed', workspaceId: payment.invoice.workspaceId },
   });
 }
@@ -193,7 +193,7 @@ export async function applyRefund(
   const isFullRefund = refundedTotal >= Number(payment.amount) - 0.01;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId },
     data: {
       status: isFullRefund ? 'refunded' : 'completed',
       workspaceId,

@@ -136,7 +136,7 @@ async function applyPaymentCaptured(tx: Tx, input: CaptureInput): Promise<void> 
   const { workspaceId } = payment.invoice;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId },
     data: {
       status: 'completed',
       workspaceId,
@@ -160,7 +160,7 @@ async function applyPaymentFailed(tx: Tx, paymentId: string, orderId?: string): 
   if (!payment || payment.status !== 'pending') return;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId: payment.invoice.workspaceId },
     data: { status: 'failed', workspaceId: payment.invoice.workspaceId },
   });
 }
@@ -183,7 +183,7 @@ async function applyOrderPaid(tx: Tx, input: OrderPaidInput): Promise<void> {
   const { workspaceId } = payment.invoice;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId },
     data: {
       status: 'completed',
       workspaceId,
@@ -273,7 +273,7 @@ async function applyRefund(tx: Tx, paymentId: string, refundAmount: number): Pro
   const isFullRefund = refundAmount >= Number(payment.amount) - 0.01;
 
   await tx.payment.update({
-    where: { id: payment.id },
+    where: { id: payment.id, workspaceId },
     data: {
       status: isFullRefund ? 'refunded' : 'completed',
       workspaceId,

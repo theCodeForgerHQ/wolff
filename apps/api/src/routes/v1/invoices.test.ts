@@ -103,15 +103,9 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
       keyId: 'rzp_test_123',
     });
 
+    // A payment link does not create a Payment row; the webhook does.
     const payments = await base.payment.findMany({ where: { workspaceId: ws.id } });
-    expect(payments).toHaveLength(1);
-    expect(payments[0]).toMatchObject({
-      provider: 'razorpay',
-      providerOrderId: 'order_123',
-      status: 'pending',
-      currency: 'INR',
-    });
-    expect(Number(payments[0]!.amount)).toBe(1180);
+    expect(payments).toHaveLength(0);
   });
 
   it('creates a Stripe checkout session when provider is stripe', async () => {
@@ -145,6 +139,16 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     const res = await as(ws.key).post(`/v1/invoices/${paid.id}/payment-links`).send({});
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('validation_error');
+  });
+
+  it('rejects payment links without an Idempotency-Key header', async () => {
+    const res = await request(app)
+      .post(`/v1/invoices/${invoiceId}/payment-links`)
+      .set('Authorization', auth(ws.key))
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('validation_error');
+    expect(res.body.error.details['Idempotency-Key']).toBeDefined();
   });
 
   it('returns 404 for an invoice in another workspace', async () => {

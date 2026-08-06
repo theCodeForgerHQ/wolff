@@ -36,7 +36,7 @@ export async function moveDeal(ctx: CoreContext, input: MoveDealInput): Promise<
     if (!locked) throw new Error('Deal not found');
 
     const targetStage = await tx.stage.findFirst({
-      where: { id: input.stageId, pipelineId: locked.pipeline_id },
+      where: { id: input.stageId, pipelineId: locked.pipeline_id, workspaceId },
     });
     if (!targetStage) throw new Error('Target stage not found in deal pipeline');
 
@@ -64,7 +64,7 @@ export async function moveDeal(ctx: CoreContext, input: MoveDealInput): Promise<
     }
 
     await tx.deal.update({
-      where: { id: input.dealId },
+      where: { id: input.dealId, workspaceId },
       data: updateData,
     });
 
@@ -203,7 +203,7 @@ export async function updateDeal(ctx: CoreContext, id: string, input: UpdateDeal
   }
 
   return db.deal.update({
-    where: { id },
+    where: { id, workspaceId },
     data: {
       ...(input.title !== undefined && { title: input.title }),
       ...(input.stageId !== undefined && { stageId: input.stageId }),
@@ -222,6 +222,6 @@ export async function deleteDeal(ctx: CoreContext, id: string) {
   const existing = await db.deal.findFirst({ where: { id, workspaceId, deletedAt: null } });
   if (!existing) return false;
 
-  await db.deal.update({ where: { id }, data: { deletedAt: new Date() } });
+  await db.deal.update({ where: { id, workspaceId }, data: { deletedAt: new Date() } });
   return true;
 }

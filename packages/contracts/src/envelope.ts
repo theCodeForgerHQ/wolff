@@ -15,6 +15,7 @@ export const ERROR_STATUS = {
   rate_limited: 429,
   internal_error: 500,
   not_configured: 501,
+  provider_error: 502,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_STATUS;

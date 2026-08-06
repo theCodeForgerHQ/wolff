@@ -33,6 +33,11 @@ export const WORKSPACE_SCOPED_MODELS = [
   'Payment',
   'OutboxEvent',
   'IdempotencyKey',
+  'Lead',
+  'Pipeline',
+  'Stage',
+  'Deal',
+  'DealActivity',
 ] as const;
 
 /** Models scoped through a parent relation: `where: { invoice: { workspaceId } }`. */

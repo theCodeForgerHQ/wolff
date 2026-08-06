@@ -4,6 +4,8 @@ import type { Db } from '@wolff/core/context';
 import '../context';
 import { sendError } from '../http';
 
+const MISSING_KEY_MESSAGE = 'Idempotency-Key header is required for this request';
+
 /**
  * `Idempotency-Key` on POST. The first request with a key runs
  * and its response is stored for 24 hours; a repeat of the same request gets
@@ -86,6 +88,24 @@ export function idempotency(db: Db): RequestHandler {
       );
       return res;
     };
+    next();
+  };
+}
+
+/**
+ * Enforces that money-affecting POSTs carry an `Idempotency-Key` header.
+ * Mount this *before* the global `idempotency()` middleware on the route
+ * so the key is present when the global middleware runs.
+ */
+export function requireIdempotencyKey(): RequestHandler {
+  return (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    const key = req.get('idempotency-key');
+    if (key === undefined || key.length === 0) {
+      return sendError(res, 'validation_error', MISSING_KEY_MESSAGE, {
+        'Idempotency-Key': [MISSING_KEY_MESSAGE],
+      });
+    }
     next();
   };
 }

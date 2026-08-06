@@ -101,13 +101,13 @@ export async function replacePipelineStages(
     // Delete stages not in the new list, then recreate/update.
     const keepIds = stages.map((s) => s.id).filter(Boolean) as string[];
     await tx.stage.deleteMany({
-      where: { pipelineId, id: { notIn: keepIds } },
+      where: { pipelineId, workspaceId, id: { notIn: keepIds } },
     });
 
     for (const s of stages) {
       if (s.id) {
         await tx.stage.update({
-          where: { id: s.id, pipelineId },
+          where: { id: s.id, pipelineId, workspaceId },
           data: {
             name: s.name,
             position: s.position,
@@ -218,7 +218,7 @@ export async function updatePipeline(ctx: CoreContext, id: string, input: Update
       });
     }
     return tx.pipeline.update({
-      where: { id },
+      where: { id, workspaceId },
       data: {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.isDefault !== undefined && { isDefault: input.isDefault }),
