@@ -98,8 +98,23 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
           }
         );
 
-        // A Payment row is created only when the provider confirms funds via
-        // webhook; a payment link is not a payment itself.
+        // A pending Payment row is created now so the provider webhook can
+        // reconcile against it. The idempotency middleware prevents duplicate
+        // rows if the client retries with the same key.
+        await db.payment.create({
+          data: {
+            workspaceId,
+            invoiceId: invoice.id,
+            amount: invoice.total,
+            currency: invoice.currency,
+            status: 'pending',
+            provider: link.provider,
+            providerOrderId: link.provider === 'razorpay' ? link.orderId : null,
+            stripePaymentIntentId: link.provider === 'stripe' ? link.paymentIntentId : null,
+            paymentMethod: link.provider,
+          },
+        });
+
         sendData(res, paymentLinkResponseSchema.parse(link));
       } catch (error) {
         if (error instanceof CoreError) {

@@ -80,4 +80,14 @@ describe('Rule 46 validation', () => {
     invoice.supplierGstin = '';
     expect(validateRule46(invoice)).toHaveLength(0);
   });
+
+  it('does not require place of supply for intra-state B2B registered invoices', () => {
+    const invoice = validInvoice();
+    invoice.isInterState = false;
+    invoice.placeOfSupply = '';
+    invoice.recipientGstin = '29AABCU9603R1ZX';
+    invoice.lines[0]!.taxableValue = 10_000;
+    const violations = validateRule46(invoice);
+    expect(violations.some((v) => v.code === 'place_of_supply')).toBe(false);
+  });
 });

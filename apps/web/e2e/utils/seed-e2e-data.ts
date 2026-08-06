@@ -13,11 +13,11 @@ import bcrypt from 'bcryptjs';
 
 const prisma = createPrisma();
 
-// Must match global-setup.ts and auth.fixture.ts
+// Must match global-setup.ts
 const E2E_TEST_USER = {
-  email: process.env.E2E_TEST_USER_EMAIL || 'e2e-test@wolff.dev',
+  email: process.env.E2E_TEST_USER_EMAIL || 'test@wolff.dev',
   password: process.env.E2E_TEST_USER_PASSWORD || 'TestPassword123!',
-  name: process.env.E2E_TEST_USER_NAME || 'E2E Test User',
+  name: process.env.E2E_TEST_USER_NAME || 'Test User',
 };
 
 // Must match role-permissions.spec.ts
@@ -98,42 +98,50 @@ async function seedE2ETestData() {
   });
   console.log('Created/Updated business profile');
 
-  // Create number sequences
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
+  // Create number sequences (non-GST workspaces use a null financial year).
+  // Prisma's generated compound-key input does not allow null, so we find
+  // by the nullable field and update by id.
+  const quoteSequence = await prisma.numberSequence.findFirst({
+    where: { workspaceId: e2eWorkspace.id, type: 'quote', financialYear: null },
+  });
+  if (quoteSequence) {
+    await prisma.numberSequence.update({
+      where: { id: quoteSequence.id },
+      data: { prefix: 'Q-', currentValue: 100, padding: 4 },
+    });
+  } else {
+    await prisma.numberSequence.create({
+      data: {
         workspaceId: e2eWorkspace.id,
         type: 'quote',
-        financialYear: null as unknown as string,
+        financialYear: null,
+        prefix: 'Q-',
+        currentValue: 100,
+        padding: 4,
       },
-    },
-    update: {},
-    create: {
-      workspaceId: e2eWorkspace.id,
-      type: 'quote',
-      prefix: 'Q-',
-      currentValue: 100,
-      padding: 4,
-    },
-  });
+    });
+  }
 
-  await prisma.numberSequence.upsert({
-    where: {
-      workspaceId_type_financialYear: {
+  const invoiceSequence = await prisma.numberSequence.findFirst({
+    where: { workspaceId: e2eWorkspace.id, type: 'invoice', financialYear: null },
+  });
+  if (invoiceSequence) {
+    await prisma.numberSequence.update({
+      where: { id: invoiceSequence.id },
+      data: { prefix: 'INV-', currentValue: 100, padding: 4 },
+    });
+  } else {
+    await prisma.numberSequence.create({
+      data: {
         workspaceId: e2eWorkspace.id,
         type: 'invoice',
-        financialYear: null as unknown as string,
+        financialYear: null,
+        prefix: 'INV-',
+        currentValue: 100,
+        padding: 4,
       },
-    },
-    update: {},
-    create: {
-      workspaceId: e2eWorkspace.id,
-      type: 'invoice',
-      prefix: 'INV-',
-      currentValue: 100,
-      padding: 4,
-    },
-  });
+    });
+  }
   console.log('Created/Updated number sequences');
 
   // Create test clients

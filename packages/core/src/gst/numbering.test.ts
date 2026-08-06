@@ -58,4 +58,33 @@ describe.skipIf(!url)('GST numbering', () => {
     expect(() => validateSerialNumber('A'.repeat(17))).toThrow();
     expect(() => validateSerialNumber('A'.repeat(16))).not.toThrow();
   });
+
+  it('validates serial length before incrementing the sequence', async () => {
+    const workspace = await base.workspace.create({
+      data: {
+        name: 'GST Numbering Validation',
+        slug: `gst-num-val-${Date.now()}`,
+        businessProfile: {
+          create: { businessName: 'GST Co', gstin: '33AABCU9603R1ZX', currency: 'INR' },
+        },
+      },
+    });
+
+    await expect(
+      nextSerialNumber(db, {
+        workspaceId: workspace.id,
+        type: 'invoice',
+        prefix: 'VERY-LONG-PREFIX',
+        padding: 10,
+      })
+    ).rejects.toThrow('Serial number exceeds 16 characters');
+
+    // Sequence should not have been incremented: the next valid number is 1.
+    const result = await nextSerialNumber(db, {
+      workspaceId: workspace.id,
+      type: 'invoice',
+      prefix: 'INV',
+    });
+    expect(result.serialNumber).toBe('INV-0001');
+  });
 });

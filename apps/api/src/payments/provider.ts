@@ -34,6 +34,8 @@ export type PaymentLinkResult =
       provider: 'stripe';
       url: string;
       sessionId: string;
+      /** Internal id used to reconcile the webhook; not exposed in the API response. */
+      paymentIntentId: string;
     }
   | {
       provider: 'razorpay';
@@ -121,7 +123,13 @@ export async function createStripeCheckout(
     throw new CoreError('internal_error', 'Stripe did not return a checkout URL');
   }
 
-  return { provider: 'stripe', url: session.url, sessionId: session.id };
+  const paymentIntentId =
+    typeof session.payment_intent === 'string' ? session.payment_intent : null;
+  if (!paymentIntentId) {
+    throw new CoreError('internal_error', 'Stripe did not return a payment intent');
+  }
+
+  return { provider: 'stripe', url: session.url, sessionId: session.id, paymentIntentId };
 }
 
 export async function createRazorpayOrder(
