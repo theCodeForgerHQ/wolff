@@ -39,6 +39,13 @@ export async function nextSerialNumber(
   const suffix = input.suffix ?? '';
   const padding = input.padding ?? 4;
 
+  if (prefix && !SERIAL_CHARSET.test(prefix)) {
+    throw new Error('Serial prefix contains invalid characters');
+  }
+  if (suffix && !SERIAL_CHARSET.test(suffix)) {
+    throw new Error('Serial suffix contains invalid characters');
+  }
+
   return db.$transaction(async (tx) => {
     const [existing] =
       financialYear === null
@@ -55,37 +62,33 @@ export async function nextSerialNumber(
             AND financial_year = ${financialYear}
           FOR UPDATE`;
 
-    let currentValue: number;
-    if (existing) {
-      const updated = await tx.numberSequence.update({
-        where: { id: existing.id, workspaceId: input.workspaceId },
-        data: { currentValue: { increment: 1 } },
-      });
-      currentValue = updated.currentValue;
-    } else {
-      const created = await tx.numberSequence.create({
-        data: {
-          workspaceId: input.workspaceId,
-          type: input.type,
-          financialYear,
-          prefix: input.prefix,
-          suffix: input.suffix,
-          currentValue: 1,
-          padding,
-        },
-      });
-      currentValue = created.currentValue;
-    }
+    const nextValue = existing ? existing.current_value + 1 : 1;
 
-    const parts = [prefix, String(currentValue).padStart(padding, '0')];
+    const parts = [prefix, String(nextValue).padStart(padding, '0')];
     if (suffix) parts.push(suffix);
     const serialNumber = parts.filter(Boolean).join('-');
 
     if (serialNumber.length > MAX_SERIAL_LENGTH) {
       throw new Error(`Serial number exceeds ${MAX_SERIAL_LENGTH} characters`);
     }
-    if (prefix && !SERIAL_CHARSET.test(prefix)) {
-      throw new Error('Serial prefix contains invalid characters');
+
+    if (existing) {
+      await tx.numberSequence.update({
+        where: { id: existing.id, workspaceId: input.workspaceId },
+        data: { currentValue: nextValue },
+      });
+    } else {
+      await tx.numberSequence.create({
+        data: {
+          workspaceId: input.workspaceId,
+          type: input.type,
+          financialYear,
+          prefix: input.prefix,
+          suffix: input.suffix,
+          currentValue: nextValue,
+          padding,
+        },
+      });
     }
 
     return { serialNumber, financialYear };

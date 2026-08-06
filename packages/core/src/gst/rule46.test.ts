@@ -16,6 +16,7 @@ function validInvoice(): import('./rule46').Rule46Invoice {
     reverseCharge: false,
     signature: 'signed',
     aggregateTurnoverBand: 'le_5cr',
+    isInterState: true,
     lines: [
       {
         description: 'Design',
@@ -56,10 +57,13 @@ describe('Rule 46 validation', () => {
   it('requires address and place of supply for unregistered B2C > 50k', () => {
     const invoice = validInvoice();
     invoice.recipientGstin = '';
+    invoice.isInterState = false;
     invoice.lines[0]!.taxableValue = 60_000;
     invoice.recipientAddress = '';
+    invoice.placeOfSupply = '';
     const violations = validateRule46(invoice);
     expect(violations.some((v) => v.code === 'recipient_address')).toBe(true);
+    expect(violations.some((v) => v.code === 'place_of_supply')).toBe(true);
   });
 
   it('validates HSN digit count by turnover band', () => {

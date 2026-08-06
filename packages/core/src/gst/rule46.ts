@@ -28,6 +28,8 @@ export interface Rule46Invoice {
   reverseCharge: boolean;
   signature?: string;
   aggregateTurnoverBand?: 'le_5cr' | 'gt_5cr';
+  /** True when the supply crosses state lines (including SEZ / export). */
+  isInterState?: boolean;
   lines: Rule46Line[];
 }
 
@@ -79,23 +81,19 @@ export function validateRule46(invoice: Rule46Invoice): Rule46Violation[] {
 
   const totalTaxable = invoice.lines.reduce((sum, line) => sum + toNum(line.taxableValue), 0);
   const unregisteredOver50k = !registeredRecipient && totalTaxable > 50_000;
-  if (unregisteredOver50k) {
-    if (!invoice.recipientAddress) {
-      violations.push({
-        code: 'recipient_address',
-        message: 'Recipient address is required for unregistered B2C > ₹50,000',
-      });
-    }
-    if (!invoice.placeOfSupply) {
-      violations.push({
-        code: 'place_of_supply',
-        message: 'Place of supply is required for unregistered B2C > ₹50,000',
-      });
-    }
+  const needsPlaceOfSupply = invoice.isInterState || unregisteredOver50k;
+  if (unregisteredOver50k && !invoice.recipientAddress) {
+    violations.push({
+      code: 'recipient_address',
+      message: 'Recipient address is required for unregistered B2C > ₹50,000',
+    });
   }
-
-  if (!invoice.placeOfSupply) {
-    violations.push({ code: 'place_of_supply', message: 'Place of supply is required' });
+  if (needsPlaceOfSupply && !invoice.placeOfSupply) {
+    violations.push({
+      code: 'place_of_supply',
+      message:
+        'Place of supply is required for inter-state / export / SEZ or unregistered B2C > ₹50,000',
+    });
   }
 
   if (invoice.lines.length === 0) {
