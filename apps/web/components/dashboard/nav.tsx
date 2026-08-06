@@ -12,6 +12,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   ChevronDown,
+  Target,
+  Kanban,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,6 +52,15 @@ export const navItems: NavItem[] = [
     title: 'Clients',
     href: '/clients',
     icon: Users,
+  },
+  {
+    title: 'CRM',
+    href: '/leads',
+    icon: Target,
+    children: [
+      { title: 'Leads', href: '/leads' },
+      { title: 'Deals', href: '/deals' },
+    ],
   },
   {
     title: 'Templates',

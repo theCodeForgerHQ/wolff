@@ -30,6 +30,12 @@ export const ROUTES = {
   newClient: '/clients/new',
   clientDetail: (id: string) => `/clients/${id}`,
 
+  // CRM
+  leads: '/leads',
+  leadDetail: (id: string) => `/leads/${id}`,
+  deals: '/deals',
+  dealDetail: (id: string) => `/deals/${id}`,
+
   // Projects
   projects: '/projects',
   projectDetail: (id: string) => `/projects/${id}`,

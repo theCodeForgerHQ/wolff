@@ -54,11 +54,17 @@ export interface CheckoutSessionResult {
   error?: string;
 }
 
+export type PaymentProvider = 'stripe' | 'razorpay';
+
 export interface PaymentSettingsData {
   stripeAccountId: string | null;
   stripeAccountStatus: string | null;
   stripeOnboardingComplete: boolean;
   enabledPaymentMethods: string[];
+  activeProviders: PaymentProvider[];
+  razorpayKeyId: string | null;
+  razorpayKeySecret: string | null;
+  razorpayWebhookSecret: string | null;
   passProcessingFees: boolean;
   defaultPaymentTerms: number;
 }

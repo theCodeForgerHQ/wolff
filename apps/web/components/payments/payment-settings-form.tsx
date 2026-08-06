@@ -3,8 +3,9 @@
 import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, ExternalLink, CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
+import { Loader2, ExternalLink, CheckCircle, AlertCircle, CreditCard, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +39,13 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
     defaultPaymentTerms: initialData?.defaultPaymentTerms ?? 30,
   });
 
+  const [razorpay, setRazorpay] = useState({
+    enabled: initialData?.activeProviders?.includes('razorpay') ?? false,
+    keyId: initialData?.razorpayKeyId ?? '',
+    keySecret: '',
+    webhookSecret: '',
+  });
+
   const [stripeStatus, setStripeStatus] = useState({
     connected: !!initialData?.stripeAccountId,
     onboardingComplete: initialData?.stripeOnboardingComplete ?? false,
@@ -59,7 +67,13 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
   const handleSave = () => {
     startTransition(async () => {
       try {
-        await updatePaymentSettings(settings);
+        await updatePaymentSettings({
+          ...settings,
+          activeProviders: razorpay.enabled ? ['stripe', 'razorpay'] : ['stripe'],
+          razorpayKeyId: razorpay.keyId || null,
+          razorpayKeySecret: razorpay.keySecret || null,
+          razorpayWebhookSecret: razorpay.webhookSecret || null,
+        });
         toast.success('Payment settings saved');
         router.refresh();
       } catch {
@@ -173,6 +187,71 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
                 Connect with Stripe
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Razorpay */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+              <Wallet className="text-primary h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle>Razorpay</CardTitle>
+              <CardDescription>Accept UPI, cards and net banking via Razorpay</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="razorpay-enabled">Enable Razorpay</Label>
+              <p className="text-muted-foreground text-sm">Turn on Razorpay for INR invoices</p>
+            </div>
+            <Switch
+              id="razorpay-enabled"
+              checked={razorpay.enabled}
+              onCheckedChange={(checked) => setRazorpay((r) => ({ ...r, enabled: checked }))}
+            />
+          </div>
+
+          {razorpay.enabled && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="razorpay-key-id">Key ID</Label>
+                <Input
+                  id="razorpay-key-id"
+                  value={razorpay.keyId}
+                  onChange={(e) => setRazorpay((r) => ({ ...r, keyId: e.target.value }))}
+                  placeholder="rzp_test_..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="razorpay-key-secret">Key Secret</Label>
+                <Input
+                  id="razorpay-key-secret"
+                  type="password"
+                  value={razorpay.keySecret}
+                  onChange={(e) => setRazorpay((r) => ({ ...r, keySecret: e.target.value }))}
+                  placeholder="Leave unchanged to keep existing secret"
+                />
+                <p className="text-muted-foreground text-sm">
+                  Stored encrypted at rest. Only enter when adding or rotating credentials.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="razorpay-webhook-secret">Webhook Secret</Label>
+                <Input
+                  id="razorpay-webhook-secret"
+                  type="password"
+                  value={razorpay.webhookSecret}
+                  onChange={(e) => setRazorpay((r) => ({ ...r, webhookSecret: e.target.value }))}
+                  placeholder="Leave unchanged to keep existing secret"
+                />
+              </div>
             </div>
           )}
         </CardContent>

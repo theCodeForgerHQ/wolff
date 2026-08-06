@@ -97,6 +97,30 @@ export interface RevenueSparklinePoint {
 }
 
 // Dashboard data
+export interface ReceivablesAgeingBucket {
+  bucket: string;
+  amountDue: number;
+  invoiceCount: number;
+}
+
+export interface GstSummary {
+  taxableValue: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount: number;
+  invoiceCount: number;
+}
+
+export interface PipelineStageSummary {
+  stageId: string;
+  stageName: string;
+  position: number;
+  dealCount: number;
+  totalValue: number;
+  currency: string;
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   quoteStatusCounts: QuoteStatusCounts;
@@ -106,6 +130,9 @@ export interface DashboardData {
   recentActivity: ActivityItem[];
   revenueData: RevenueDataPoint[];
   revenueSparkline: RevenueSparklinePoint[];
+  paymentAging: PaymentAgingData;
+  gstSummary: GstSummary | null;
+  pipelineSummary: PipelineStageSummary[];
 }
 
 // Period filter

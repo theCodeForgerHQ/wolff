@@ -80,6 +80,7 @@ export default defineConfig({
         '**/dashboard-accessibility.spec.ts',
         '**/analytics.spec.ts',
         '**/stripe-webhooks.spec.ts',
+        '**/flows/*.spec.ts',
         '**/file-uploads.spec.ts',
         '**/email-delivery.spec.ts',
         '**/search-filtering.spec.ts',
