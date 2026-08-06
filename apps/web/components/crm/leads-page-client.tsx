@@ -21,7 +21,7 @@ export function LeadsPageClient({ data }: LeadsPageClientProps) {
           <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
           <p className="text-muted-foreground text-sm">Track and convert prospective clients.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
+        <Button data-testid="add-lead-button" onClick={() => setShowCreate(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Lead
         </Button>

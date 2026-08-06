@@ -19,7 +19,7 @@ test.describe('Lead to paid flow', () => {
 
     // 1. Create a lead from the widget/source manual path
     await page.goto('/leads');
-    await page.getByRole('button', { name: 'Add Lead' }).click();
+    await page.getByTestId('add-lead-button').click();
 
     const dialog = page.getByRole('dialog', { name: 'Add Lead' });
     await expect(dialog).toBeVisible();
@@ -51,27 +51,21 @@ test.describe('Lead to paid flow', () => {
     await page.waitForURL('/deals');
     await expect(page.getByText(leadName)).toBeVisible();
 
-    const dealCard = page.locator('[data-testid="deal-card"]', { hasText: leadName });
-    // Fallback if test id not present: any card with lead name
-    const card = dealCard.or(page.locator('.rounded-lg', { hasText: leadName }).first());
-    await card.getByRole('button', { name: 'Create Quote' }).click();
+    const card = page.locator('[data-testid="deal-card"]', { hasText: leadName }).first();
+    await expect(card).toBeVisible();
+    await card.locator('[data-testid="create-quote-button"]').click();
 
     // Should land on the quote editor for the new draft quote
     await page.waitForURL(/\/quotes\/[0-9a-f-]+\/edit/);
-    await expect(page.getByText('Quote for')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Edit Quote' })).toBeVisible();
 
     // 4. Record payment against an existing unpaid invoice
     await page.goto('/invoices');
-    const invoiceLink = page
-      .locator('a[href^="/invoices/"]')
-      .filter({ hasText: /sent|overdue|partial/i })
-      .first();
-    await expect(invoiceLink).toBeVisible();
-    await invoiceLink.click();
-
-    const recordButton = page.getByRole('button', { name: /record payment/i });
-    await expect(recordButton).toBeVisible();
-    await recordButton.click();
+    const unpaidStatuses = /Sent|Overdue|Partially Paid|Partial/i;
+    const invoiceRow = page.locator('tr', { hasText: unpaidStatuses }).first();
+    await expect(invoiceRow).toBeVisible();
+    await invoiceRow.getByRole('button', { name: 'Open menu' }).click();
+    await page.getByRole('menuitem', { name: /record payment/i }).click();
 
     const paymentDialog = page.getByRole('dialog');
     await expect(paymentDialog).toBeVisible();

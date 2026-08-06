@@ -124,12 +124,12 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Source</Label>
+              <Label id="lead-source-label">Source</Label>
               <Select
                 value={form.source}
                 onValueChange={(v) => setForm((f) => ({ ...f, source: v as LeadSource }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-labelledby="lead-source-label">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,12 +141,12 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Status</Label>
+              <Label id="lead-status-label">Status</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => setForm((f) => ({ ...f, status: v as LeadStatus }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-labelledby="lead-status-label">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
