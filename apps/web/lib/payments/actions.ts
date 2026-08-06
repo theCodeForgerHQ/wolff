@@ -10,6 +10,7 @@ import {
   retrieveConnectAccount,
 } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
+import { encrypt } from '@wolff/core/encryption';
 import { toNumber, getBaseUrl } from '@/lib/utils';
 import type {
   PaymentListItem,
@@ -61,6 +62,10 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
       stripeAccountStatus: null,
       stripeOnboardingComplete: false,
       enabledPaymentMethods: ['card'],
+      activeProviders: ['stripe'],
+      razorpayKeyId: null,
+      razorpayKeySecret: null,
+      razorpayWebhookSecret: null,
       passProcessingFees: false,
       defaultPaymentTerms: 30,
     };
@@ -71,6 +76,11 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
     stripeAccountStatus: settings.stripeAccountStatus,
     stripeOnboardingComplete: settings.stripeOnboardingComplete,
     enabledPaymentMethods: settings.enabledPaymentMethods as string[],
+    activeProviders: (settings.activeProviders as ('stripe' | 'razorpay')[]) ?? ['stripe'],
+    razorpayKeyId: settings.razorpayKeyId,
+    // Secrets are write-only from the UI; never decrypt them back to the form.
+    razorpayKeySecret: null,
+    razorpayWebhookSecret: null,
     passProcessingFees: settings.passProcessingFees,
     defaultPaymentTerms: settings.defaultPaymentTerms,
   };
@@ -81,26 +91,51 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
  */
 export async function updatePaymentSettings(data: {
   enabledPaymentMethods?: string[];
+  activeProviders?: ('stripe' | 'razorpay')[];
+  razorpayKeyId?: string | null;
+  razorpayKeySecret?: string | null;
+  razorpayWebhookSecret?: string | null;
   passProcessingFees?: boolean;
   defaultPaymentTerms?: number;
 }): Promise<{ success: boolean; error?: string }> {
   const { workspaceId } = await getCurrentUserWorkspace();
 
   try {
+    const update: Record<string, unknown> = {};
+    if (data.enabledPaymentMethods !== undefined) {
+      update.enabledPaymentMethods = data.enabledPaymentMethods;
+    }
+    if (data.activeProviders !== undefined) {
+      update.activeProviders = data.activeProviders;
+    }
+    if (data.razorpayKeyId !== undefined) {
+      update.razorpayKeyId = data.razorpayKeyId;
+    }
+    if (data.razorpayKeySecret) {
+      update.razorpayKeySecretEnc = encrypt(data.razorpayKeySecret);
+    }
+    if (data.razorpayWebhookSecret) {
+      update.razorpayWebhookSecretEnc = encrypt(data.razorpayWebhookSecret);
+    }
+    if (data.passProcessingFees !== undefined) {
+      update.passProcessingFees = data.passProcessingFees;
+    }
+    if (data.defaultPaymentTerms !== undefined) {
+      update.defaultPaymentTerms = data.defaultPaymentTerms;
+    }
+
     await prisma.paymentSettings.upsert({
       where: { workspaceId },
-      update: {
-        ...(data.enabledPaymentMethods && { enabledPaymentMethods: data.enabledPaymentMethods }),
-        ...(data.passProcessingFees !== undefined && {
-          passProcessingFees: data.passProcessingFees,
-        }),
-        ...(data.defaultPaymentTerms !== undefined && {
-          defaultPaymentTerms: data.defaultPaymentTerms,
-        }),
-      },
+      update,
       create: {
         workspaceId,
         enabledPaymentMethods: data.enabledPaymentMethods ?? ['card'],
+        activeProviders: data.activeProviders ?? ['stripe'],
+        razorpayKeyId: data.razorpayKeyId ?? null,
+        razorpayKeySecretEnc: data.razorpayKeySecret ? encrypt(data.razorpayKeySecret) : null,
+        razorpayWebhookSecretEnc: data.razorpayWebhookSecret
+          ? encrypt(data.razorpayWebhookSecret)
+          : null,
         passProcessingFees: data.passProcessingFees ?? false,
         defaultPaymentTerms: data.defaultPaymentTerms ?? 30,
       },
