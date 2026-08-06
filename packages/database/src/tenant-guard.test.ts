@@ -79,6 +79,12 @@ describe('findTenantViolation', () => {
       expect(fieldsOf(name), name).toContain(parent);
     }
   });
+
+  it('includes CRM models in workspace-scoped guard', () => {
+    for (const name of ['Lead', 'Pipeline', 'Stage', 'Deal', 'DealActivity']) {
+      expect(WORKSPACE_SCOPED_MODELS).toContain(name);
+    }
+  });
 });
 
 const url = process.env.TEST_DATABASE_URL;
