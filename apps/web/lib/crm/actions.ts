@@ -14,6 +14,7 @@ import {
   moveDeal as moveDealCore,
   createDeal as createDealCore,
 } from '@wolff/core/crm';
+import { createQuoteFromDeal as createQuoteFromDealCore } from '@wolff/core/quotes';
 import { ROUTES } from '@/lib/routes';
 import { toNumber } from '@/lib/utils';
 import type {
@@ -219,5 +220,13 @@ export async function createDeal(input: {
     pipelineId: (await ensureDefaultPipeline(ctx.db, ctx.workspaceId)).pipelineId,
   });
   revalidatePath(ROUTES.deals);
+  return result;
+}
+
+export async function createQuoteFromDeal(dealId: string): Promise<{ quoteId: string }> {
+  const ctx = await getContext();
+  const result = await createQuoteFromDealCore(ctx, { dealId });
+  revalidatePath(ROUTES.deals);
+  revalidatePath(ROUTES.quotes);
   return result;
 }

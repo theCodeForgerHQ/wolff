@@ -50,10 +50,10 @@ export function LeadsDataTable({ data, onCreateClick }: LeadsDataTableProps) {
     if (!convertId) return;
     setIsLoading(true);
     try {
-      const result = await convertLead(convertId);
+      await convertLead(convertId);
       toast.success('Lead converted to deal');
       setConvertId(null);
-      router.push(`/deals/${result.dealId}`);
+      router.push('/deals');
     } catch {
       toast.error('Failed to convert lead');
       setIsLoading(false);

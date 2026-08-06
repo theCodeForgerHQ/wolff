@@ -15,8 +15,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2 } from 'lucide-react';
-import { moveDeal } from '@/lib/crm/actions';
+import { Plus, Loader2, FileText } from 'lucide-react';
+import { moveDeal, createQuoteFromDeal } from '@/lib/crm/actions';
 import { formatCurrency } from '@/lib/utils';
 import type { DealsBoard, DealListItem, DealStage } from '@/lib/crm/types';
 
@@ -29,10 +29,12 @@ function DealCard({
   deal,
   isOverlay,
   currency,
+  onCreateQuote,
 }: {
   deal: DealListItem;
   isOverlay?: boolean;
   currency?: string;
+  onCreateQuote?: (deal: DealListItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: deal.id,
@@ -68,6 +70,21 @@ function DealCard({
           </span>
         )}
       </div>
+      {onCreateQuote && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 h-7 w-full text-xs"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCreateQuote(deal);
+          }}
+        >
+          <FileText className="mr-1 h-3 w-3" />
+          Create Quote
+        </Button>
+      )}
     </div>
   );
 }
@@ -76,10 +93,12 @@ function StageColumn({
   stage,
   deals,
   currency,
+  onCreateQuote,
 }: {
   stage: DealStage;
   deals: DealListItem[];
   currency?: string;
+  onCreateQuote?: (deal: DealListItem) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id, data: { stage } });
   const total = deals.reduce((sum, d) => sum + d.value, 0);
@@ -104,7 +123,7 @@ function StageColumn({
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         {deals.map((deal) => (
-          <DealCard key={deal.id} deal={deal} currency={currency} />
+          <DealCard key={deal.id} deal={deal} currency={currency} onCreateQuote={onCreateQuote} />
         ))}
       </div>
     </div>
@@ -116,6 +135,19 @@ export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
   const [deals, setDeals] = useState(board.deals);
   const [activeDeal, setActiveDeal] = useState<DealListItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
+  const [isCreatingQuote, setIsCreatingQuote] = useState(false);
+
+  const handleCreateQuote = async (deal: DealListItem) => {
+    setIsCreatingQuote(true);
+    try {
+      const result = await createQuoteFromDeal(deal.id);
+      toast.success('Quote created from deal');
+      router.push(`/quotes/${result.quoteId}/edit`);
+    } catch {
+      toast.error('Failed to create quote');
+      setIsCreatingQuote(false);
+    }
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const deal = event.active.data.current?.deal as DealListItem | undefined;
@@ -153,7 +185,7 @@ export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
 
   return (
     <div className="relative">
-      {isMoving && (
+      {(isMoving || isCreatingQuote) && (
         <div className="bg-background/50 absolute inset-0 z-10 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -166,6 +198,7 @@ export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
               stage={stage}
               deals={deals.filter((d) => d.stageId === stage.id)}
               currency={currency}
+              onCreateQuote={handleCreateQuote}
             />
           ))}
           <div className="flex min-w-[200px] flex-col items-start justify-start">
