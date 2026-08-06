@@ -46,6 +46,13 @@ vi.mock('@/lib/workspace/get-current-workspace', () => ({
 vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
+  incrementNumberSequence: vi.fn((tx, workspaceId, type) =>
+    tx.numberSequence.upsert({
+      where: { workspaceId, type, financialYear: null },
+      update: { currentValue: { increment: 1 } },
+      create: { workspaceId, type, prefix: 'QT', currentValue: 1, padding: 4 },
+    })
+  ),
 }));
 
 // Import actual functions under test

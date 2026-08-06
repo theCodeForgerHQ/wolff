@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { prisma, Prisma } from '@wolff/database';
+import { prisma, Prisma, incrementNumberSequence } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type {
   QuoteDocument,
@@ -77,26 +77,14 @@ async function getActiveWorkspace() {
  * Uses atomic increment on NumberSequence table to prevent race conditions
  */
 async function generateQuoteNumber(workspaceId: string): Promise<string> {
-  // Use upsert to atomically create or increment the sequence (race-condition safe)
+  // Atomically create or increment the sequence (race-condition safe).
   // Bug #82: Counter uses Int (max ~2.1B). Safe for any realistic business use case.
   // At 1000 quotes/day, this supports ~5,800 years of operation.
   const result = await prisma.$transaction(async (tx) => {
-    const updated = await tx.numberSequence.upsert({
-      where: {
-        workspaceId_type_financialYear: {
-          workspaceId,
-          type: 'quote',
-          financialYear: null as unknown as string,
-        },
-      },
-      update: { currentValue: { increment: 1 } },
-      create: {
-        workspaceId,
-        type: 'quote',
-        prefix: 'QT',
-        currentValue: 1,
-        padding: 4,
-      },
+    const updated = await incrementNumberSequence(tx, workspaceId, 'quote', null, {
+      prefix: 'QT',
+      currentValue: 1,
+      padding: 4,
     });
 
     if (updated.currentValue > 2_000_000_000) {
@@ -128,13 +116,11 @@ async function generateQuoteNumber(workspaceId: string): Promise<string> {
 export async function getNextQuoteNumber(): Promise<string> {
   const { workspace } = await getActiveWorkspace();
 
-  const seq = await prisma.numberSequence.findUnique({
+  const seq = await prisma.numberSequence.findFirst({
     where: {
-      workspaceId_type_financialYear: {
-        workspaceId: workspace.id,
-        type: 'quote',
-        financialYear: null as unknown as string,
-      },
+      workspaceId: workspace.id,
+      type: 'quote',
+      financialYear: null,
     },
   });
 

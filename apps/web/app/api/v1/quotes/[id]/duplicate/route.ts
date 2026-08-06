@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { randomBytes } from 'crypto';
-import { prisma, Prisma } from '@wolff/database';
+import { prisma, Prisma, incrementNumberSequence } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber } from '@/lib/utils';
 import { logger } from '@/lib/logger';
@@ -32,23 +32,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!original) return apiError('Quote not found', 404);
 
-    // Generate new quote number in a serializable transaction to prevent duplicates
-    const seq = await prisma.$transaction(
-      async (tx) => {
-        return tx.numberSequence.upsert({
-          where: {
-            workspaceId_type_financialYear: {
-              workspaceId,
-              type: 'quote',
-              financialYear: null as unknown as string,
-            },
-          },
-          update: { currentValue: { increment: 1 } },
-          create: { workspaceId, type: 'quote', prefix: 'Q-', currentValue: 1, padding: 4 },
-        });
-      },
-      { isolationLevel: 'Serializable' }
-    );
+    // Generate new quote number in a transaction to prevent duplicates
+    const seq = await prisma.$transaction(async (tx) => {
+      return incrementNumberSequence(tx, workspaceId, 'quote', null, {
+        prefix: 'Q-',
+        currentValue: 1,
+        padding: 4,
+      });
+    });
     const quoteNumber = `${seq.prefix || 'Q-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
 
     // Create duplicate

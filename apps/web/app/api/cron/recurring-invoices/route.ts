@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@wolff/database';
+import { prisma, incrementNumberSequence } from '@wolff/database';
 import { randomBytes } from 'crypto';
 import { logger } from '@/lib/logger';
 
@@ -89,22 +89,10 @@ export async function GET(request: Request) {
 
         // Generate invoice number atomically
         const seqResult = await prisma.$transaction(async (tx) => {
-          const updated = await tx.numberSequence.upsert({
-            where: {
-              workspaceId_type_financialYear: {
-                workspaceId: parent.workspaceId,
-                type: 'invoice',
-                financialYear: null as unknown as string,
-              },
-            },
-            update: { currentValue: { increment: 1 } },
-            create: {
-              workspaceId: parent.workspaceId,
-              type: 'invoice',
-              prefix: 'INV',
-              currentValue: 1,
-              padding: 4,
-            },
+          const updated = await incrementNumberSequence(tx, parent.workspaceId, 'invoice', null, {
+            prefix: 'INV',
+            currentValue: 1,
+            padding: 4,
           });
           return {
             prefix: updated.prefix || 'INV',
