@@ -43,8 +43,17 @@ function QuoteBuilderContent() {
   const searchParams = useSearchParams();
   const clientId = searchParams.get('clientId');
 
-  const { document, showBlocksPanel, showPropertiesPanel, addBlock, moveBlock, resetDocument } =
-    useQuoteBuilderStore();
+  const {
+    document,
+    showBlocksPanel,
+    showPropertiesPanel,
+    addBlock,
+    moveBlock,
+    resetDocument,
+    updateClientId,
+    toggleBlocksPanel,
+    togglePropertiesPanel,
+  } = useQuoteBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<QuoteBlock | null>(null);
   const [activeTemplateType, setActiveTemplateType] = useState<BlockType | null>(null);
@@ -69,19 +78,12 @@ function QuoteBuilderContent() {
   // Set clientId on document when available
   useEffect(() => {
     if (clientId && document && !clientIdSet.current) {
-      const store = useQuoteBuilderStore.getState();
-      if (store.document && store.document.clientId !== clientId) {
-        // Update the document with the clientId using immer
-        useQuoteBuilderStore.setState((state) => {
-          if (state.document) {
-            state.document.clientId = clientId;
-            state.isDirty = true;
-          }
-        });
-        clientIdSet.current = true;
+      if (document.clientId !== clientId) {
+        updateClientId(clientId);
       }
+      clientIdSet.current = true;
     }
-  }, [clientId, document]);
+  }, [clientId, document, updateClientId]);
 
   // Hide panels on mobile on first load
   useEffect(() => {
@@ -90,10 +92,10 @@ function QuoteBuilderContent() {
 
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      const store = useQuoteBuilderStore.getState();
-      if (store.showBlocksPanel) store.toggleBlocksPanel();
-      if (store.showPropertiesPanel) store.togglePropertiesPanel();
+      if (showBlocksPanel) toggleBlocksPanel();
+      if (showPropertiesPanel) togglePropertiesPanel();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sensors = useSensors(
