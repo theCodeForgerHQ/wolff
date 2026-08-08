@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
+import { config as loadEnv } from 'dotenv';
+
+// Make DATABASE_URL and other local env vars available to E2E test helpers that
+// import @wolff/database directly (e.g. quote-to-paid fixture reset).
+loadEnv({ path: path.join(__dirname, '.env') });
 
 // Support multiple environment variable names for flexibility
 const baseURL =
@@ -87,9 +92,14 @@ export default defineConfig({
         '**/multi-user-team.spec.ts',
         '**/notifications.spec.ts',
         '**/offline-network.spec.ts',
+        '**/axe-authenticated.spec.ts',
         // Phase 2 tests
         '**/projects.spec.ts',
         '**/sidebar-hierarchy.spec.ts',
+      ],
+      testIgnore: [
+        // Phase 1 Stripe flow needs stripe-mock; run via playwright.flows.config.ts.
+        '**/quote-to-paid.spec.ts',
       ],
       use: {
         ...devices['Desktop Chrome'],
@@ -151,17 +161,35 @@ export default defineConfig({
       testMatch: '**/accessibility.spec.ts',
       use: { ...devices['iPhone 12'] },
     },
+
+    // Widget tests (built embed + preview server)
+    {
+      name: 'widget',
+      testDir: './e2e/widget',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:5173',
+      },
+    },
   ],
 
   // Only start local dev server when testing localhost
   ...(isExternalUrl
     ? {}
     : {
-        webServer: {
-          command: 'pnpm run dev',
-          url: baseURL,
-          reuseExistingServer: !process.env.CI,
-          timeout: 120000,
-        },
+        webServer: [
+          {
+            command: 'pnpm run dev',
+            url: baseURL,
+            reuseExistingServer: false,
+            timeout: 120000,
+          },
+          {
+            command: 'pnpm --filter @wolff/widget build && pnpm --filter @wolff/widget preview',
+            url: 'http://localhost:5173',
+            reuseExistingServer: false,
+            timeout: 180000,
+          },
+        ],
       }),
 });

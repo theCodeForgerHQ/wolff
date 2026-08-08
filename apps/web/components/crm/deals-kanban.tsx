@@ -15,7 +15,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, FileText } from 'lucide-react';
+import { Plus, Loader2, FileText, GripVertical } from 'lucide-react';
 import { moveDeal, createQuoteFromDeal } from '@/lib/crm/actions';
 import { formatCurrency } from '@/lib/utils';
 import type { DealsBoard, DealListItem, DealStage } from '@/lib/crm/types';
@@ -50,15 +50,24 @@ function DealCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
       data-testid="deal-card"
-      className={`bg-card cursor-grab rounded-lg border p-3 shadow-sm active:cursor-grabbing ${
-        isOverlay ? 'rotate-2 shadow-lg' : ''
-      }`}
+      className={`bg-card rounded-lg border p-3 shadow-sm ${isOverlay ? 'rotate-2 shadow-lg' : ''}`}
     >
-      <div className="font-medium">{deal.title}</div>
-      <div className="text-muted-foreground text-sm">{deal.clientName ?? 'No client'}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">{deal.title}</div>
+          <div className="text-muted-foreground text-sm">{deal.clientName ?? 'No client'}</div>
+        </div>
+        <button
+          type="button"
+          aria-label="Drag deal"
+          className="text-muted-foreground hover:text-foreground cursor-grab p-1 active:cursor-grabbing"
+          {...listeners}
+          {...attributes}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      </div>
       <div className="mt-2 flex items-center justify-between">
         <Badge variant="outline" className="text-xs">
           {formatCurrency(deal.value, currency ?? deal.currency)}
@@ -114,7 +123,7 @@ function StageColumn({
     >
       <div className="border-b p-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">{stage.name}</h3>
+          <h2 className="font-medium">{stage.name}</h2>
           <Badge variant="secondary" className="text-xs">
             {deals.length}
           </Badge>

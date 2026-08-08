@@ -39,7 +39,7 @@ async function getUserProfile() {
 
   // Bug #90: Check password existence without fetching the full hash into memory
   const [{ has_password }] = await prisma.$queryRaw<[{ has_password: boolean }]>`
-    SELECT password_hash IS NOT NULL AS has_password FROM "User" WHERE id = ${session.user.id}
+    SELECT password_hash IS NOT NULL AS has_password FROM "users" WHERE id = ${session.user.id}
   `;
 
   return {

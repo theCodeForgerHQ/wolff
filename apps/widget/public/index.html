@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wolff Widget Demo</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 720px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Widget demo</h1>
+    <div data-wolff-widget="lead-form"></div>
+    <script
+      src="./widget.iife.js"
+      data-wolff-widget
+      data-key="wolff_pk_test_123"
+      data-api-base-url="http://localhost:4000"
+    ></script>
+  </body>
+</html>

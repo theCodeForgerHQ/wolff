@@ -89,7 +89,7 @@ export function AutomationBuilder({ automations: initial, runs, approvals }: Pro
       setName(automation.name);
       setTrigger(automation.trigger as AutomationTrigger);
       setIsActive(automation.isActive);
-      setSteps([]);
+      setSteps(automation.steps.length > 0 ? automation.steps : [{ type: 'wait', days: 7 }]);
     } else {
       setName('');
       setTrigger('invoice.overdue');
@@ -182,6 +182,7 @@ export function AutomationBuilder({ automations: initial, runs, approvals }: Pro
           {automations.map((a) => (
             <Card
               key={a.id}
+              data-testid="automation-card"
               className="hover:border-primary cursor-pointer"
               onClick={() => openEdit(a)}
             >

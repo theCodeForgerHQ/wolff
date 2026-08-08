@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -195,7 +195,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
           <SidebarTrigger className="[&_svg]:size-5!" />
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="cursor-default rounded-full border border-blue-400 px-2 py-0.5 text-[11px] font-medium text-blue-500">
+              <span className="cursor-default rounded-full border border-blue-600 px-2 py-0.5 text-[11px] font-medium text-blue-700">
                 Beta
               </span>
             </TooltipTrigger>
@@ -211,8 +211,8 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               <BreadcrumbItem>
                 <BreadcrumbLink href="/dashboard">Home</BreadcrumbLink>
               </BreadcrumbItem>
-              {breadcrumbs.map((crumb, index) => (
-                <span key={crumb.href} className="flex items-center gap-1.5">
+              {breadcrumbs.map((crumb) => (
+                <Fragment key={crumb.href}>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     {crumb.isLast ? (
@@ -221,7 +221,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
                       <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
-                </span>
+                </Fragment>
               ))}
             </BreadcrumbList>
           </Breadcrumb>

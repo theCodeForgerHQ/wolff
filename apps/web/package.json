@@ -12,9 +12,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "e2e:seed": "npx tsx e2e/utils/seed-e2e-data.ts",
-    "e2e:cleanup": "CLEANUP=true npx tsx e2e/utils/seed-e2e-data.ts",
-    "e2e:seed:edge-cases": "SEED_EDGE_CASES=true npx tsx e2e/utils/seed-e2e-data.ts",
+    "e2e:seed": "npx tsx -r dotenv/config e2e/utils/seed-e2e-data.ts",
+    "e2e:cleanup": "CLEANUP=true npx tsx -r dotenv/config e2e/utils/seed-e2e-data.ts",
+    "e2e:seed:edge-cases": "SEED_EDGE_CASES=true npx tsx -r dotenv/config e2e/utils/seed-e2e-data.ts",
     "e2e:data-integrity": "playwright test --project=data-integrity",
     "e2e:regression": "playwright test --project=regression",
     "e2e:full": "pnpm e2e:seed:edge-cases && pnpm test:e2e"
@@ -113,6 +113,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "^6.6.0",
@@ -127,6 +128,7 @@
     "@typescript-eslint/parser": "^8.18.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "5.0.2",
+    "dotenv": "^18.0.4",
     "eslint": "^9.16.0",
     "eslint-config-next": "16.3.7",
     "jsdom": "^29.1.1",
