@@ -85,6 +85,18 @@ describe('findTenantViolation', () => {
       expect(WORKSPACE_SCOPED_MODELS).toContain(name);
     }
   });
+
+  it('includes every model that owns a workspaceId column', () => {
+    const schema = readFileSync(join(__dirname, '../prisma/schema.prisma'), 'utf8');
+    const modelRe = /^model (\w+) \{([\s\S]*?)^\}/gm;
+    let match: RegExpExecArray | null;
+    while ((match = modelRe.exec(schema)) !== null) {
+      const [, name, body] = match;
+      if (/^\s+workspaceId\s+/m.test(body)) {
+        expect(WORKSPACE_SCOPED_MODELS).toContain(name);
+      }
+    }
+  });
 });
 
 const url = process.env.TEST_DATABASE_URL;
