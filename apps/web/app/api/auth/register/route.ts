@@ -59,6 +59,7 @@ export async function POST(request: Request) {
     const result = await createUserWithWorkspace(prisma, { name, email, passwordHash });
 
     // Create email verification token and send email
+    let emailSent = false;
     try {
       const rawToken = crypto.randomUUID();
       const tokenHash = createHash('sha256').update(rawToken).digest('hex');
@@ -75,7 +76,12 @@ export async function POST(request: Request) {
       const { sendVerificationEmail } = await import('@/lib/services/email');
       const baseUrl = getBaseUrl();
       const verifyUrl = `${baseUrl}/verify-email/confirm?token=${rawToken}`; // Email gets raw token
-      await sendVerificationEmail({ to: email, name, verifyUrl });
+      const emailResult = await sendVerificationEmail({ to: email, name, verifyUrl });
+      emailSent = emailResult.success;
+
+      if (!emailSent) {
+        throw new Error(emailResult.error || 'Verification email was not sent');
+      }
     } catch (emailError) {
       // Bug #48: If verification email fails, auto-verify the user so they aren't
       // stuck unable to log in with no way to get a verification link.

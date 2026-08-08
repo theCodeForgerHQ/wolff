@@ -63,6 +63,9 @@ async function resetFixtures() {
 }
 
 async function signIn(page: Page) {
+  // The authenticated project starts with the default test user logged in;
+  // sign out so we can sign in as the demo workspace user.
+  await page.context().clearCookies();
   await page.goto('/login');
   await page.getByLabel('Email').fill(DEMO.email);
   await page.getByLabel('Password').fill(DEMO.password);
@@ -80,7 +83,7 @@ test('an accepted quote becomes an invoice that the client pays by card', async 
   browser,
   request,
 }) => {
-  // 1. The business converts the accepted quote into an invoice.
+  // 1. The business converts the accepted quote into an invoice and sends it.
   await signIn(page);
   await page.goto(`/quotes/${QUOTE_ID}`);
   await page.getByRole('button', { name: 'Convert to Invoice' }).click();
@@ -88,6 +91,10 @@ test('an accepted quote becomes an invoice that the client pays by card', async 
   await page.waitForURL(/\/invoices\/[0-9a-f-]{36}$/);
 
   const invoice = await prisma.invoice.findFirstOrThrow({ where: { quoteId: QUOTE_ID } });
+
+  // Mark the invoice as sent so the client portal exposes the pay button.
+  // Email delivery is not configured in the local E2E environment.
+  await prisma.invoice.update({ where: { id: invoice.id }, data: { status: 'sent' } });
   expect(Number(invoice.total)).toBeGreaterThan(0);
 
   // 2. The client opens the portal link and pays with the (stubbed) Payment Element.

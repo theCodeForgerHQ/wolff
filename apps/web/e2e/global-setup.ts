@@ -384,11 +384,24 @@ async function setupOnboardingUser(appUrl: string, authDir: string) {
     await page.getByLabel('Email').fill(ONBOARDING_USER.email);
     await page.getByLabel('Password', { exact: true }).fill(ONBOARDING_USER.password);
     await page.getByLabel('Confirm Password').fill(ONBOARDING_USER.password);
+    await page.getByRole('checkbox', { name: /terms/i }).check();
 
     await page.getByRole('button', { name: 'Create Account' }).click();
 
-    await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 });
+    // Registration redirects to /verify-email; sign in to reach /onboarding.
+    await page.waitForURL(/\/(verify-email|onboarding|dashboard)/, { timeout: 15000 });
     await page.waitForLoadState('networkidle');
+
+    if (page.url().includes('/verify-email')) {
+      console.log('📧 Registered; signing in to reach onboarding...');
+      await page.goto(`${appUrl}/login`);
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('textbox', { name: 'Email' }).fill(ONBOARDING_USER.email);
+      await page.getByRole('textbox', { name: 'Password' }).fill(ONBOARDING_USER.password);
+      await page.getByRole('button', { name: 'Sign In' }).click();
+      await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 });
+      await page.waitForLoadState('networkidle');
+    }
 
     console.log(`📍 Current URL: ${page.url()}`);
 
