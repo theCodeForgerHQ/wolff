@@ -35,8 +35,16 @@ export default function EditQuoteBuilderPage() {
   const [error, setError] = useState<string | null>(null);
   const hasInitialized = useRef(false);
 
-  const { document, showBlocksPanel, showPropertiesPanel, addBlock, moveBlock, initDocument } =
-    useQuoteBuilderStore();
+  const {
+    document,
+    showBlocksPanel,
+    showPropertiesPanel,
+    addBlock,
+    moveBlock,
+    initDocument,
+    toggleBlocksPanel,
+    togglePropertiesPanel,
+  } = useQuoteBuilderStore();
 
   const [activeBlock, setActiveBlock] = useState<QuoteBlock | null>(null);
   const [activeTemplateType, setActiveTemplateType] = useState<BlockType | null>(null);
@@ -57,10 +65,10 @@ export default function EditQuoteBuilderPage() {
 
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      const store = useQuoteBuilderStore.getState();
-      if (store.showBlocksPanel) store.toggleBlocksPanel();
-      if (store.showPropertiesPanel) store.togglePropertiesPanel();
+      if (showBlocksPanel) toggleBlocksPanel();
+      if (showPropertiesPanel) togglePropertiesPanel();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load quote on mount

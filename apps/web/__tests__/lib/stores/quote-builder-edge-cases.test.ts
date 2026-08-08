@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { enableMapSet } from 'immer';
-import { useQuoteBuilderStore } from '@/lib/stores/quote-builder-store';
+import { useQuoteBuilderStore, resetTestStore } from '@/lib/stores/quote-builder-store';
 import type { QuoteDocument, QuoteBlock, ServiceItemBlock } from '@/lib/quotes/types';
 
 enableMapSet();
@@ -65,13 +65,7 @@ function createTestDocument(blocks: QuoteBlock[] = []): QuoteDocument {
 describe('Quote Builder Edge Cases', () => {
   beforeEach(() => {
     // Reset the store
-    useQuoteBuilderStore.setState({
-      document: null,
-      isDirty: false,
-      selectedBlockId: null,
-      history: [],
-      historyIndex: -1,
-    });
+    resetTestStore();
   });
 
   describe('Negative Values', () => {

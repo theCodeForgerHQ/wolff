@@ -99,19 +99,14 @@ function DocumentSettingsPanel({
 }: {
   contractTemplates: { id: string; name: string }[];
 }) {
-  const { document, updateSettings, markDirty } = useQuoteBuilderStore();
+  const { document, updateSettings, updateContractTemplateId } = useQuoteBuilderStore();
 
   if (!document) return null;
 
   const contractTemplateId = document.contractTemplateId || '';
   const selectedTemplate = contractTemplates.find((t) => t.id === contractTemplateId);
   const handleContractChange = (value: string) => {
-    useQuoteBuilderStore.setState((state) => {
-      if (state.document) {
-        state.document.contractTemplateId = value === 'none' ? null : value;
-      }
-    });
-    markDirty();
+    updateContractTemplateId(value === 'none' ? null : value);
   };
 
   return (
