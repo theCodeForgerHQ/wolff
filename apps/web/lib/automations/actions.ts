@@ -49,8 +49,8 @@ export async function getAutomationRuns(status?: string): Promise<AutomationRunL
   return page.data.map((r) => ({
     id: r.id,
     automationId: r.automationId,
-    automationName: (r.automation as { name: string }).name,
-    trigger: (r.automation as { trigger: string }).trigger,
+    automationName: (r.automation as { name: string } | null)?.name ?? 'Unknown automation',
+    trigger: (r.automation as { trigger: string } | null)?.trigger ?? 'invoice.overdue',
     subjectId: r.subjectId,
     currentStep: r.currentStep,
     status: r.status,

@@ -182,6 +182,7 @@ export function AutomationBuilder({ automations: initial, runs, approvals }: Pro
           {automations.map((a) => (
             <Card
               key={a.id}
+              data-testid="automation-card"
               className="hover:border-primary cursor-pointer"
               onClick={() => openEdit(a)}
             >

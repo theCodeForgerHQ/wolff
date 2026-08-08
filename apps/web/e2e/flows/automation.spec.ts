@@ -22,15 +22,16 @@ test.describe('Automation builder', () => {
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dialog).not.toBeVisible();
 
-    await expect(page.getByText(name)).toBeVisible();
+    const card = page.getByTestId('automation-card').filter({ hasText: name });
+    await expect(card).toBeVisible();
 
     // Open edit and pause
-    await page.getByText(name).click();
+    await card.click();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('switch').click();
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(dialog).not.toBeVisible();
 
-    await expect(page.getByText(name).locator('..').getByText('Paused')).toBeVisible();
+    await expect(card.getByText('Paused')).toBeVisible();
   });
 });
