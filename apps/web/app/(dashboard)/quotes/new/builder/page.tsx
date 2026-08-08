@@ -186,7 +186,7 @@ function QuoteBuilderContent() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div data-testid="quote-builder" className="flex h-screen flex-col overflow-hidden">
       <BuilderToolbar />
 
       <DndContext

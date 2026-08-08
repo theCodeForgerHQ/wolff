@@ -118,7 +118,7 @@ function DocumentSettingsPanel({
           <Label className="text-sm font-medium">Contract</Label>
         </div>
         <Select value={contractTemplateId || 'none'} onValueChange={handleContractChange}>
-          <SelectTrigger>
+          <SelectTrigger aria-label="Contract template">
             <SelectValue placeholder="Select a contract template..." />
           </SelectTrigger>
           <SelectContent>
@@ -211,7 +211,7 @@ function HeaderProperties({
           value={String(block.content.level)}
           onValueChange={(value) => onUpdate({ level: parseInt(value) as 1 | 2 | 3 })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Heading level">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -315,7 +315,7 @@ function ServiceItemProperties({
         <div className="space-y-2">
           <Label>Unit</Label>
           <Select value={block.content.unit} onValueChange={(value) => onUpdate({ unit: value })}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Unit">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -375,7 +375,7 @@ function DividerProperties({
           value={block.content.style}
           onValueChange={(value) => onUpdate({ style: value as 'solid' | 'dashed' | 'dotted' })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Divider style">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -392,7 +392,7 @@ function DividerProperties({
           value={String(block.content.thickness)}
           onValueChange={(value) => onUpdate({ thickness: parseInt(value) as 1 | 2 | 3 })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Divider thickness">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -439,7 +439,7 @@ function SpacerProperties({
         value={block.content.height}
         onValueChange={(value) => onUpdate({ height: value as 'sm' | 'md' | 'lg' | 'xl' })}
       >
-        <SelectTrigger>
+        <SelectTrigger aria-label="Spacer height">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -496,7 +496,7 @@ function ImageProperties({
           value={block.content.width === 'full' ? 'full' : 'custom'}
           onValueChange={(value) => onUpdate({ width: value === 'full' ? 'full' : 400 })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Image width">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -695,7 +695,7 @@ function ColumnsProperties({
           value={block.content.ratio}
           onValueChange={(value) => onUpdate({ ratio: value as typeof block.content.ratio })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Column ratio">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -714,7 +714,7 @@ function ColumnsProperties({
           value={block.content.gap}
           onValueChange={(value) => onUpdate({ gap: value as 'sm' | 'md' | 'lg' })}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Column gap">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
