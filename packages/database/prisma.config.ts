@@ -1,7 +1,13 @@
-import 'dotenv/config';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import { defineConfig } from 'prisma/config';
 
 // Prisma 7 no longer loads .env files or reads the URL from schema.prisma.
+// Load root env files so `pnpm db:*` scripts from the monorepo root work.
+const rootDir = path.resolve(import.meta.dirname ?? '.', '../..');
+dotenv.config({ path: path.join(rootDir, '.env') });
+dotenv.config({ path: path.join(rootDir, '.env.local'), override: true });
+
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
