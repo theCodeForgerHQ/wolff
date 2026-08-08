@@ -11,6 +11,7 @@ import { FontSizeProvider } from '@/components/providers/font-size-provider';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { UiProvider } from '@/components/providers/ui-provider';
 import { GlobalErrorHandler } from '@/components/providers/global-error-handler';
+import { WebVitalsReporter } from '@/components/web-vitals/reporter';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -167,6 +168,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <UiProvider>
                   {children}
                   <GlobalErrorHandler />
+                  <WebVitalsReporter />
                   <Toaster richColors position="top-right" />
                 </UiProvider>
               </FontSizeProvider>
