@@ -21,6 +21,7 @@ import { leadRoutes } from './routes/v1/leads';
 import { pipelineRoutes } from './routes/v1/pipelines';
 import { publicRoutes } from './routes/v1/public';
 import { reportRoutes } from './routes/v1/reports';
+import { automationRoutes } from './routes/v1/automations';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
 import type { PaymentProviderClients } from './payments/provider';
@@ -142,6 +143,7 @@ export function createApp(deps: AppDeps): Express {
   v1.use(dealRoutes(db));
   v1.use(invoiceRoutes(db, { paymentClients: deps.paymentClients, appUrl: config.APP_URL }));
   v1.use(reportRoutes(db));
+  v1.use('/automations', automationRoutes(db));
 
   const router = Router();
   deps.extend?.(router);

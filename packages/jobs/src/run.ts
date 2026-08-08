@@ -39,6 +39,7 @@ export const RETRY_POLICIES: Record<JobType, RetryPolicy> = {
   'recurring.invoice': { attempts: 3, delayMs: exponential(30_000) },
   'reminders.scan': { attempts: 5, delayMs: exponential(MINUTE) },
   'invoices.mark_overdue': { attempts: 3, delayMs: exponential(30_000) },
+  'automations.tick': { attempts: 3, delayMs: exponential(30_000) },
   'pdf.render': { attempts: 3, delayMs: exponential(10_000) },
   'outbox.sweep': { attempts: 1, delayMs: () => 0 },
 };

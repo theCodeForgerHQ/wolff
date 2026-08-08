@@ -7,3 +7,4 @@ export * from './crm';
 export * from './payments';
 export * from './quotes';
 export * from './reports';
+export * from './automations';

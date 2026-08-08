@@ -6,6 +6,7 @@ import {
   markOverdueInvoices,
   scanInvoiceReminders,
 } from '@wolff/core/invoices';
+import { scanAutomationTriggers, tickAutomationRun } from '@wolff/core/automations';
 import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
 import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
 import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
@@ -185,6 +186,46 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
   }
 };
 
+const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => {
+  if (!runId) {
+    const created = await scanAutomationTriggers(ctx.db, { now: ctx.now() });
+    for (const id of created) {
+      await ctx.dispatch({
+        type: 'automations.tick',
+        payload: { runId: id },
+        jobId: `automation:${id}:0`,
+      });
+    }
+    return;
+  }
+
+  const run = await ctx.db.automationRun.findUnique({ where: { id: runId } });
+  if (!run) return;
+
+  const dispatch: Parameters<typeof tickAutomationRun>[2]['dispatch'] = async (
+    dispatchedRunId,
+    stepIndex
+  ) => {
+    await ctx.dispatch({
+      type: 'automations.tick',
+      payload: { runId: dispatchedRunId },
+      jobId: `automation:${dispatchedRunId}:${stepIndex}`,
+    });
+  };
+
+  // Loop to execute consecutive action steps in one job invocation.
+  let previousStep: number | null = null;
+  while (true) {
+    const after = await tickAutomationRun({ db: ctx.db, workspaceId: run.workspaceId }, runId, {
+      dispatch,
+      now: ctx.now(),
+    });
+    if (!after || after.status !== 'running') break;
+    if (previousStep === after.currentStep) break; // no progress (e.g. waiting)
+    previousStep = after.currentStep;
+  }
+};
+
 const sweepOutbox: Processor<'outbox.sweep'> = async (ctx) => {
   await requeueStaleOutboxEvents(ctx.db, { now: ctx.now() });
   await redriveStaleProviderEvents(ctx.db, { now: ctx.now() });
@@ -200,6 +241,7 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'recurring.invoice': generateRecurringOne,
   'reminders.scan': scanReminders,
   'invoices.mark_overdue': markOverdue,
+  'automations.tick': tickAutomation,
   'pdf.render': renderPdf,
   'outbox.sweep': sweepOutbox,
 };
