@@ -23,6 +23,7 @@ export const jobPayloads = {
   }),
   'reminders.scan': z.object({}),
   'invoices.mark_overdue': z.object({}),
+  'automations.tick': z.object({ runId: id.optional() }),
   'pdf.render': z.object({
     documentType: z.enum(['invoice', 'quote']),
     documentId: id,

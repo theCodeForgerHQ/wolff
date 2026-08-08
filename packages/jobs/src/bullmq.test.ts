@@ -203,13 +203,14 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
       schedulers.map((s) => [s.key, s.name, s.pattern ?? s.every, s.tz ?? null]).sort()
     ).toEqual(
       [
+        ['automations', 'automations.tick', 60_000, null],
         ['outbox-sweep', 'outbox.sweep', 300_000, null],
         ['overdue', 'invoices.mark_overdue', '15 0 * * *', 'UTC'],
         ['recurring', 'recurring.generate', '0 * * * *', 'UTC'],
         ['reminders', 'reminders.scan', '0 3 * * *', 'UTC'],
       ].sort()
     );
-    expect(Object.keys(SCHEDULES)).toHaveLength(4);
+    expect(Object.keys(SCHEDULES)).toHaveLength(5);
   });
 
   describe('when Redis is lost', () => {

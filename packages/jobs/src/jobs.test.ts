@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
 import { recordProviderEvent } from '@wolff/core/payments';
+import { approveRun } from '@wolff/core/automations';
 import {
   createWebhookEndpoint,
   verifyWebhookSignature,
@@ -203,6 +204,11 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     await base.payment.deleteMany({ where });
     await base.invoice.updateMany({ where, data: { parentInvoiceId: null } });
     await base.invoice.deleteMany({ where });
+    await base.automationRun.deleteMany({ where });
+    await base.automation.deleteMany({ where });
+    await base.deal.deleteMany({ where });
+    await base.stage.deleteMany({ where });
+    await base.pipeline.deleteMany({ where });
     await base.numberSequence.deleteMany({ where });
   });
 
@@ -458,5 +464,80 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(rows.get(orphan.id)).toMatchObject({ status: 'pending', attempts: 1 });
     expect(rows.get(orphan.id)!.lastError).toContain('nonsense.happened');
     expect(rows.get(owed.id)).toMatchObject({ status: 'failed', lastError: 'gave up' });
+  });
+
+  it('pauses an automation run at approval and resumes on approve', async () => {
+    const pipeline = await base.pipeline.create({
+      data: { workspace: { connect: { id: workspaceId } }, name: 'Sales' },
+    });
+    const stage = await base.stage.create({
+      data: {
+        workspace: { connect: { id: workspaceId } },
+        pipeline: { connect: { id: pipeline.id } },
+        name: 'New',
+        position: 0,
+      },
+    });
+    const nextStage = await base.stage.create({
+      data: {
+        workspace: { connect: { id: workspaceId } },
+        pipeline: { connect: { id: pipeline.id } },
+        name: 'Qualified',
+        position: 1,
+      },
+    });
+    const deal = await base.deal.create({
+      data: {
+        workspace: { connect: { id: workspaceId } },
+        pipeline: { connect: { id: pipeline.id } },
+        stage: { connect: { id: stage.id } },
+        title: 'Stalled deal',
+        value: 1000,
+      },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Stalled deal follow-up',
+        trigger: 'deal.stalled',
+        steps: [
+          { type: 'approval', role: 'owner' },
+          { type: 'move_deal', stageId: nextStage.id },
+        ],
+      },
+    });
+    const run = await base.automationRun.create({
+      data: {
+        workspaceId,
+        automationId: automation.id,
+        subjectId: deal.id,
+        status: 'running',
+        currentStep: 0,
+      },
+    });
+
+    await runJob(ctx, {
+      type: 'automations.tick',
+      payload: { runId: run.id },
+      jobId: `tick:${run.id}`,
+    });
+
+    const paused = await base.automationRun.findUniqueOrThrow({ where: { id: run.id } });
+    expect(paused.status).toBe('waiting_approval');
+    expect(paused.currentStep).toBe(0);
+
+    await approveRun({ db, workspaceId }, run.id, true);
+
+    await runJob(ctx, {
+      type: 'automations.tick',
+      payload: { runId: run.id },
+      jobId: `tick:${run.id}:resume`,
+    });
+
+    const done = await base.automationRun.findUniqueOrThrow({ where: { id: run.id } });
+    expect(done.status).toBe('done');
+    expect(done.currentStep).toBe(2);
+    const moved = await base.deal.findUniqueOrThrow({ where: { id: deal.id } });
+    expect(moved.stageId).toBe(nextStage.id);
   });
 });
