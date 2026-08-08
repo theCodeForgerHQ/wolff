@@ -11,6 +11,10 @@ export default defineConfig({
       'react/jsx-runtime': 'preact/jsx-runtime',
     },
   },
+  preview: {
+    port: 5173,
+    strictPort: true,
+  },
   build: {
     lib: {
       entry: resolve(import.meta.dirname, 'src/embed.tsx'),
