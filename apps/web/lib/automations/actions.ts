@@ -11,7 +11,11 @@ import {
   listAutomationRuns as listAutomationRunsCore,
   approveRun as approveRunCore,
 } from '@wolff/core/automations';
-import { createAutomationSchema, updateAutomationSchema } from '@wolff/contracts';
+import {
+  createAutomationSchema,
+  updateAutomationSchema,
+  type AutomationStep,
+} from '@wolff/contracts';
 import { ROUTES } from '@/lib/routes';
 import type { AutomationFormInput, AutomationListItem, AutomationRunListItem } from './types';
 
@@ -31,6 +35,7 @@ export async function getAutomations(): Promise<AutomationListItem[]> {
     trigger: a.trigger,
     isActive: a.isActive,
     stepCount: Array.isArray(a.steps) ? a.steps.length : 0,
+    steps: Array.isArray(a.steps) ? (a.steps as AutomationStep[]) : [],
     createdAt: a.createdAt,
   }));
 }

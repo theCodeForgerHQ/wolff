@@ -21,5 +21,5 @@ export async function POST(request: NextRequest) {
     'web-vital'
   );
 
-  return NextResponse.json({ success: true }, { status: 204 });
+  return new Response(null, { status: 204 });
 }

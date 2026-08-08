@@ -6,6 +6,7 @@ export interface AutomationListItem {
   trigger: string;
   isActive: boolean;
   stepCount: number;
+  steps: AutomationStep[];
   createdAt: Date;
 }
 
