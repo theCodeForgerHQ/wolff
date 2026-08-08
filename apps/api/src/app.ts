@@ -19,6 +19,7 @@ import { dealRoutes } from './routes/v1/deals';
 import { invoiceRoutes } from './routes/v1/invoices';
 import { leadRoutes } from './routes/v1/leads';
 import { pipelineRoutes } from './routes/v1/pipelines';
+import { publicRoutes } from './routes/v1/public';
 import { reportRoutes } from './routes/v1/reports';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
@@ -102,6 +103,18 @@ export function createApp(deps: AppDeps): Express {
   app.use('/webhooks', webhookRoutes({ db, config, onOutboxEvents: deps.onOutboxEvents }));
 
   app.use('/jobs', jobRoutes(config, deps.jobs));
+
+  // Public widget routes: CORS reflects the caller's Origin when a valid
+  // publishable key is presented; credentials are never used.
+  app.use('/v1/public', express.json({ limit: JSON_LIMIT }));
+  app.use(
+    '/v1/public',
+    cors({
+      origin: (origin, allow) => allow(null, origin ?? false),
+      credentials: false,
+    })
+  );
+  app.use('/v1/public', publicRoutes({ db, rateLimitStore: deps.rateLimitStore }));
 
   // Private routes are called by the web app's origin only. No wildcard.
   app.use(

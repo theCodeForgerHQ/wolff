@@ -4,7 +4,7 @@ export interface RequestContext {
   /** The API key id, or the service that issued the JWT. */
   keyId: string;
   scopes: string[];
-  actor: 'api_key' | 'service';
+  actor: 'api_key' | 'service' | 'publishable_key';
   rateLimitPerMin: number;
   /** The user a service acts on behalf of (`sub` of a service JWT). */
   userId?: string;

@@ -62,6 +62,7 @@ export async function issueKey(
     kind?: 'secret' | 'publishable';
     rateLimitPerMin?: number;
     prefix?: string;
+    allowedOrigins?: string[];
   }
 ): Promise<{ key: string; id: string }> {
   const key = `${data.prefix ?? 'qc_sk_'}${randomUUID().replace(/-/g, '')}`;
@@ -74,6 +75,7 @@ export async function issueKey(
       scopes: data.scopes ?? [],
       kind: data.kind ?? 'secret',
       rateLimitPerMin: data.rateLimitPerMin ?? 120,
+      allowedOrigins: data.allowedOrigins,
     },
   });
   return { key, id: row.id };

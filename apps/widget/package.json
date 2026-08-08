@@ -1,0 +1,35 @@
+{
+  "name": "@wolff/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "size": "size-limit"
+  },
+  "dependencies": {
+    "preact": "^10.26.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "@size-limit/preset-small-lib": "^11.2.0",
+    "@testing-library/preact": "^3.2.4",
+    "jsdom": "^26.0.0",
+    "size-limit": "^11.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "size-limit": [
+    {
+      "path": "dist/widget.es.js",
+      "limit": "60 kB",
+      "gzip": true
+    }
+  ]
+}
