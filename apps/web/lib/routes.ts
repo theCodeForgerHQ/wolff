@@ -44,6 +44,9 @@ export const ROUTES = {
   templates: '/templates',
   contracts: '/contracts',
 
+  // Automations
+  automations: '/automations',
+
   // Analytics
   analytics: '/analytics',
 

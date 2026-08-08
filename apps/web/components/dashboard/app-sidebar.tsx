@@ -13,6 +13,7 @@ import {
   Settings,
   FileStack,
   HelpCircle,
+  Zap,
   ChevronRight,
   BarChart3,
   ScrollText,
@@ -100,6 +101,11 @@ const workspaceNavItems: NavItemWithSub[] = [
     title: 'Contracts',
     href: '/contracts',
     icon: ScrollText,
+  },
+  {
+    title: 'Automations',
+    href: '/automations',
+    icon: Zap,
   },
 ];
 
