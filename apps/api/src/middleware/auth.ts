@@ -21,17 +21,15 @@ function publishableToken(req: Request): string | null {
   return null;
 }
 
-function originMatches(allowed: string[], origin: string | undefined): boolean {
-  if (allowed.length === 0) return true;
-  if (!origin) return false;
-  return allowed.some((pattern) => {
-    if (pattern === origin) return true;
-    if (pattern.startsWith('*.')) {
-      const suffix = pattern.slice(2);
-      return origin === suffix || origin.endsWith(`.${suffix}`);
-    }
-    return false;
-  });
+/**
+ * A browser always sends `Origin` on a cross-origin request and a page cannot
+ * set it, so it is the only thing checked; `Referer` is not a substitute.
+ * The match is exact (scheme, host and port). A key with no allowed origins
+ * is usable from nowhere, not from everywhere.
+ */
+function originAllowed(allowed: readonly string[], origin: string | undefined): boolean {
+  if (!origin || allowed.length === 0) return false;
+  return allowed.includes(origin);
 }
 
 /**
@@ -83,20 +81,23 @@ export function requireScopes(...required: string[]): RequestHandler {
 /**
  * Authenticates a publishable key from `X-Publishable-Key` (or a Bearer token
  * with the publishable prefix). Sets `req.ctx` only when the key is valid,
- * not expired, and the Origin header matches the key's allowedOrigins.
+ * not expired, and the Origin header is exactly one of the key's allowedOrigins.
  */
 export function requirePublishableKey(db: Db): RequestHandler {
   return async (req, res, next) => {
     const token = publishableToken(req);
     const result = token ? await authenticateApiKey(db, token) : null;
-    const origin = req.get('origin') ?? req.get('referer') ?? undefined;
+    const origin = req.get('origin') ?? undefined;
 
     if (!result?.ok || result.key.kind !== 'publishable') {
       sendError(res, 'unauthorized', 'Missing or invalid publishable key');
       return;
     }
 
-    if (!originMatches(result.key.allowedOrigins, origin)) {
+    if (!originAllowed(result.key.allowedOrigins, origin)) {
+      // CORS ran first and reflected the origin; take it back so the page
+      // that called cannot read even the refusal.
+      res.removeHeader('Access-Control-Allow-Origin');
       sendError(res, 'unauthorized', 'Origin not allowed');
       return;
     }
