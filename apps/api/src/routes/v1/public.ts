@@ -4,7 +4,7 @@ import { createLead } from '@wolff/core/crm';
 import { createLeadSchema } from '@wolff/contracts';
 import '../../context';
 import { sendData, sendError } from '../../http';
-import { requirePublishableKey, apiKeyRateLimit } from '../../middleware/auth';
+import { apiKeyRateLimit, requirePublishableKey, requireScopes } from '../../middleware/auth';
 import type { Store } from 'express-rate-limit';
 import type { PaymentProviderClients } from '../../payments/provider';
 
@@ -31,7 +31,7 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
 
   router.use(requirePublishableKey(db), apiKeyRateLimit(deps.rateLimitStore));
 
-  router.post('/leads', async (req, res) => {
+  router.post('/leads', requireScopes('lead:create'), async (req, res) => {
     const input = createLeadSchema.parse(req.body);
     const lead = await createLead(ctxOf(req), {
       ...input,
@@ -45,7 +45,7 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
     sendData(res, { id: lead.id, message: 'Lead submitted.' }, 201);
   });
 
-  router.post('/invoices/:token/pay', async (req, res) => {
+  router.post('/invoices/:token/pay', requireScopes('invoice:pay'), async (req, res) => {
     const token = req.params.token;
     if (!token) {
       sendError(res, 'validation_error', 'Invoice token is required');

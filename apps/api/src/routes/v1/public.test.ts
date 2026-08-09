@@ -20,6 +20,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/public widget routes', () => {
     const issued = await issueKey(base, a.id, {
       kind: 'publishable',
       prefix: 'wolff_pk_',
+      scopes: ['lead:create', 'invoice:pay'],
       allowedOrigins: ['https://client.example.com'],
     });
     publishableKey = issued.key;
@@ -140,6 +141,41 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/public widget routes', () => {
         .send(lead);
 
       expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    });
+  });
+  describe('scopes', () => {
+    const keyWith = (scopes: string[]) =>
+      issueKey(base, a.id, {
+        kind: 'publishable',
+        prefix: 'wolff_pk_',
+        scopes,
+        allowedOrigins: ['https://client.example.com'],
+      });
+
+    it('needs lead:create to submit a lead', async () => {
+      const payOnly = await keyWith(['invoice:pay']);
+
+      const res = await request(app)
+        .post('/v1/public/leads')
+        .set('X-Publishable-Key', payOnly.key)
+        .set('Origin', 'https://client.example.com')
+        .send({ name: 'Ada', email: 'ada@example.com' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('insufficient_scope');
+      expect(await base.lead.count({ where: { workspaceId: a.id } })).toBe(0);
+    });
+
+    it('needs invoice:pay to start a payment', async () => {
+      const leadsOnly = await keyWith(['lead:create']);
+
+      const res = await request(app)
+        .post('/v1/public/invoices/some-token/pay')
+        .set('X-Publishable-Key', leadsOnly.key)
+        .set('Origin', 'https://client.example.com')
+        .send({});
+
+      expect(res.status).toBe(403);
     });
   });
 });
