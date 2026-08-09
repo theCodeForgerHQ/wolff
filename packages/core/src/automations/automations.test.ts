@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
 import { CoreError } from '../errors';
-import { approveRun } from '.';
+import { approveRun, createAutomation, tickAutomationRun } from '.';
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -14,6 +14,7 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
   let ownerId = '';
   let memberId = '';
   let automationId = '';
+  let otherWorkspaceId = '';
 
   beforeAll(async () => {
     const owner = await base.user.create({
@@ -51,14 +52,23 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
       },
     });
     automationId = automation.id;
+    const other = await base.workspace.create({
+      data: { name: 'Other', slug: `approvals-other-${run}` },
+    });
+    otherWorkspaceId = other.id;
   });
 
   afterAll(async () => {
     await base.outboxEvent.deleteMany({ where: { workspaceId } });
+    for (const ws of [workspaceId, otherWorkspaceId]) {
+      await base.deal.deleteMany({ where: { workspaceId: ws } });
+      await base.stage.deleteMany({ where: { workspaceId: ws } });
+      await base.pipeline.deleteMany({ where: { workspaceId: ws } });
+    }
     await base.automationRun.deleteMany({ where: { workspaceId } });
     await base.automation.deleteMany({ where: { workspaceId } });
     await base.workspaceMember.deleteMany({ where: { workspaceId } });
-    await base.workspace.deleteMany({ where: { id: workspaceId } });
+    await base.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
     await base.user.deleteMany({ where: { id: { in: [ownerId, memberId] } } });
     await base.$disconnect();
   });
@@ -139,5 +149,77 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     expect(results.filter((r) => r !== null)).toHaveLength(1);
     const after = await base.automationRun.findUniqueOrThrow({ where: { id: waiting.id } });
     expect((after.log as unknown[]).length).toBe(1);
+  });
+  const pipelineWithStages = async (ws: string) => {
+    const pipeline = await base.pipeline.create({ data: { workspaceId: ws, name: 'Sales' } });
+    const [first, second] = await Promise.all(
+      [0, 1].map((position) =>
+        base.stage.create({
+          data: { workspaceId: ws, pipelineId: pipeline.id, name: `S${position}`, position },
+        })
+      )
+    );
+    return { pipeline, first: first!, second: second! };
+  };
+
+  it('does not move a deal to a stage of another workspace', async () => {
+    const mine = await pipelineWithStages(workspaceId);
+    const theirs = await pipelineWithStages(otherWorkspaceId);
+    const deal = await base.deal.create({
+      data: {
+        workspaceId,
+        pipelineId: mine.pipeline.id,
+        stageId: mine.first.id,
+        title: 'Deal',
+        value: 10,
+      },
+    });
+    // Written directly: creating it through core is refused (next test).
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Move',
+        trigger: 'deal.stalled',
+        steps: [{ type: 'move_deal', stageId: theirs.second.id }],
+        isActive: false,
+      },
+    });
+    const moving = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
+    });
+
+    await tickAutomationRun({ db, workspaceId }, moving.id, {
+      dispatch: async () => {},
+      now: new Date(),
+    });
+
+    expect((await base.deal.findUniqueOrThrow({ where: { id: deal.id } })).stageId).toBe(
+      mine.first.id
+    );
+  });
+
+  it('refuses to save a step that names a stage or template outside the workspace', async () => {
+    const theirs = await pipelineWithStages(otherWorkspaceId);
+
+    await expect(
+      createAutomation(
+        { db, workspaceId },
+        {
+          name: 'Bad',
+          trigger: 'deal.stalled',
+          steps: [{ type: 'move_deal', stageId: theirs.first.id }],
+        }
+      )
+    ).rejects.toBeInstanceOf(CoreError);
+    await expect(
+      createAutomation(
+        { db, workspaceId },
+        {
+          name: 'Bad',
+          trigger: 'invoice.overdue',
+          steps: [{ type: 'send_email', templateId: randomUUID() }],
+        }
+      )
+    ).rejects.toBeInstanceOf(CoreError);
   });
 });

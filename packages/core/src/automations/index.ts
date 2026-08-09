@@ -51,7 +51,36 @@ function toDbSteps(steps: AutomationStep[]): Prisma.InputJsonValue {
   return steps as unknown as Prisma.InputJsonValue;
 }
 
+/**
+ * Steps name a stage or an email template by id. Both must belong to the
+ * caller's workspace; the ids come from the request body.
+ */
+async function assertStepReferences(ctx: CoreContext, steps: AutomationStep[]): Promise<void> {
+  const stageIds = steps.flatMap((s) => (s.type === 'move_deal' ? [s.stageId] : []));
+  const templateIds = steps.flatMap((s) => (s.type === 'send_email' ? [s.templateId] : []));
+  const [stages, templates] = await Promise.all([
+    stageIds.length
+      ? ctx.db.stage.count({ where: { workspaceId: ctx.workspaceId, id: { in: stageIds } } })
+      : 0,
+    templateIds.length
+      ? ctx.db.emailTemplate.count({
+          where: { workspaceId: ctx.workspaceId, id: { in: templateIds } },
+        })
+      : 0,
+  ]);
+  const details: Record<string, string[]> = {};
+  if (stages !== new Set(stageIds).size)
+    details.steps = ['A move_deal step names an unknown stage'];
+  if (templates !== new Set(templateIds).size) {
+    details.steps = [...(details.steps ?? []), 'A send_email step names an unknown template'];
+  }
+  if (Object.keys(details).length > 0) {
+    throw new CoreError('validation_error', 'The automation refers to unknown records', details);
+  }
+}
+
 export async function createAutomation(ctx: CoreContext, input: CreateAutomationInput) {
+  await assertStepReferences(ctx, input.steps);
   return ctx.db.automation.create({
     data: {
       workspaceId: ctx.workspaceId,
@@ -68,6 +97,7 @@ export async function updateAutomation(ctx: CoreContext, id: string, input: Upda
     where: { id, workspaceId: ctx.workspaceId },
   });
   if (!existing) return null;
+  if (input.steps) await assertStepReferences(ctx, input.steps);
   return ctx.db.automation.update({
     where: { id, workspaceId: ctx.workspaceId },
     data: {
@@ -352,13 +382,25 @@ export async function tickAutomationRun(
     const deal = await ctx.db.deal.findFirst({
       where: { id: run.subjectId, workspaceId: ctx.workspaceId },
     });
-    if (deal) {
+    // The stage must be in this workspace and on the deal's own pipeline;
+    // the id was checked when the automation was saved, but the stage may
+    // have been deleted or the deal moved to another pipeline since.
+    const stage = deal
+      ? await ctx.db.stage.findFirst({
+          where: { id: step.stageId, workspaceId: ctx.workspaceId, pipelineId: deal.pipelineId },
+        })
+      : null;
+    if (deal && stage) {
       await ctx.db.deal.update({
         where: { id: deal.id, workspaceId: ctx.workspaceId },
-        data: { stageId: step.stageId },
+        data: { stageId: stage.id },
       });
     }
-    return advanceRun(ctx, run, deal ? 'Deal moved.' : 'Deal not found; skipped.');
+    return advanceRun(
+      ctx,
+      run,
+      !deal ? 'Deal not found; skipped.' : stage ? 'Deal moved.' : 'Stage not found; skipped.'
+    );
   }
 
   return run;
