@@ -16,7 +16,7 @@ import {
   createResendTransport,
   createS3Storage,
 } from '@wolff/jobs/ports';
-import type { Job, JobContext, JobDispatcher } from '@wolff/jobs';
+import { relayOutboxToJobs, type Job, type JobContext, type JobDispatcher } from '@wolff/jobs';
 import type { Db } from '@wolff/core/context';
 import { logger } from '@wolff/core/logger';
 import type { Express } from 'express';
@@ -109,6 +109,23 @@ function createStorage(config: ApiConfig): JobContext['storage'] {
   return createLocalStorage(process.env.STORAGE_LOCAL_PATH ?? './uploads');
 }
 
+/**
+ * Pushes the outbox events a request just committed to the dispatcher, so
+ * they don't wait for the relay's next pass. Fire and forget: the outbox row
+ * is the record, and a failed push is picked up by the relay and sweeper.
+ */
+export function createOutboxPush(db: Db, dispatcher: JobDispatcher) {
+  // The same routine as the relay: each row becomes the job its type maps
+  // to (jobForOutboxEvent), under `outbox:<id>`, and is marked enqueued.
+  return (ids: string[]): Promise<void> =>
+    relayOutboxToJobs(db, dispatcher, { ids, limit: ids.length }).then(
+      () => undefined,
+      (error: unknown) => {
+        logger.error({ err: error, outboxEventIds: ids }, 'Failed to push outbox events');
+      }
+    );
+}
+
 export function bootstrap(config: ApiConfig): BootstrapDeps {
   const { report } = initObservability(config);
   const base = createPrisma(process.env.DATABASE_URL);
@@ -138,21 +155,7 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     replayCache,
     rateLimitStore,
     jobs: createJobRunDeps(config, jobContext, redis),
-    onOutboxEvents: (ids) => {
-      // Fire and forget: the outbox row is the record; a failed dispatch is
-      // reconciled by the relay/sweeper.
-      for (const id of ids) {
-        dispatcher
-          .dispatch({
-            type: 'webhooks.fanout',
-            payload: { outboxEventId: id },
-            jobId: `outbox:${id}`,
-          })
-          .catch((error: unknown) => {
-            logger.error({ err: error, outboxEventId: id }, 'Failed to dispatch outbox fanout job');
-          });
-      }
-    },
+    onOutboxEvents: createOutboxPush(db, dispatcher),
   };
 
   const app = createApp({ ...appDeps, report });
