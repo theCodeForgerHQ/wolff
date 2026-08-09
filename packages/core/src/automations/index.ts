@@ -1,6 +1,8 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
 import type { CoreContext, Db } from '../context';
+import { CoreError } from '../errors';
+import { writeOutboxEvent } from '../outbox';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
 
 export interface CreateAutomationInput {
@@ -152,6 +154,7 @@ interface LogEntry {
   stepIndex: number;
   action: string;
   message: string;
+  actorId?: string;
 }
 
 function pushLog(run: { log: Prisma.JsonValue }, entry: LogEntry): Prisma.InputJsonValue {
@@ -159,41 +162,94 @@ function pushLog(run: { log: Prisma.JsonValue }, entry: LogEntry): Prisma.InputJ
   return [...existing, entry] as unknown as Prisma.InputJsonValue;
 }
 
+const ROLE_RANK: Record<string, number> = { viewer: 0, member: 1, editor: 1, admin: 2, owner: 3 };
+
+/**
+ * Decides a run that is waiting at an approval step. The decision belongs to
+ * a person ("approve or reject in the app") whose workspace role
+ * is at least the role the step names; an API key has no person behind it
+ * and is refused.
+ *
+ * The status check and the change are one conditional update, so of two
+ * concurrent decisions exactly one applies. An approval also queues the
+ * run's next tick through the outbox, in the same transaction.
+ */
 export async function approveRun(ctx: CoreContext, id: string, approved: boolean) {
   const run = await ctx.db.automationRun.findFirst({
     where: { id, workspaceId: ctx.workspaceId, status: 'waiting_approval' },
+    include: { automation: { select: { steps: true } } },
   });
   if (!run) return null;
 
-  if (!approved) {
-    return ctx.db.automationRun.update({
-      where: { id, workspaceId: ctx.workspaceId },
-      data: {
-        status: 'cancelled',
-        log: pushLog(run, {
-          at: new Date().toISOString(),
-          stepIndex: run.currentStep,
-          action: 'approval_rejected',
-          message: 'Run rejected by user.',
-        }),
-      },
-    });
-  }
+  const steps = Array.isArray(run.automation.steps)
+    ? (run.automation.steps as unknown as AutomationStep[])
+    : [];
+  const step = steps[run.currentStep];
+  const required = step?.type === 'approval' ? step.role : 'owner';
+  await assertMayDecide(ctx, required);
 
-  return ctx.db.automationRun.update({
-    where: { id, workspaceId: ctx.workspaceId },
-    data: {
-      status: 'running',
-      waitingSince: null,
-      currentStep: { increment: 1 },
-      log: pushLog(run, {
+  const entry: LogEntry = approved
+    ? {
         at: new Date().toISOString(),
         stepIndex: run.currentStep,
         action: 'approval_approved',
         message: 'Approved; continuing.',
-      }),
-    },
+      }
+    : {
+        at: new Date().toISOString(),
+        stepIndex: run.currentStep,
+        action: 'approval_rejected',
+        message: 'Run rejected by user.',
+      };
+  if (ctx.actorId) entry.actorId = ctx.actorId;
+
+  return ctx.db.$transaction(async (tx) => {
+    const changed = await tx.automationRun.updateMany({
+      where: {
+        id,
+        workspaceId: ctx.workspaceId,
+        status: 'waiting_approval',
+        currentStep: run.currentStep,
+      },
+      data: approved
+        ? {
+            status: 'running',
+            waitingSince: null,
+            currentStep: run.currentStep + 1,
+            log: pushLog(run, entry),
+          }
+        : { status: 'cancelled', log: pushLog(run, entry) },
+    });
+    if (changed.count === 0) return null;
+
+    if (approved) {
+      await writeOutboxEvent(tx, {
+        workspaceId: ctx.workspaceId,
+        type: 'automation.tick',
+        aggregateType: 'automation_run',
+        aggregateId: id,
+        payload: { runId: id },
+      });
+    }
+    return tx.automationRun.findFirst({ where: { id, workspaceId: ctx.workspaceId } });
   });
+}
+
+async function assertMayDecide(ctx: CoreContext, required: string): Promise<void> {
+  if (!ctx.actorId) {
+    throw new CoreError(
+      'insufficient_scope',
+      'Approvals are decided by a workspace member in the app, not with an API key'
+    );
+  }
+  const membership = await ctx.db.workspaceMember.findFirst({
+    where: { workspaceId: ctx.workspaceId, userId: ctx.actorId },
+    select: { role: true },
+  });
+  const rank = membership ? (ROLE_RANK[membership.role] ?? 0) : -1;
+  if (rank < (ROLE_RANK[required] ?? ROLE_RANK.owner!)) {
+    throw new CoreError('insufficient_scope', `This approval needs the ${required} role`);
+  }
 }
 
 export async function tickAutomationRun(

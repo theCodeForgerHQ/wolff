@@ -87,6 +87,9 @@ export function automationRoutes(db: Db): Router {
     }
   });
 
+  // An API key has no person behind it, so core refuses its decisions with
+  // 403 insufficient_scope (approvals are decided in the app).
+  // The routes stay so that the refusal is explicit and documented.
   router.post('/runs/:id/approve', requireScopes('automations:write'), async (req, res, next) => {
     try {
       const id = req.params.id as string;
@@ -153,34 +156,6 @@ export function automationRoutes(db: Db): Router {
         return;
       }
       res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post('/runs/:id/approve', requireScopes('automations:write'), async (req, res, next) => {
-    try {
-      const id = req.params.id as string;
-      const run = await approveRun(ctxOf(req), id, true);
-      if (!run) {
-        sendError(res, 'not_found', 'Run not found or not waiting for approval');
-        return;
-      }
-      sendData(res, run);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post('/runs/:id/reject', requireScopes('automations:write'), async (req, res, next) => {
-    try {
-      const id = req.params.id as string;
-      const run = await approveRun(ctxOf(req), id, false);
-      if (!run) {
-        sendError(res, 'not_found', 'Run not found or not waiting for approval');
-        return;
-      }
-      sendData(res, run);
     } catch (error) {
       next(error);
     }

@@ -59,6 +59,14 @@ describe('jobForOutboxEvent', () => {
     expect(job?.payload).toEqual({ deliveryId: 'd-1', workspaceId: 'ws-1' });
   });
 
+  it('turns an approved run into its next tick', () => {
+    expect(jobForOutboxEvent(event('automation.tick', { runId: 'run-1' }))).toMatchObject({
+      type: 'automations.tick',
+      payload: { runId: 'run-1' },
+      jobId: 'outbox:evt-1',
+    });
+  });
+
   it.each([
     ['an unknown type', event('nonsense.happened', {})],
     ['a payload that does not fit the job', event('webhook.deliver', { wrong: true })],
@@ -598,18 +606,24 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(paused.status).toBe('waiting_approval');
     expect(paused.currentStep).toBe(0);
 
-    await approveRun({ db, workspaceId }, run.id, true);
-
-    await runJob(ctx, {
-      type: 'automations.tick',
-      payload: { runId: run.id },
-      jobId: `tick:${run.id}:resume`,
+    const approver = await base.user.create({
+      data: { email: `approver-${run.id}@example.test`, name: 'Approver' },
     });
+    await base.workspaceMember.create({
+      data: { workspaceId, userId: approver.id, role: 'owner' },
+    });
+    await approveRun({ db, workspaceId, actorId: approver.id }, run.id, true);
+
+    // The approval queued the next tick through the outbox; nothing else
+    // nudges the run.
+    await relayAndDrain();
 
     const done = await base.automationRun.findUniqueOrThrow({ where: { id: run.id } });
     expect(done.status).toBe('done');
     expect(done.currentStep).toBe(2);
     const moved = await base.deal.findUniqueOrThrow({ where: { id: deal.id } });
     expect(moved.stageId).toBe(nextStage.id);
+    await base.workspaceMember.deleteMany({ where: { workspaceId, userId: approver.id } });
+    await base.user.delete({ where: { id: approver.id } });
   });
 });
