@@ -350,28 +350,61 @@ export async function tickAutomationRun(
     const template = await ctx.db.emailTemplate.findFirst({
       where: { id: step.templateId, workspaceId: ctx.workspaceId },
     });
-    if (template) {
-      const subject = await resolveSubject(ctx, run);
-      await ctx.db.scheduledEmail.create({
-        data: {
+    const subject = template ? await resolveSubject(ctx, run) : null;
+    if (!template || !subject?.email) {
+      return advanceRun(
+        ctx,
+        run,
+        template ? 'No recipient email; skipped.' : 'Email template not found; skipped.'
+      );
+    }
+    // The email, its send job and the step advance commit together, and only
+    // if the run is still on this step: a repeated tick sends nothing twice.
+    return ctx.db.$transaction(async (tx) => {
+      const moved = await tx.automationRun.updateMany({
+        where: {
+          id: run.id,
           workspaceId: ctx.workspaceId,
-          type: 'automation',
-          entityType:
-            subjectTypeOf[run.automation.trigger as AutomationTrigger] ?? 'automation_run',
-          entityId: run.subjectId,
-          recipientEmail: subject?.email ?? '',
-          recipientName: subject?.name ?? '',
-          subject: template.subject,
-          body: template.body,
-          scheduledFor: options.now,
+          status: 'running',
+          currentStep: run.currentStep,
+        },
+        data: {
+          currentStep: run.currentStep + 1,
+          waitingSince: null,
+          log: pushLog(run, {
+            at: options.now.toISOString(),
+            stepIndex: run.currentStep,
+            action: 'step_completed',
+            message: 'Email queued.',
+          }),
         },
       });
-    }
-    return advanceRun(
-      ctx,
-      run,
-      template ? 'Email scheduled.' : 'Email template not found; skipped.'
-    );
+      if (moved.count === 1) {
+        const email = await tx.scheduledEmail.create({
+          data: {
+            workspaceId: ctx.workspaceId,
+            templateId: template.id,
+            type: 'automation',
+            entityType:
+              subjectTypeOf[run.automation.trigger as AutomationTrigger] ?? 'automation_run',
+            entityId: run.subjectId,
+            recipientEmail: subject.email!,
+            recipientName: subject.name ?? '',
+            subject: template.subject,
+            body: template.body,
+            scheduledFor: options.now,
+          },
+        });
+        await writeOutboxEvent(tx, {
+          workspaceId: ctx.workspaceId,
+          type: 'email.send',
+          aggregateType: 'scheduled_email',
+          aggregateId: email.id,
+          payload: { scheduledEmailId: email.id, workspaceId: ctx.workspaceId },
+        });
+      }
+      return tx.automationRun.findFirst({ where: { id: run.id, workspaceId: ctx.workspaceId } });
+    });
   }
 
   if (step.type === 'ai_draft_email') {

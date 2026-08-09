@@ -60,6 +60,10 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
 
   afterAll(async () => {
     await base.outboxEvent.deleteMany({ where: { workspaceId } });
+    await base.scheduledEmail.deleteMany({ where: { workspaceId } });
+    await base.emailTemplate.deleteMany({ where: { workspaceId } });
+    await base.invoice.deleteMany({ where: { workspaceId } });
+    await base.client.deleteMany({ where: { workspaceId } });
     for (const ws of [workspaceId, otherWorkspaceId]) {
       await base.deal.deleteMany({ where: { workspaceId: ws } });
       await base.stage.deleteMany({ where: { workspaceId: ws } });
@@ -221,5 +225,59 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
         }
       )
     ).rejects.toBeInstanceOf(CoreError);
+  });
+  it('queues the email of a send_email step for sending, once', async () => {
+    const client = await base.client.create({
+      data: { workspaceId, name: 'Asha', email: `asha-${run}@example.test` },
+    });
+    const invoice = await base.invoice.create({
+      data: {
+        workspaceId,
+        clientId: client.id,
+        invoiceNumber: `AUTO-${run.slice(0, 8)}`,
+        status: 'overdue',
+        dueDate: new Date('2026-09-01'),
+        total: 100,
+        amountDue: 100,
+      },
+    });
+    const template = await base.emailTemplate.create({
+      data: {
+        workspaceId,
+        type: 'reminder',
+        name: 'Nudge',
+        subject: 'Reminder',
+        body: '<p>Hi</p>',
+      },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Email',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'send_email', templateId: template.id }],
+        isActive: false,
+      },
+    });
+    const emailing = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: invoice.id, status: 'running' },
+    });
+    const tick = () =>
+      tickAutomationRun({ db, workspaceId }, emailing.id, {
+        dispatch: async () => {},
+        now: new Date(),
+      });
+
+    await tick();
+    await tick();
+
+    const emails = await base.scheduledEmail.findMany({
+      where: { workspaceId, entityId: invoice.id },
+    });
+    expect(emails.map((e) => e.recipientEmail)).toEqual([client.email]);
+    const queued = await base.outboxEvent.findMany({
+      where: { workspaceId, type: 'email.send', aggregateId: emails[0]!.id },
+    });
+    expect(queued).toHaveLength(1);
   });
 });
