@@ -1,6 +1,6 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
-import type { CoreContext, DbOrTx } from '../context';
+import type { CoreContext, Db } from '../context';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
 
 export interface CreateAutomationInput {
@@ -67,7 +67,7 @@ export async function updateAutomation(ctx: CoreContext, id: string, input: Upda
   });
   if (!existing) return null;
   return ctx.db.automation.update({
-    where: { id },
+    where: { id, workspaceId: ctx.workspaceId },
     data: {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.trigger !== undefined && { trigger: input.trigger }),
@@ -82,7 +82,7 @@ export async function deleteAutomation(ctx: CoreContext, id: string) {
     where: { id, workspaceId: ctx.workspaceId },
   });
   if (!existing) return null;
-  await ctx.db.automation.delete({ where: { id } });
+  await ctx.db.automation.delete({ where: { id, workspaceId: ctx.workspaceId } });
   return existing;
 }
 
@@ -167,7 +167,7 @@ export async function approveRun(ctx: CoreContext, id: string, approved: boolean
 
   if (!approved) {
     return ctx.db.automationRun.update({
-      where: { id },
+      where: { id, workspaceId: ctx.workspaceId },
       data: {
         status: 'cancelled',
         log: pushLog(run, {
@@ -181,7 +181,7 @@ export async function approveRun(ctx: CoreContext, id: string, approved: boolean
   }
 
   return ctx.db.automationRun.update({
-    where: { id },
+    where: { id, workspaceId: ctx.workspaceId },
     data: {
       status: 'running',
       waitingSince: null,
@@ -213,7 +213,7 @@ export async function tickAutomationRun(
     : [];
   if (run.currentStep >= steps.length) {
     return ctx.db.automationRun.update({
-      where: { id: run.id },
+      where: { id: run.id, workspaceId: ctx.workspaceId },
       data: { status: 'done' },
     });
   }
@@ -224,7 +224,7 @@ export async function tickAutomationRun(
   if (step.type === 'wait') {
     if (!run.waitingSince) {
       await ctx.db.automationRun.update({
-        where: { id: run.id },
+        where: { id: run.id, workspaceId: ctx.workspaceId },
         data: {
           waitingSince: options.now,
           log: pushLog(run, {
@@ -245,7 +245,7 @@ export async function tickAutomationRun(
 
   if (step.type === 'approval') {
     await ctx.db.automationRun.update({
-      where: { id: run.id },
+      where: { id: run.id, workspaceId: ctx.workspaceId },
       data: {
         status: 'waiting_approval',
         waitingSince: options.now,
@@ -265,7 +265,7 @@ export async function tickAutomationRun(
       where: { id: step.templateId, workspaceId: ctx.workspaceId },
     });
     if (template) {
-      const subject = await resolveSubject(ctx.db, run);
+      const subject = await resolveSubject(ctx, run);
       await ctx.db.scheduledEmail.create({
         data: {
           workspaceId: ctx.workspaceId,
@@ -314,7 +314,7 @@ async function advanceRun(
   message: string
 ) {
   return ctx.db.automationRun.update({
-    where: { id: run.id },
+    where: { id: run.id, workspaceId: ctx.workspaceId },
     data: {
       currentStep: { increment: 1 },
       waitingSince: null,
@@ -329,27 +329,27 @@ async function advanceRun(
 }
 
 async function resolveSubject(
-  db: DbOrTx,
+  { db, workspaceId }: CoreContext,
   run: { subjectId: string; automation: { trigger: string } }
 ): Promise<{ name: string | null; email: string | null } | null> {
   const trigger = run.automation.trigger as AutomationTrigger;
   if (trigger === 'invoice.overdue') {
     const invoice = await db.invoice.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: { client: { select: { name: true, email: true } } },
     });
     return invoice?.client ?? null;
   }
   if (trigger === 'quote.sent_no_response') {
     const quote = await db.quote.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: { client: { select: { name: true, email: true } } },
     });
     return quote?.client ?? null;
   }
   if (trigger === 'deal.stalled') {
     const deal = await db.deal.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: {
         lead: { select: { name: true, email: true } },
         client: { select: { name: true, email: true } },
@@ -360,8 +360,10 @@ async function resolveSubject(
   return null;
 }
 
-export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date }) {
-  const automations = await db.automation.findMany({ where: { isActive: true } });
+export async function scanAutomationTriggers(db: Db, options: { now: Date }) {
+  // The scheduler runs for every workspace, so this one list is unscoped;
+  // everything after it is pinned to the automation's own workspace.
+  const automations = await db.$unscoped.automation.findMany({ where: { isActive: true } });
   const created: string[] = [];
   const STALL_DAYS = 7;
   const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
@@ -377,7 +379,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({
@@ -404,7 +410,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({
@@ -430,7 +440,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({

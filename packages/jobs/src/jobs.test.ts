@@ -466,6 +466,26 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(rows.get(owed.id)).toMatchObject({ status: 'failed', lastError: 'gave up' });
   });
 
+  it('starts runs for overdue invoices when scanning for triggers', async () => {
+    const overdue = await invoice({ status: 'overdue' });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Overdue nudge',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'wait', days: 3 }],
+      },
+    });
+
+    await runJob(ctx, { type: 'automations.tick', payload: {}, jobId: `scan:${run}` });
+
+    const runs = await base.automationRun.findMany({
+      where: { workspaceId, automationId: automation.id },
+    });
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ subjectId: overdue.id, status: 'running' });
+  });
+
   it('pauses an automation run at approval and resumes on approve', async () => {
     const pipeline = await base.pipeline.create({
       data: { workspace: { connect: { id: workspaceId } }, name: 'Sales' },
