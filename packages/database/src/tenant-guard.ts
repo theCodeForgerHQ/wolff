@@ -11,6 +11,7 @@ import type { PrismaClient } from './client';
 /** Models with their own `workspaceId` column. */
 export const WORKSPACE_SCOPED_MODELS = [
   'Client',
+  'ClientTag',
   'Quote',
   'Invoice',
   'CreditNote',
@@ -38,6 +39,15 @@ export const WORKSPACE_SCOPED_MODELS = [
   'Stage',
   'Deal',
   'DealActivity',
+  'WorkspaceMember',
+  'WorkspaceInvitation',
+  'BusinessProfile',
+  'PaymentSettings',
+  'BrandingSettings',
+  'WorkspaceSlugHistory',
+  'JobRun',
+  'Automation',
+  'AutomationRun',
 ] as const;
 
 /** Models scoped through a parent relation: `where: { invoice: { workspaceId } }`. */
