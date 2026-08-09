@@ -2,9 +2,11 @@ name: jobs-drain
 
 on:
   schedule:
-    # Every 15 minutes while the repo is private; switch to '*/5 * * * *'
-    # once it is public and GitHub's 5-minute minimum applies.
-    - cron: '*/15 * * * *'
+    # Hourly while the repo is private (Phase 2): scheduled runs
+    # use the private repo's Actions minutes. Scheduled workflows can start
+    # late or be skipped under load; the jobs are re-runnable, so a skipped
+    # hour is picked up by the next run.
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 concurrency:
@@ -30,10 +32,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The Prisma client is generated into packages/database/src/generated,
+      # which is not committed; the worker imports it.
+      - name: Generate the Prisma client
+        run: pnpm db:generate
+
       - name: Drain queues
         run: pnpm --filter @wolff/api worker:drain
         env:
+          # Production mode: webhooks must be https and may not target
+          # private addresses (the SSRF guard is relaxed in development).
+          NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Decrypts per-workspace webhook signing secrets.
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
