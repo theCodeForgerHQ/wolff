@@ -46,7 +46,7 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
   });
 
   router.post('/invoices/:token/pay', requireScopes('invoice:pay'), async (req, res) => {
-    const token = req.params.token;
+    const token = req.params.token as string;
     if (!token) {
       sendError(res, 'validation_error', 'Invoice token is required');
       return;
@@ -126,7 +126,7 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
   });
 
   router.get('/quotes/:token', async (req, res) => {
-    const token = req.params.token;
+    const token = req.params.token as string;
     if (!token) {
       sendError(res, 'validation_error', 'Quote token is required');
       return;
