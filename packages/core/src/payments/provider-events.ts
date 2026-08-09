@@ -25,6 +25,11 @@ export const PROVIDER_EVENT_AGGREGATE = 'provider_webhook_event';
 
 export interface RecordProviderEventInput {
   provider: PaymentProvider;
+  /**
+   * The workspace whose endpoint and secret verified the event. Required for
+   * Razorpay: the event may only touch that workspace's payments.
+   */
+  workspaceId?: string;
   /** The provider's id for the event; the idempotency key. */
   eventId: string;
   type: string;
@@ -49,10 +54,14 @@ export async function recordProviderEvent(
   db: Db,
   input: RecordProviderEventInput
 ): Promise<{ outcome: RecordOutcome; id: string; outboxEventId?: string }> {
+  if (input.provider === 'razorpay' && !input.workspaceId) {
+    throw new Error('A Razorpay event must be recorded with the workspace that verified it');
+  }
   return db.$unscoped.$transaction(async (tx) => {
     const inserted = await tx.providerWebhookEvent.createMany({
       data: {
         provider: input.provider,
+        workspaceId: input.workspaceId ?? null,
         eventId: input.eventId,
         type: input.type.slice(0, 100),
         payload: input.payload as Prisma.InputJsonValue,
@@ -61,11 +70,16 @@ export async function recordProviderEvent(
     });
 
     // Lock the row so concurrent deliveries decide about the job one at a time.
-    const [row] = await tx.$queryRaw<{ id: string; status: string }[]>`
-      SELECT id, status::text FROM provider_webhook_events
+    const [row] = await tx.$queryRaw<{ id: string; status: string; workspace_id: string | null }[]>`
+      SELECT id, status::text, workspace_id FROM provider_webhook_events
       WHERE provider = ${input.provider}::payment_provider AND event_id = ${input.eventId}
       FOR UPDATE`;
     if (!row) throw new Error('provider event row missing after insert');
+    // The same event id already stored for another workspace: never let this
+    // delivery re-drive (or take over) that workspace's event.
+    if ((row.workspace_id ?? null) !== (input.workspaceId ?? null)) {
+      return { outcome: 'duplicate' as const, id: row.id };
+    }
 
     const queue = () =>
       writeOutboxEvent(tx, {
@@ -107,8 +121,10 @@ export type ProcessOutcome = 'processed' | 'already_processed' | 'not_found';
 export async function processProviderEvent(db: Db, eventRowId: string): Promise<ProcessOutcome> {
   try {
     return await db.$unscoped.$transaction(async (tx) => {
-      const [row] = await tx.$queryRaw<{ id: string; status: string; provider: string }[]>`
-        SELECT id, status::text, provider::text FROM provider_webhook_events
+      const [row] = await tx.$queryRaw<
+        { id: string; status: string; provider: string; workspace_id: string | null }[]
+      >`
+        SELECT id, status::text, provider::text, workspace_id FROM provider_webhook_events
         WHERE id = ${eventRowId} FOR UPDATE`;
       if (!row) return 'not_found';
       if (row.status === 'processed') return 'already_processed';
@@ -118,8 +134,10 @@ export async function processProviderEvent(db: Db, eventRowId: string): Promise<
         select: { payload: true },
       });
       if (row.provider === 'stripe') await applyStripeEvent(tx, event.payload);
-      else if (row.provider === 'razorpay') await applyRazorpayEvent(tx, event.payload);
-      else throw new Error(`No handler for provider ${row.provider}`);
+      else if (row.provider === 'razorpay') {
+        if (!row.workspace_id) throw new Error('Razorpay event has no workspace');
+        await applyRazorpayEvent(tx, event.payload, { workspaceId: row.workspace_id });
+      } else throw new Error(`No handler for provider ${row.provider}`);
 
       await tx.providerWebhookEvent.update({
         where: { id: row.id },

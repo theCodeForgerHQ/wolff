@@ -48,6 +48,9 @@ export const WORKSPACE_SCOPED_MODELS = [
   'JobRun',
   'Automation',
   'AutomationRun',
+  // Read and written only through $unscoped by the webhook handlers and the
+  // reconcile job; listed so that a scoped query on it must name a workspace.
+  'ProviderWebhookEvent',
 ] as const;
 
 /** Models scoped through a parent relation: `where: { invoice: { workspaceId } }`. */

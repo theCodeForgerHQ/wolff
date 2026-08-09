@@ -14,6 +14,7 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
   let n = 0;
   let invoiceId = '';
   let orderId = '';
+  let otherWorkspaceId = '';
 
   const razorpayEvent = (
     event: string,
@@ -38,6 +39,7 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
         id: paymentId,
         order_id: orderId,
         amount: amountPaise,
+        currency: 'INR',
         method: 'upi',
         fee: Math.round(amountPaise * 0.02),
       },
@@ -53,6 +55,7 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
         id: paymentId,
         order_id: orderId,
         amount: amountPaise,
+        currency: 'INR',
         method: 'card',
         fee: Math.round(amountPaise * 0.02),
       },
@@ -61,9 +64,10 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
   const refundProcessed = (paymentId: string, amountPaise: number) =>
     razorpayEvent('refund.processed', { refund: { payment_id: paymentId, amount: amountPaise } });
 
-  const record = (event: { id: string; event: string }) =>
+  const record = (event: { id: string; event: string }, forWorkspace = workspaceId) =>
     recordProviderEvent(db, {
       provider: 'razorpay',
+      workspaceId: forWorkspace,
       eventId: event.id,
       type: event.event,
       payload: event,
@@ -84,6 +88,10 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     });
     workspaceId = workspace.id;
     clientId = workspace.clients[0]!.id;
+    const other = await base.workspace.create({
+      data: { name: 'Another tenant', slug: `razorpay-other-${run}` },
+    });
+    otherWorkspaceId = other.id;
   });
 
   beforeEach(async () => {
@@ -120,7 +128,7 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     await base.invoiceEvent.deleteMany({ where: { invoice: { workspaceId } } });
     await base.payment.deleteMany({ where: { workspaceId } });
     await base.invoice.deleteMany({ where: { workspaceId } });
-    await base.workspace.deleteMany({ where: { id: workspaceId } });
+    await base.workspace.deleteMany({ where: { id: { in: [workspaceId, otherWorkspaceId] } } });
     await base.$disconnect();
   });
 
@@ -208,5 +216,46 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
 
     expect(await processProviderEvent(db, id)).toBe('processed');
     expect((await invoice()).status).toBe('sent');
+  });
+  it('ignores an event that names an order of another workspace', async () => {
+    // Another tenant signs an event with its own secret and quotes this
+    // workspace's order id. The event belongs to that tenant only.
+    const forged = await record(captured('pay_forged', 25_000), otherWorkspaceId);
+    const forgedPaid = await record(orderPaid('pay_forged_2', 25_000), otherWorkspaceId);
+
+    expect(await processProviderEvent(db, forged.id)).toBe('processed');
+    expect(await processProviderEvent(db, forgedPaid.id)).toBe('processed');
+
+    const untouched = await invoice();
+    expect(untouched.status).toBe('sent');
+    expect(Number(untouched.amountPaid)).toBe(0);
+    expect(untouched.payments[0]).toMatchObject({ status: 'pending', providerPaymentId: null });
+  });
+
+  it('refuses a capture whose amount differs from the payment', async () => {
+    const { id } = await record(captured('pay_short', 100));
+
+    await expect(processProviderEvent(db, id)).rejects.toThrow(/amount/);
+
+    const untouched = await invoice();
+    expect(untouched.status).toBe('sent');
+    expect(untouched.payments[0]!.status).toBe('pending');
+  });
+
+  it('refuses a capture in another currency', async () => {
+    const event = captured('pay_usd', 25_000);
+    (event.payload.payment.entity as Record<string, unknown>).currency = 'USD';
+    const { id } = await record(event);
+
+    await expect(processProviderEvent(db, id)).rejects.toThrow(/currency/);
+
+    expect((await invoice()).status).toBe('sent');
+  });
+
+  it('stores the workspace the event was delivered for', async () => {
+    const { id } = await record(failed('pay_ws'));
+
+    const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id } });
+    expect(row.workspaceId).toBe(workspaceId);
   });
 });

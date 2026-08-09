@@ -205,6 +205,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
             id: 'pay_reconcile_1',
             order_id: orderId,
             amount: 118000,
+            currency: 'INR',
             method: 'upi',
           },
         },
@@ -212,6 +213,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     };
     const { id } = await recordProviderEvent(db, {
       provider: 'razorpay',
+      workspaceId: ws.id,
       eventId: `evt_reconcile_${orderId}`,
       type: event.event,
       payload: event,

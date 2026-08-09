@@ -104,6 +104,9 @@ export function webhookRoutes(deps: WebhookDeps): Router {
 
     const result = await recordProviderEvent(deps.db, {
       provider: 'razorpay',
+      // The secret that verified the event is this workspace's, so the event
+      // may only ever touch this workspace's payments.
+      workspaceId,
       eventId,
       type: (payload as Record<string, unknown>).event?.toString() ?? 'unknown',
       payload,

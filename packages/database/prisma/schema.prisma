@@ -184,6 +184,7 @@ model Workspace {
   automations        Automation[]
   automationRuns     AutomationRun[]
   jobRuns            JobRun[]
+  providerEvents     ProviderWebhookEvent[]
 
   @@index([slug])
   @@index([ownerId])
@@ -1388,6 +1389,10 @@ enum WebhookEventStatus {
 model ProviderWebhookEvent {
   id          String             @id @default(uuid())
   provider    PaymentProvider
+  // The workspace whose endpoint received the event. Set for Razorpay, where
+  // each workspace has its own URL and secret; null for Stripe platform
+  // events, which arrive before any workspace is known.
+  workspaceId String?            @map("workspace_id")
   eventId     String             @map("event_id") @db.VarChar(255)
   type        String             @db.VarChar(100)
   payload     Json?
@@ -1396,8 +1401,11 @@ model ProviderWebhookEvent {
   receivedAt  DateTime           @default(now()) @map("received_at")
   processedAt DateTime?          @map("processed_at")
 
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   @@unique([provider, eventId])
   @@index([status, receivedAt])
+  @@index([workspaceId])
   @@map("provider_webhook_events")
 }
 
