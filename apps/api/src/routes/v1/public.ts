@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import type { Db } from '@wolff/core/context';
 import { createLead } from '@wolff/core/crm';
-import { createLeadSchema } from '@wolff/contracts';
+import { publicLeadSchema } from '@wolff/contracts';
+import { CoreError } from '@wolff/core/errors';
 import '../../context';
 import { sendData, sendError } from '../../http';
 import { apiKeyRateLimit, requirePublishableKey, requireScopes } from '../../middleware/auth';
@@ -32,17 +33,25 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
   router.use(requirePublishableKey(db), apiKeyRateLimit(deps.rateLimitStore));
 
   router.post('/leads', requireScopes('lead:create'), async (req, res) => {
-    const input = createLeadSchema.parse(req.body);
-    const lead = await createLead(ctxOf(req), {
-      ...input,
-      email: input.email ?? null,
-      phone: input.phone ?? null,
-      company: input.company ?? null,
-      score: input.score ?? null,
-      message: input.message ?? null,
-      ownerId: input.ownerId ?? null,
-    });
-    sendData(res, { id: lead.id, message: 'Lead submitted.' }, 201);
+    const input = publicLeadSchema.parse(req.body);
+    try {
+      await createLead(ctxOf(req), {
+        name: input.name,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        company: input.company ?? null,
+        message: input.message ?? null,
+        source: 'widget',
+        status: 'new',
+        score: null,
+        ownerId: null,
+      });
+    } catch (error) {
+      // A visitor must not learn which emails the workspace already has, so
+      // a duplicate gets the same answer as a new lead.
+      if (!(error instanceof CoreError && error.code === 'conflict')) throw error;
+    }
+    sendData(res, { message: 'Lead submitted.' }, 201);
   });
 
   router.post('/invoices/:token/pay', requireScopes('invoice:pay'), async (req, res) => {

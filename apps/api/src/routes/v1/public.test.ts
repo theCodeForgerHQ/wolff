@@ -178,4 +178,40 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/public widget routes', () => {
       expect(res.status).toBe(403);
     });
   });
+  describe('lead submissions', () => {
+    const post = (body: Record<string, unknown>) =>
+      request(app)
+        .post('/v1/public/leads')
+        .set('X-Publishable-Key', publishableKey)
+        .set('Origin', 'https://client.example.com')
+        .send(body);
+
+    it.each([
+      ['ownerId', { ownerId: '00000000-0000-4000-8000-000000000000' }],
+      ['status', { status: 'won' }],
+      ['score', { score: 100 }],
+      ['source', { source: 'manual' }],
+    ])('refuses a %s chosen by the visitor', async (_field, extra) => {
+      const res = await post({ name: 'Ada', email: 'ada@example.com', ...extra });
+
+      expect(res.status).toBe(400);
+      expect(await base.lead.count({ where: { workspaceId: a.id } })).toBe(0);
+    });
+
+    it('records the lead as coming from the widget', async () => {
+      await post({ name: 'Ada', email: 'ada@example.com', company: 'Lovelace Ltd' });
+
+      const lead = await base.lead.findFirstOrThrow({ where: { workspaceId: a.id } });
+      expect(lead).toMatchObject({ source: 'widget', status: 'new', ownerId: null, score: null });
+    });
+
+    it('answers a repeated email the same way, without saying the lead exists', async () => {
+      const first = await post({ name: 'Ada', email: 'ada@example.com' });
+      const second = await post({ name: 'Someone', email: 'ada@example.com' });
+
+      expect(second.status).toBe(first.status);
+      expect(second.body).toEqual(first.body);
+      expect(await base.lead.count({ where: { workspaceId: a.id } })).toBe(1);
+    });
+  });
 });
