@@ -50,6 +50,12 @@ export interface Job<T extends JobType = JobType> {
   /** The outbox event this job works off, if any. Marked done when the job finishes. */
   outboxEventId?: string;
   traceId?: string;
+  /**
+   * Run no earlier than this many milliseconds from now. A hint: a delayed
+   * job lost with Redis is made up for by the periodic tick that re-derives
+   * due work from the database.
+   */
+  delayMs?: number;
 }
 
 export interface EmailMessage {

@@ -91,6 +91,7 @@ export class BullMQDispatcher implements JobDispatcher {
     await this.queue.add(job.type, data, {
       // A second add with the same id is ignored: this is the dedupe.
       jobId: toBullJobId(job.jobId),
+      ...(job.delayMs && job.delayMs > 0 ? { delay: job.delayMs } : {}),
       attempts: RETRY_POLICIES[job.type].attempts,
       backoff: { type: 'custom' },
       // Redis is not the record (the database is), so finished jobs are trimmed.

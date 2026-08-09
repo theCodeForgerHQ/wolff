@@ -486,6 +486,58 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(runs[0]).toMatchObject({ subjectId: overdue.id, status: 'running' });
   });
 
+  it('resumes a wait step once the wait is over', async () => {
+    const subject = await invoice({ status: 'overdue' });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Wait then finish',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'wait', days: 3 }],
+        isActive: false,
+      },
+    });
+    const waiting = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: subject.id, status: 'running' },
+    });
+    let clock = NOW;
+    // Other suites share the database: run only this run's jobs.
+    const local = new InlineDispatcher((job) => runJob(testCtx, job));
+    const testCtx: JobContext = {
+      ...ctx,
+      now: () => clock,
+      dispatch: async (job) => {
+        if ((job.payload as { runId?: string }).runId === waiting.id) {
+          await local.dispatch(job);
+        }
+      },
+    };
+
+    await runJob(testCtx, {
+      type: 'automations.tick',
+      payload: { runId: waiting.id },
+      jobId: `tick:${waiting.id}`,
+    });
+
+    // The wake-up is queued for when the wait ends, not right away.
+    expect(local.dispatched).toEqual([
+      expect.objectContaining({ type: 'automations.tick', delayMs: 3 * 86_400_000 }),
+    ]);
+    await local.drain();
+    const stillWaiting = await base.automationRun.findUniqueOrThrow({ where: { id: waiting.id } });
+    expect(stillWaiting.status).toBe('running');
+    expect(stillWaiting.currentStep).toBe(0);
+
+    // Three days later the periodic tick (the drain, on the demo) resumes
+    // it, even if the delayed job was lost with Redis.
+    clock = new Date(NOW.getTime() + 3 * 86_400_000 + 60_000);
+    await runJob(testCtx, { type: 'automations.tick', payload: {}, jobId: `scan:${waiting.id}` });
+    await local.drain();
+
+    const done = await base.automationRun.findUniqueOrThrow({ where: { id: waiting.id } });
+    expect(done.status).toBe('done');
+  });
+
   it('pauses an automation run at approval and resumes on approve', async () => {
     const pipeline = await base.pipeline.create({
       data: { workspace: { connect: { id: workspaceId } }, name: 'Sales' },

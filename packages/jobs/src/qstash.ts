@@ -14,6 +14,8 @@ export interface QStashPublisher {
     body: unknown;
     deduplicationId?: string;
     retries?: number;
+    /** Seconds to wait before delivering. */
+    delay?: number;
   }): Promise<unknown>;
 }
 
@@ -34,6 +36,7 @@ export class QStashDispatcher implements JobDispatcher {
       // QStash allows only letters, digits, "-" and "_" in a deduplication id.
       deduplicationId: job.jobId.replace(/[^A-Za-z0-9_-]/g, '-'),
       retries: QSTASH_RETRIES,
+      ...(job.delayMs && job.delayMs > 0 ? { delay: Math.ceil(job.delayMs / 1000) } : {}),
     });
   }
 }

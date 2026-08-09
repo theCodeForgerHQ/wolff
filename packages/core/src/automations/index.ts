@@ -360,6 +360,17 @@ async function resolveSubject(
   return null;
 }
 
+/** Ids of runs still in progress, across workspaces, for the periodic tick. */
+export async function listRunningAutomationRuns(db: Db, limit = 500): Promise<string[]> {
+  const runs = await db.$unscoped.automationRun.findMany({
+    where: { status: 'running' },
+    select: { id: true },
+    orderBy: { updatedAt: 'asc' },
+    take: limit,
+  });
+  return runs.map((r) => r.id);
+}
+
 export async function scanAutomationTriggers(db: Db, options: { now: Date }) {
   // The scheduler runs for every workspace, so this one list is unscoped;
   // everything after it is pinned to the automation's own workspace.
