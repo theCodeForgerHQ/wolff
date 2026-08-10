@@ -2,6 +2,7 @@ import type { Decimal } from 'decimal.js';
 
 export interface Rule46Line {
   description: string;
+  itemType?: 'goods' | 'services';
   hsnSac?: string;
   quantity: Decimal | number | string;
   unit?: string;
@@ -30,6 +31,8 @@ export interface Rule46Invoice {
   aggregateTurnoverBand?: 'le_5cr' | 'gt_5cr';
   /** True when the supply crosses state lines (including SEZ / export). */
   isInterState?: boolean;
+  /** Export or SEZ supply under LUT: IGST is 0 on every line, legitimately. */
+  zeroRated?: boolean;
   lines: Rule46Line[];
 }
 
@@ -112,7 +115,10 @@ export function validateRule46(invoice: Rule46Invoice): Rule46Violation[] {
     }
     if (toNum(line.quantity) <= 0)
       violations.push({ code: 'line_quantity', message: 'Line quantity must be positive' });
-    if (!line.unit) violations.push({ code: 'line_unit', message: 'Line unit is required' });
+    // Rule 46(i): "quantity in case of goods and unit or Unique Quantity Code".
+    if (line.itemType === 'goods' && !line.unit) {
+      violations.push({ code: 'line_unit', message: 'Unit is required on goods lines' });
+    }
     if (toNum(line.taxableValue) < 0)
       violations.push({
         code: 'line_taxable_value',
@@ -121,7 +127,7 @@ export function validateRule46(invoice: Rule46Invoice): Rule46Violation[] {
 
     const hasIntraTax = toNum(line.cgstAmount) > 0 || toNum(line.sgstAmount) > 0;
     const hasInterTax = toNum(line.igstAmount) > 0;
-    if (!hasIntraTax && !hasInterTax) {
+    if (!hasIntraTax && !hasInterTax && !invoice.zeroRated) {
       violations.push({ code: 'line_tax', message: 'Line must have CGST/SGST or IGST' });
     }
   }
