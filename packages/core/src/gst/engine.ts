@@ -51,7 +51,15 @@ export interface GstBreakup {
   sgstTotal: Decimal;
   igstTotal: Decimal;
   cessTotal: Decimal;
+  /** Tax shown on the invoice: CGST + SGST + IGST. */
   taxTotal: Decimal;
+  /**
+   * Under reverse charge (CGST Act s.9(3)/9(4)) the recipient pays the tax to
+   * the government, so it is shown but not charged: this is that amount, and
+   * 0 otherwise.
+   */
+  taxPayableByRecipient: Decimal;
+  /** What the recipient pays the supplier. Excludes tax under reverse charge. */
   total: Decimal;
   lines: GstLineOutput[];
   hsnSummary: GstSummaryItem[];
@@ -98,6 +106,7 @@ export function determineSupplyType(input: {
  * - intra-state: cgst = round2(tax / 2), sgst = tax - cgst
  * - inter-state/export/SEZ: igst = tax
  * - export/SEZ with LUT: igst = 0
+ * - reverse charge: tax is computed and shown, but not added to the total
  */
 export function computeGst(input: ComputeGstInput): GstBreakup {
   const supplyType = determineSupplyType(input);
@@ -133,7 +142,10 @@ export function computeGst(input: ComputeGstInput): GstBreakup {
       igstAmount = tax;
     }
 
-    const total = taxableValue.plus(cgstAmount).plus(sgstAmount).plus(igstAmount);
+    // Reverse charge: the tax is shown on the line but paid by the recipient.
+    const total = input.reverseCharge
+      ? taxableValue
+      : taxableValue.plus(cgstAmount).plus(sgstAmount).plus(igstAmount);
 
     return {
       description: line.description,
@@ -190,6 +202,8 @@ export function computeGst(input: ComputeGstInput): GstBreakup {
     new Decimal(0)
   );
 
+  const taxTotal = sum('cgstAmount').plus(sum('sgstAmount')).plus(sum('igstAmount'));
+
   return {
     supplyType,
     subtotal,
@@ -199,7 +213,8 @@ export function computeGst(input: ComputeGstInput): GstBreakup {
     sgstTotal: sum('sgstAmount'),
     igstTotal: sum('igstAmount'),
     cessTotal: sum('cessAmount'),
-    taxTotal: sum('cgstAmount').plus(sum('sgstAmount')).plus(sum('igstAmount')),
+    taxTotal,
+    taxPayableByRecipient: input.reverseCharge ? taxTotal : new Decimal(0),
     total: sum('total'),
     lines,
     hsnSummary,

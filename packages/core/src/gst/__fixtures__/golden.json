@@ -1,5 +1,5 @@
 {
-  "description": "Golden vectors for the GST engine, checked against CBIC Rule 46 and published CA worked examples. Reviewer: chartered accountant worked examples for Indian GST invoicing.",
+  "description": "Golden vectors for the GST engine. Each case was worked by hand from the rules in the design (CGST/SGST/IGST split, per-line half-up rounding, LUT, reverse charge per CGST Act s.9(3) and Rule 46(p)). They have not been reviewed by a chartered accountant; that review is listed as an owner item in docs/phase-4.md.",
   "cases": [
     {
       "name": "intra-state single rate",
@@ -200,7 +200,8 @@
         "cgstTotal": 2250,
         "sgstTotal": 2250,
         "igstTotal": 0,
-        "total": 29500
+        "taxPayableByRecipient": 4500,
+        "total": 25000
       }
     },
     {
