@@ -130,7 +130,7 @@ export async function replacePipelineStages(
     }
 
     return tx.pipeline.findUniqueOrThrow({
-      where: { id: pipeline.id },
+      where: { id: pipeline.id, workspaceId },
       include: { stages: { orderBy: { position: 'asc' } } },
     });
   });

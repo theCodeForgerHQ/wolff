@@ -203,7 +203,12 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/webhook-endpoints (Postgres)', () => {
 
       expect(first.status).toBe(201);
       expect(second.status).toBe(201);
-      expect(second.body).toEqual(first.body);
+      // The signing secret is shown once; the stored copy has it redacted.
+      expect(second.body).toEqual({
+        ...first.body,
+        data: { ...first.body.data, secret: expect.stringContaining('redacted') },
+      });
+      expect(second.body.data.secret).not.toBe(first.body.data.secret);
       expect(second.headers['idempotent-replayed']).toBe('true');
       expect(first.headers['idempotent-replayed']).toBeUndefined();
       expect(await base.webhookEndpoint.count({ where: { workspaceId: a.id } })).toBe(1);

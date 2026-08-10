@@ -13,6 +13,31 @@ const MISSING_KEY_MESSAGE = 'Idempotency-Key header is required for this request
  * workspace, and bound to the request it was first used with.
  */
 const TTL_MS = 24 * 60 * 60 * 1000;
+/**
+ * How long a claimed key with no response yet blocks a retry. After that the
+ * first request is presumed dead (process killed, connection lost before the
+ * response was stored) and the key may be claimed again.
+ */
+export const LEASE_MS = 60_000;
+const REDACTED = '[redacted: shown only in the first response]';
+
+/**
+ * Values that must not sit in the database for 24 hours in clear: the
+ * webhook signing secret is returned once, on creation. A replay gets the
+ * placeholder instead.
+ */
+function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+        k,
+        k === 'secret' && typeof v === 'string' ? REDACTED : redactSecrets(v),
+      ])
+    );
+  }
+  return value;
+}
 const MAX_KEY_LENGTH = 255;
 export const REPLAY_HEADER = 'Idempotent-Replayed';
 
@@ -49,15 +74,22 @@ export function idempotency(db: Db): RequestHandler {
     let claimed = (await claim()).count === 1;
     if (!claimed) {
       const existing = await db.idempotencyKey.findFirst({ where: { workspaceId, key } });
-      if (existing && existing.expiresAt.getTime() <= Date.now()) {
-        // The stored response has expired: the key is free again.
+      const abandoned =
+        existing !== null &&
+        existing.responseStatus === null &&
+        existing.createdAt.getTime() + LEASE_MS <= Date.now();
+      if (existing && (existing.expiresAt.getTime() <= Date.now() || abandoned)) {
+        // The stored response has expired, or the first request never
+        // answered within its lease: the key is free again.
         await db.idempotencyKey.deleteMany({ where: { workspaceId, key, id: existing.id } });
         claimed = (await claim()).count === 1;
       } else if (existing && existing.requestHash !== requestHash) {
         return sendError(res, 'conflict', 'This Idempotency-Key was used with a different request');
       } else if (existing && existing.responseStatus !== null) {
         res.set(REPLAY_HEADER, 'true');
-        res.status(existing.responseStatus).json(existing.responseBody);
+        res.status(existing.responseStatus);
+        if (existing.responseBody === null) res.end();
+        else res.json(existing.responseBody);
         return;
       }
       if (!claimed) {
@@ -72,22 +104,49 @@ export function idempotency(db: Db): RequestHandler {
 
     // Store what the handler answers. A 5xx is not stored: the request did
     // not complete, and the client must be able to retry with the same key.
+    const where = { workspaceId, key };
+    const record = (status: number, body: unknown) =>
+      status >= 500
+        ? db.idempotencyKey.deleteMany({ where })
+        : db.idempotencyKey.updateMany({
+            where,
+            data: { responseStatus: status, responseBody: (body ?? null) as never },
+          });
+    let settled = false;
+
+    // JSON answers are stored before they are sent, so a retry that arrives
+    // right after the response replays it.
     const json = res.json.bind(res);
     res.json = (body: unknown) => {
-      const where = { workspaceId, key };
-      const done =
-        res.statusCode >= 500
-          ? db.idempotencyKey.deleteMany({ where })
-          : db.idempotencyKey.updateMany({
-              where,
-              data: { responseStatus: res.statusCode, responseBody: (body ?? null) as never },
-            });
-      done.then(
+      settled = true;
+      // As it goes over the wire (dates become strings), then redacted.
+      const stored = body === undefined ? null : redactSecrets(JSON.parse(JSON.stringify(body)));
+      record(res.statusCode, stored).then(
         () => json(body),
         (error) => next(error)
       );
       return res;
     };
+    // Any other answer (res.send, res.end, a 204) is stored with its status
+    // (not its body) before it goes out. res.json ends here too, already
+    // recorded.
+    const end = res.end.bind(res) as (...args: unknown[]) => typeof res;
+    res.end = ((...args: unknown[]) => {
+      if (settled) return end(...args);
+      settled = true;
+      record(res.statusCode, null).then(
+        () => end(...args),
+        (error) => next(error)
+      );
+      return res;
+    }) as typeof res.end;
+    // The connection closed before an answer was sent: free the key now
+    // rather than after the lease.
+    res.on('close', () => {
+      if (settled || res.writableFinished) return;
+      settled = true;
+      db.idempotencyKey.deleteMany({ where: { ...where, responseStatus: null } }).catch(() => {});
+    });
     next();
   };
 }

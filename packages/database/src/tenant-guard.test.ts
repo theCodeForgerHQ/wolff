@@ -62,7 +62,23 @@ describe('findTenantViolation', () => {
   it('ignores models and operations outside the list', () => {
     expect(findTenantViolation('User', 'findMany', {})).toBeNull();
     expect(findTenantViolation('Invoice', 'create', { data: {} })).toBeNull();
-    expect(findTenantViolation('Invoice', 'findUnique', { where: { id: 'x' } })).toBeNull();
+  });
+
+  it('guards lookups and upserts by unique key too', () => {
+    // A unique id from a request is exactly the case the guard is for.
+    for (const operation of ['findUnique', 'findUniqueOrThrow', 'upsert']) {
+      expect(findTenantViolation('Invoice', operation, { where: { id: 'x' } })).toMatch(
+        /workspaceId/
+      );
+      expect(
+        findTenantViolation('Invoice', operation, { where: { id: 'x', workspaceId: ws } })
+      ).toBeNull();
+    }
+    expect(
+      findTenantViolation('NumberSequence', 'upsert', {
+        where: { workspaceId_type: { workspaceId: ws, type: 'invoice' } },
+      })
+    ).toBeNull();
   });
 
   it('lists only models that have the column or the parent relation', () => {
