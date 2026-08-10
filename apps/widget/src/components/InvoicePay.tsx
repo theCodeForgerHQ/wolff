@@ -1,6 +1,48 @@
 import { useState } from 'preact/compat';
 import type { WidgetConfig } from '../types';
-import { payInvoice } from '../api';
+import { payInvoice, tokenFromPage } from '../api';
+import type { PaymentStart } from '../types';
+
+const RAZORPAY_CHECKOUT = 'https://checkout.razorpay.com/v1/checkout.js';
+
+type RazorpayOrder = Extract<PaymentStart, { provider: 'razorpay' }>;
+interface RazorpayCheckout {
+  open(): void;
+}
+type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayCheckout;
+
+function loadRazorpay(): Promise<RazorpayConstructor> {
+  const existing = (window as { Razorpay?: RazorpayConstructor }).Razorpay;
+  if (existing) return Promise.resolve(existing);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = RAZORPAY_CHECKOUT;
+    script.async = true;
+    script.onload = () => {
+      const loaded = (window as { Razorpay?: RazorpayConstructor }).Razorpay;
+      if (loaded) resolve(loaded);
+      else reject(new Error('Razorpay checkout did not load.'));
+    };
+    script.onerror = () => reject(new Error('Razorpay checkout did not load.'));
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Opens Razorpay's own checkout modal (served from checkout.razorpay.com).
+ * Its success callback is for the page only; the invoice is marked paid by
+ * the webhook.
+ */
+async function openRazorpayCheckout(order: RazorpayOrder): Promise<void> {
+  const Razorpay = await loadRazorpay();
+  new Razorpay({
+    key: order.keyId,
+    order_id: order.orderId,
+    amount: order.amount,
+    currency: order.currency,
+    prefill: order.prefill ?? {},
+  }).open();
+}
 
 interface InvoicePayProps {
   config: WidgetConfig;
@@ -10,7 +52,7 @@ export function InvoicePay({ config }: InvoicePayProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const token = config.invoiceToken;
+  const token = tokenFromPage('inv');
 
   const handlePay = async () => {
     if (!token) {
@@ -22,9 +64,14 @@ export function InvoicePay({ config }: InvoicePayProps) {
     setIsLoading(true);
 
     try {
-      const response = await payInvoice(config, token);
-      config.onSuccess?.(response);
-      window.open(response.checkoutUrl, '_blank', 'noopener,noreferrer');
+      const payment = await payInvoice(config, token);
+      config.onSuccess?.(payment);
+      if (payment.provider === 'stripe') {
+        // No card fields in the widget: Checkout opens in its own tab.
+        window.open(payment.url, '_blank', 'noopener,noreferrer');
+      } else {
+        await openRazorpayCheckout(payment);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to load payment link.';
       setError(message);

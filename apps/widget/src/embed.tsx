@@ -10,10 +10,10 @@ const WIDGET_ATTR = 'data-wolff-widget';
 
 interface EmbedOptions {
   apiBaseUrl?: string;
+  /** The product origin (hosted quote portal). */
+  appUrl?: string;
   publishableKey?: string;
   mode?: WidgetMode;
-  invoiceToken?: string;
-  quoteToken?: string;
   onSuccess?: (data: unknown) => void;
   onError?: (error: Error) => void;
 }
@@ -25,9 +25,8 @@ function readScriptOptions(): EmbedOptions {
   return {
     apiBaseUrl: script.dataset.apiBaseUrl,
     publishableKey: script.dataset.key,
+    appUrl: script.dataset.appUrl,
     mode: (script.dataset.mode as WidgetMode) ?? 'lead-form',
-    invoiceToken: script.dataset.invoiceToken,
-    quoteToken: script.dataset.quoteToken,
   };
 }
 
@@ -38,7 +37,8 @@ function findTargets(mode: WidgetMode): HTMLElement[] {
 function mount(target: HTMLElement, options: EmbedOptions): { unmount: () => void } | null {
   const mode = options.mode ?? 'lead-form';
   const publishableKey = options.publishableKey?.trim();
-  const apiBaseUrl = (options.apiBaseUrl ?? 'http://localhost:3001').trim();
+  const apiBaseUrl = (options.apiBaseUrl ?? 'http://localhost:4000').trim();
+  const appUrl = (options.appUrl ?? 'http://localhost:3000').trim();
 
   if (!publishableKey) {
     // eslint-disable-next-line no-console
@@ -48,11 +48,10 @@ function mount(target: HTMLElement, options: EmbedOptions): { unmount: () => voi
 
   const config: WidgetConfig = {
     apiBaseUrl,
+    appUrl,
     publishableKey,
     mode,
     target,
-    invoiceToken: options.invoiceToken,
-    quoteToken: options.quoteToken,
     onSuccess: options.onSuccess,
     onError: options.onError,
   };

@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import type { Db } from '@wolff/core/context';
 import { createLead } from '@wolff/core/crm';
-import { publicLeadSchema } from '@wolff/contracts';
+import { paymentLinkResponseSchema, publicLeadSchema } from '@wolff/contracts';
 import { CoreError } from '@wolff/core/errors';
 import '../../context';
 import { sendData, sendError } from '../../http';
 import { apiKeyRateLimit, requirePublishableKey, requireScopes } from '../../middleware/auth';
 import type { Store } from 'express-rate-limit';
 import type { PaymentProviderClients } from '../../payments/provider';
+import { defaultPaymentClients, startInvoicePayment } from '../../payments/start-payment';
 
 export interface PublicRoutesDeps {
   db: Db;
@@ -16,14 +17,11 @@ export interface PublicRoutesDeps {
   appUrl?: string;
 }
 
-function toNumber(value: unknown): number {
-  const n = typeof value === 'bigint' ? Number(value) : Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
 export function publicRoutes(deps: PublicRoutesDeps): Router {
   const { db } = deps;
   const router = Router();
+  const clients = deps.paymentClients ?? defaultPaymentClients();
+  const appUrl = deps.appUrl ?? 'http://localhost:3000';
 
   const ctxOf = (req: Express.Request) => ({
     db,
@@ -54,107 +52,36 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
     sendData(res, { message: 'Lead submitted.' }, 201);
   });
 
+  // The token is the invoice's portal token from the link
+  // the client was emailed. It is unguessable and expires; an invoice id is
+  // not accepted. The key pins the workspace, so another workspace's token
+  // finds nothing.
   router.post('/invoices/:token/pay', requireScopes('invoice:pay'), async (req, res) => {
     const token = req.params.token as string;
-    if (!token) {
-      sendError(res, 'validation_error', 'Invoice token is required');
-      return;
-    }
-
-    // Resolve the invoice by its public payment token.
-    const payment = await db.payment.findFirst({
+    const invoice = await db.invoice.findFirst({
       where: {
         workspaceId: req.ctx!.workspaceId,
-        providerOrderId: token,
-        status: 'pending',
+        accessToken: token,
+        deletedAt: null,
+        OR: [{ accessTokenExpiresAt: null }, { accessTokenExpiresAt: { gt: new Date() } }],
       },
-      include: { invoice: true },
+      include: { client: { select: { name: true, email: true, phone: true } } },
     });
-
-    if (!payment || !payment.invoice) {
-      sendError(res, 'not_found', 'Invoice not found or already paid');
+    if (!invoice) {
+      sendError(res, 'not_found', 'Invoice not found');
       return;
     }
 
-    const invoice = payment.invoice;
-    const providers = deps.paymentClients;
-    const baseUrl = deps.appUrl ?? 'http://localhost:3000';
-    const successUrl = `${baseUrl}/invoices/${invoice.id}/paid?token=${token}`;
-    const cancelUrl = `${baseUrl}/invoices/${invoice.id}?token=${token}`;
-
-    if (invoice.currency === 'INR') {
-      const razorpay = providers?.razorpay;
-      if (!razorpay) {
-        sendError(res, 'internal_error', 'Razorpay is not configured');
+    try {
+      const link = await startInvoicePayment(db, clients, invoice, { appUrl });
+      sendData(res, paymentLinkResponseSchema.parse(link));
+    } catch (error) {
+      if (error instanceof CoreError) {
+        sendError(res, error.code, error.message);
         return;
       }
-      const amount = toNumber(invoice.total);
-      const order = await razorpay.orders.create({
-        amount: Math.round(amount * 100),
-        currency: invoice.currency,
-        receipt: payment.id,
-        notes: { invoiceId: invoice.id, workspaceId: invoice.workspaceId },
-      });
-      await db.payment.update({
-        where: { id: payment.id, workspaceId: invoice.workspaceId },
-        data: { providerOrderId: order.id },
-      });
-      sendData(res, {
-        checkoutUrl: '',
-        provider: 'razorpay',
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-      });
-      return;
+      throw error;
     }
-
-    const stripe = providers?.stripe;
-    if (!stripe) {
-      sendError(res, 'internal_error', 'Stripe is not configured');
-      return;
-    }
-    const amount = toNumber(invoice.total);
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: invoice.currency.toLowerCase(),
-            product_data: { name: `Invoice ${invoice.invoiceNumber}` },
-            unit_amount: Math.round(amount * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: { invoiceId: invoice.id, paymentId: payment.id, workspaceId: invoice.workspaceId },
-    });
-    sendData(res, { checkoutUrl: session.url ?? '', provider: 'stripe' });
-  });
-
-  router.get('/quotes/:token', async (req, res) => {
-    const token = req.params.token as string;
-    if (!token) {
-      sendError(res, 'validation_error', 'Quote token is required');
-      return;
-    }
-
-    const quote = await db.quote.findFirst({
-      where: {
-        workspaceId: req.ctx!.workspaceId,
-        OR: [{ id: token }, { accessToken: token }],
-      },
-      select: { id: true, title: true, status: true },
-    });
-
-    if (!quote) {
-      sendError(res, 'not_found', 'Quote not found');
-      return;
-    }
-
-    sendData(res, quote);
   });
 
   return router;

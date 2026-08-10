@@ -1,4 +1,4 @@
-import type { LeadFormData, WidgetApiError, WidgetConfig } from './types';
+import type { LeadFormData, PaymentStart, WidgetApiError, WidgetConfig } from './types';
 
 const MIN_SUBMIT_MS = 2000;
 
@@ -14,10 +14,10 @@ async function request<T>(
   const url = buildUrl(config.apiBaseUrl, path);
   const response = await fetch(url, {
     ...options,
+    // The browser sends Origin itself; the API checks it against the key.
     headers: {
       'Content-Type': 'application/json',
       'X-Publishable-Key': config.publishableKey,
-      Origin: typeof window !== 'undefined' ? window.location.origin : '',
       ...options.headers,
     },
     credentials: 'omit',
@@ -31,10 +31,11 @@ async function request<T>(
     } catch {
       // ignore parse error
     }
-    throw new Error(body?.error ?? `HTTP ${response.status}`);
+    throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
   }
 
-  return (await response.json()) as T;
+  const body = (await response.json()) as { data: T };
+  return body.data;
 }
 
 export function isBotSubmission(data: LeadFormData): boolean {
@@ -48,8 +49,8 @@ export function isBotSubmission(data: LeadFormData): boolean {
 export async function submitLead(
   config: WidgetConfig,
   data: LeadFormData
-): Promise<{ id: string; message: string }> {
-  return request<{ id: string; message: string }>(config, '/v1/public/leads', {
+): Promise<{ message: string }> {
+  return request<{ message: string }>(config, '/v1/public/leads', {
     method: 'POST',
     body: JSON.stringify({
       name: data.name,
@@ -61,28 +62,16 @@ export async function submitLead(
   });
 }
 
-export async function payInvoice(
-  config: WidgetConfig,
-  token: string
-): Promise<{ checkoutUrl: string; provider: string }> {
-  return request<{ checkoutUrl: string; provider: string }>(
-    config,
-    `/v1/public/invoices/${token}/pay`,
-    {
-      method: 'POST',
-    }
-  );
+/** The portal token from the link the client was emailed: `?inv=` or `?quote=`. */
+export function tokenFromPage(param: 'inv' | 'quote'): string | null {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get(param)?.trim();
+  return value ? value : null;
 }
 
-export async function getQuotePublic(
-  config: WidgetConfig,
-  token: string
-): Promise<{ id: string; title: string; status: string }> {
-  return request<{ id: string; title: string; status: string }>(
-    config,
-    `/v1/public/quotes/${token}`,
-    {
-      method: 'GET',
-    }
-  );
+export async function payInvoice(config: WidgetConfig, token: string): Promise<PaymentStart> {
+  return request<PaymentStart>(config, `/v1/public/invoices/${encodeURIComponent(token)}/pay`, {
+    method: 'POST',
+    body: '{}',
+  });
 }
