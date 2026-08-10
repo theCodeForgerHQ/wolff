@@ -76,7 +76,7 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
             id: invoice.id,
             workspaceId: invoice.workspaceId,
             clientId: invoice.clientId,
-            total: Number(invoice.total),
+            amountDue: Number(invoice.amountDue),
             currency: invoice.currency,
             status: invoice.status,
             invoiceNumber: invoice.invoiceNumber,
@@ -105,7 +105,7 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
           data: {
             workspaceId,
             invoiceId: invoice.id,
-            amount: invoice.total,
+            amount: invoice.amountDue,
             currency: invoice.currency,
             status: 'pending',
             provider: link.provider,

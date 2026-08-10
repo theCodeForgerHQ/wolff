@@ -10,7 +10,8 @@ export interface InvoiceForPayment {
   id: string;
   workspaceId: string;
   clientId: string;
-  total: number;
+  /** What is still owed; a payment link charges this, not the invoice total. */
+  amountDue: number;
   currency: string;
   status: string;
   invoiceNumber: string;
@@ -70,10 +71,10 @@ export function resolveProvider(
   );
 }
 
-function toSmallestCurrencyUnit(total: number | bigint | unknown): number {
-  const value = typeof total === 'bigint' ? Number(total) : Number(total ?? 0);
-  if (!Number.isFinite(value) || value < 0) {
-    throw new CoreError('validation_error', 'Invalid invoice total');
+function toSmallestCurrencyUnit(due: number | bigint | unknown): number {
+  const value = typeof due === 'bigint' ? Number(due) : Number(due ?? 0);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new CoreError('validation_error', 'Nothing is due on this invoice');
   }
   return Math.round(value * 100);
 }
@@ -91,7 +92,7 @@ export async function createStripeCheckout(
     );
   }
 
-  const amount = toSmallestCurrencyUnit(invoice.total);
+  const amount = toSmallestCurrencyUnit(invoice.amountDue);
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create(
@@ -149,7 +150,7 @@ export async function createRazorpayOrder(
     throw new CoreError('not_configured', 'Cannot decrypt Razorpay secret');
   }
 
-  const amount = toSmallestCurrencyUnit(invoice.total);
+  const amount = toSmallestCurrencyUnit(invoice.amountDue);
   let order: { id?: string };
   try {
     order = await razorpay.orders.create({
