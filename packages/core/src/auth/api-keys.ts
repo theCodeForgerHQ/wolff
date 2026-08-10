@@ -115,3 +115,47 @@ export async function authenticateApiKey(
     },
   };
 }
+
+const MAX_ALLOWED_ORIGINS = 20;
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+export type AllowedOriginsResult = { ok: true; origins: string[] } | { ok: false; error: string };
+
+/**
+ * Validates the origins a publishable key may be used from. Each
+ * entry must be exactly an origin (scheme, host, optional port; no path, no
+ * wildcard), https except on loopback hosts for local development. The API
+ * compares the browser's Origin header to these strings byte for byte, so
+ * they are stored in the form browsers send.
+ */
+export function normaliseAllowedOrigins(input: readonly string[]): AllowedOriginsResult {
+  const origins: string[] = [];
+  for (const raw of input) {
+    const value = raw.trim();
+    if (!value) continue;
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      return { ok: false, error: `"${value}" is not an origin (e.g. https://shop.example.com)` };
+    }
+    if (
+      url.origin === 'null' ||
+      url.origin !== value.replace(/\/$/, '') ||
+      url.hostname.includes('*')
+    ) {
+      return { ok: false, error: `"${value}" is not an origin (e.g. https://shop.example.com)` };
+    }
+    if (url.protocol !== 'https:' && !LOOPBACK_HOSTS.has(url.hostname)) {
+      return { ok: false, error: `"${value}" must use https` };
+    }
+    if (!origins.includes(url.origin)) origins.push(url.origin);
+  }
+  if (origins.length === 0) {
+    return { ok: false, error: 'A publishable key needs at least one allowed origin' };
+  }
+  if (origins.length > MAX_ALLOWED_ORIGINS) {
+    return { ok: false, error: `At most ${MAX_ALLOWED_ORIGINS} allowed origins` };
+  }
+  return { ok: true, origins };
+}

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -38,6 +39,8 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
+  const [keyKind, setKeyKind] = useState<'secret' | 'publishable'>('secret');
+  const [origins, setOrigins] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [revokeId, setRevokeId] = useState<string | null>(null);
@@ -50,13 +53,19 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
     }
     setIsCreating(true);
     try {
-      const result = await generateApiKey({ name: keyName });
+      const result = await generateApiKey({
+        name: keyName,
+        kind: keyKind,
+        allowedOrigins:
+          keyKind === 'publishable' ? origins.split(/[\s,]+/).filter(Boolean) : undefined,
+      });
       if (!result.success) {
         toast.error(result.error || 'Failed to create API key');
         return;
       }
       setNewKey(result.key!);
       setKeyName('');
+      setOrigins('');
       router.refresh();
     } catch {
       toast.error('Failed to create API key');
@@ -127,7 +136,19 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{key.name}</p>
+                    <p className="flex items-center gap-2 text-sm font-medium">
+                      {key.name}
+                      {key.kind === 'publishable' && (
+                        <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs font-normal">
+                          Widget
+                        </span>
+                      )}
+                    </p>
+                    {key.kind === 'publishable' && (
+                      <p className="text-muted-foreground text-xs">
+                        Allowed from {key.allowedOrigins.join(', ')}
+                      </p>
+                    )}
                     <div className="text-muted-foreground flex items-center gap-3 text-xs">
                       <span className="font-mono">{key.keyPrefix}...••••••</span>
                       <span>Created {formatDate(key.createdAt)}</span>
@@ -169,12 +190,62 @@ export function ApiKeysManager({ keys }: ApiKeysManagerProps) {
                 placeholder="e.g. Zapier Integration"
               />
             </div>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Kind</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ['secret', 'Secret key', 'Server-side REST API access'],
+                    ['publishable', 'Widget key', 'Lead form and invoice payment, from your site'],
+                  ] as const
+                ).map(([value, title, hint]) => (
+                  <label
+                    key={value}
+                    className="has-[:checked]:border-primary has-[:focus-visible]:ring-ring flex cursor-pointer flex-col rounded-md border p-3 text-sm has-[:focus-visible]:ring-2"
+                  >
+                    <input
+                      type="radio"
+                      name="key-kind"
+                      value={value}
+                      checked={keyKind === value}
+                      onChange={() => setKeyKind(value)}
+                      className="sr-only"
+                    />
+                    <span className="font-medium">{title}</span>
+                    <span className="text-muted-foreground text-xs">{hint}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {keyKind === 'publishable' && (
+              <div className="space-y-2">
+                <Label htmlFor="key-origins">Allowed origins</Label>
+                <Textarea
+                  id="key-origins"
+                  value={origins}
+                  onChange={(e) => setOrigins(e.target.value)}
+                  rows={3}
+                  placeholder="https://www.example.com"
+                  aria-describedby="key-origins-hint"
+                  className="font-mono text-sm"
+                />
+                <p id="key-origins-hint" className="text-muted-foreground text-xs">
+                  One per line, exactly as the browser sends it (scheme and host, no path). The key
+                  works from these sites only.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={isCreating || !keyName.trim()}>
+            <Button
+              onClick={handleCreate}
+              disabled={
+                isCreating || !keyName.trim() || (keyKind === 'publishable' && !origins.trim())
+              }
+            >
               {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Generate Key
             </Button>

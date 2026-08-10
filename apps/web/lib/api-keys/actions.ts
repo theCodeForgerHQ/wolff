@@ -2,14 +2,21 @@
 
 import { randomBytes } from 'crypto';
 import { prisma } from '@wolff/database';
-import { LEGACY_KEY_SCOPES } from '@wolff/contracts';
-import { LEGACY_SECRET_PREFIX, hashApiKey } from '@wolff/core/auth/api-keys';
+import { LEGACY_KEY_SCOPES, PUBLISHABLE_SCOPES } from '@wolff/contracts';
+import {
+  LEGACY_SECRET_PREFIX,
+  generateApiKey as generatePublishable,
+  hashApiKey,
+  normaliseAllowedOrigins,
+} from '@wolff/core/auth/api-keys';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 
 export interface ApiKeyListItem {
   id: string;
   name: string;
+  kind: 'secret' | 'publishable';
+  allowedOrigins: string[];
   keyPrefix: string;
   lastUsedAt: Date | null;
   expiresAt: Date | null;
@@ -18,10 +25,16 @@ export interface ApiKeyListItem {
 
 /**
  * Generate a new API key. Returns the raw key ONCE — it's hashed in DB.
+ *
+ * A publishable key is for the embeddable widget: it holds only
+ * the widget scopes and works only from the listed origins, so at least one
+ * valid origin is required.
  */
 export async function generateApiKey(data: {
   name: string;
   expiresAt?: string | null;
+  kind?: 'secret' | 'publishable';
+  allowedOrigins?: string[];
 }): Promise<{ success: boolean; key?: string; id?: string; error?: string }> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
@@ -31,6 +44,26 @@ export async function generateApiKey(data: {
 
   if (!data.name?.trim()) {
     return { success: false, error: 'API key name is required' };
+  }
+
+  if (data.kind === 'publishable') {
+    const origins = normaliseAllowedOrigins(data.allowedOrigins ?? []);
+    if (!origins.ok) return { success: false, error: origins.error };
+    const generated = generatePublishable('publishable');
+    await prisma.apiKey.create({
+      data: {
+        workspaceId,
+        name: data.name.trim(),
+        keyHash: generated.keyHash,
+        keyPrefix: generated.keyPrefix,
+        kind: 'publishable',
+        scopes: [...PUBLISHABLE_SCOPES],
+        allowedOrigins: origins.origins,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+      },
+    });
+    revalidatePath('/settings/api');
+    return { success: true, key: generated.raw };
   }
 
   // Generate a secure random key with prefix
@@ -68,6 +101,8 @@ export async function getApiKeys(): Promise<ApiKeyListItem[]> {
     select: {
       id: true,
       name: true,
+      kind: true,
+      allowedOrigins: true,
       keyPrefix: true,
       lastUsedAt: true,
       expiresAt: true,
