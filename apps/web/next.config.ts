@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   // Bug #23: Prevent access token leakage via referrer headers on portal pages
   async headers() {
     // Bug #5: Security headers for all routes (mirrors vercel.json for Docker/self-hosted deployments).
-    // The Content-Security-Policy is not here: it carries a per-request nonce,
+    // The CSP is not here: it carries a per-request nonce,
     // so proxy.ts sets it (lib/security/csp.ts).
     const securityHeaders = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
