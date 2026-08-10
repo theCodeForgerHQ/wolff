@@ -1,3 +1,4 @@
+import { incrementNumberSequence } from '@wolff/database';
 import type { DbOrTx } from '../context';
 import { getFinancialYear } from './financial-year';
 
@@ -46,51 +47,25 @@ export async function nextSerialNumber(
     throw new Error('Serial suffix contains invalid characters');
   }
 
+  // One INSERT ... ON CONFLICT DO UPDATE: the first request of a year creates
+  // the row and concurrent ones increment it, instead of racing to create it.
+  // A number that turns out too long throws, which rolls the increment back.
   return db.$transaction(async (tx) => {
-    const [existing] =
-      financialYear === null
-        ? await tx.$queryRaw<Array<{ id: string; current_value: number }>>`
-          SELECT id, current_value FROM number_sequences
-          WHERE workspace_id = ${input.workspaceId}
-            AND type = ${input.type}
-            AND financial_year IS NULL
-          FOR UPDATE`
-        : await tx.$queryRaw<Array<{ id: string; current_value: number }>>`
-          SELECT id, current_value FROM number_sequences
-          WHERE workspace_id = ${input.workspaceId}
-            AND type = ${input.type}
-            AND financial_year = ${financialYear}
-          FOR UPDATE`;
+    const sequence = await incrementNumberSequence(
+      tx as unknown as Parameters<typeof incrementNumberSequence>[0],
+      input.workspaceId,
+      input.type,
+      financialYear,
+      { prefix: input.prefix ?? '', currentValue: 1, padding }
+    );
 
-    const nextValue = existing ? existing.current_value + 1 : 1;
-
-    const parts = [prefix, String(nextValue).padStart(padding, '0')];
+    const parts = [prefix, String(sequence.currentValue).padStart(padding, '0')];
     if (suffix) parts.push(suffix);
     const serialNumber = parts.filter(Boolean).join('-');
 
     if (serialNumber.length > MAX_SERIAL_LENGTH) {
       throw new Error(`Serial number exceeds ${MAX_SERIAL_LENGTH} characters`);
     }
-
-    if (existing) {
-      await tx.numberSequence.update({
-        where: { id: existing.id, workspaceId: input.workspaceId },
-        data: { currentValue: nextValue },
-      });
-    } else {
-      await tx.numberSequence.create({
-        data: {
-          workspaceId: input.workspaceId,
-          type: input.type,
-          financialYear,
-          prefix: input.prefix,
-          suffix: input.suffix,
-          currentValue: nextValue,
-          padding,
-        },
-      });
-    }
-
     return { serialNumber, financialYear };
   });
 }

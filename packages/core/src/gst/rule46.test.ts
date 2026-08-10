@@ -90,4 +90,23 @@ describe('Rule 46 validation', () => {
     const violations = validateRule46(invoice);
     expect(violations.some((v) => v.code === 'place_of_supply')).toBe(false);
   });
+  it('asks for a unit only on goods lines (Rule 46(i): quantity and unit of goods)', () => {
+    const service = validInvoice();
+    service.lines = [{ ...service.lines[0]!, itemType: 'services', unit: undefined }];
+    expect(validateRule46(service).map((v) => v.code)).not.toContain('line_unit');
+
+    const goods = validInvoice();
+    goods.lines = [{ ...goods.lines[0]!, itemType: 'goods', unit: undefined }];
+    expect(validateRule46(goods).map((v) => v.code)).toContain('line_unit');
+  });
+
+  it('accepts a line with no tax on a zero-rated supply (export or SEZ under LUT)', () => {
+    const invoice = validInvoice();
+    invoice.zeroRated = true;
+    invoice.lines = [
+      { ...invoice.lines[0]!, cgstAmount: 0, sgstAmount: 0, igstAmount: 0, igstRate: 18 },
+    ];
+
+    expect(validateRule46(invoice).map((v) => v.code)).not.toContain('line_tax');
+  });
 });

@@ -34,6 +34,9 @@ describe('GST engine', () => {
     expect(result.sgstTotal.toNumber()).toBeCloseTo(c.expected.sgstTotal, 2);
     expect(result.igstTotal.toNumber()).toBeCloseTo(c.expected.igstTotal, 2);
     expect(result.total.toNumber()).toBeCloseTo(c.expected.total, 2);
+    const payableByRecipient =
+      'taxPayableByRecipient' in c.expected ? (c.expected.taxPayableByRecipient as number) : 0;
+    expect(result.taxPayableByRecipient.toNumber()).toBeCloseTo(payableByRecipient, 2);
     if (c.expected.hsnSummaryCount) {
       expect(result.hsnSummary).toHaveLength(c.expected.hsnSummaryCount);
     }
