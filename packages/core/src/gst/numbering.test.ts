@@ -87,4 +87,42 @@ describe.skipIf(!url)('GST numbering', () => {
     });
     expect(result.serialNumber).toBe('INV-0001');
   });
+  it('hands out distinct numbers when the first numbers are requested at once', async () => {
+    const workspace = await base.workspace.create({
+      data: {
+        name: 'GST Numbering Race',
+        slug: `gst-num-race-${Date.now()}`,
+        businessProfile: {
+          create: { businessName: 'GST Co', gstin: '33AABCU9603R1ZX', currency: 'INR' },
+        },
+      },
+    });
+
+    // No sequence row exists yet: every call races to create it. Hold each
+    // call after its first query on number_sequences until all have made it
+    // (or 300 ms pass, for code that serialises them in the database).
+    let arrived = 0;
+    let release: () => void = () => {};
+    const allArrived = new Promise<void>((resolve) => (release = resolve));
+    const racy = db.$extends({
+      query: {
+        async $queryRaw({ args, query }) {
+          const result = await query(args);
+          if (++arrived === 8) release();
+          await Promise.race([allArrived, new Promise((r) => setTimeout(r, 300))]);
+          return result;
+        },
+      },
+    }) as unknown as typeof db;
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        nextSerialNumber(racy, { workspaceId: workspace.id, type: 'invoice', prefix: 'INV' })
+      )
+    );
+
+    expect(results.map((r) => r.serialNumber).sort()).toEqual(
+      Array.from({ length: 8 }, (_, i) => `INV-${String(i + 1).padStart(4, '0')}`)
+    );
+  });
 });
