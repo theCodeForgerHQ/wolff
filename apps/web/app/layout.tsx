@@ -1,6 +1,7 @@
 import '@/lib/env'; // Must be first — trims \n from all env vars
 import { getBaseUrl } from '@/lib/utils';
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { Toaster } from 'sonner';
@@ -134,6 +135,9 @@ const jsonLd = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Set by proxy.ts with the CSP; reading it also renders every page per
+  // request, which a nonce needs (a prerendered page cannot carry one).
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   const locale = await getLocale();
   const messages = await getMessages();
 
@@ -159,6 +163,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SessionProvider>
           <NextIntlClientProvider locale={locale} messages={messages}>
             <ThemeProvider
+              nonce={nonce}
               attribute="class"
               defaultTheme="system"
               enableSystem
