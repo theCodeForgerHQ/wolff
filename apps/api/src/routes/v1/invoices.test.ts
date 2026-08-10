@@ -24,9 +24,13 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     },
   };
   let orderCounter = 0;
+  const orderRequests: { amount: number }[] = [];
   const razorpay = {
     orders: {
-      create: async () => ({ id: `order_${++orderCounter}` }),
+      create: async (request: { amount: number }) => {
+        orderRequests.push(request);
+        return { id: `order_${++orderCounter}` };
+      },
     },
   };
   const app = testApp(db, {
@@ -205,6 +209,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
             id: 'pay_reconcile_1',
             order_id: orderId,
             amount: 118000,
+            currency: 'INR',
             method: 'upi',
           },
         },
@@ -212,6 +217,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     };
     const { id } = await recordProviderEvent(db, {
       provider: 'razorpay',
+      workspaceId: ws.id,
       eventId: `evt_reconcile_${orderId}`,
       type: event.event,
       payload: event,
@@ -227,5 +233,31 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     const payment = await base.payment.findFirstOrThrow({ where: { invoiceId } });
     expect(payment.status).toBe('completed');
     expect(payment.providerPaymentId).toBe('pay_reconcile_1');
+  });
+  it('charges what is still due on a partly paid invoice, not the total', async () => {
+    const partly = await base.invoice.create({
+      data: {
+        workspaceId: ws.id,
+        clientId,
+        invoiceNumber: `INV-PART-${randomUUID().slice(0, 6)}`,
+        status: 'partial',
+        issueDate: new Date(),
+        dueDate: new Date(Date.now() + 7 * 86_400_000),
+        subtotal: 1000,
+        taxTotal: 180,
+        total: 1180,
+        amountPaid: 500,
+        amountDue: 680,
+        currency: 'INR',
+      },
+    });
+
+    const res = await as(ws.key).post(`/v1/invoices/${partly.id}/payment-links`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.amount).toBe(68_000);
+    expect(orderRequests.at(-1)!.amount).toBe(68_000);
+    const payment = await base.payment.findFirstOrThrow({ where: { invoiceId: partly.id } });
+    expect(Number(payment.amount)).toBe(680);
   });
 });

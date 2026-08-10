@@ -2,6 +2,7 @@ import { createHmac, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import Stripe from 'stripe';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { processProviderEvent } from '@wolff/core/payments';
 import { createApp } from '../app';
 import { TEST_DATABASE_URL, testConfig, testDb } from '../testing/harness';
 import { verifyRazorpaySignature } from './razorpay';
@@ -359,5 +360,69 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
       where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
     });
     expect(rows).toHaveLength(0);
+  });
+  it('cannot pay an invoice of another workspace with an event signed by its own secret', async () => {
+    const victim = await base.workspace.create({
+      data: {
+        name: 'Victim',
+        slug: `razorpay-victim-${run}`,
+        clients: { create: { name: 'Victim client', email: `victim-${run}@example.test` } },
+      },
+      include: { clients: true },
+    });
+    const orderId = `order_victim_${run}`;
+    const invoice = await base.invoice.create({
+      data: {
+        workspaceId: victim.id,
+        clientId: victim.clients[0]!.id,
+        invoiceNumber: `V-${run.slice(0, 8)}`,
+        status: 'sent',
+        dueDate: new Date('2026-12-01'),
+        total: 250,
+        amountDue: 250,
+        payments: {
+          create: {
+            workspaceId: victim.id,
+            amount: 250,
+            currency: 'INR',
+            paymentMethod: 'razorpay',
+            provider: 'razorpay',
+            providerOrderId: orderId,
+          },
+        },
+      },
+    });
+    try {
+      const body = JSON.stringify({
+        event: 'order.paid',
+        payload: {
+          order: { entity: { id: orderId, currency: 'INR' } },
+          payment: {
+            entity: { id: `pay_forged_${run}`, order_id: orderId, amount: 25_000, currency: 'INR' },
+          },
+        },
+      });
+
+      // Signed with the attacker workspace's own, valid secret.
+      const res = await post(body);
+      expect(res.status).toBe(200);
+      const [row] = await base.providerWebhookEvent.findMany({
+        where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+      });
+      expect(row!.workspaceId).toBe(workspaceId);
+      await processProviderEvent(db, row!.id);
+
+      const after = await base.invoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        include: { payments: true },
+      });
+      expect(after.status).toBe('sent');
+      expect(Number(after.amountPaid)).toBe(0);
+      expect(after.payments[0]!.status).toBe('pending');
+    } finally {
+      await base.payment.deleteMany({ where: { invoiceId: invoice.id } });
+      await base.invoice.deleteMany({ where: { id: invoice.id } });
+      await base.workspace.deleteMany({ where: { id: victim.id } });
+    }
   });
 });

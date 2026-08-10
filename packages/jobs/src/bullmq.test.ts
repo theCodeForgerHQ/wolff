@@ -177,6 +177,21 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
     expect(await queue.getJobCounts('waiting')).toEqual({ waiting: 1 });
   });
 
+  it('holds a job back for its delay', async () => {
+    const job: Job = {
+      type: 'automations.tick',
+      payload: { runId: randomUUID() },
+      jobId: `delayed:${run}`,
+      delayMs: 60_000,
+    };
+
+    await dispatcher.dispatch(job);
+
+    const queued = await queue.getJob(`delayed-${run}`);
+    expect(await queued?.getState()).toBe('delayed');
+    expect(queued?.opts.delay).toBe(60_000);
+  });
+
   it('retries a failing job up to its attempts, then records the failure for good', async () => {
     const { emailId, outboxId } = await emailEvent();
     emailFails = true;

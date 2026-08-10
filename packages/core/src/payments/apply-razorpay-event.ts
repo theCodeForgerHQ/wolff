@@ -9,9 +9,12 @@ import { writeOutboxEvent } from '../outbox';
  * Razorpay amounts are in the smallest currency unit (paise for INR). All
  * stored amounts are in the main unit, so values are divided by 100.
  *
- * Payments are found by the provider's order or payment id, before any
- * workspace is known. That lookup is one of the tenant guard's documented
- * exemptions; the workspace is then taken from the invoice.
+ * Each event was verified with one workspace's webhook secret, and the
+ * caller passes that workspace in. Payments are looked up by the provider's
+ * order or payment id *within that workspace only*: another tenant that
+ * signs an event with its own secret and quotes someone else's order id
+ * finds nothing. A capture must also match the payment's amount and
+ * currency before the invoice is credited.
  */
 type Tx = Prisma.TransactionClient;
 
@@ -35,10 +38,12 @@ const amountFromPaise = (value: unknown): number => {
 };
 
 /** Lock the payment row by Razorpay order id. */
-async function lockPaymentByOrderId(tx: Tx, orderId: string) {
+async function lockPaymentByOrderId(tx: Tx, workspaceId: string, orderId: string) {
   const locked = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM payments WHERE provider_order_id = ${orderId}
-    ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+    SELECT p.id FROM payments p JOIN invoices i ON i.id = p.invoice_id
+    WHERE p.provider_order_id = ${orderId} AND i.workspace_id = ${workspaceId}
+      AND p.provider = 'razorpay'::payment_provider
+    ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p`;
   if (!locked[0]) return null;
   return tx.payment.findUnique({
     where: { id: locked[0].id },
@@ -49,10 +54,12 @@ async function lockPaymentByOrderId(tx: Tx, orderId: string) {
 }
 
 /** Lock the payment row by Razorpay payment id. */
-async function lockPaymentByPaymentId(tx: Tx, paymentId: string) {
+async function lockPaymentByPaymentId(tx: Tx, workspaceId: string, paymentId: string) {
   const locked = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM payments WHERE provider_payment_id = ${paymentId}
-    ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+    SELECT p.id FROM payments p JOIN invoices i ON i.id = p.invoice_id
+    WHERE p.provider_payment_id = ${paymentId} AND i.workspace_id = ${workspaceId}
+      AND p.provider = 'razorpay'::payment_provider
+    ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p`;
   if (!locked[0]) return null;
   return tx.payment.findUnique({
     where: { id: locked[0].id },
@@ -62,7 +69,16 @@ async function lockPaymentByPaymentId(tx: Tx, paymentId: string) {
   });
 }
 
-export async function applyRazorpayEvent(tx: Tx, payload: unknown): Promise<void> {
+export interface RazorpayEventScope {
+  /** The workspace whose secret verified the event. */
+  workspaceId: string;
+}
+
+export async function applyRazorpayEvent(
+  tx: Tx,
+  payload: unknown,
+  { workspaceId }: RazorpayEventScope
+): Promise<void> {
   const event = (payload ?? {}) as RazorpayPayload;
   const type = str(event.event);
   const paymentEntity = event.payload?.payment?.entity ?? {};
@@ -74,10 +90,11 @@ export async function applyRazorpayEvent(tx: Tx, payload: unknown): Promise<void
       const paymentId = str(paymentEntity.id);
       if (!paymentId) throw new Error('payment.captured without a payment id');
       const orderId = str(paymentEntity.order_id);
-      await applyPaymentCaptured(tx, {
+      await applyPaymentCaptured(tx, workspaceId, {
         paymentId,
         orderId,
         amountPaise: paymentEntity.amount,
+        currency: paymentEntity.currency,
         method: str(paymentEntity.method),
         feePaise: paymentEntity.fee,
       });
@@ -87,17 +104,18 @@ export async function applyRazorpayEvent(tx: Tx, payload: unknown): Promise<void
       const paymentId = str(paymentEntity.id);
       const failedOrderId = str(paymentEntity.order_id);
       if (!paymentId) throw new Error('payment.failed without a payment id');
-      await applyPaymentFailed(tx, paymentId, failedOrderId);
+      await applyPaymentFailed(tx, workspaceId, paymentId, failedOrderId);
       return;
     }
     case 'order.paid': {
       const orderId = str(orderEntity.id);
       const paymentId = str(paymentEntity.id);
       if (!orderId) throw new Error('order.paid without an order id');
-      await applyOrderPaid(tx, {
+      await applyOrderPaid(tx, workspaceId, {
         orderId,
         paymentId,
         amountPaise: paymentEntity.amount,
+        currency: paymentEntity.currency ?? orderEntity.currency,
         method: str(paymentEntity.method),
         feePaise: paymentEntity.fee,
       });
@@ -106,7 +124,7 @@ export async function applyRazorpayEvent(tx: Tx, payload: unknown): Promise<void
     case 'refund.processed': {
       const paymentId = str(refundEntity.payment_id);
       if (!paymentId) throw new Error('refund.processed without a payment id');
-      await applyRefund(tx, paymentId, amountFromPaise(refundEntity.amount));
+      await applyRefund(tx, workspaceId, paymentId, amountFromPaise(refundEntity.amount));
       return;
     }
     default:
@@ -119,27 +137,55 @@ interface CaptureInput {
   paymentId: string;
   orderId?: string;
   amountPaise: unknown;
+  currency: unknown;
   method?: string;
   feePaise?: unknown;
 }
 
-async function applyPaymentCaptured(tx: Tx, input: CaptureInput): Promise<void> {
-  let payment = await lockPaymentByPaymentId(tx, input.paymentId);
+/**
+ * The money Razorpay says it captured must be the money this payment asked
+ * for. A mismatch is not applied; it throws, so the event keeps the error
+ * and stays unprocessed for someone to look at.
+ */
+function assertMatchesPayment(
+  payment: { amount: unknown; currency: string },
+  amountPaise: unknown,
+  currency: unknown
+): number {
+  const amount = amountFromPaise(amountPaise);
+  const expectedPaise = Math.round(Number(payment.amount) * 100);
+  if (Math.round(amount * 100) !== expectedPaise) {
+    throw new Error(
+      `Razorpay amount ${amountPaise} paise does not match the payment (${expectedPaise} paise)`
+    );
+  }
+  if (typeof currency !== 'string' || currency.toUpperCase() !== payment.currency.toUpperCase()) {
+    throw new Error(
+      `Razorpay currency ${String(currency)} does not match the payment (${payment.currency})`
+    );
+  }
+  return amount;
+}
+
+async function applyPaymentCaptured(
+  tx: Tx,
+  workspaceId: string,
+  input: CaptureInput
+): Promise<void> {
+  let payment = await lockPaymentByPaymentId(tx, workspaceId, input.paymentId);
   if (!payment && input.orderId) {
-    payment = await lockPaymentByOrderId(tx, input.orderId);
+    payment = await lockPaymentByOrderId(tx, workspaceId, input.orderId);
   }
   if (!payment) return;
 
   if (payment.status === 'completed' || payment.status === 'refunded') return;
 
-  const amount = amountFromPaise(input.amountPaise);
-  const { workspaceId } = payment.invoice;
+  const amount = assertMatchesPayment(payment, input.amountPaise, input.currency);
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
     data: {
       status: 'completed',
-      workspaceId,
       processedAt: new Date(),
       providerPaymentId: input.paymentId,
       providerOrderId: input.orderId ?? payment.providerOrderId,
@@ -152,16 +198,21 @@ async function applyPaymentCaptured(tx: Tx, input: CaptureInput): Promise<void> 
   await creditInvoice(tx, payment.invoiceId, workspaceId, amount, payment.id, 'razorpay');
 }
 
-async function applyPaymentFailed(tx: Tx, paymentId: string, orderId?: string): Promise<void> {
-  let payment = await lockPaymentByPaymentId(tx, paymentId);
+async function applyPaymentFailed(
+  tx: Tx,
+  workspaceId: string,
+  paymentId: string,
+  orderId?: string
+): Promise<void> {
+  let payment = await lockPaymentByPaymentId(tx, workspaceId, paymentId);
   if (!payment && orderId) {
-    payment = await lockPaymentByOrderId(tx, orderId);
+    payment = await lockPaymentByOrderId(tx, workspaceId, orderId);
   }
   if (!payment || payment.status !== 'pending') return;
 
   await tx.payment.update({
-    where: { id: payment.id, workspaceId: payment.invoice.workspaceId },
-    data: { status: 'failed', workspaceId: payment.invoice.workspaceId },
+    where: { id: payment.id, workspaceId },
+    data: { status: 'failed' },
   });
 }
 
@@ -169,24 +220,23 @@ interface OrderPaidInput {
   orderId: string;
   paymentId?: string;
   amountPaise: unknown;
+  currency: unknown;
   method?: string;
   feePaise?: unknown;
 }
 
-async function applyOrderPaid(tx: Tx, input: OrderPaidInput): Promise<void> {
-  const payment = await lockPaymentByOrderId(tx, input.orderId);
+async function applyOrderPaid(tx: Tx, workspaceId: string, input: OrderPaidInput): Promise<void> {
+  const payment = await lockPaymentByOrderId(tx, workspaceId, input.orderId);
   if (!payment) return;
 
   if (payment.status === 'completed' || payment.status === 'refunded') return;
 
-  const amount = amountFromPaise(input.amountPaise);
-  const { workspaceId } = payment.invoice;
+  const amount = assertMatchesPayment(payment, input.amountPaise, input.currency);
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
     data: {
       status: 'completed',
-      workspaceId,
       processedAt: new Date(),
       providerPaymentId: input.paymentId ?? payment.providerPaymentId,
       providerOrderId: input.orderId,
@@ -264,19 +314,25 @@ async function creditInvoice(
   });
 }
 
-async function applyRefund(tx: Tx, paymentId: string, refundAmount: number): Promise<void> {
-  const payment = await lockPaymentByPaymentId(tx, paymentId);
+async function applyRefund(
+  tx: Tx,
+  workspaceId: string,
+  paymentId: string,
+  refundAmount: number
+): Promise<void> {
+  const payment = await lockPaymentByPaymentId(tx, workspaceId, paymentId);
   if (!payment || payment.status !== 'completed') return;
   if (refundAmount <= 0) return;
+  if (refundAmount > Number(payment.amount) + 0.001) {
+    throw new Error('Razorpay refund is larger than the payment');
+  }
 
-  const { workspaceId } = payment.invoice;
   const isFullRefund = refundAmount >= Number(payment.amount) - 0.01;
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
     data: {
       status: isFullRefund ? 'refunded' : 'completed',
-      workspaceId,
       refundedAt: new Date(),
       refundAmount,
       refundReason: 'Refunded via Razorpay',

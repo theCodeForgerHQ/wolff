@@ -77,7 +77,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/automations', () => {
     expect(res.status).toBe(400);
   });
 
-  it('approves and rejects a run waiting for approval', async () => {
+  it('refuses to decide an approval with an API key', async () => {
     const automation = await base.automation.create({
       data: {
         workspaceId: ws.id,
@@ -97,20 +97,11 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/automations', () => {
     });
 
     const approve = await as(ws.key).post(`/v1/automations/runs/${run.id}/approve`);
-    expect(approve.status).toBe(200);
-    expect(approve.body.data.status).toBe('running');
+    const reject = await as(ws.key).post(`/v1/automations/runs/${run.id}/reject`);
 
-    const run2 = await base.automationRun.create({
-      data: {
-        workspaceId: ws.id,
-        automationId: automation.id,
-        subjectId: '00000000-0000-0000-0000-000000000001',
-        status: 'waiting_approval',
-        currentStep: 0,
-      },
-    });
-    const reject = await as(ws.key).post(`/v1/automations/runs/${run2.id}/reject`);
-    expect(reject.status).toBe(200);
-    expect(reject.body.data.status).toBe('cancelled');
+    expect([approve.status, reject.status]).toEqual([403, 403]);
+    expect(approve.body.error.code).toBe('insufficient_scope');
+    const unchanged = await base.automationRun.findUniqueOrThrow({ where: { id: run.id } });
+    expect(unchanged.status).toBe('waiting_approval');
   });
 });

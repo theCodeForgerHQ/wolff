@@ -32,6 +32,34 @@ export const createLeadSchema = z
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 
+/** An empty form field arrives as "": treat it as absent. */
+const optionalText = (max: number) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().trim().max(max).optional()
+  );
+
+/**
+ * What a visitor may send through the widget (`POST /v1/public/leads`).
+ * Only what a contact form asks for; source, status, score and owner are
+ * the workspace's to decide, so they are not accepted here.
+ */
+export const publicLeadSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    email: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().email().max(255).optional()
+    ),
+    phone: optionalText(30),
+    company: optionalText(200),
+    message: optionalText(5000),
+  })
+  .strict()
+  .openapi('PublicLead');
+
+export type PublicLeadInput = z.infer<typeof publicLeadSchema>;
+
 export const updateLeadSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),

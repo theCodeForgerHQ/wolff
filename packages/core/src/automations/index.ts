@@ -1,6 +1,8 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
-import type { CoreContext, DbOrTx } from '../context';
+import type { CoreContext, Db } from '../context';
+import { CoreError } from '../errors';
+import { writeOutboxEvent } from '../outbox';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
 
 export interface CreateAutomationInput {
@@ -49,7 +51,36 @@ function toDbSteps(steps: AutomationStep[]): Prisma.InputJsonValue {
   return steps as unknown as Prisma.InputJsonValue;
 }
 
+/**
+ * Steps name a stage or an email template by id. Both must belong to the
+ * caller's workspace; the ids come from the request body.
+ */
+async function assertStepReferences(ctx: CoreContext, steps: AutomationStep[]): Promise<void> {
+  const stageIds = steps.flatMap((s) => (s.type === 'move_deal' ? [s.stageId] : []));
+  const templateIds = steps.flatMap((s) => (s.type === 'send_email' ? [s.templateId] : []));
+  const [stages, templates] = await Promise.all([
+    stageIds.length
+      ? ctx.db.stage.count({ where: { workspaceId: ctx.workspaceId, id: { in: stageIds } } })
+      : 0,
+    templateIds.length
+      ? ctx.db.emailTemplate.count({
+          where: { workspaceId: ctx.workspaceId, id: { in: templateIds } },
+        })
+      : 0,
+  ]);
+  const details: Record<string, string[]> = {};
+  if (stages !== new Set(stageIds).size)
+    details.steps = ['A move_deal step names an unknown stage'];
+  if (templates !== new Set(templateIds).size) {
+    details.steps = [...(details.steps ?? []), 'A send_email step names an unknown template'];
+  }
+  if (Object.keys(details).length > 0) {
+    throw new CoreError('validation_error', 'The automation refers to unknown records', details);
+  }
+}
+
 export async function createAutomation(ctx: CoreContext, input: CreateAutomationInput) {
+  await assertStepReferences(ctx, input.steps);
   return ctx.db.automation.create({
     data: {
       workspaceId: ctx.workspaceId,
@@ -66,8 +97,9 @@ export async function updateAutomation(ctx: CoreContext, id: string, input: Upda
     where: { id, workspaceId: ctx.workspaceId },
   });
   if (!existing) return null;
+  if (input.steps) await assertStepReferences(ctx, input.steps);
   return ctx.db.automation.update({
-    where: { id },
+    where: { id, workspaceId: ctx.workspaceId },
     data: {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.trigger !== undefined && { trigger: input.trigger }),
@@ -82,7 +114,7 @@ export async function deleteAutomation(ctx: CoreContext, id: string) {
     where: { id, workspaceId: ctx.workspaceId },
   });
   if (!existing) return null;
-  await ctx.db.automation.delete({ where: { id } });
+  await ctx.db.automation.delete({ where: { id, workspaceId: ctx.workspaceId } });
   return existing;
 }
 
@@ -152,6 +184,7 @@ interface LogEntry {
   stepIndex: number;
   action: string;
   message: string;
+  actorId?: string;
 }
 
 function pushLog(run: { log: Prisma.JsonValue }, entry: LogEntry): Prisma.InputJsonValue {
@@ -159,41 +192,94 @@ function pushLog(run: { log: Prisma.JsonValue }, entry: LogEntry): Prisma.InputJ
   return [...existing, entry] as unknown as Prisma.InputJsonValue;
 }
 
+const ROLE_RANK: Record<string, number> = { viewer: 0, member: 1, editor: 1, admin: 2, owner: 3 };
+
+/**
+ * Decides a run that is waiting at an approval step. The decision belongs to
+ * a person ("approve or reject in the app") whose workspace role
+ * is at least the role the step names; an API key has no person behind it
+ * and is refused.
+ *
+ * The status check and the change are one conditional update, so of two
+ * concurrent decisions exactly one applies. An approval also queues the
+ * run's next tick through the outbox, in the same transaction.
+ */
 export async function approveRun(ctx: CoreContext, id: string, approved: boolean) {
   const run = await ctx.db.automationRun.findFirst({
     where: { id, workspaceId: ctx.workspaceId, status: 'waiting_approval' },
+    include: { automation: { select: { steps: true } } },
   });
   if (!run) return null;
 
-  if (!approved) {
-    return ctx.db.automationRun.update({
-      where: { id },
-      data: {
-        status: 'cancelled',
-        log: pushLog(run, {
-          at: new Date().toISOString(),
-          stepIndex: run.currentStep,
-          action: 'approval_rejected',
-          message: 'Run rejected by user.',
-        }),
-      },
-    });
-  }
+  const steps = Array.isArray(run.automation.steps)
+    ? (run.automation.steps as unknown as AutomationStep[])
+    : [];
+  const step = steps[run.currentStep];
+  const required = step?.type === 'approval' ? step.role : 'owner';
+  await assertMayDecide(ctx, required);
 
-  return ctx.db.automationRun.update({
-    where: { id },
-    data: {
-      status: 'running',
-      waitingSince: null,
-      currentStep: { increment: 1 },
-      log: pushLog(run, {
+  const entry: LogEntry = approved
+    ? {
         at: new Date().toISOString(),
         stepIndex: run.currentStep,
         action: 'approval_approved',
         message: 'Approved; continuing.',
-      }),
-    },
+      }
+    : {
+        at: new Date().toISOString(),
+        stepIndex: run.currentStep,
+        action: 'approval_rejected',
+        message: 'Run rejected by user.',
+      };
+  if (ctx.actorId) entry.actorId = ctx.actorId;
+
+  return ctx.db.$transaction(async (tx) => {
+    const changed = await tx.automationRun.updateMany({
+      where: {
+        id,
+        workspaceId: ctx.workspaceId,
+        status: 'waiting_approval',
+        currentStep: run.currentStep,
+      },
+      data: approved
+        ? {
+            status: 'running',
+            waitingSince: null,
+            currentStep: run.currentStep + 1,
+            log: pushLog(run, entry),
+          }
+        : { status: 'cancelled', log: pushLog(run, entry) },
+    });
+    if (changed.count === 0) return null;
+
+    if (approved) {
+      await writeOutboxEvent(tx, {
+        workspaceId: ctx.workspaceId,
+        type: 'automation.tick',
+        aggregateType: 'automation_run',
+        aggregateId: id,
+        payload: { runId: id },
+      });
+    }
+    return tx.automationRun.findFirst({ where: { id, workspaceId: ctx.workspaceId } });
   });
+}
+
+async function assertMayDecide(ctx: CoreContext, required: string): Promise<void> {
+  if (!ctx.actorId) {
+    throw new CoreError(
+      'insufficient_scope',
+      'Approvals are decided by a workspace member in the app, not with an API key'
+    );
+  }
+  const membership = await ctx.db.workspaceMember.findFirst({
+    where: { workspaceId: ctx.workspaceId, userId: ctx.actorId },
+    select: { role: true },
+  });
+  const rank = membership ? (ROLE_RANK[membership.role] ?? 0) : -1;
+  if (rank < (ROLE_RANK[required] ?? ROLE_RANK.owner!)) {
+    throw new CoreError('insufficient_scope', `This approval needs the ${required} role`);
+  }
 }
 
 export async function tickAutomationRun(
@@ -213,7 +299,7 @@ export async function tickAutomationRun(
     : [];
   if (run.currentStep >= steps.length) {
     return ctx.db.automationRun.update({
-      where: { id: run.id },
+      where: { id: run.id, workspaceId: ctx.workspaceId },
       data: { status: 'done' },
     });
   }
@@ -224,7 +310,7 @@ export async function tickAutomationRun(
   if (step.type === 'wait') {
     if (!run.waitingSince) {
       await ctx.db.automationRun.update({
-        where: { id: run.id },
+        where: { id: run.id, workspaceId: ctx.workspaceId },
         data: {
           waitingSince: options.now,
           log: pushLog(run, {
@@ -245,7 +331,7 @@ export async function tickAutomationRun(
 
   if (step.type === 'approval') {
     await ctx.db.automationRun.update({
-      where: { id: run.id },
+      where: { id: run.id, workspaceId: ctx.workspaceId },
       data: {
         status: 'waiting_approval',
         waitingSince: options.now,
@@ -264,28 +350,61 @@ export async function tickAutomationRun(
     const template = await ctx.db.emailTemplate.findFirst({
       where: { id: step.templateId, workspaceId: ctx.workspaceId },
     });
-    if (template) {
-      const subject = await resolveSubject(ctx.db, run);
-      await ctx.db.scheduledEmail.create({
-        data: {
+    const subject = template ? await resolveSubject(ctx, run) : null;
+    if (!template || !subject?.email) {
+      return advanceRun(
+        ctx,
+        run,
+        template ? 'No recipient email; skipped.' : 'Email template not found; skipped.'
+      );
+    }
+    // The email, its send job and the step advance commit together, and only
+    // if the run is still on this step: a repeated tick sends nothing twice.
+    return ctx.db.$transaction(async (tx) => {
+      const moved = await tx.automationRun.updateMany({
+        where: {
+          id: run.id,
           workspaceId: ctx.workspaceId,
-          type: 'automation',
-          entityType:
-            subjectTypeOf[run.automation.trigger as AutomationTrigger] ?? 'automation_run',
-          entityId: run.subjectId,
-          recipientEmail: subject?.email ?? '',
-          recipientName: subject?.name ?? '',
-          subject: template.subject,
-          body: template.body,
-          scheduledFor: options.now,
+          status: 'running',
+          currentStep: run.currentStep,
+        },
+        data: {
+          currentStep: run.currentStep + 1,
+          waitingSince: null,
+          log: pushLog(run, {
+            at: options.now.toISOString(),
+            stepIndex: run.currentStep,
+            action: 'step_completed',
+            message: 'Email queued.',
+          }),
         },
       });
-    }
-    return advanceRun(
-      ctx,
-      run,
-      template ? 'Email scheduled.' : 'Email template not found; skipped.'
-    );
+      if (moved.count === 1) {
+        const email = await tx.scheduledEmail.create({
+          data: {
+            workspaceId: ctx.workspaceId,
+            templateId: template.id,
+            type: 'automation',
+            entityType:
+              subjectTypeOf[run.automation.trigger as AutomationTrigger] ?? 'automation_run',
+            entityId: run.subjectId,
+            recipientEmail: subject.email!,
+            recipientName: subject.name ?? '',
+            subject: template.subject,
+            body: template.body,
+            scheduledFor: options.now,
+          },
+        });
+        await writeOutboxEvent(tx, {
+          workspaceId: ctx.workspaceId,
+          type: 'email.send',
+          aggregateType: 'scheduled_email',
+          aggregateId: email.id,
+          payload: { scheduledEmailId: email.id, workspaceId: ctx.workspaceId },
+        });
+      }
+      return tx.automationRun.findFirst({ where: { id: run.id, workspaceId: ctx.workspaceId } });
+    });
   }
 
   if (step.type === 'ai_draft_email') {
@@ -296,13 +415,25 @@ export async function tickAutomationRun(
     const deal = await ctx.db.deal.findFirst({
       where: { id: run.subjectId, workspaceId: ctx.workspaceId },
     });
-    if (deal) {
+    // The stage must be in this workspace and on the deal's own pipeline;
+    // the id was checked when the automation was saved, but the stage may
+    // have been deleted or the deal moved to another pipeline since.
+    const stage = deal
+      ? await ctx.db.stage.findFirst({
+          where: { id: step.stageId, workspaceId: ctx.workspaceId, pipelineId: deal.pipelineId },
+        })
+      : null;
+    if (deal && stage) {
       await ctx.db.deal.update({
         where: { id: deal.id, workspaceId: ctx.workspaceId },
-        data: { stageId: step.stageId },
+        data: { stageId: stage.id },
       });
     }
-    return advanceRun(ctx, run, deal ? 'Deal moved.' : 'Deal not found; skipped.');
+    return advanceRun(
+      ctx,
+      run,
+      !deal ? 'Deal not found; skipped.' : stage ? 'Deal moved.' : 'Stage not found; skipped.'
+    );
   }
 
   return run;
@@ -314,7 +445,7 @@ async function advanceRun(
   message: string
 ) {
   return ctx.db.automationRun.update({
-    where: { id: run.id },
+    where: { id: run.id, workspaceId: ctx.workspaceId },
     data: {
       currentStep: { increment: 1 },
       waitingSince: null,
@@ -329,27 +460,27 @@ async function advanceRun(
 }
 
 async function resolveSubject(
-  db: DbOrTx,
+  { db, workspaceId }: CoreContext,
   run: { subjectId: string; automation: { trigger: string } }
 ): Promise<{ name: string | null; email: string | null } | null> {
   const trigger = run.automation.trigger as AutomationTrigger;
   if (trigger === 'invoice.overdue') {
     const invoice = await db.invoice.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: { client: { select: { name: true, email: true } } },
     });
     return invoice?.client ?? null;
   }
   if (trigger === 'quote.sent_no_response') {
     const quote = await db.quote.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: { client: { select: { name: true, email: true } } },
     });
     return quote?.client ?? null;
   }
   if (trigger === 'deal.stalled') {
     const deal = await db.deal.findFirst({
-      where: { id: run.subjectId },
+      where: { id: run.subjectId, workspaceId },
       include: {
         lead: { select: { name: true, email: true } },
         client: { select: { name: true, email: true } },
@@ -360,8 +491,21 @@ async function resolveSubject(
   return null;
 }
 
-export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date }) {
-  const automations = await db.automation.findMany({ where: { isActive: true } });
+/** Ids of runs still in progress, across workspaces, for the periodic tick. */
+export async function listRunningAutomationRuns(db: Db, limit = 500): Promise<string[]> {
+  const runs = await db.$unscoped.automationRun.findMany({
+    where: { status: 'running' },
+    select: { id: true },
+    orderBy: { updatedAt: 'asc' },
+    take: limit,
+  });
+  return runs.map((r) => r.id);
+}
+
+export async function scanAutomationTriggers(db: Db, options: { now: Date }) {
+  // The scheduler runs for every workspace, so this one list is unscoped;
+  // everything after it is pinned to the automation's own workspace.
+  const automations = await db.$unscoped.automation.findMany({ where: { isActive: true } });
   const created: string[] = [];
   const STALL_DAYS = 7;
   const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
@@ -377,7 +521,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({
@@ -404,7 +552,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({
@@ -430,7 +582,11 @@ export async function scanAutomationTriggers(db: DbOrTx, options: { now: Date })
       });
       for (const subject of subjects) {
         const existing = await db.automationRun.findFirst({
-          where: { automationId: automation.id, subjectId: subject.id },
+          where: {
+            workspaceId: automation.workspaceId,
+            automationId: automation.id,
+            subjectId: subject.id,
+          },
         });
         if (!existing) {
           const run = await db.automationRun.create({

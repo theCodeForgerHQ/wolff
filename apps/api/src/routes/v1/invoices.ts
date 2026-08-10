@@ -10,13 +10,8 @@ import '../../context';
 import { sendData, sendError } from '../../http';
 import { requireScopes } from '../../middleware/auth';
 import { requireIdempotencyKey } from '../../middleware/idempotency';
-import {
-  createPaymentLink,
-  type PaymentProviderClients,
-  type PaymentProvider,
-} from '../../payments/provider';
-import Stripe from 'stripe';
-import Razorpay from 'razorpay';
+import type { PaymentProviderClients } from '../../payments/provider';
+import { defaultPaymentClients, startInvoicePayment } from '../../payments/start-payment';
 
 export interface InvoiceRouteDeps {
   paymentClients?: PaymentProviderClients;
@@ -34,16 +29,7 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
   const notFound = (res: Parameters<typeof sendError>[0]) =>
     sendError(res, 'not_found', 'Not found');
 
-  const clients = deps.paymentClients ?? {
-    stripe: new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder', {
-      apiVersion: '2026-08-26.dahlia',
-      typescript: true,
-    }),
-    razorpay: new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID ?? 'rzp_test_placeholder',
-      key_secret: process.env.RAZORPAY_KEY_SECRET ?? 'secret_placeholder',
-    }),
-  };
+  const clients = deps.paymentClients ?? defaultPaymentClients();
 
   router.post(
     '/invoices/:id/payment-links',
@@ -62,59 +48,13 @@ export function invoiceRoutes(db: Db, deps: InvoiceRouteDeps = {}): Router {
       });
       if (!invoice) return notFound(res);
 
-      const settings = await db.paymentSettings.findUnique({
-        where: { workspaceId },
-      });
-      if (!settings) {
-        return sendError(res, 'not_configured', 'Payment settings not found');
-      }
-
       try {
-        const link = await createPaymentLink(
-          clients,
-          {
-            id: invoice.id,
-            workspaceId: invoice.workspaceId,
-            clientId: invoice.clientId,
-            total: Number(invoice.total),
-            currency: invoice.currency,
-            status: invoice.status,
-            invoiceNumber: invoice.invoiceNumber,
-            client: invoice.client,
-          },
-          {
-            stripeAccountId: settings.stripeAccountId,
-            chargesEnabled: settings.chargesEnabled,
-            razorpayKeyId: settings.razorpayKeyId,
-            razorpayKeySecretEnc: settings.razorpayKeySecretEnc,
-            defaultProviderByCurrency: (settings.defaultProviderByCurrency as Record<
-              string,
-              PaymentProvider
-            >) ?? { '*': 'stripe' },
-          },
-          {
-            provider: input.provider,
-            appUrl: deps.appUrl ?? process.env.APP_URL ?? 'http://localhost:3000',
-          }
-        );
-
-        // A pending Payment row is created now so the provider webhook can
-        // reconcile against it. The idempotency middleware prevents duplicate
-        // rows if the client retries with the same key.
-        await db.payment.create({
-          data: {
-            workspaceId,
-            invoiceId: invoice.id,
-            amount: invoice.total,
-            currency: invoice.currency,
-            status: 'pending',
-            provider: link.provider,
-            providerOrderId: link.provider === 'razorpay' ? link.orderId : null,
-            stripePaymentIntentId: link.provider === 'stripe' ? link.paymentIntentId : null,
-            paymentMethod: link.provider,
-          },
+        // The idempotency middleware stops a retried request from opening a
+        // second link and payment row.
+        const link = await startInvoicePayment(db, clients, invoice, {
+          provider: input.provider,
+          appUrl: deps.appUrl ?? process.env.APP_URL ?? 'http://localhost:3000',
         });
-
         sendData(res, paymentLinkResponseSchema.parse(link));
       } catch (error) {
         if (error instanceof CoreError) {

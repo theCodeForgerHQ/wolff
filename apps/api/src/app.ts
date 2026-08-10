@@ -115,7 +115,15 @@ export function createApp(deps: AppDeps): Express {
       credentials: false,
     })
   );
-  app.use('/v1/public', publicRoutes({ db, rateLimitStore: deps.rateLimitStore }));
+  app.use(
+    '/v1/public',
+    publicRoutes({
+      db,
+      rateLimitStore: deps.rateLimitStore,
+      paymentClients: deps.paymentClients,
+      appUrl: config.APP_URL,
+    })
+  );
 
   // Private routes are called by the web app's origin only. No wildcard.
   app.use(

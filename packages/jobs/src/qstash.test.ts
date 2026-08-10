@@ -122,4 +122,21 @@ describe('QStashDispatcher', () => {
       },
     ]);
   });
+
+  it('asks QStash to deliver a delayed job later, in whole seconds', async () => {
+    const published: { delay?: number }[] = [];
+    const dispatcher = new QStashDispatcher({
+      client: { publishJSON: async (request) => void published.push(request) },
+      apiUrl: 'https://api.example.test',
+    });
+
+    await dispatcher.dispatch({
+      type: 'automations.tick',
+      payload: { runId: 'r' },
+      jobId: 'automation:r:0:wake',
+      delayMs: 1_500,
+    });
+
+    expect(published[0]!.delay).toBe(2);
+  });
 });

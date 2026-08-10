@@ -6,7 +6,11 @@ import {
   markOverdueInvoices,
   scanInvoiceReminders,
 } from '@wolff/core/invoices';
-import { scanAutomationTriggers, tickAutomationRun } from '@wolff/core/automations';
+import {
+  listRunningAutomationRuns,
+  scanAutomationTriggers,
+  tickAutomationRun,
+} from '@wolff/core/automations';
 import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
 import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
 import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
@@ -188,7 +192,12 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
 
 const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => {
   if (!runId) {
-    const created = await scanAutomationTriggers(ctx.db, { now: ctx.now() });
+    // The periodic tick: start runs for new subjects, then give every run
+    // that is still going a tick. The database is the record, so a wake-up
+    // job lost with Redis (or never scheduled, on the drain) costs at most
+    // one period; ticking a run whose wait is not over does nothing.
+    const now = ctx.now();
+    const created = await scanAutomationTriggers(ctx.db, { now });
     for (const id of created) {
       await ctx.dispatch({
         type: 'automations.tick',
@@ -196,20 +205,31 @@ const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => 
         jobId: `automation:${id}:0`,
       });
     }
+    const stamp = now.toISOString().slice(0, 16);
+    for (const id of await listRunningAutomationRuns(ctx.db)) {
+      if (created.includes(id)) continue;
+      await ctx.dispatch({
+        type: 'automations.tick',
+        payload: { runId: id },
+        jobId: `automation:${id}:tick:${stamp}`,
+      });
+    }
     return;
   }
 
-  const run = await ctx.db.automationRun.findUnique({ where: { id: runId } });
+  const run = await ctx.db.$unscoped.automationRun.findUnique({ where: { id: runId } });
   if (!run) return;
 
   const dispatch: Parameters<typeof tickAutomationRun>[2]['dispatch'] = async (
     dispatchedRunId,
-    stepIndex
+    stepIndex,
+    delayMs
   ) => {
     await ctx.dispatch({
       type: 'automations.tick',
       payload: { runId: dispatchedRunId },
-      jobId: `automation:${dispatchedRunId}:${stepIndex}`,
+      jobId: `automation:${dispatchedRunId}:${stepIndex}:wake`,
+      delayMs,
     });
   };
 

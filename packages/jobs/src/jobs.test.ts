@@ -59,6 +59,14 @@ describe('jobForOutboxEvent', () => {
     expect(job?.payload).toEqual({ deliveryId: 'd-1', workspaceId: 'ws-1' });
   });
 
+  it('turns an approved run into its next tick', () => {
+    expect(jobForOutboxEvent(event('automation.tick', { runId: 'run-1' }))).toMatchObject({
+      type: 'automations.tick',
+      payload: { runId: 'run-1' },
+      jobId: 'outbox:evt-1',
+    });
+  });
+
   it.each([
     ['an unknown type', event('nonsense.happened', {})],
     ['a payload that does not fit the job', event('webhook.deliver', { wrong: true })],
@@ -466,6 +474,78 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(rows.get(owed.id)).toMatchObject({ status: 'failed', lastError: 'gave up' });
   });
 
+  it('starts runs for overdue invoices when scanning for triggers', async () => {
+    const overdue = await invoice({ status: 'overdue' });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Overdue nudge',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'wait', days: 3 }],
+      },
+    });
+
+    await runJob(ctx, { type: 'automations.tick', payload: {}, jobId: `scan:${run}` });
+
+    const runs = await base.automationRun.findMany({
+      where: { workspaceId, automationId: automation.id },
+    });
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ subjectId: overdue.id, status: 'running' });
+  });
+
+  it('resumes a wait step once the wait is over', async () => {
+    const subject = await invoice({ status: 'overdue' });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Wait then finish',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'wait', days: 3 }],
+        isActive: false,
+      },
+    });
+    const waiting = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: subject.id, status: 'running' },
+    });
+    let clock = NOW;
+    // Other suites share the database: run only this run's jobs.
+    const local = new InlineDispatcher((job) => runJob(testCtx, job));
+    const testCtx: JobContext = {
+      ...ctx,
+      now: () => clock,
+      dispatch: async (job) => {
+        if ((job.payload as { runId?: string }).runId === waiting.id) {
+          await local.dispatch(job);
+        }
+      },
+    };
+
+    await runJob(testCtx, {
+      type: 'automations.tick',
+      payload: { runId: waiting.id },
+      jobId: `tick:${waiting.id}`,
+    });
+
+    // The wake-up is queued for when the wait ends, not right away.
+    expect(local.dispatched).toEqual([
+      expect.objectContaining({ type: 'automations.tick', delayMs: 3 * 86_400_000 }),
+    ]);
+    await local.drain();
+    const stillWaiting = await base.automationRun.findUniqueOrThrow({ where: { id: waiting.id } });
+    expect(stillWaiting.status).toBe('running');
+    expect(stillWaiting.currentStep).toBe(0);
+
+    // Three days later the periodic tick (the drain, on the demo) resumes
+    // it, even if the delayed job was lost with Redis.
+    clock = new Date(NOW.getTime() + 3 * 86_400_000 + 60_000);
+    await runJob(testCtx, { type: 'automations.tick', payload: {}, jobId: `scan:${waiting.id}` });
+    await local.drain();
+
+    const done = await base.automationRun.findUniqueOrThrow({ where: { id: waiting.id } });
+    expect(done.status).toBe('done');
+  });
+
   it('pauses an automation run at approval and resumes on approve', async () => {
     const pipeline = await base.pipeline.create({
       data: { workspace: { connect: { id: workspaceId } }, name: 'Sales' },
@@ -526,18 +606,24 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(paused.status).toBe('waiting_approval');
     expect(paused.currentStep).toBe(0);
 
-    await approveRun({ db, workspaceId }, run.id, true);
-
-    await runJob(ctx, {
-      type: 'automations.tick',
-      payload: { runId: run.id },
-      jobId: `tick:${run.id}:resume`,
+    const approver = await base.user.create({
+      data: { email: `approver-${run.id}@example.test`, name: 'Approver' },
     });
+    await base.workspaceMember.create({
+      data: { workspaceId, userId: approver.id, role: 'owner' },
+    });
+    await approveRun({ db, workspaceId, actorId: approver.id }, run.id, true);
+
+    // The approval queued the next tick through the outbox; nothing else
+    // nudges the run.
+    await relayAndDrain();
 
     const done = await base.automationRun.findUniqueOrThrow({ where: { id: run.id } });
     expect(done.status).toBe('done');
     expect(done.currentStep).toBe(2);
     const moved = await base.deal.findUniqueOrThrow({ where: { id: deal.id } });
     expect(moved.stageId).toBe(nextStage.id);
+    await base.workspaceMember.deleteMany({ where: { workspaceId, userId: approver.id } });
+    await base.user.delete({ where: { id: approver.id } });
   });
 });

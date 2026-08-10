@@ -5,6 +5,7 @@ import type { WidgetConfig } from '../src/types';
 
 const config: WidgetConfig = {
   apiBaseUrl: 'https://api.example.com',
+  appUrl: 'https://app.example.com',
   publishableKey: 'wolff_pk_test',
   mode: 'lead-form',
   target: document.createElement('div'),
@@ -22,7 +23,7 @@ describe('LeadForm', () => {
   it('submits a lead and shows success', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 'lead-1', message: 'Thanks!' }),
+      json: async () => ({ success: true, data: { message: 'Thanks!' } }),
     } as Response);
 
     let mockedNow = Date.now();

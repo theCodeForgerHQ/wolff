@@ -27,7 +27,8 @@
               "gst_unsupported",
               "rate_limited",
               "internal_error",
-              "not_configured"
+              "not_configured",
+              "provider_error"
             ]
           },
           "message": {

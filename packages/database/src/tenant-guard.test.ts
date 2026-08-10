@@ -92,7 +92,7 @@ describe('findTenantViolation', () => {
     let match: RegExpExecArray | null;
     while ((match = modelRe.exec(schema)) !== null) {
       const [, name, body] = match;
-      if (/^\s+workspaceId\s+/m.test(body)) {
+      if (/^\s+workspaceId\s+/m.test(body ?? '')) {
         expect(WORKSPACE_SCOPED_MODELS).toContain(name);
       }
     }

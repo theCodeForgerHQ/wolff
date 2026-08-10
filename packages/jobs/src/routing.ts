@@ -9,6 +9,7 @@ const DIRECT: Record<string, JobType> = {
   'email.send': 'email.send',
   'email.payment_received': 'email.payment_received',
   'pdf.render': 'pdf.render',
+  'automation.tick': 'automations.tick',
 };
 
 /**
