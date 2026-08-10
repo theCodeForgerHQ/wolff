@@ -4,7 +4,8 @@
  */
 
 import { randomBytes } from 'crypto';
-import { prisma, type Prisma, incrementNumberSequence } from '@wolff/database';
+import { prisma, type Prisma, incrementNumberSequence, withTenantGuard } from '@wolff/database';
+import { nextInvoiceNumber } from '@wolff/core/invoices';
 
 /** Generate a cryptographically secure access token */
 function generateAccessToken(): string {
@@ -13,29 +14,13 @@ function generateAccessToken(): string {
 
 /**
  * Generate next invoice number for a workspace (atomic, race-condition safe).
+ * A GST workspace numbers per financial year of the issue date.
  */
-export async function generateInvoiceNumber(workspaceId: string): Promise<string> {
-  const result = await prisma.$transaction(async (tx) => {
-    const updated = await incrementNumberSequence(tx, workspaceId, 'invoice', null, {
-      prefix: 'INV',
-      currentValue: 1,
-      padding: 4,
-    });
-    return {
-      prefix: updated.prefix || 'INV',
-      suffix: updated.suffix,
-      value: updated.currentValue,
-      padding: updated.padding,
-    };
-  });
-
-  const paddedValue = String(result.value).padStart(result.padding, '0');
-  const prefix = result.prefix.replace(/-$/, '');
-  const parts = [prefix, paddedValue];
-  if (result.suffix) {
-    parts.push(result.suffix);
-  }
-  return parts.join('-');
+export async function generateInvoiceNumber(
+  workspaceId: string,
+  issueDate: Date = new Date()
+): Promise<string> {
+  return nextInvoiceNumber(withTenantGuard(prisma), workspaceId, issueDate);
 }
 
 /**

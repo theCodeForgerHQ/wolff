@@ -2,7 +2,15 @@
 
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { prisma, type Prisma } from '@wolff/database';
+import { prisma, withTenantGuard, type Prisma } from '@wolff/database';
+import {
+  assertGstSupported,
+  assertReadyToIssue,
+  isGstWorkspace,
+  loadGstProfile,
+  priceGstInvoice,
+} from '@wolff/core/invoices';
+import { CoreError } from '@wolff/core/errors';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type {
   InvoiceDocument,
@@ -18,6 +26,25 @@ import { formatCurrency, toNumber, getBaseUrl } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 import { generateInvoiceNumber } from './internal';
 import { domainEvents } from '@/lib/events/emitter';
+
+const gstDb = withTenantGuard(prisma);
+
+/** A Rule 46 / GST refusal as the message the dashboard shows. */
+function describeCoreError(error: CoreError): string {
+  const reasons = error.details ? Object.values(error.details).flat() : [];
+  return reasons.length > 0 ? `${error.message}: ${reasons.join('; ')}` : error.message;
+}
+
+/** Throws nothing; returns the reason a draft may not be issued, if any. */
+async function issueBlocker(workspaceId: string, invoiceId: string): Promise<string | null> {
+  try {
+    await assertReadyToIssue(gstDb, workspaceId, invoiceId);
+    return null;
+  } catch (error) {
+    if (error instanceof CoreError) return describeCoreError(error);
+    throw error;
+  }
+}
 
 /** Generate a cryptographically secure access token (64 hex chars = 256 bits) */
 function generateAccessToken(): string {
@@ -122,6 +149,24 @@ export async function createInvoice(data: CreateInvoiceData) {
     return { success: false, error: 'Client not found' };
   }
 
+  // GST workspaces: priced by the engine, numbered per FY.
+  const gstProfile = await loadGstProfile(gstDb, workspace.id);
+  const isGst = isGstWorkspace(gstProfile);
+  if (isGst) {
+    try {
+      assertGstSupported(gstProfile);
+    } catch (error) {
+      if (error instanceof CoreError) return { success: false, error: error.message };
+      throw error;
+    }
+    if (data.discountType && data.discountValue) {
+      return {
+        success: false,
+        error: 'GST invoices take discounts per line, before tax; remove the invoice discount',
+      };
+    }
+  }
+
   // Use custom invoice number if provided, otherwise auto-generate
   let invoiceNumber: string;
   if (data.invoiceNumber) {
@@ -177,12 +222,31 @@ export async function createInvoice(data: CreateInvoiceData) {
     }
   }
 
-  const { subtotal, taxTotal, discountAmount, total } = calculateTotals(data.lineItems, {
+  const gst = isGst
+    ? priceGstInvoice({
+        profile: gstProfile,
+        client,
+        lines: data.lineItems.map((item) => ({
+          name: item.name,
+          description: item.description || null,
+          quantity: Math.round(item.quantity * 100) / 100,
+          rate: item.rate,
+          gstRate: item.taxRate ?? 0,
+          hsnSac: item.hsnSac?.trim() || null,
+          itemType: item.itemType,
+        })),
+      })
+    : null;
+
+  const generic = calculateTotals(data.lineItems, {
     type: data.discountType,
     value: data.discountValue,
   });
+  const { subtotal, taxTotal, discountAmount, total } = gst
+    ? { ...gst.invoice, discountAmount: 0 }
+    : generic;
 
-  const lineItems = data.lineItems.map((item, index) => ({
+  const genericLineItems = data.lineItems.map((item, index) => ({
     name: item.name,
     description: item.description || null,
     quantity: Math.round(item.quantity * 100) / 100,
@@ -194,7 +258,11 @@ export async function createInvoice(data: CreateInvoiceData) {
       : 0,
     sortOrder: index,
   }));
+  const lineItems = gst ? gst.lines : genericLineItems;
 
+  // A GST invoice is created as a draft and leaves draft only after the
+  // Rule 46 check below.
+  const wantsSent = data.isDraft === false;
   const invoice = await prisma.invoice.create({
     data: {
       workspaceId: workspace.id,
@@ -202,7 +270,15 @@ export async function createInvoice(data: CreateInvoiceData) {
       projectId: data.projectId || null,
       invoiceNumber,
       title: data.title,
-      status: data.isDraft !== false ? 'draft' : 'sent',
+      status: wantsSent && !gst ? 'sent' : 'draft',
+      ...(gst && {
+        placeOfSupply: gst.invoice.placeOfSupply,
+        supplyType: gst.invoice.supplyType,
+        reverseCharge: gst.invoice.reverseCharge,
+        supplierGstin: gst.invoice.supplierGstin,
+        recipientGstin: gst.invoice.recipientGstin,
+        taxBreakup: gst.invoice.taxBreakup as Prisma.InputJsonValue,
+      }),
       currency,
       accessToken: generateAccessToken(),
       issueDate: new Date(),
@@ -239,6 +315,19 @@ export async function createInvoice(data: CreateInvoiceData) {
       metadata: {},
     },
   });
+
+  if (gst && wantsSent) {
+    const blocker = await issueBlocker(workspace.id, invoice.id);
+    if (blocker) {
+      revalidatePath(ROUTES.invoices);
+      return { success: false, error: `Saved as a draft. ${blocker}`, invoiceId: invoice.id };
+    }
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { status: 'sent', sentAt: new Date() },
+    });
+    invoice.status = 'sent';
+  }
 
   revalidatePath(ROUTES.invoices);
 
@@ -337,6 +426,38 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
     }
   }
 
+  // GST workspaces: re-price the quote's lines with the engine, so the
+  // invoice carries the CGST/SGST/IGST split Rule 46 asks for.
+  const gstProfile = await loadGstProfile(gstDb, workspace.id);
+  let gst: ReturnType<typeof priceGstInvoice> | null = null;
+  if (isGstWorkspace(gstProfile)) {
+    try {
+      assertGstSupported(gstProfile);
+    } catch (error) {
+      if (error instanceof CoreError) return { success: false, error: error.message };
+      throw error;
+    }
+    if (discountAmount > 0) {
+      return {
+        success: false,
+        error: 'GST invoices take discounts per line, before tax; remove the quote discount',
+      };
+    }
+    gst = priceGstInvoice({
+      profile: gstProfile,
+      client: quote.client,
+      lines: quote.lineItems.map((item) => ({
+        name: item.name,
+        description: item.description,
+        quantity: toNumber(item.quantity),
+        rate: toNumber(item.rate),
+        gstRate: toNumber(item.gstRate ?? item.taxRate),
+        hsnSac: item.hsnSac,
+        itemType: item.itemType,
+      })),
+    });
+  }
+
   // Calculate due date (configurable, default: 30 days from now)
   const dueDays = options?.dueDays ?? 30;
   const dueDate = new Date();
@@ -369,27 +490,44 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
           currency: quote.currency,
           issueDate: new Date(),
           dueDate,
-          subtotal: lineItemSubtotal,
-          discountType: quote.discountType,
-          discountValue: quote.discountValue,
-          discountAmount: discountAmount,
-          taxTotal: quote.taxTotal,
-          total: lineItemSubtotal - discountAmount + toNumber(quote.taxTotal),
-          amountDue: lineItemSubtotal - discountAmount + toNumber(quote.taxTotal),
+          ...(gst
+            ? {
+                subtotal: gst.invoice.subtotal,
+                taxTotal: gst.invoice.taxTotal,
+                total: gst.invoice.total,
+                amountDue: gst.invoice.total,
+                placeOfSupply: gst.invoice.placeOfSupply,
+                supplyType: gst.invoice.supplyType,
+                reverseCharge: gst.invoice.reverseCharge,
+                supplierGstin: gst.invoice.supplierGstin,
+                recipientGstin: gst.invoice.recipientGstin,
+                taxBreakup: gst.invoice.taxBreakup as Prisma.InputJsonValue,
+              }
+            : {
+                subtotal: lineItemSubtotal,
+                discountType: quote.discountType,
+                discountValue: quote.discountValue,
+                discountAmount: discountAmount,
+                taxTotal: quote.taxTotal,
+                total: lineItemSubtotal - discountAmount + toNumber(quote.taxTotal),
+                amountDue: lineItemSubtotal - discountAmount + toNumber(quote.taxTotal),
+              }),
           notes: quote.notes,
           terms: quote.terms,
           settings: {} as unknown as Prisma.InputJsonValue,
           lineItems: {
-            create: quote.lineItems.map((item: (typeof quote.lineItems)[number]) => ({
-              name: item.name,
-              description: item.description,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount,
-              taxRate: item.taxRate,
-              taxAmount: item.taxAmount,
-              sortOrder: item.sortOrder,
-            })),
+            create: gst
+              ? gst.lines
+              : quote.lineItems.map((item: (typeof quote.lineItems)[number]) => ({
+                  name: item.name,
+                  description: item.description,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: item.amount,
+                  taxRate: item.taxRate,
+                  taxAmount: item.taxAmount,
+                  sortOrder: item.sortOrder,
+                })),
           },
         },
         include: {
@@ -811,6 +949,12 @@ export async function updateInvoiceStatus(invoiceId: string, status: InvoiceStat
     };
   }
 
+  // Leaving draft: a GST invoice must carry Rule 46's mandatory details.
+  if (invoice.status === 'draft' && status !== 'voided') {
+    const blocker = await issueBlocker(workspace.id, invoiceId);
+    if (blocker) return { success: false, error: blocker };
+  }
+
   // Enforce payment constraints for payment-related statuses
   const amountPaid = toNumber(invoice.amountPaid);
   const total = toNumber(invoice.total);
@@ -909,6 +1053,12 @@ export async function sendInvoice(invoiceId: string, emailOptions?: SendEmailOpt
 
   if (!invoice.client?.email) {
     return { success: false, error: 'Client has no email address', emailSent: false };
+  }
+
+  // Do not email a GST invoice that may not leave draft.
+  if (invoice.status === 'draft') {
+    const blocker = await issueBlocker(workspace.id, invoiceId);
+    if (blocker) return { success: false, error: blocker, emailSent: false };
   }
 
   // Try sending email FIRST — only update status if email succeeds

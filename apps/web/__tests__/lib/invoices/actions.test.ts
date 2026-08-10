@@ -54,7 +54,17 @@ vi.mock('@/lib/workspace/get-current-workspace', () => ({
 vi.mock('@/lib/invoices/internal', () => ({
   generateInvoiceNumber: vi.fn().mockResolvedValue('INV-0001'),
 }));
+// These tests cover a workspace without a GSTIN; the GST path has its own
+// integration test (gst-invoices.integration.test.ts).
+vi.mock('@wolff/core/invoices', () => ({
+  loadGstProfile: vi.fn().mockResolvedValue(null),
+  isGstWorkspace: () => false,
+  assertGstSupported: vi.fn(),
+  assertReadyToIssue: vi.fn().mockResolvedValue(undefined),
+  priceGstInvoice: vi.fn(),
+}));
 vi.mock('@wolff/database', () => ({
+  withTenantGuard: (client: unknown) => client,
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
 }));
