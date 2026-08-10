@@ -10,8 +10,6 @@ import {
   type RootState,
   type AppDispatch,
 } from '@/lib/store';
-import { setActiveStore, getActiveStore, resetTestStore } from '@/lib/store/active-store';
-import type { QuoteBuilderStoreState } from '@/lib/store/makeStore';
 import type { AppStore } from '@/lib/store/makeStore';
 
 export interface QuoteBuilderState {
@@ -116,17 +114,6 @@ const createEmptyDocument = (): QuoteDocument => ({
 
 const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
-function useActiveStore(): AppStore {
-  const dispatch = useDispatch<AppDispatch>();
-  useEffect(() => {
-    // This hook is only called inside StoreProvider, so dispatch comes from the
-    // nearest Provider. We cannot access the store instance directly from the
-    // hook, but we can expose dispatch-bound actions. For imperative access we
-    // rely on the active-store registry, which StoreProvider updates.
-  }, [dispatch]);
-  return getActiveStore();
-}
-
 function useActions(dispatch: AppDispatch): QuoteBuilderActions {
   return useMemo(
     () => ({
@@ -214,8 +201,22 @@ export function useQuoteBuilderStore<T>(
   return store;
 }
 
-useQuoteBuilderStore.getState = (): QuoteBuilderStore => {
-  const store = getActiveStore();
+/**
+ * Imperative access to one store, for tests and non-React callers. There is
+ * deliberately no module-level "current store": each StoreProvider owns its
+ * store, so the caller must say which one.
+ */
+export function quoteBuilderFacade(store: AppStore) {
+  return {
+    getState: () => getQuoteBuilderState(store),
+    setState: (
+      partial:
+        Partial<QuoteBuilderState> | ((state: QuoteBuilderState) => Partial<QuoteBuilderState>)
+    ) => setQuoteBuilderState(store, partial),
+  };
+}
+
+function getQuoteBuilderState(store: AppStore): QuoteBuilderStore {
   const state = store.getState();
   const boundActions: QuoteBuilderActions = {
     initDocument: (doc) => store.dispatch(quoteDocumentActions.initDocument(doc)),
@@ -262,12 +263,12 @@ useQuoteBuilderStore.getState = (): QuoteBuilderStore => {
     ...selectQuoteBuilderState(state),
     ...boundActions,
   };
-};
+}
 
-useQuoteBuilderStore.setState = (
+function setQuoteBuilderState(
+  store: AppStore,
   partial: Partial<QuoteBuilderState> | ((state: QuoteBuilderState) => Partial<QuoteBuilderState>)
-): void => {
-  const store = getActiveStore();
+): void {
   const current = selectQuoteBuilderState(store.getState());
   const patch = typeof partial === 'function' ? partial(current) : partial;
 
@@ -305,7 +306,6 @@ useQuoteBuilderStore.setState = (
   if ('zoom' in patch) {
     store.dispatch(builderUiActions.setZoom(patch.zoom ?? 100));
   }
-};
+}
 
-export { setActiveStore, resetTestStore, getActiveStore };
 export type { QuoteBuilderStore };

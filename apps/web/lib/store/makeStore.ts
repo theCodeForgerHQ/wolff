@@ -48,7 +48,10 @@ export const makeStore = (preloadedState?: Partial<QuoteBuilderStoreState>) => {
   const store = configureStore({
     reducer: {
       quoteDocument: undoable(quoteDocumentReducer, {
-        limit: 100,
+        // redux-undo counts the present state in `limit`, so 100 undoable
+        // edits (Phase 4 DoD) need 101. The design says "limit: 100",
+        // meaning the number of edits; see docs/phase-4.md.
+        limit: 101,
         filter: excludeAction(excludedFromHistory),
         groupBy,
         syncFilter: true,

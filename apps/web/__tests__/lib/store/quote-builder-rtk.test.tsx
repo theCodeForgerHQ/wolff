@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import type { ReactNode } from 'react';
 import { makeStore } from '@/lib/store/makeStore';
 import { StoreProvider } from '@/lib/store/StoreProvider';
-import { useQuoteBuilderStore, resetTestStore } from '@/lib/stores/quote-builder-store';
+import { initialQuoteDocumentState } from '@/lib/store/slices/quoteDocumentSlice';
+import { useQuoteBuilderStore } from '@/lib/stores/quote-builder-store';
 import { createBlock, type QuoteDocument, type TextBlock } from '@/lib/quotes/types';
 
 function createTestDocument(overrides: Partial<QuoteDocument> = {}): QuoteDocument {
@@ -46,44 +50,37 @@ function createTestDocument(overrides: Partial<QuoteDocument> = {}): QuoteDocume
 }
 
 describe('Quote Builder RTK Store', () => {
-  beforeEach(() => {
-    resetTestStore();
-  });
-
   describe('undo/redo', () => {
-    it('supports 100 edits and undoes all of them', () => {
-      const store = resetTestStore();
+    it('undoes 100 edits back to the start, and redoes them (Phase 4)', () => {
+      const store = makeStore();
       const doc = createTestDocument();
       store.dispatch({ type: 'quoteDocument/initDocument', payload: doc });
 
-      // Perform 99 distinct block additions (limit 100 leaves room for the
-      // base state plus 99 edits; the 100th edit would drop the base state).
-      for (let i = 0; i < 99; i++) {
+      for (let i = 0; i < 100; i++) {
         store.dispatch({
           type: 'quoteDocument/addBlock',
           payload: { block: createBlock('text', { html: `<p>Edit ${i}</p>` }) },
         });
       }
+      expect(store.getState().quoteDocument.present.document!.blocks).toHaveLength(101);
 
-      const stateAfterEdits = store.getState();
-      expect(stateAfterEdits.quoteDocument.past.length).toBe(99);
-      expect(stateAfterEdits.quoteDocument.present.document!.blocks).toHaveLength(100);
+      for (let i = 0; i < 100; i++) store.dispatch({ type: '@@redux-undo/UNDO' });
 
-      // Undo all edits
-      for (let i = 0; i < 99; i++) {
-        store.dispatch({ type: '@@redux-undo/UNDO' });
-      }
+      const undone = store.getState().quoteDocument;
+      expect(undone.present.document!.blocks).toHaveLength(1);
+      expect((undone.present.document!.blocks[0]! as TextBlock).content.html).toBe(
+        '<p>Initial</p>'
+      );
 
-      const stateAfterUndo = store.getState();
-      expect(stateAfterUndo.quoteDocument.present.document!.blocks).toHaveLength(1);
-      expect(
-        (stateAfterUndo.quoteDocument.present.document!.blocks[0]! as TextBlock).content.html
-      ).toBe('<p>Initial</p>');
-      expect(stateAfterUndo.quoteDocument.future.length).toBe(99);
+      for (let i = 0; i < 100; i++) store.dispatch({ type: '@@redux-undo/REDO' });
+
+      const redone = store.getState().quoteDocument.present.document!.blocks;
+      expect(redone).toHaveLength(101);
+      expect((redone[100]! as TextBlock).content.html).toBe('<p>Edit 99</p>');
     });
 
     it('redoes undone edits', () => {
-      const store = resetTestStore();
+      const store = makeStore();
       const doc = createTestDocument();
       store.dispatch({ type: 'quoteDocument/initDocument', payload: doc });
 
@@ -102,7 +99,7 @@ describe('Quote Builder RTK Store', () => {
     });
 
     it('does not record UI-only actions in history', () => {
-      const store = resetTestStore();
+      const store = makeStore();
       const doc = createTestDocument();
       store.dispatch({ type: 'quoteDocument/initDocument', payload: doc });
 
@@ -117,21 +114,54 @@ describe('Quote Builder RTK Store', () => {
   });
 
   describe('SSR isolation', () => {
-    it('creates distinct stores for concurrent requests', () => {
-      const storeA = makeStore();
-      const storeB = makeStore();
-
-      const docA = createTestDocument({ id: 'doc-a', title: 'Quote A' });
-      const docB = createTestDocument({ id: 'doc-b', title: 'Quote B' });
-
-      storeA.dispatch({ type: 'quoteDocument/initDocument', payload: docA });
-      storeB.dispatch({ type: 'quoteDocument/initDocument', payload: docB });
-
-      expect(storeA.getState().quoteDocument.present.document!.title).toBe('Quote A');
-      expect(storeB.getState().quoteDocument.present.document!.title).toBe('Quote B');
-      expect(storeA.getState().quoteDocument.present.document!.id).not.toBe(
-        storeB.getState().quoteDocument.present.document!.id
+    function Title() {
+      return <h1>{useQuoteBuilderStore((state) => state.document?.title)}</h1>;
+    }
+    const page = (title: string) =>
+      renderToString(
+        <StoreProvider
+          preloadedState={{
+            quoteDocument: {
+              past: [],
+              future: [],
+              present: {
+                ...initialQuoteDocumentState,
+                document: createTestDocument({ id: title, title }),
+              },
+            } as never,
+          }}
+        >
+          <Title />
+        </StoreProvider>
       );
+
+    it('renders two concurrent requests with their own documents', async () => {
+      // Interleave many server renders, as concurrent requests do.
+      const titles = Array.from({ length: 20 }, (_, i) => `Quote ${i}`);
+      const html = await Promise.all(
+        titles.map(async (title, i) => {
+          await new Promise((resolve) => setTimeout(resolve, (i * 7) % 5));
+          return page(title);
+        })
+      );
+
+      html.forEach((markup, i) => {
+        expect(markup).toContain(`>${titles[i]}<`);
+        expect(markup.match(/Quote \d+/g)).toEqual([titles[i]]);
+      });
+    });
+
+    it('keeps no store in module state that one request could leak to another', () => {
+      // A module-level `let` in the store code is how a store would be shared
+      // across requests on the server (the removed active-store registry).
+      const dirs = [join(__dirname, '../../../lib/store'), join(__dirname, '../../../lib/stores')];
+      for (const dir of dirs) {
+        for (const file of readdirSync(dir, { recursive: true }) as string[]) {
+          if (!/\.tsx?$/.test(file)) continue;
+          const source = readFileSync(join(dir, file), 'utf8');
+          expect(source, file).not.toMatch(/^let /m);
+        }
+      }
     });
 
     it('StoreProvider creates one store per mount', () => {
@@ -163,7 +193,7 @@ describe('Quote Builder RTK Store', () => {
     });
 
     it('writes dirty drafts to localStorage debounced', async () => {
-      const store = resetTestStore();
+      const store = makeStore();
       const doc = createTestDocument();
       store.dispatch({ type: 'quoteDocument/initDocument', payload: doc });
 
