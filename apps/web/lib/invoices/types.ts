@@ -108,7 +108,11 @@ export interface CreateInvoiceData {
     description?: string;
     quantity: number;
     rate: number;
+    /** In a GST workspace this is the line's GST rate. */
     taxRate?: number;
+    /** HSN (goods) or SAC (services) code; required on GST invoices (Rule 46). */
+    hsnSac?: string;
+    itemType?: 'goods' | 'services';
   }>;
   discountType?: 'percentage' | 'fixed' | null;
   discountValue?: number | null;

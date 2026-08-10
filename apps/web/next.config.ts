@@ -4,11 +4,6 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin();
 
-// The browser SDK posts events to the DSN's host; allow it only when Sentry is on.
-const sentryOrigin = process.env.NEXT_PUBLIC_SENTRY_DSN
-  ? new URL(process.env.NEXT_PUBLIC_SENTRY_DSN).origin
-  : null;
-
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Bug #20: Enable standalone output for Docker production builds
@@ -22,7 +17,9 @@ const nextConfig: NextConfig = {
   ],
   // Bug #23: Prevent access token leakage via referrer headers on portal pages
   async headers() {
-    // Bug #5: Security headers for all routes (mirrors vercel.json for Docker/self-hosted deployments)
+    // Bug #5: Security headers for all routes (mirrors vercel.json for Docker/self-hosted deployments).
+    // The CSP is not here: it carries a per-request nonce,
+    // so proxy.ts sets it (lib/security/csp.ts).
     const securityHeaders = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'X-Frame-Options', value: 'DENY' },
@@ -30,21 +27,6 @@ const nextConfig: NextConfig = {
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=(), usb=()' },
       { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-      {
-        key: 'Content-Security-Policy',
-        value: [
-          "default-src 'self'",
-          "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
-          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' https://fonts.gstatic.com",
-          'frame-src https://js.stripe.com',
-          `connect-src 'self' https://api.stripe.com${sentryOrigin ? ` ${sentryOrigin}` : ''}`,
-          "object-src 'none'",
-          "base-uri 'self'",
-          "form-action 'self'",
-        ].join('; '),
-      },
     ];
 
     return [

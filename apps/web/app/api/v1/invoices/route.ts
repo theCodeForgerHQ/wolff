@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { prisma, incrementNumberSequence } from '@wolff/database';
+import { prisma } from '@wolff/database';
+import { generateInvoiceNumber } from '@/lib/invoices/internal';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber } from '@/lib/utils';
 
@@ -145,15 +146,8 @@ export async function POST(request: NextRequest) {
     if (!project) return apiError('Project not found', 404);
   }
 
-  // Generate invoice number in a transaction to prevent duplicates
-  const seq = await prisma.$transaction(async (tx) => {
-    return incrementNumberSequence(tx, workspaceId, 'invoice', null, {
-      prefix: 'INV-',
-      currentValue: 1,
-      padding: 4,
-    });
-  });
-  const invoiceNumber = `${seq.prefix || 'INV-'}${String(seq.currentValue).padStart(seq.padding, '0')}`;
+  // Atomic; a GST workspace numbers per financial year.
+  const invoiceNumber = await generateInvoiceNumber(workspaceId);
 
   const items = lineItems || [];
 
