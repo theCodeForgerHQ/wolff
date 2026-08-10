@@ -65,6 +65,9 @@ export const PARENT_SCOPED_MODELS: Record<string, string> = {
 };
 
 const GUARDED_OPERATIONS = new Set([
+  'findUnique',
+  'findUniqueOrThrow',
+  'upsert',
   'findMany',
   'findFirst',
   'findFirstOrThrow',

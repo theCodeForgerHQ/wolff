@@ -106,7 +106,7 @@ export async function convertLead(
     if (!locked) throw new Error('Lead not found');
     if (locked.status === 'converted') {
       const converted = await tx.lead.findUniqueOrThrow({
-        where: { id: input.leadId },
+        where: { id: input.leadId, workspaceId },
         include: { deal: true, client: true },
       });
       if (converted.client && converted.deal) {
