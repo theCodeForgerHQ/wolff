@@ -6,6 +6,7 @@ import {
   generateApiKey,
   hashApiKey,
   keyKindOf,
+  normaliseAllowedOrigins,
   SECRET_KEY_PREFIXES,
 } from './api-keys';
 
@@ -133,5 +134,36 @@ describe.skipIf(!url)('authenticateApiKey (Postgres)', () => {
         async () => (await base.apiKey.findUniqueOrThrow({ where: { id: stored.id } })).lastUsedAt
       )
       .toEqual(now);
+  });
+});
+
+describe('normaliseAllowedOrigins', () => {
+  it('keeps exact origins, trimmed and without duplicates', () => {
+    expect(
+      normaliseAllowedOrigins([
+        ' https://shop.example.com ',
+        'https://shop.example.com',
+        'http://localhost:5173',
+      ])
+    ).toEqual({ ok: true, origins: ['https://shop.example.com', 'http://localhost:5173'] });
+  });
+
+  it.each([
+    [[], 'at least one'],
+    [['shop.example.com'], 'not an origin'],
+    [['https://shop.example.com/contact'], 'not an origin'],
+    [['https://*.example.com'], 'not an origin'],
+    [['http://shop.example.com'], 'https'],
+    [['javascript:alert(1)'], 'not an origin'],
+    [['*'], 'not an origin'],
+  ])('refuses %j (%s)', (input, reason) => {
+    const result = normaliseAllowedOrigins(input);
+    expect(result.ok).toBe(false);
+    expect(result.ok ? '' : result.error).toContain(reason);
+  });
+
+  it('refuses more than 20 origins', () => {
+    const many = Array.from({ length: 21 }, (_, i) => `https://s${i}.example.com`);
+    expect(normaliseAllowedOrigins(many).ok).toBe(false);
   });
 });
