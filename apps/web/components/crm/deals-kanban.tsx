@@ -6,10 +6,17 @@ import { toast } from 'sonner';
 import {
   DndContext,
   DragOverlay,
+  KeyboardCode,
+  KeyboardSensor,
+  PointerSensor,
   useDraggable,
   useDroppable,
+  useSensor,
+  useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +26,32 @@ import { Plus, Loader2, FileText, GripVertical } from 'lucide-react';
 import { moveDeal, createQuoteFromDeal } from '@/lib/crm/actions';
 import { formatCurrency } from '@/lib/utils';
 import type { DealsBoard, DealListItem, DealStage } from '@/lib/crm/types';
+
+/**
+ * Keyboard moves (WCAG 2.1.1): with a deal picked up (Space or
+ * Enter on its handle), Left/Right jump to the previous/next stage column
+ * instead of nudging the card a few pixels; Space/Enter drops, Escape
+ * cancels. dnd-kit's default getter moves 25 px per key, which takes a dozen
+ * presses to cross one column.
+ */
+const stageColumnCoordinates: KeyboardCoordinateGetter = (event, { context }) => {
+  const { collisionRect, droppableRects, droppableContainers } = context;
+  if (!collisionRect) return undefined;
+  const step = event.code === KeyboardCode.Right ? 1 : event.code === KeyboardCode.Left ? -1 : 0;
+  if (step === 0) return undefined;
+  event.preventDefault();
+
+  const columns = droppableContainers
+    .getEnabled()
+    .map((container) => droppableRects.get(container.id))
+    .filter((rect): rect is NonNullable<typeof rect> => Boolean(rect))
+    .sort((a, b) => a.left - b.left);
+  const centre = collisionRect.left + collisionRect.width / 2;
+  const current = columns.findIndex((rect) => centre >= rect.left && centre <= rect.right);
+  const target = columns[Math.min(Math.max(current + step, 0), columns.length - 1)];
+  if (!target) return undefined;
+  return { x: target.left + 12, y: target.top + 64 };
+};
 
 interface DealsKanbanProps {
   board: DealsBoard;
@@ -60,7 +93,7 @@ function DealCard({
         </div>
         <button
           type="button"
-          aria-label="Drag deal"
+          aria-label={`Move ${deal.title} to another stage`}
           className="text-muted-foreground hover:text-foreground cursor-grab p-1 active:cursor-grabbing"
           {...listeners}
           {...attributes}
@@ -143,6 +176,26 @@ function StageColumn({
 
 export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
   const router = useRouter();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: stageColumnCoordinates })
+  );
+  const stageName = (id: unknown) => board.stages.find((s) => s.id === id)?.name ?? 'no stage';
+  const dealTitle = (id: unknown) => board.deals.find((d) => d.id === id)?.title ?? 'Deal';
+  // What a screen reader hears while a deal is moved (dnd-kit live region).
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      `Picked up ${dealTitle(active.id)}. Left and right arrows move it between stages, Space drops it, Escape cancels.`,
+    onDragOver: ({ active, over }) =>
+      over
+        ? `${dealTitle(active.id)} is over ${stageName(over.id)}.`
+        : `${dealTitle(active.id)} is not over a stage.`,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? `${dealTitle(active.id)} dropped in ${stageName(over.id)}.`
+        : `${dealTitle(active.id)} dropped outside the board; not moved.`,
+    onDragCancel: ({ active }) => `Move of ${dealTitle(active.id)} cancelled.`,
+  };
   const [deals, setDeals] = useState(board.deals);
   const [activeDeal, setActiveDeal] = useState<DealListItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
@@ -201,7 +254,13 @@ export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       )}
-      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        accessibility={{ announcements }}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDeal(null)}
+      >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {board.stages.map((stage) => (
             <StageColumn
