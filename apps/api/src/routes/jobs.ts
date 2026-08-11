@@ -1,6 +1,13 @@
 import express, { Router } from 'express';
-import { InvalidJobError, isJobType, runJob, type Job, type JobContext } from '@wolff/jobs';
-import type { QStashVerifier } from '@wolff/jobs/qstash';
+import {
+  InvalidJobError,
+  handleExhaustedJob,
+  isJobType,
+  runJob,
+  type Job,
+  type JobContext,
+} from '@wolff/jobs';
+import { QSTASH_RETRIES, type QStashVerifier } from '@wolff/jobs/qstash';
 import type { ApiConfig } from '../config';
 import { sendData, sendError } from '../http';
 
@@ -18,6 +25,8 @@ export interface JobRunDeps {
   context: JobContext;
   /** Replaced in tests; the real one runs the processor. */
   run?: (context: JobContext, job: Job) => Promise<void>;
+  /** Replaced in tests; the real one is handleExhaustedJob. */
+  onExhausted?: (context: JobContext, job: Job, error: unknown) => Promise<void>;
 }
 
 export function jobRoutes(config: ApiConfig, deps: JobRunDeps | undefined): Router {
@@ -54,6 +63,13 @@ export function jobRoutes(config: ApiConfig, deps: JobRunDeps | undefined): Rout
     } catch (error) {
       if (error instanceof InvalidJobError) {
         return sendError(res, 'validation_error', error.message);
+      }
+      // QStash says how many times it has retried. On its last delivery the
+      // job has failed for good: record that (outbox event failed, webhook
+      // delivery exhausted, email failed) as the BullMQ worker does.
+      const retried = Number(req.get('upstash-retried') ?? 0);
+      if (retried >= QSTASH_RETRIES) {
+        await (deps.onExhausted ?? handleExhaustedJob)(deps.context, job, error);
       }
       throw error;
     }

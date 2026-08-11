@@ -25,7 +25,10 @@ async function signature(url: string, body: string, key = CURRENT): Promise<stri
     .sign(new TextEncoder().encode(key));
 }
 
-function setup(run: (ctx: JobContext, job: Job) => Promise<void>) {
+function setup(
+  run: (ctx: JobContext, job: Job) => Promise<void>,
+  onExhausted?: (ctx: JobContext, job: Job, error: unknown) => Promise<void>
+) {
   const app = createApp({
     db: {} as Db,
     config: testConfig({ PUBLIC_API_URL: API }),
@@ -33,15 +36,17 @@ function setup(run: (ctx: JobContext, job: Job) => Promise<void>) {
       verify: createQStashVerifier({ currentSigningKey: CURRENT, nextSigningKey: NEXT }),
       context: { marker: 'ctx' } as unknown as JobContext,
       run,
+      onExhausted,
     },
   });
   const post = async (
     type: string,
     job: unknown,
-    options: { sign?: boolean; key?: string; url?: string } = {}
+    options: { sign?: boolean; key?: string; url?: string; retried?: number } = {}
   ) => {
     const body = JSON.stringify(job);
     const req = request(app).post(`/jobs/run/${type}`).set('Content-Type', 'application/json');
+    if (options.retried !== undefined) req.set('Upstash-Retried', String(options.retried));
     if (options.sign !== false) {
       req.set(
         'Upstash-Signature',
@@ -135,5 +140,23 @@ describe('POST /jobs/run/:type', () => {
 
     expect(res.status).toBe(500);
     expect(JSON.stringify(res.body)).not.toContain('someone@example.com');
+  });
+  it('records the failure for good on the last delivery QStash will make', async () => {
+    const exhausted = vi.fn(async () => {});
+    const { post } = setup(async () => {
+      throw new Error('still failing');
+    }, exhausted);
+
+    await post('email.send', job, { retried: 1 });
+    expect(exhausted).not.toHaveBeenCalled();
+
+    const res = await post('email.send', job, { retried: 3 });
+
+    expect(res.status).toBe(500);
+    expect(exhausted).toHaveBeenCalledWith(
+      { marker: 'ctx' },
+      expect.objectContaining({ jobId: 'outbox:1' }),
+      expect.any(Error)
+    );
   });
 });
