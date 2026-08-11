@@ -1401,6 +1401,9 @@ model ProviderWebhookEvent {
   type        String             @db.VarChar(100)
   payload     Json?
   status      WebhookEventStatus @default(received)
+  // Failed processing attempts; at the cap the event is dead-lettered
+  // (status failed) and no longer re-driven.
+  attempts    Int                @default(0)
   lastError   String?            @map("last_error") @db.Text
   receivedAt  DateTime           @default(now()) @map("received_at")
   processedAt DateTime?          @map("processed_at")
