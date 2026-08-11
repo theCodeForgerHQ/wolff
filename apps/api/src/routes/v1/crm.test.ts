@@ -199,7 +199,13 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes (Postgres)', () => {
           ],
         });
       expect(first.status).toBe(201);
-      expect(first.body.data).toEqual({ created: 2, updated: 0, skipped: 0, errors: 0 });
+      expect(first.body.data).toEqual({
+        created: 2,
+        updated: 0,
+        skipped: 0,
+        errors: 0,
+        failures: [],
+      });
 
       const second = await as(a)
         .post('/v1/leads/import')
@@ -215,7 +221,13 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes (Postgres)', () => {
           ],
         });
       expect(second.status).toBe(201);
-      expect(second.body.data).toEqual({ created: 1, updated: 1, skipped: 0, errors: 0 });
+      expect(second.body.data).toEqual({
+        created: 1,
+        updated: 1,
+        skipped: 0,
+        errors: 0,
+        failures: [],
+      });
 
       const list = await as(a).get('/v1/leads?q=Kaveri');
       expect(list.status).toBe(200);
@@ -234,7 +246,13 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes (Postgres)', () => {
           ],
         });
       expect(res.status).toBe(201);
-      expect(res.body.data).toEqual({ created: 1, updated: 0, skipped: 1, errors: 0 });
+      expect(res.body.data).toEqual({
+        created: 1,
+        updated: 0,
+        skipped: 1,
+        errors: 0,
+        failures: [],
+      });
     });
   });
 

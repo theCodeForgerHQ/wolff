@@ -166,6 +166,7 @@ export const importLeadsResultSchema = z
     updated: z.number().int(),
     skipped: z.number().int(),
     errors: z.number().int(),
+    failures: z.array(z.object({ row: z.number().int(), message: z.string() })),
   })
   .openapi('ImportLeadsResult');
 

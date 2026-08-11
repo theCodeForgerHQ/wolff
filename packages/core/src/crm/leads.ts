@@ -213,10 +213,26 @@ export async function getLead(ctx: CoreContext, id: string) {
   });
 }
 
+/**
+ * One spelling per phone number, so "+91 98765 43210" and "+91-98765-43210"
+ * are the same lead: digits only, with a leading "+" kept. Null when there
+ * are no digits at all.
+ */
+export function normalisePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  return raw.trim().startsWith('+') ? `+${digits}` : digits;
+}
+
+/** Emails are stored lower-case, so the (workspace, email) unique index is case-insensitive. */
+const normaliseEmail = (raw: string | null | undefined): string | null =>
+  raw ? raw.trim().toLowerCase() || null : null;
+
 function normalizeLeadInput<T extends CreateLeadInput | UpdateLeadInput>(input: T): T {
   const copy: T = { ...input };
-  if (copy.email === '') copy.email = null;
-  if (copy.phone === '') copy.phone = null;
+  if (copy.email !== undefined) copy.email = normaliseEmail(copy.email);
+  if (copy.phone !== undefined) copy.phone = normalisePhone(copy.phone);
   if (copy.company === '') copy.company = null;
   if (copy.message === '') copy.message = null;
   return copy;
@@ -312,38 +328,56 @@ export interface ImportLeadsResult {
   updated: number;
   skipped: number;
   errors: number;
+  /** One entry per failed row: its index in the request and the reason. */
+  failures: { row: number; message: string }[];
 }
 
 function normalizeImportRow(
   row: ImportLeadsInput['leads'][number]
 ): ImportLeadsInput['leads'][number] {
   const copy = { ...row };
-  if (copy.email === '') copy.email = null;
-  if (copy.phone === '') copy.phone = null;
-  if (copy.company === '') copy.company = null;
-  if (copy.message === '') copy.message = null;
+  copy.email = normaliseEmail(copy.email) ?? undefined;
+  copy.phone = normalisePhone(copy.phone) ?? undefined;
+  if (copy.company === '') copy.company = undefined;
+  if (copy.message === '') copy.message = undefined;
   return copy;
 }
 
 /**
- * Imports leads into a workspace with email/phone deduplication. Existing
- * leads are updated; new leads are created. Errors on individual rows are
- * counted but do not fail the whole batch.
+ * Imports leads into a workspace with email/phone deduplication (emails
+ * compared lower-case, phones in normalised form). An existing lead keeps its
+ * name and source and gets the other fields the row provides; a new lead is
+ * created. A row that fails (an owner who is not a member, a database error)
+ * is reported in `failures` with its index and does not stop the batch.
  */
 export async function importLeads(
   ctx: CoreContext,
   input: ImportLeadsInput
 ): Promise<ImportLeadsResult> {
   const { db, workspaceId } = ctx;
-  const result: ImportLeadsResult = { created: 0, updated: 0, skipped: 0, errors: 0 };
+  const result: ImportLeadsResult = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    errors: 0,
+    failures: [],
+  };
+  const members = new Set(
+    (await db.workspaceMember.findMany({ where: { workspaceId }, select: { userId: true } })).map(
+      (m) => m.userId
+    )
+  );
 
   // Track keys seen in this batch so duplicate imports do not create multiple
   // rows for the same contact.
   const seen = new Set<string>();
 
-  for (const raw of input.leads) {
+  for (const [index, raw] of input.leads.entries()) {
     const row = normalizeImportRow(raw);
     try {
+      if (row.ownerId && !members.has(row.ownerId)) {
+        throw new Error('The owner is not a member of this workspace');
+      }
       const keys: string[] = [];
       if (input.dedupeBy.includes('email') && row.email)
         keys.push(`email:${row.email.toLowerCase()}`);
@@ -357,7 +391,7 @@ export async function importLeads(
       const where: Prisma.LeadWhereInput = { workspaceId, deletedAt: null };
       const orConditions: Prisma.LeadWhereInput[] = [];
       if (input.dedupeBy.includes('email') && row.email) {
-        orConditions.push({ email: { equals: row.email, mode: 'insensitive' } });
+        orConditions.push({ email: row.email });
       }
       if (input.dedupeBy.includes('phone') && row.phone) {
         orConditions.push({ phone: row.phone });
@@ -369,12 +403,12 @@ export async function importLeads(
       if (existing) {
         await db.lead.update({
           where: { id: existing.id, workspaceId },
+          // Name and source are what the workspace knows the lead by and
+          // where it came from; an import does not rewrite them.
           data: {
-            name: row.name,
             ...(row.email !== undefined && { email: row.email }),
             ...(row.phone !== undefined && { phone: row.phone }),
             ...(row.company !== undefined && { company: row.company }),
-            source: 'import',
             ...(row.status !== undefined &&
               existing.status !== 'converted' && { status: row.status }),
             ...(row.score !== undefined && { score: row.score }),
@@ -402,8 +436,12 @@ export async function importLeads(
       }
 
       keys.forEach((k) => seen.add(k));
-    } catch {
+    } catch (error) {
       result.errors++;
+      result.failures.push({
+        row: index,
+        message: error instanceof Error ? error.message.slice(0, 300) : 'Import failed',
+      });
     }
   }
 

@@ -451,7 +451,11 @@ model Lead {
   client    Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   deal      Deal?
 
+  // Emails are stored lower-case (core/crm/leads.ts), which makes this unique
+  // index case-insensitive: the email dedupe of lead import relies on it.
   @@unique([workspaceId, email])
+  // Phones are stored normalised; the phone dedupe of lead import looks here.
+  @@index([workspaceId, phone])
   @@index([workspaceId, status])
   @@index([workspaceId, source])
   @@index([workspaceId, ownerId])
