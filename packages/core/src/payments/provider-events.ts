@@ -1,5 +1,6 @@
 import type { Prisma } from '@wolff/database';
 import type { Db } from '../context';
+import { logger } from '../logger';
 import { writeOutboxEvent } from '../outbox';
 import { applyRazorpayEvent } from './apply-razorpay-event';
 import { applyStripeEvent } from './apply-stripe-event';
@@ -111,7 +112,14 @@ export async function recordProviderEvent(
   });
 }
 
-export type ProcessOutcome = 'processed' | 'already_processed' | 'not_found';
+export type ProcessOutcome = 'processed' | 'already_processed' | 'not_found' | 'dead_lettered';
+
+/**
+ * Failed attempts after which an event is dead-lettered: marked `failed`,
+ * logged, and no longer re-driven by retries or the sweeper. Someone has to
+ * look at it (its last error is on the row).
+ */
+export const MAX_PROCESSING_ATTEMPTS = 10;
 
 /**
  * Applies a recorded event. Throws when applying fails; nothing of the event
@@ -128,6 +136,7 @@ export async function processProviderEvent(db: Db, eventRowId: string): Promise<
         WHERE id = ${eventRowId} FOR UPDATE`;
       if (!row) return 'not_found';
       if (row.status === 'processed') return 'already_processed';
+      if (row.status === 'failed') return 'dead_lettered';
 
       const event = await tx.providerWebhookEvent.findUniqueOrThrow({
         where: { id: row.id },
@@ -146,13 +155,21 @@ export async function processProviderEvent(db: Db, eventRowId: string): Promise<
       return 'processed';
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await db.$unscoped.providerWebhookEvent
-      .updateMany({
-        where: { id: eventRowId, status: { not: 'processed' } },
-        data: { lastError: message.slice(0, 2_000) },
-      })
-      .catch(() => {});
+    const message = (error instanceof Error ? error.message : String(error)).slice(0, 2_000);
+    const [counted] = await db.$unscoped.$queryRaw<{ status: string; attempts: number }[]>`
+      UPDATE provider_webhook_events
+      SET attempts = attempts + 1,
+          last_error = ${message},
+          status = CASE WHEN attempts + 1 >= ${MAX_PROCESSING_ATTEMPTS}
+                        THEN 'failed'::webhook_event_status ELSE status END
+      WHERE id = ${eventRowId} AND status = 'received'
+      RETURNING status::text, attempts`.catch(() => []);
+    if (counted?.status === 'failed') {
+      logger.error(
+        { eventRowId, attempts: counted.attempts, lastError: message },
+        'Provider webhook event dead-lettered after repeated failures'
+      );
+    }
     throw error;
   }
 }

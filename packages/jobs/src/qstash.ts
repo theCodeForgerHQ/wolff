@@ -20,7 +20,7 @@ export interface QStashPublisher {
 }
 
 /** Retries QStash makes itself. Anything beyond that falls to the cron drain via the sweeper. */
-const QSTASH_RETRIES = 3;
+export const QSTASH_RETRIES = 3;
 
 export class QStashDispatcher implements JobDispatcher {
   private readonly apiUrl: string;

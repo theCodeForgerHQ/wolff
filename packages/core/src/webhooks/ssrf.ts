@@ -25,8 +25,10 @@ for (const [network, prefix] of [
   blocked.addSubnet(network, prefix, 'ipv4');
 }
 for (const [network, prefix] of [
-  ['::', 127], // unspecified and loopback
+  ['::', 96], // unspecified, loopback and IPv4-compatible (::a.b.c.d, deprecated)
   ['64:ff9b::', 96], // NAT64
+  ['2001::', 32], // Teredo: tunnels to an embedded IPv4 address
+  ['2002::', 16], // 6to4: embeds an IPv4 address (deprecated, RFC 7526)
   ['100::', 64], // discard
   ['2001:db8::', 32], // documentation
   ['fc00::', 7], // unique local

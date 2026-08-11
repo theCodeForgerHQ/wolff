@@ -26,6 +26,12 @@ describe('isPublicAddress', () => {
     '::ffff:10.0.0.1',
     '::ffff:7f00:1',
     '64:ff9b::7f00:1',
+    '::127.0.0.1', // IPv4-compatible (::/96), deprecated but still parsed
+    '::7f00:1',
+    '::a00:1',
+    '2002:7f00:1::1', // 6to4 wrapping 127.0.0.1
+    '2002:c0a8:101::1', // 6to4 wrapping 192.168.1.1
+    '2001:0:4136:e378:8000:63bf:3fff:fdd2', // Teredo
     'not-an-ip',
     '',
   ])('treats %s as not public', (address) => {

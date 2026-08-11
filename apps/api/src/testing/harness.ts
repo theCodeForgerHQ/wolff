@@ -46,7 +46,15 @@ export async function createTestWorkspace(
       name,
       slug: `${name.toLowerCase().replace(/\W+/g, '-')}-${run}`,
       apiKeys: {
-        create: { name: 'test', keyHash: hashApiKey(key), keyPrefix: key.slice(0, 10), scopes },
+        // High enough that suites making many calls are never rate limited;
+        // the rate-limit tests issue their own keys.
+        create: {
+          name: 'test',
+          keyHash: hashApiKey(key),
+          keyPrefix: key.slice(0, 10),
+          scopes,
+          rateLimitPerMin: 100_000,
+        },
       },
     },
     include: { apiKeys: true },

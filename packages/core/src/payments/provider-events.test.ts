@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
-import { processProviderEvent, recordProviderEvent } from './provider-events';
+import {
+  MAX_PROCESSING_ATTEMPTS,
+  processProviderEvent,
+  recordProviderEvent,
+  redriveStaleProviderEvents,
+} from './provider-events';
 
 const url = process.env.TEST_DATABASE_URL;
 
@@ -249,5 +254,24 @@ describe.skipIf(!url)('provider webhook events (Postgres)', () => {
     );
 
     expect(await processProviderEvent(db, id)).toBe('processed');
+  });
+  it('dead-letters an event that keeps failing, and stops re-driving it', async () => {
+    // A refund with an impossible amount fails every time it is applied.
+    const poison = stripeEvent('charge.refunded', { payment_intent: intent, amount_refunded: -1 });
+    const { id } = await record(poison, false);
+
+    for (let i = 0; i < MAX_PROCESSING_ATTEMPTS; i++) {
+      await expect(processProviderEvent(db, id)).rejects.toThrow();
+    }
+
+    const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ status: 'failed', attempts: MAX_PROCESSING_ATTEMPTS });
+    expect(row.lastError).toMatch(/amount_refunded/);
+    // The sweeper only re-drives `received` events, so nothing is queued.
+    const later = new Date(Date.now() + 3_600_000);
+    await redriveStaleProviderEvents(db, { now: later });
+    expect(await base.outboxEvent.count({ where: { aggregateId: id } })).toBe(0);
+    // And a further attempt does nothing.
+    await expect(processProviderEvent(db, id)).resolves.toBe('dead_lettered');
   });
 });

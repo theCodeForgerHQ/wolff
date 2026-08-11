@@ -6,12 +6,15 @@ import { pinoHttp } from 'pino-http';
 import type { Db } from '@wolff/core/context';
 import { logger as defaultLogger, REDACT_PATHS, type Logger } from '@wolff/core/logger';
 import type { ApiConfig } from './config';
-import type { Store } from 'express-rate-limit';
-import { apiKeyRateLimit, requireApiKey } from './middleware/auth';
+import {
+  apiKeyRateLimit,
+  authFailureRateLimit,
+  requireApiKey,
+  type RateLimitStoreFactory,
+} from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
-import { metricsHandler } from './observability';
 import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
 import { jobRoutes, type JobRunDeps } from './routes/jobs';
@@ -39,7 +42,7 @@ export interface AppDeps {
   /** Told about outbox events a request wrote, once it committed (push dispatch). */
   onOutboxEvents?: (ids: string[]) => void;
   /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
-  rateLimitStore?: Store;
+  rateLimitStore?: RateLimitStoreFactory;
   /** Injected Stripe/Razorpay clients for tests. Defaults to env-configured clients. */
   paymentClients?: PaymentProviderClients;
   /** Public app URL used to build checkout success/cancel URLs. */
@@ -97,7 +100,6 @@ export function createApp(deps: AppDeps): Express {
       pageTitle: 'Wolff API Reference',
     })
   );
-  app.get('/metrics', metricsHandler);
 
   // Provider webhooks: mounted before the JSON parser because their
   // signatures cover the raw body, and before CORS because no browser calls them.
@@ -139,7 +141,12 @@ export function createApp(deps: AppDeps): Express {
   // The public API. Every route acts in the workspace of the key it was
   // called with; nothing below reads a workspace from the request itself.
   const v1 = Router();
-  v1.use(requireApiKey(db), apiKeyRateLimit(deps.rateLimitStore), idempotency(db));
+  v1.use(
+    authFailureRateLimit(deps.rateLimitStore),
+    requireApiKey(db),
+    apiKeyRateLimit(deps.rateLimitStore),
+    idempotency(db)
+  );
   v1.use(
     webhookEndpointRoutes(db, {
       // http is tolerated outside production so a local receiver can be used.
