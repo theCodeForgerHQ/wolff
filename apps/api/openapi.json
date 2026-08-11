@@ -634,9 +634,24 @@
           },
           "errors": {
             "type": "integer"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "row": {
+                  "type": "integer"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["row", "message"]
+            }
           }
         },
-        "required": ["created", "updated", "skipped", "errors"]
+        "required": ["created", "updated", "skipped", "errors", "failures"]
       },
       "Lead": {
         "type": "object",
