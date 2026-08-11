@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/sri.mjs",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
@@ -30,6 +30,11 @@
     "vitest": "^5.0.2"
   },
   "size-limit": [
+    {
+      "path": "dist/widget.iife.js",
+      "limit": "60 kB",
+      "gzip": true
+    },
     {
       "path": "dist/widget.es.js",
       "limit": "60 kB",

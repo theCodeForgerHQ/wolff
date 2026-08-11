@@ -138,6 +138,10 @@ jobs:
           git diff --exit-code apps/api/openapi.json
       - name: Postman collection generation must work
         run: pnpm --filter @wolff/api openapi:postman
+      # Budget: the widget bundles stay within 60 kB gzip. The
+      # build above also wrote dist/sri.json with their integrity hashes.
+      - name: Widget size budget
+        run: pnpm --filter @wolff/widget size
 
   e2e:
     name: E2E (flows + visual)
