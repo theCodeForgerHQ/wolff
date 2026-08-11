@@ -47,7 +47,8 @@ test.describe('Automation approval inbox', () => {
         automationId: automation.id,
         subjectId: 'e2e-subject-approval',
         status: 'waiting_approval',
-        currentStep: 0,
+        // Steps are [wait, approval]: the run waits at the approval.
+        currentStep: 1,
         waitingSince: new Date(),
       },
     });
@@ -56,7 +57,7 @@ test.describe('Automation approval inbox', () => {
     await page.reload();
     await page.getByRole('tab', { name: /Approvals/i }).click();
 
-    const waitingText = page.getByText(/Waiting for approval at step 1/i);
+    const waitingText = page.getByText(/Waiting for approval at step 2/i);
     await expect(waitingText).toBeVisible();
 
     await page.getByRole('button', { name: /Approve/i }).click();
@@ -67,6 +68,11 @@ test.describe('Automation approval inbox', () => {
       where: { id: automationRun.id },
     });
     expect(updated.status).toBe('running');
-    expect(updated.currentStep).toBe(1);
+    expect(updated.currentStep).toBe(2);
+    // The approval queued the run's next tick for the worker.
+    const tick = await prisma.outboxEvent.findFirst({
+      where: { type: 'automation.tick', aggregateId: automationRun.id },
+    });
+    expect(tick).not.toBeNull();
   });
 });

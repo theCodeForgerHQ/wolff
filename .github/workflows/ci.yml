@@ -197,7 +197,11 @@ jobs:
         env:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_wolffE2E
       - run: pnpm --filter @wolff/web exec playwright install --with-deps chromium
-      - name: Login and quote -> invoice -> payment flows
+      # Projects: flows (signed out: login, quote -> paid, CSP), setup +
+      # product (signed in: lead -> paid, Kanban keyboard, automations, axe)
+      # and widget (the built embed on its preview server: axe, perf). The
+      # config starts `next start` and the widget preview itself.
+      - name: E2E flows, product and widget projects
         run: pnpm --filter @wolff/web exec playwright test -c playwright.flows.config.ts
         env:
           DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
