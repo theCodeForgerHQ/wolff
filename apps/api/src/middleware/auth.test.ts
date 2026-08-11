@@ -12,7 +12,13 @@ import {
   testDb,
   type TestWorkspace,
 } from '../testing/harness';
-import { apiKeyRateLimit, redisRateLimitStore, requireApiKey, requireScopes } from './auth';
+import {
+  apiKeyRateLimit,
+  authFailureRateLimit,
+  redisRateLimitStore,
+  requireApiKey,
+  requireScopes,
+} from './auth';
 
 describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
   const { base, db } = testDb();
@@ -59,7 +65,7 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
       keyId: workspace.keyId,
       scopes: ['invoices:read'],
       actor: 'api_key',
-      rateLimitPerMin: 120,
+      rateLimitPerMin: 100_000,
     });
   });
 
@@ -152,6 +158,44 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
     expect((await call(workspace.key)).status).toBe(200);
   });
 
+  it('allows a burst of 20 requests, then spreads the rest of the minute', async () => {
+    const steady = await issueKey(base, workspace.id, {
+      scopes: ['invoices:read'],
+      rateLimitPerMin: 120,
+    });
+    const limited = app();
+    const statuses: number[] = [];
+    for (let i = 0; i < 21; i++) {
+      statuses.push(
+        (await request(limited).get('/v1/probe').set('Authorization', `Bearer ${steady.key}`))
+          .status
+      );
+    }
+
+    expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(statuses[20]).toBe(429);
+  });
+
+  it('slows down a client that keeps presenting bad keys', async () => {
+    const guarded = testApp(db, {
+      extend: (router) => {
+        router.get('/v1/guarded', authFailureRateLimit(), requireApiKey(db), (_req, res) =>
+          sendData(res, {})
+        );
+      },
+    });
+    const statuses: number[] = [];
+    for (let i = 0; i < 31; i++) {
+      statuses.push(
+        (await request(guarded).get('/v1/guarded').set('Authorization', `Bearer qc_sk_wrong${i}`))
+          .status
+      );
+    }
+
+    expect(statuses.slice(0, 30).every((s) => s === 401)).toBe(true);
+    expect(statuses[30]).toBe(429);
+  });
+
   it('shares the count between instances through Redis, under the rl: prefix', async () => {
     const container = await TestRedis.start();
     const redis = createRedis(container.url);
@@ -166,7 +210,7 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
             router.get(
               '/v1/probe',
               requireApiKey(db),
-              apiKeyRateLimit(redisRateLimitStore(redis)),
+              apiKeyRateLimit((prefix) => redisRateLimitStore(redis, prefix)),
               (_req, res) => sendData(res, {})
             );
           },
@@ -177,7 +221,10 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
       expect((await call(instance())).status).toBe(200);
       expect((await call(instance())).status).toBe(200);
       expect((await call(instance())).status).toBe(429);
-      expect(await redis.keys('rl:*')).toEqual([`rl:key:${slow.id}`]);
+      expect((await redis.keys('rl:*')).sort()).toEqual([
+        `rl:burst:${slow.id}`,
+        `rl:key:${slow.id}`,
+      ]);
     } finally {
       redis.disconnect();
       await container.kill();

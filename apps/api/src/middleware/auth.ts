@@ -113,22 +113,68 @@ export function requirePublishableKey(db: Db): RequestHandler {
   };
 }
 
+/** Makes a rate-limit store for one limiter (each limiter needs its own). */
+export type RateLimitStoreFactory = (prefix: string) => Store;
+
+const BURST_WINDOW_MS = 10_000;
+const BURST = 20;
+
+const rateLimited: RequestHandler = (_req, res) => {
+  sendError(res, 'rate_limited', 'Too many requests. Retry after the time in Retry-After.');
+};
+
 /**
  * Per-key rate limit: `ApiKey.rateLimitPerMin` requests per
- * minute, counted per key id. Must run after `requireApiKey`. With a Redis
- * store the count is shared by all instances; without one it is per process.
+ * minute, with bursts of at most 20. The burst is a second window of 10 s
+ * allowing 20 requests (or a sixth of the minute's allowance for keys above
+ * 120/min), so 120/min cannot be spent in the first second. Counted per key
+ * id; must run after the key is authenticated. With a Redis store the counts
+ * are shared by all instances; without one they are per process.
  */
-export function apiKeyRateLimit(store?: Store): RequestHandler {
-  return rateLimit({
+export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHandler {
+  const keyOf = (req: Request) => req.ctx?.keyId ?? 'anonymous';
+  const perMinute = (req: Request) => req.ctx?.rateLimitPerMin ?? 120;
+  const minute = rateLimit({
     windowMs: 60_000,
-    limit: (req) => (req as Request).ctx?.rateLimitPerMin ?? 120,
-    keyGenerator: (req) => (req as Request).ctx?.keyId ?? 'anonymous',
+    limit: (req) => perMinute(req as Request),
+    keyGenerator: (req) => keyOf(req as Request),
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    store,
-    handler: (_req, res) => {
-      sendError(res, 'rate_limited', 'Too many requests. Retry after the time in Retry-After.');
-    },
+    store: createStore?.('rl:key:'),
+    handler: rateLimited,
+  });
+  const burst = rateLimit({
+    windowMs: BURST_WINDOW_MS,
+    limit: (req) => Math.max(BURST, Math.ceil(perMinute(req as Request) / 6)),
+    keyGenerator: (req) => keyOf(req as Request),
+    standardHeaders: false,
+    legacyHeaders: false,
+    store: createStore?.('rl:burst:'),
+    handler: rateLimited,
+  });
+  return (req, res, next) => {
+    void minute(req, res, (error?: unknown) => {
+      if (error) return next(error);
+      void burst(req, res, next);
+    });
+  };
+}
+
+/**
+ * Failed authentication per client IP: 30 failed attempts a
+ * minute, then 429 for the rest of the window, so keys cannot be guessed at
+ * speed. Successful requests are not counted. Mount before the key check.
+ */
+export function authFailureRateLimit(createStore?: RateLimitStoreFactory): RequestHandler {
+  return rateLimit({
+    windowMs: 60_000,
+    limit: 30,
+    skipSuccessfulRequests: true,
+    requestWasSuccessful: (_req, res) => res.statusCode !== 401,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store: createStore?.('rl:authfail:'),
+    handler: rateLimited,
   });
 }
 
@@ -136,9 +182,9 @@ export function apiKeyRateLimit(store?: Store): RequestHandler {
  * Rate-limit counters in the Redis that also holds the queue, under their own
  * `rl:` prefix.
  */
-export function redisRateLimitStore(redis: Redis): Store {
+export function redisRateLimitStore(redis: Redis, prefix = 'rl:key:'): Store {
   return new RedisStore({
-    prefix: 'rl:key:',
+    prefix,
     sendCommand: (command: string, ...args: string[]) =>
       redis.call(command, ...args) as Promise<RedisReply>,
   });

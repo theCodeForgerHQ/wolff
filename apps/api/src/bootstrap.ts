@@ -41,7 +41,7 @@ function createReplayCache(redis?: Redis) {
 }
 
 function createRateLimitStore(redis?: Redis) {
-  return redis ? redisRateLimitStore(redis) : undefined;
+  return redis ? (prefix: string) => redisRateLimitStore(redis, prefix) : undefined;
 }
 
 class NoOpDispatcher implements JobDispatcher {

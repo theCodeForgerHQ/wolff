@@ -5,14 +5,19 @@ import { paymentLinkResponseSchema, publicLeadSchema } from '@wolff/contracts';
 import { CoreError } from '@wolff/core/errors';
 import '../../context';
 import { sendData, sendError } from '../../http';
-import { apiKeyRateLimit, requirePublishableKey, requireScopes } from '../../middleware/auth';
-import type { Store } from 'express-rate-limit';
+import {
+  apiKeyRateLimit,
+  authFailureRateLimit,
+  requirePublishableKey,
+  requireScopes,
+  type RateLimitStoreFactory,
+} from '../../middleware/auth';
 import type { PaymentProviderClients } from '../../payments/provider';
 import { defaultPaymentClients, startInvoicePayment } from '../../payments/start-payment';
 
 export interface PublicRoutesDeps {
   db: Db;
-  rateLimitStore?: Store;
+  rateLimitStore?: RateLimitStoreFactory;
   paymentClients?: PaymentProviderClients;
   appUrl?: string;
 }
@@ -28,7 +33,12 @@ export function publicRoutes(deps: PublicRoutesDeps): Router {
     workspaceId: req.ctx!.workspaceId,
   });
 
-  router.use(requirePublishableKey(db), apiKeyRateLimit(deps.rateLimitStore));
+  // Publishable keys are public by design; the failure limit still slows
+  // down guessing. Distinct prefixes keep these counters apart from /v1's.
+  const prefixed = deps.rateLimitStore
+    ? (prefix: string) => deps.rateLimitStore!(`${prefix}public:`)
+    : undefined;
+  router.use(authFailureRateLimit(prefixed), requirePublishableKey(db), apiKeyRateLimit(prefixed));
 
   router.post('/leads', requireScopes('lead:create'), async (req, res) => {
     const input = publicLeadSchema.parse(req.body);
