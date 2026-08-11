@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { bootstrap } from '../bootstrap';
 import { loadConfig } from '../config';
+import { createMetricsApp } from '../observability';
 
 describe('/openapi.json and /docs', () => {
   const config = loadConfig({ ...process.env, NODE_ENV: 'test' });
@@ -28,8 +29,14 @@ describe('/openapi.json and /docs', () => {
     expect(res.text).toContain('/openapi.json');
   });
 
-  it('serves Prometheus metrics without authentication', async () => {
+  it('does not serve Prometheus metrics on the public port', async () => {
     const res = await request(app).get('/metrics');
+
+    expect(res.status).toBe(404);
+  });
+
+  it('serves Prometheus metrics on the separate metrics app (internal port)', async () => {
+    const res = await request(createMetricsApp()).get('/metrics');
 
     expect(res.status).toBe(200);
     expect(res.text).toContain('wolff_');

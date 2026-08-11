@@ -9,7 +9,7 @@ import {
   Gauge,
   register as prometheusRegister,
 } from '@prometheus-io/client';
-import type { RequestHandler } from 'express';
+import express, { type Express, type RequestHandler } from 'express';
 import type { ApiConfig } from './config';
 
 let otelSdk: NodeSDK | undefined;
@@ -64,3 +64,15 @@ export const metricsHandler: RequestHandler = async (_req, res) => {
   res.set('Content-Type', prometheusRegister.contentType);
   res.send(await prometheusRegister.metrics());
 };
+
+/**
+ * `/metrics` on its own port (METRICS_PORT, 9464 by default), not on the
+ * public API port: process and app internals are for the scraper inside the
+ * network (internal port), not for anyone who can reach the API.
+ */
+export function createMetricsApp(): Express {
+  const app = express();
+  app.disable('x-powered-by');
+  app.get('/metrics', metricsHandler);
+  return app;
+}
