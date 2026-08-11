@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@wolff/core/logger';
 import { z } from 'zod';
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
+
+/** A page reports a handful of vitals per load; 60 a minute per client is generous. */
+const VITALS_LIMIT = { limit: 60, windowMs: 60_000 };
 
 const vitalsSchema = z.object({
   name: z.enum(['CLS', 'FCP', 'FID', 'INP', 'LCP', 'TTFB']),
@@ -10,6 +14,17 @@ const vitalsSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Unauthenticated and written to the logs: cap it so it cannot be used to
+  // flood them.
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const limited = await checkRateLimit(`vitals:${clientIp}`, VITALS_LIMIT);
+  if (limited.limited) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests' },
+      { status: 429, headers: getRateLimitHeaders(limited) }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = vitalsSchema.safeParse(body);
   if (!parsed.success) {
