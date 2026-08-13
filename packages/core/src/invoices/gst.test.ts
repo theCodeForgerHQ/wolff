@@ -148,7 +148,26 @@ describe.skipIf(!url)('GST invoices in the database', () => {
     const b = await nextInvoiceNumber(db, ws.id, lastMinuteOfFy);
     const c = await nextInvoiceNumber(db, ws.id, firstMinuteOfFy);
 
-    expect([a, b, c]).toEqual(['INV-0001', 'INV-0002', 'INV-0001']);
+    // The FY is part of the number: invoice numbers are unique per
+    // workspace, so a number reused in the next FY could not be stored.
+    expect([a, b, c]).toEqual(['INV/26-27/0001', 'INV/26-27/0002', 'INV/27-28/0001']);
+    for (const [invoiceNumber, issueDate] of [
+      [a, lastMinuteOfFy],
+      [b, lastMinuteOfFy],
+      [c, firstMinuteOfFy],
+    ] as const) {
+      await base.invoice.create({
+        data: {
+          workspaceId: ws.id,
+          clientId: ws.clients[0]!.id,
+          invoiceNumber,
+          issueDate,
+          dueDate: issueDate,
+          total: 0,
+          amountDue: 0,
+        },
+      });
+    }
     const years = await base.numberSequence.findMany({
       where: { workspaceId: ws.id },
       select: { financialYear: true, currentValue: true },

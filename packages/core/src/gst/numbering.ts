@@ -19,10 +19,20 @@ export interface NextNumberResult {
   financialYear: string | null;
 }
 
+/** "2026-27" → "26-27". */
+function shortFinancialYear(financialYear: string): string {
+  return financialYear.slice(2);
+}
+
 /**
- * Generates the next serial number for a workspace and document type. For
- * GST workspaces a financial-year row is used; for non-GST workspaces the
- * row with no financial year is used.
+ * Generates the next serial number for a workspace and document type.
+ *
+ * A GST workspace counts per financial year and puts the year in the number
+ * ("INV/26-27/0001"): Rule 46(b) asks for a serial unique for the financial
+ * year, and the counter restarts each April, so without the year the first
+ * number of a new FY would repeat last year's, which the unique key on
+ * (workspace, number) refuses. A non-GST workspace keeps one running
+ * counter and today's "INV-0001" format.
  */
 export async function nextSerialNumber(
   db: DbOrTx,
@@ -39,6 +49,7 @@ export async function nextSerialNumber(
   const prefix = (input.prefix ?? '').replace(/-$/, '');
   const suffix = input.suffix ?? '';
   const padding = input.padding ?? 4;
+  const withSuffix = (serial: string) => (suffix ? `${serial}-${suffix}` : serial);
 
   if (prefix && !SERIAL_CHARSET.test(prefix)) {
     throw new Error('Serial prefix contains invalid characters');
@@ -59,9 +70,10 @@ export async function nextSerialNumber(
       { prefix: input.prefix ?? '', currentValue: 1, padding }
     );
 
-    const parts = [prefix, String(sequence.currentValue).padStart(padding, '0')];
-    if (suffix) parts.push(suffix);
-    const serialNumber = parts.filter(Boolean).join('-');
+    const counter = String(sequence.currentValue).padStart(padding, '0');
+    const serialNumber = financialYear
+      ? withSuffix([prefix, shortFinancialYear(financialYear), counter].filter(Boolean).join('/'))
+      : withSuffix([prefix, counter].filter(Boolean).join('-'));
 
     if (serialNumber.length > MAX_SERIAL_LENGTH) {
       throw new Error(`Serial number exceeds ${MAX_SERIAL_LENGTH} characters`);
