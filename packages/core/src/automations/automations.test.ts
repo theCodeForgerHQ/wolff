@@ -324,4 +324,85 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     const paused = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
     expect(paused).toMatchObject({ status: 'waiting_approval', currentStep: 1 });
   });
+
+  it('does not move a deal to a stage of another pipeline in the same workspace', async () => {
+    const mine = await pipelineWithStages(workspaceId);
+    const otherPipeline = await pipelineWithStages(workspaceId);
+    const deal = await base.deal.create({
+      data: {
+        workspaceId,
+        pipelineId: mine.pipeline.id,
+        stageId: mine.first.id,
+        title: 'Pipeline',
+        value: 10,
+      },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Move across',
+        trigger: 'deal.stalled',
+        steps: [{ type: 'move_deal', stageId: otherPipeline.second.id }],
+        isActive: false,
+      },
+    });
+    const moving = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
+    });
+
+    await tickAutomationRun({ db, workspaceId }, moving.id, {
+      dispatch: async () => {},
+      now: new Date(),
+    });
+
+    expect((await base.deal.findUniqueOrThrow({ where: { id: deal.id } })).stageId).toBe(
+      mine.first.id
+    );
+    const after = await base.automationRun.findUniqueOrThrow({ where: { id: moving.id } });
+    expect((after.log as { message: string }[]).map((e) => e.message)).toEqual([
+      'Stage not found; skipped.',
+    ]);
+  });
+
+  it('queues one email for two concurrent ticks of a send_email step', async () => {
+    const client = await base.client.create({
+      data: { workspaceId, name: 'Ravi', email: `ravi-${run}@example.test` },
+    });
+    const invoice = await base.invoice.create({
+      data: {
+        workspaceId,
+        clientId: client.id,
+        invoiceNumber: `RACE-${run.slice(0, 8)}`,
+        status: 'overdue',
+        dueDate: new Date('2026-09-01'),
+        total: 100,
+        amountDue: 100,
+      },
+    });
+    const template = await base.emailTemplate.create({
+      data: { workspaceId, type: 'reminder', name: 'Race', subject: 'Reminder', body: '<p>Hi</p>' },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Email race',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'send_email', templateId: template.id }],
+        isActive: false,
+      },
+    });
+    const emailing = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: invoice.id, status: 'running' },
+    });
+    const ctx = { db: racyDb(), workspaceId };
+    const tick = () =>
+      tickAutomationRun(ctx, emailing.id, { dispatch: async () => {}, now: new Date() });
+
+    await Promise.all([tick(), tick()]);
+
+    const emails = await base.scheduledEmail.findMany({
+      where: { workspaceId, entityId: invoice.id },
+    });
+    expect(emails).toHaveLength(1);
+  });
 });
