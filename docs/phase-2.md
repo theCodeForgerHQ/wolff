@@ -9,7 +9,7 @@ Phase 2 has a task list and a definition of done.
 | ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | OpenAPI/Scalar/Postman | None               | `GET /openapi.json`, `GET /docs` (Scalar), `pnpm openapi:postman` generates `docs/api/postman_collection.json`, `openapi:gen` script, CI diff check | `bcec306`, `be5d5a3`, `aec2a25` |
 | API entry points       | None               | `apps/api/src/server.ts` (local/ECS), `src/index.ts` (Vercel zero-config), build/start/dev scripts                                                  | `f8641d1`                       |
-| Observability          | Config only        | Sentry + OTel init, `/metrics` with Prometheus client                                                                                               | `ad9fd57`                       |
+| Observability          | Config only        | Sentry + OTel init, `/metrics` (Prometheus) on the internal METRICS_PORT                                                                            | `ad9fd57`                       |
 | Worker                 | Package logic only | `apps/api/src/worker.ts` (long-running), `src/worker-drain.ts` (GitHub Actions), `pnpm worker`, `pnpm worker:drain`                                 | `ad9fd57`                       |
 | Free demo env          | Not documented     | `docs/free-tier.md`, `.github/workflows/jobs-drain.yml`                                                                                             | `9e23009`                       |
 
@@ -42,18 +42,27 @@ domains; tests pass (see Test counts below).
 
 ### Free demo env task
 
-Documented in `docs/free-tier.md` and automated via `.github/workflows/jobs-drain.yml`.
+Partly done. `docs/free-tier.md` lists the services and their limits as
+"verify at signup": no account was created (owner item). The drain
+workflow exists (`.github/workflows/jobs-drain.yml`, hourly as the spec
+says); until the 2026-08-09 fixes it could not have run, because it never
+generated the Prisma client. Not done, and deferred with the demo
+environment (Phase 6): the three Vercel projects, Neon `bootstrap.sql`,
+Redis Cloud/Supabase setup, the PDF function smoke test (Chromium cold
+start), the `ai` bundle-size check, and the uptime check. The Vercel
+recurring-invoice cron was removed on 2026-08-09; `/api/cron/reset-demo`
+stays until a `demo.reset` job exists.
 
 ### DoD evidence
 
-| Criterion                                                           | Evidence                                                                                                                                                                                            |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Recurring job runs twice and produces one invoice per parent+period | `packages/core/src/invoices/scheduled.test.ts` lines 132–164                                                                                                                                        |
-| Chaos test: kill Redis, event reconciled by sweeper                 | `packages/jobs/src/bullmq.test.ts` "when Redis is lost"                                                                                                                                             |
-| Stripe test event delivered to old + new endpoint processed once    | `apps/api/src/webhooks/webhooks.test.ts`                                                                                                                                                            |
-| Cross-tenant suite green                                            | `apps/api/src/routes/v1/webhook-endpoints.test.ts` "tenant isolation", `packages/core/src/webhooks/webhooks.test.ts` "does not show or delete another workspace's endpoint"                         |
-| Postman collection green                                            | `pnpm --filter @wolff/api openapi:postman` generates a valid collection from `openapi.json`; the generated file is not committed because `openapi-to-postmanv2` output is non-deterministic         |
-| One trace spans api → job                                           | **Partial**: OTel SDK is initialized and auto-instrumentations are enabled; explicit trace context propagation through BullMQ/QStash is not yet wired. Deferred to Phase 6 observability hardening. |
+| Criterion                                                           | Evidence                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recurring job runs twice and produces one invoice per parent+period | `packages/core/src/invoices/scheduled.test.ts` lines 132–164                                                                                                                                                                                       |
+| Chaos test: kill Redis, event reconciled by sweeper                 | `packages/jobs/src/bullmq.test.ts` "when Redis is lost"                                                                                                                                                                                            |
+| Stripe test event delivered to old + new endpoint processed once    | Not true at Phase 2's close: the Next route still deduped on `stripe_webhook_events`. Fixed 2026-08-09; `apps/web/__tests__/api/stripe-webhook-cutover.integration.test.ts` sends one event to each endpoint in both orders                        |
+| Cross-tenant suite green                                            | At Phase 2's close only webhook endpoints had isolation tests, and they passed with the guard off. Since 2026-08-09: `apps/api/src/routes/v1/cross-tenant.test.ts` covers every /v1 route that takes an id                                         |
+| Postman collection green                                            | **Not met.** The collection is only generated (`pnpm --filter @wolff/api openapi:postman`, also in CI); no request in it has been run (no Newman run). The file is not committed. Whether the converter's output is deterministic was not measured |
+| One trace spans api → job                                           | **Partial**: OTel SDK is initialized and auto-instrumentations are enabled; explicit trace context propagation through BullMQ/QStash is not yet wired. Deferred to Phase 6 observability hardening.                                                |
 
 ## Test counts
 
@@ -106,11 +115,11 @@ up` now includes Redis on `localhost:6379`.
    image documented in `apps/web/e2e/visual/run-in-linux.sh` or the
    `e2e` CI job.
 6. **Partial unique index**: the migration
-   `20250815000000_add_invoice_parent_period_partial_index` creates a
-   partial unique index (`WHERE parentInvoiceId IS NOT NULL`). Prisma
-   Migrate cannot express partial indexes, so `prisma migrate diff`
-   reports "No difference detected" by ignoring the unsupported object.
-   The index is preserved by the migration SQL.
+   `20260716135000_invoice_recurring_period_key` creates the partial
+   unique index `invoices_parent_period_key` (`WHERE parent_invoice_id IS
+NOT NULL AND recurring_period_key IS NOT NULL`). Prisma's schema cannot
+   express it; `prisma migrate diff` reports no difference, and the index
+   exists only in the migration SQL.
 
 ## Review findings and fixes
 
@@ -130,5 +139,19 @@ fixed; LOW findings are documented above.
 
 ## Owner decisions / blockers
 
-None new. The free-tier account creation is documented but not executed;
+None new. See "Free demo env task" above. The free-tier account creation is documented but not executed;
 limits are marked "verify at signup".
+
+## Second review (2026-08-09)
+
+A later review of Phases 2–4 found Phase 2 problems that this document had
+reported as done. They are fixed on `phase4-rtk-widget-automation`; the
+details and evidence are in `docs/phase-4.md`, "Review findings and fixes":
+the push dispatch blocking payment reconciliation (H4), the drain workflow
+never generating the Prisma client (H5), the old Stripe endpoint not using
+`ProviderWebhookEvent` (H6), Idempotency-Key leases and stored secrets
+(M1), the missing cross-tenant suite (M2), `prisma.config.ts` precedence
+(M10), dead-lettering of provider events (L1), QStash exhaustion,
+`/metrics`, burst and auth-failure rate limits, the SSRF ranges (L2), and
+the Vercel cron (L5). The test counts above are as recorded at Phase 2's
+close and were not re-run; current counts are in `docs/phase-4.md`.
