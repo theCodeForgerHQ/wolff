@@ -124,26 +124,33 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     );
   });
 
-  it('applies one of two concurrent decisions', async () => {
-    const waiting = await waitingRun();
-    // Hold every read of the run until both decisions have read it, so both
-    // see it waiting: the case a read-then-update gets wrong.
+  /**
+   * A client whose first two reads of a run wait for each other, so two
+   * concurrent callers both see the same state: the case a read-then-update
+   * gets wrong. Later reads pass straight through.
+   */
+  const racyDb = () => {
     let reads = 0;
     let release: () => void = () => {};
     const bothRead = new Promise<void>((resolve) => (release = resolve));
-    const racy = db.$extends({
+    return db.$extends({
       query: {
         automationRun: {
           async findFirst({ args, query }) {
             const result = await query(args);
-            if (++reads === 2) release();
+            if (++reads > 2) return result;
+            if (reads === 2) release();
             await bothRead;
             return result;
           },
         },
       },
     }) as unknown as typeof db;
-    const ctx = { db: racy, workspaceId, actorId: ownerId };
+  };
+
+  it('applies one of two concurrent decisions', async () => {
+    const waiting = await waitingRun();
+    const ctx = { db: racyDb(), workspaceId, actorId: ownerId };
 
     const results = await Promise.all([
       approveRun(ctx, waiting.id, true),
@@ -279,5 +286,42 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
       where: { workspaceId, type: 'email.send', aggregateId: emails[0]!.id },
     });
     expect(queued).toHaveLength(1);
+  });
+
+  it('advances one step for two concurrent ticks, and stops at the approval', async () => {
+    const { pipeline, first, second } = await pipelineWithStages(workspaceId);
+    const deal = await base.deal.create({
+      data: { workspaceId, pipelineId: pipeline.id, stageId: first.id, title: 'Race', value: 1 },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Move then ask',
+        trigger: 'deal.stalled',
+        steps: [
+          { type: 'move_deal', stageId: second.id },
+          { type: 'approval', role: 'admin' },
+          { type: 'wait', days: 1 },
+        ],
+        isActive: false,
+      },
+    });
+    const racing = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
+    });
+    const ctx = { db: racyDb(), workspaceId };
+    const tick = () =>
+      tickAutomationRun(ctx, racing.id, { dispatch: async () => {}, now: new Date() });
+
+    await Promise.all([tick(), tick()]);
+
+    const after = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
+    expect(after.currentStep).toBe(1);
+    expect((after.log as { action: string }[]).map((e) => e.action)).toEqual(['step_completed']);
+
+    // The next tick reaches the approval and pauses there.
+    await tick();
+    const paused = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
+    expect(paused).toMatchObject({ status: 'waiting_approval', currentStep: 1 });
   });
 });
