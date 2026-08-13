@@ -68,7 +68,7 @@ export function AutomationList({
                 return (
                   <Fragment key={index}>
                     {index > 0 && (
-                      <ChevronRight className="text-muted-foreground/60 h-3.5 w-3.5" aria-hidden />
+                      <ChevronRight className="text-muted-foreground h-3.5 w-3.5" aria-hidden />
                     )}
                     <span
                       className={cn(
