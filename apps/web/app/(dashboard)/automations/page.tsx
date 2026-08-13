@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { AutomationBuilder } from '@/components/automations/automation-builder';
-import { getAutomations, getAutomationRuns } from '@/lib/automations/actions';
+import { getAutomationOptions, getAutomationRuns, getAutomations } from '@/lib/automations/actions';
 
 export const metadata: Metadata = {
   title: 'Automations',
@@ -10,10 +10,11 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AutomationsPage() {
-  const [automations, runs, approvals] = await Promise.all([
+  const [automations, runs, approvals, options] = await Promise.all([
     getAutomations(),
     getAutomationRuns(),
     getAutomationRuns('waiting_approval'),
+    getAutomationOptions(),
   ]);
 
   return (
@@ -24,7 +25,12 @@ export default async function AutomationsPage() {
           Build linear follow-up flows with human-in-the-loop approvals.
         </p>
       </div>
-      <AutomationBuilder automations={automations} runs={runs} approvals={approvals} />
+      <AutomationBuilder
+        automations={automations}
+        runs={runs}
+        approvals={approvals}
+        options={options}
+      />
     </div>
   );
 }

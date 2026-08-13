@@ -8,10 +8,6 @@
     {
       "path": "/api/cron/reset-demo",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/recurring-invoices",
-      "schedule": "0 * * * *"
     }
   ],
   "headers": [

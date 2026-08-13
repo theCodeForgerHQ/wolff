@@ -16,8 +16,15 @@ import {
   updateAutomationSchema,
   type AutomationStep,
 } from '@wolff/contracts';
+import { ZodError } from 'zod';
+import { CoreError } from '@wolff/core/errors';
 import { ROUTES } from '@/lib/routes';
-import type { AutomationFormInput, AutomationListItem, AutomationRunListItem } from './types';
+import type {
+  AutomationFormInput,
+  AutomationListItem,
+  AutomationOptions,
+  AutomationRunListItem,
+} from './types';
 
 const db = withTenantGuard(prisma);
 
@@ -60,43 +67,75 @@ export async function getAutomationRuns(status?: string): Promise<AutomationRunL
   }));
 }
 
-export async function createAutomation(input: AutomationFormInput) {
-  const ctx = await getContext();
-  const parsed = createAutomationSchema.parse(input);
-  const automation = await createAutomationCore(ctx, parsed);
-  revalidatePath(ROUTES.automations);
-  return automation;
+export async function getAutomationOptions(): Promise<AutomationOptions> {
+  const { workspaceId } = await getContext();
+  const [templates, stages] = await Promise.all([
+    db.emailTemplate.findMany({
+      where: { workspaceId, isActive: true, deletedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    db.stage.findMany({
+      where: { workspaceId },
+      select: { id: true, name: true, pipeline: { select: { name: true } } },
+      orderBy: [{ pipelineId: 'asc' }, { position: 'asc' }],
+    }),
+  ]);
+  return {
+    templates,
+    stages: stages.map((s) => ({ id: s.id, name: s.name, pipelineName: s.pipeline.name })),
+  };
 }
 
-export async function updateAutomation(id: string, input: Partial<AutomationFormInput>) {
-  const ctx = await getContext();
-  const parsed = updateAutomationSchema.parse(input);
-  const automation = await updateAutomationCore(ctx, id, parsed);
-  if (!automation) throw new Error('Automation not found');
-  revalidatePath(ROUTES.automations);
-  return automation;
+/** Server actions answer with a result: a thrown error's message is hidden in production. */
+export type ActionResult = { success: true } | { success: false; error: string };
+
+async function attempt(work: () => Promise<unknown>): Promise<ActionResult> {
+  try {
+    await work();
+    revalidatePath(ROUTES.automations);
+    return { success: true };
+  } catch (error) {
+    if (error instanceof CoreError) {
+      const reasons = error.details ? Object.values(error.details).flat() : [];
+      return { success: false, error: [error.message, ...reasons].join(': ') };
+    }
+    if (error instanceof ZodError) return { success: false, error: 'Some fields are not valid' };
+    throw error;
+  }
 }
 
-export async function deleteAutomation(id: string) {
+export async function createAutomation(input: AutomationFormInput): Promise<ActionResult> {
   const ctx = await getContext();
-  const automation = await deleteAutomationCore(ctx, id);
-  if (!automation) throw new Error('Automation not found');
-  revalidatePath(ROUTES.automations);
-  return automation;
+  return attempt(() => createAutomationCore(ctx, createAutomationSchema.parse(input)));
 }
 
-export async function approveRun(id: string) {
+export async function updateAutomation(
+  id: string,
+  input: Partial<AutomationFormInput>
+): Promise<ActionResult> {
   const ctx = await getContext();
-  const run = await approveRunCore(ctx, id, true);
-  if (!run) throw new Error('Run not found or not waiting for approval');
-  revalidatePath(ROUTES.automations);
-  return run;
+  return attempt(async () => {
+    const automation = await updateAutomationCore(ctx, id, updateAutomationSchema.parse(input));
+    if (!automation) throw new CoreError('not_found', 'Automation not found');
+  });
 }
 
-export async function rejectRun(id: string) {
+export async function deleteAutomation(id: string): Promise<ActionResult> {
   const ctx = await getContext();
-  const run = await approveRunCore(ctx, id, false);
-  if (!run) throw new Error('Run not found or not waiting for approval');
-  revalidatePath(ROUTES.automations);
-  return run;
+  return attempt(async () => {
+    if (!(await deleteAutomationCore(ctx, id))) {
+      throw new CoreError('not_found', 'Automation not found');
+    }
+  });
+}
+
+/** Approve or reject a run waiting at an approval step (role-checked in core). */
+export async function decideRun(id: string, approved: boolean): Promise<ActionResult> {
+  const ctx = await getContext();
+  return attempt(async () => {
+    if (!(await approveRunCore(ctx, id, approved))) {
+      throw new CoreError('conflict', 'This run is no longer waiting for approval');
+    }
+  });
 }

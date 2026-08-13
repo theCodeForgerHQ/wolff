@@ -24,11 +24,15 @@ export const VISUAL = {
 } as const;
 
 // Seed dates are relative to "now"; pin the clones so their pages render
-// the same text (and width) whatever day the database was seeded.
+// the same text (and width) whatever day the database was seeded. The
+// expiry and due dates are far in the future: a date that passes turns the
+// quote "expired" and the invoice "overdue", and the pages change with it
+// (the first pinned expiry, 2026-10-01, did exactly that on 2026-10-02).
 const FIXED = '2026-09-01T09:00:00Z';
+const FAR_FUTURE = '2099-10-01T09:00:00Z';
 const QUOTE_DATES = {
   issue_date: FIXED,
-  expiration_date: '2026-10-01T09:00:00Z',
+  expiration_date: FAR_FUTURE,
   sent_at: FIXED,
   viewed_at: FIXED,
   created_at: FIXED,
@@ -36,7 +40,7 @@ const QUOTE_DATES = {
 };
 const INVOICE_DATES = {
   issue_date: FIXED,
-  due_date: '2026-10-01T09:00:00Z',
+  due_date: FAR_FUTURE,
   sent_at: FIXED,
   viewed_at: FIXED,
   created_at: FIXED,

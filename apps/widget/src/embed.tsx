@@ -7,6 +7,7 @@ import type { WidgetConfig, WidgetMode } from './types';
 import widgetCss from './index.css?inline';
 
 const WIDGET_ATTR = 'data-wolff-widget';
+export const INTERACTIVE_MARK = 'wolff-widget:interactive';
 
 interface EmbedOptions {
   apiBaseUrl?: string;
@@ -66,6 +67,15 @@ function mount(target: HTMLElement, options: EmbedOptions): { unmount: () => voi
   shadow.appendChild(container);
 
   render(<Widget config={config} />, container);
+  // Preact renders synchronously: the form and its handlers exist now. The
+  // performance budget (interactive ≤ 300 ms after
+  // DOMContentLoaded) is measured against this mark.
+  if (
+    typeof performance !== 'undefined' &&
+    performance.getEntriesByName(INTERACTIVE_MARK).length === 0
+  ) {
+    performance.mark(INTERACTIVE_MARK);
+  }
   return {
     unmount: () => {
       render(null as unknown as preact.VNode, container);

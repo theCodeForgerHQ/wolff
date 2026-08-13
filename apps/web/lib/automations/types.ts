@@ -29,3 +29,9 @@ export interface AutomationRunListItem {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** What the step forms offer to pick from, instead of raw ids. */
+export interface AutomationOptions {
+  templates: { id: string; name: string }[];
+  stages: { id: string; name: string; pipelineName: string }[];
+}

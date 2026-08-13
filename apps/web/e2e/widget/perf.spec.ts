@@ -1,24 +1,37 @@
 import { test, expect } from '@playwright/test';
 
+/**
+ * The widget is interactive within 300 ms of DOMContentLoaded on a
+ * throttled "Fast 3G / 4x CPU" profile. "Interactive" is the widget's own
+ * performance mark, set once the form and its handlers are mounted.
+ */
 test.describe('Widget performance', () => {
-  test('lead form interaction stays under 300 ms on a throttled profile', async ({ page }) => {
-    // Throttle CPU to emulate a low-end device.
+  test('lead form is interactive within 300 ms of DOMContentLoaded (Fast 3G, 4x CPU)', async ({
+    page,
+  }) => {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-
-    await page.goto('/');
-    const input = page.locator('[data-wolff-widget="lead-form"] input').first();
-    await input.waitFor({ state: 'visible', timeout: 10000 });
-
-    const duration = await page.evaluate(async () => {
-      const start = performance.now();
-      const el = document.querySelector('[data-wolff-widget="lead-form"] input') as HTMLElement;
-      el?.focus();
-      // Force a style/layout flush so the browser processes the interaction.
-      document.body.offsetHeight;
-      return performance.now() - start;
+    await cdp.send('Network.enable');
+    // Chrome DevTools' "Fast 3G" preset.
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 562.5,
+      downloadThroughput: (1.44 * 1024 * 1024) / 8,
+      uploadThroughput: (675 * 1024) / 8,
     });
 
-    expect(duration).toBeLessThan(300);
+    await page.goto('/');
+    await page.locator('[data-wolff-widget="lead-form"] input').first().waitFor();
+
+    const timing = await page.evaluate(() => {
+      const [nav] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const [mark] = performance.getEntriesByName('wolff-widget:interactive');
+      return { domContentLoaded: nav!.domContentLoadedEventEnd, interactive: mark?.startTime };
+    });
+
+    expect(timing.interactive, 'widget never marked itself interactive').toBeDefined();
+    const sinceDcl = timing.interactive! - timing.domContentLoaded;
+    test.info().annotations.push({ type: 'interactive-ms', description: sinceDcl.toFixed(1) });
+    expect(sinceDcl).toBeLessThanOrEqual(300);
   });
 });
