@@ -298,10 +298,7 @@ export async function tickAutomationRun(
     ? (run.automation.steps as unknown as AutomationStep[])
     : [];
   if (run.currentStep >= steps.length) {
-    return ctx.db.automationRun.update({
-      where: { id: run.id, workspaceId: ctx.workspaceId },
-      data: { status: 'done' },
-    });
+    return transition(ctx.db, ctx, run, { status: 'done' });
   }
 
   const step = steps[run.currentStep];
@@ -309,20 +306,18 @@ export async function tickAutomationRun(
 
   if (step.type === 'wait') {
     if (!run.waitingSince) {
-      await ctx.db.automationRun.update({
-        where: { id: run.id, workspaceId: ctx.workspaceId },
-        data: {
-          waitingSince: options.now,
-          log: pushLog(run, {
-            at: options.now.toISOString(),
-            stepIndex: run.currentStep,
-            action: 'wait_started',
-            message: `Waiting ${step.days} day(s).`,
-          }),
-        },
+      const started = await transition(ctx.db, ctx, run, {
+        waitingSince: options.now,
+        log: pushLog(run, {
+          at: options.now.toISOString(),
+          stepIndex: run.currentStep,
+          action: 'wait_started',
+          message: `Waiting ${step.days} day(s).`,
+        }),
       });
-      await options.dispatch(run.id, run.currentStep, step.days * 86_400_000);
-      return run;
+      // Only the tick that started the wait schedules its end.
+      if (started) await options.dispatch(run.id, run.currentStep, step.days * 86_400_000);
+      return started ?? run;
     }
     const elapsed = options.now.getTime() - run.waitingSince.getTime();
     if (elapsed < step.days * 86_400_000) return run;
@@ -330,20 +325,17 @@ export async function tickAutomationRun(
   }
 
   if (step.type === 'approval') {
-    await ctx.db.automationRun.update({
-      where: { id: run.id, workspaceId: ctx.workspaceId },
-      data: {
-        status: 'waiting_approval',
-        waitingSince: options.now,
-        log: pushLog(run, {
-          at: options.now.toISOString(),
-          stepIndex: run.currentStep,
-          action: 'approval_requested',
-          message: `Waiting for ${step.role} approval.`,
-        }),
-      },
+    const paused = await transition(ctx.db, ctx, run, {
+      status: 'waiting_approval',
+      waitingSince: options.now,
+      log: pushLog(run, {
+        at: options.now.toISOString(),
+        stepIndex: run.currentStep,
+        action: 'approval_requested',
+        message: `Waiting for ${step.role} approval.`,
+      }),
     });
-    return run;
+    return paused ?? run;
   }
 
   if (step.type === 'send_email') {
@@ -361,25 +353,13 @@ export async function tickAutomationRun(
     // The email, its send job and the step advance commit together, and only
     // if the run is still on this step: a repeated tick sends nothing twice.
     return ctx.db.$transaction(async (tx) => {
-      const moved = await tx.automationRun.updateMany({
-        where: {
-          id: run.id,
-          workspaceId: ctx.workspaceId,
-          status: 'running',
-          currentStep: run.currentStep,
-        },
-        data: {
-          currentStep: run.currentStep + 1,
-          waitingSince: null,
-          log: pushLog(run, {
-            at: options.now.toISOString(),
-            stepIndex: run.currentStep,
-            action: 'step_completed',
-            message: 'Email queued.',
-          }),
-        },
-      });
-      if (moved.count === 1) {
+      const moved = await transition(
+        tx,
+        ctx,
+        run,
+        completedStep(run, 'Email queued.', options.now)
+      );
+      if (moved) {
         const email = await tx.scheduledEmail.create({
           data: {
             workspaceId: ctx.workspaceId,
@@ -423,40 +403,75 @@ export async function tickAutomationRun(
           where: { id: step.stageId, workspaceId: ctx.workspaceId, pipelineId: deal.pipelineId },
         })
       : null;
-    if (deal && stage) {
-      await ctx.db.deal.update({
-        where: { id: deal.id, workspaceId: ctx.workspaceId },
-        data: { stageId: stage.id },
-      });
-    }
-    return advanceRun(
-      ctx,
-      run,
-      !deal ? 'Deal not found; skipped.' : stage ? 'Deal moved.' : 'Stage not found; skipped.'
-    );
+    const message = !deal
+      ? 'Deal not found; skipped.'
+      : stage
+        ? 'Deal moved.'
+        : 'Stage not found; skipped.';
+    // The move and the step advance commit together, and only for the tick
+    // that still finds the run on this step.
+    return ctx.db.$transaction(async (tx) => {
+      const moved = await transition(tx, ctx, run, completedStep(run, message, options.now));
+      if (moved && deal && stage) {
+        await tx.deal.update({
+          where: { id: deal.id, workspaceId: ctx.workspaceId },
+          data: { stageId: stage.id },
+        });
+      }
+      return moved ?? run;
+    });
   }
 
   return run;
 }
 
-async function advanceRun(
+type RunState = { id: string; currentStep: number; log: Prisma.JsonValue };
+type RunClient = Pick<Db, 'automationRun'>;
+
+/**
+ * Applies a change to a run only if it is still running at the step this
+ * tick read. Two ticks for the same (run, step) can both read the run; this
+ * makes exactly one of them move it, so each step runs once. Returns the
+ * updated run, or null when another tick got there first.
+ */
+async function transition(
+  db: RunClient,
   ctx: CoreContext,
-  run: { id: string; currentStep: number; log: Prisma.JsonValue },
-  message: string
+  run: RunState,
+  data: Prisma.AutomationRunUpdateManyMutationInput
 ) {
-  return ctx.db.automationRun.update({
-    where: { id: run.id, workspaceId: ctx.workspaceId },
-    data: {
-      currentStep: { increment: 1 },
-      waitingSince: null,
-      log: pushLog(run, {
-        at: new Date().toISOString(),
-        stepIndex: run.currentStep,
-        action: 'step_completed',
-        message,
-      }),
+  const changed = await db.automationRun.updateMany({
+    where: {
+      id: run.id,
+      workspaceId: ctx.workspaceId,
+      status: 'running',
+      currentStep: run.currentStep,
     },
+    data,
   });
+  if (changed.count !== 1) return null;
+  return db.automationRun.findFirst({ where: { id: run.id, workspaceId: ctx.workspaceId } });
+}
+
+function completedStep(
+  run: RunState,
+  message: string,
+  at = new Date()
+): Prisma.AutomationRunUpdateManyMutationInput {
+  return {
+    currentStep: run.currentStep + 1,
+    waitingSince: null,
+    log: pushLog(run, {
+      at: at.toISOString(),
+      stepIndex: run.currentStep,
+      action: 'step_completed',
+      message,
+    }),
+  };
+}
+
+async function advanceRun(ctx: CoreContext, run: RunState, message: string) {
+  return (await transition(ctx.db, ctx, run, completedStep(run, message))) ?? run;
 }
 
 async function resolveSubject(

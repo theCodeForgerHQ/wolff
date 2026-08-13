@@ -31,8 +31,8 @@ describe.skipIf(!url)('GST numbering', () => {
       prefix: 'INV',
     });
 
-    expect(first.serialNumber).toMatch(/^INV-\d{4}$/);
-    expect(second.serialNumber).toMatch(/^INV-\d{4}$/);
+    expect(first.serialNumber).toMatch(/^INV\/\d{2}-\d{2}\/\d{4}$/);
+    expect(second.serialNumber).toMatch(/^INV\/\d{2}-\d{2}\/\d{4}$/);
     expect(first.financialYear).toBe(getFinancialYear());
     expect(second.serialNumber).not.toBe(first.serialNumber);
   });
@@ -85,7 +85,7 @@ describe.skipIf(!url)('GST numbering', () => {
       type: 'invoice',
       prefix: 'INV',
     });
-    expect(result.serialNumber).toBe('INV-0001');
+    expect(result.serialNumber).toBe(`INV/${getFinancialYear().slice(2)}/0001`);
   });
   it('hands out distinct numbers when the first numbers are requested at once', async () => {
     const workspace = await base.workspace.create({
@@ -122,7 +122,10 @@ describe.skipIf(!url)('GST numbering', () => {
     );
 
     expect(results.map((r) => r.serialNumber).sort()).toEqual(
-      Array.from({ length: 8 }, (_, i) => `INV-${String(i + 1).padStart(4, '0')}`)
+      Array.from(
+        { length: 8 },
+        (_, i) => `INV/${getFinancialYear().slice(2)}/${String(i + 1).padStart(4, '0')}`
+      )
     );
   });
 });

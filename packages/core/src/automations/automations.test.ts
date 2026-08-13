@@ -124,26 +124,33 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     );
   });
 
-  it('applies one of two concurrent decisions', async () => {
-    const waiting = await waitingRun();
-    // Hold every read of the run until both decisions have read it, so both
-    // see it waiting: the case a read-then-update gets wrong.
+  /**
+   * A client whose first two reads of a run wait for each other, so two
+   * concurrent callers both see the same state: the case a read-then-update
+   * gets wrong. Later reads pass straight through.
+   */
+  const racyDb = () => {
     let reads = 0;
     let release: () => void = () => {};
     const bothRead = new Promise<void>((resolve) => (release = resolve));
-    const racy = db.$extends({
+    return db.$extends({
       query: {
         automationRun: {
           async findFirst({ args, query }) {
             const result = await query(args);
-            if (++reads === 2) release();
+            if (++reads > 2) return result;
+            if (reads === 2) release();
             await bothRead;
             return result;
           },
         },
       },
     }) as unknown as typeof db;
-    const ctx = { db: racy, workspaceId, actorId: ownerId };
+  };
+
+  it('applies one of two concurrent decisions', async () => {
+    const waiting = await waitingRun();
+    const ctx = { db: racyDb(), workspaceId, actorId: ownerId };
 
     const results = await Promise.all([
       approveRun(ctx, waiting.id, true),
@@ -279,5 +286,123 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
       where: { workspaceId, type: 'email.send', aggregateId: emails[0]!.id },
     });
     expect(queued).toHaveLength(1);
+  });
+
+  it('advances one step for two concurrent ticks, and stops at the approval', async () => {
+    const { pipeline, first, second } = await pipelineWithStages(workspaceId);
+    const deal = await base.deal.create({
+      data: { workspaceId, pipelineId: pipeline.id, stageId: first.id, title: 'Race', value: 1 },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Move then ask',
+        trigger: 'deal.stalled',
+        steps: [
+          { type: 'move_deal', stageId: second.id },
+          { type: 'approval', role: 'admin' },
+          { type: 'wait', days: 1 },
+        ],
+        isActive: false,
+      },
+    });
+    const racing = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
+    });
+    const ctx = { db: racyDb(), workspaceId };
+    const tick = () =>
+      tickAutomationRun(ctx, racing.id, { dispatch: async () => {}, now: new Date() });
+
+    await Promise.all([tick(), tick()]);
+
+    const after = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
+    expect(after.currentStep).toBe(1);
+    expect((after.log as { action: string }[]).map((e) => e.action)).toEqual(['step_completed']);
+
+    // The next tick reaches the approval and pauses there.
+    await tick();
+    const paused = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
+    expect(paused).toMatchObject({ status: 'waiting_approval', currentStep: 1 });
+  });
+
+  it('does not move a deal to a stage of another pipeline in the same workspace', async () => {
+    const mine = await pipelineWithStages(workspaceId);
+    const otherPipeline = await pipelineWithStages(workspaceId);
+    const deal = await base.deal.create({
+      data: {
+        workspaceId,
+        pipelineId: mine.pipeline.id,
+        stageId: mine.first.id,
+        title: 'Pipeline',
+        value: 10,
+      },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Move across',
+        trigger: 'deal.stalled',
+        steps: [{ type: 'move_deal', stageId: otherPipeline.second.id }],
+        isActive: false,
+      },
+    });
+    const moving = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
+    });
+
+    await tickAutomationRun({ db, workspaceId }, moving.id, {
+      dispatch: async () => {},
+      now: new Date(),
+    });
+
+    expect((await base.deal.findUniqueOrThrow({ where: { id: deal.id } })).stageId).toBe(
+      mine.first.id
+    );
+    const after = await base.automationRun.findUniqueOrThrow({ where: { id: moving.id } });
+    expect((after.log as { message: string }[]).map((e) => e.message)).toEqual([
+      'Stage not found; skipped.',
+    ]);
+  });
+
+  it('queues one email for two concurrent ticks of a send_email step', async () => {
+    const client = await base.client.create({
+      data: { workspaceId, name: 'Ravi', email: `ravi-${run}@example.test` },
+    });
+    const invoice = await base.invoice.create({
+      data: {
+        workspaceId,
+        clientId: client.id,
+        invoiceNumber: `RACE-${run.slice(0, 8)}`,
+        status: 'overdue',
+        dueDate: new Date('2026-09-01'),
+        total: 100,
+        amountDue: 100,
+      },
+    });
+    const template = await base.emailTemplate.create({
+      data: { workspaceId, type: 'reminder', name: 'Race', subject: 'Reminder', body: '<p>Hi</p>' },
+    });
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Email race',
+        trigger: 'invoice.overdue',
+        steps: [{ type: 'send_email', templateId: template.id }],
+        isActive: false,
+      },
+    });
+    const emailing = await base.automationRun.create({
+      data: { workspaceId, automationId: automation.id, subjectId: invoice.id, status: 'running' },
+    });
+    const ctx = { db: racyDb(), workspaceId };
+    const tick = () =>
+      tickAutomationRun(ctx, emailing.id, { dispatch: async () => {}, now: new Date() });
+
+    await Promise.all([tick(), tick()]);
+
+    const emails = await base.scheduledEmail.findMany({
+      where: { workspaceId, entityId: invoice.id },
+    });
+    expect(emails).toHaveLength(1);
   });
 });
