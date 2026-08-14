@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getEmailTemplates, getEmailTemplateById } from '@/lib/email/actions';
 import { sendQuote } from '@/lib/quotes/actions';
-import { sendInvoice } from '@/lib/invoices/actions';
+import { sendInvoice } from '@/lib/invoices/status-actions';
 import { sendContractInstance } from '@/lib/contracts/actions';
 
 // ─── Types ────────────────────────────────────────────────

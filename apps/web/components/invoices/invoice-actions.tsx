@@ -32,12 +32,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { InvoiceDocument } from '@/lib/invoices/types';
-import {
-  sendInvoice,
-  deleteInvoice,
-  updateInvoiceStatus,
-  duplicateInvoice,
-} from '@/lib/invoices/actions';
+import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
+import { deleteInvoice, duplicateInvoice } from '@/lib/invoices/actions';
 
 interface InvoiceActionsProps {
   invoice: InvoiceDocument;

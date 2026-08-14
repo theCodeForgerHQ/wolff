@@ -62,8 +62,10 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { toast } from 'sonner';
-import { updateInvoice, sendInvoice, getInvoiceTemplates } from '@/lib/invoices/actions';
-import type { InvoiceTemplateLineItem } from '@/lib/invoices/actions';
+import { updateInvoice } from '@/lib/invoices/actions';
+import { sendInvoice } from '@/lib/invoices/status-actions';
+import { getInvoiceTemplates } from '@/lib/invoices/template-actions';
+import type { InvoiceTemplateLineItem } from '@/lib/invoices/template-actions';
 import type { InvoiceDocument } from '@/lib/invoices/types';
 
 // ─── Types ───────────────────────────────────────────────

@@ -63,8 +63,8 @@ import {
 } from '@/components/ui/command';
 import { searchClients } from '@/lib/clients/actions';
 import { updateQuote, sendQuote } from '@/lib/quotes/actions';
-import { getInvoiceTemplates } from '@/lib/invoices/actions';
-import type { InvoiceTemplateLineItem } from '@/lib/invoices/actions';
+import { getInvoiceTemplates } from '@/lib/invoices/template-actions';
+import type { InvoiceTemplateLineItem } from '@/lib/invoices/template-actions';
 import { getBusinessProfile, getWorkspace } from '@/lib/settings/actions';
 
 // ─── Types ───────────────────────────────────────────────

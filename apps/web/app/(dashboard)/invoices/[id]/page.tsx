@@ -11,7 +11,7 @@ import {
   Ban,
   RefreshCw,
 } from 'lucide-react';
-import { getInvoice } from '@/lib/invoices/actions';
+import { getInvoice } from '@/lib/invoices/queries';
 import { getCreditNotesForInvoice } from '@/lib/credit-notes/actions';
 import { getRecurringSettings } from '@/lib/invoices/recurring';
 import { prisma } from '@wolff/database';

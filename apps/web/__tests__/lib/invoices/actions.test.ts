@@ -68,13 +68,9 @@ vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
 }));
-import {
-  createInvoice,
-  getInvoices,
-  deleteInvoice,
-  updateInvoiceStatus,
-  createInvoiceFromQuote,
-} from '@/lib/invoices/actions';
+import { createInvoice, deleteInvoice, createInvoiceFromQuote } from '@/lib/invoices/actions';
+import { getInvoices } from '@/lib/invoices/queries';
+import { updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe('Invoice Actions', () => {
   const WORKSPACE_ID = 'ws-123';
