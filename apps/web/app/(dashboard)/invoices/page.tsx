@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getInvoices } from '@/lib/invoices/actions';
+import { getInvoices } from '@/lib/invoices/queries';
 import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { InvoicesDataTable } from '@/components/invoices/invoices-data-table';

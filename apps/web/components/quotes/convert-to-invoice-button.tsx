@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { createInvoiceFromQuote } from '@/lib/invoices/actions';
-import { sendInvoice } from '@/lib/invoices/actions';
+import { sendInvoice } from '@/lib/invoices/status-actions';
 
 const PAYMENT_TERMS = [
   { value: '7', label: 'Net 7 (7 days)' },

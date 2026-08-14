@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { getInvoice } from '@/lib/invoices/actions';
+import { getInvoice } from '@/lib/invoices/queries';
 import { getClientsForSelect } from '@/lib/clients/actions';
 import { getTaxRates, getBusinessProfile } from '@/lib/settings/actions';
 import { EditInvoiceForm } from './edit-invoice-form';

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { recordPayment } from '@/lib/invoices/actions';
+import { recordPayment } from '@/lib/invoices/status-actions';
 
 export interface PaymentRecord {
   id: string;

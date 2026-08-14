@@ -41,7 +41,7 @@ vi.mock('@/lib/services/email', () => ({
 }));
 
 import { getQuotes } from '@/lib/quotes/actions';
-import { getInvoices } from '@/lib/invoices/actions';
+import { getInvoices } from '@/lib/invoices/queries';
 import { getClients } from '@/lib/clients/actions';
 
 describe('Cross-Workspace Isolation', () => {

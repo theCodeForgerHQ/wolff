@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getInvoiceTemplates } from '@/lib/invoices/actions';
+import { getInvoiceTemplates } from '@/lib/invoices/template-actions';
 import { InvoiceTemplatesDataTable } from '@/components/invoices/invoice-templates-data-table';
 
 export const metadata = {

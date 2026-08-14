@@ -20,8 +20,11 @@ import {
   deleteInvoiceTemplate,
   duplicateInvoiceTemplate,
   updateInvoiceTemplate,
-} from '@/lib/invoices/actions';
-import type { InvoiceTemplateListItem, InvoiceTemplateLineItem } from '@/lib/invoices/actions';
+} from '@/lib/invoices/template-actions';
+import type {
+  InvoiceTemplateListItem,
+  InvoiceTemplateLineItem,
+} from '@/lib/invoices/template-actions';
 import {
   AlertDialog,
   AlertDialogAction,

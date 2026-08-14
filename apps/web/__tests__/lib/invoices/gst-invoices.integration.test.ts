@@ -27,12 +27,8 @@ vi.mock('@/lib/notifications/internal', () => ({
 
 import { prisma } from '@wolff/database';
 import { getFinancialYear } from '@wolff/core/gst';
-import {
-  createInvoice,
-  createInvoiceFromQuote,
-  sendInvoice,
-  updateInvoiceStatus,
-} from '@/lib/invoices/actions';
+import { createInvoice, createInvoiceFromQuote } from '@/lib/invoices/actions';
+import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
   const run = randomUUID().slice(0, 8);
