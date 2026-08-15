@@ -57,9 +57,18 @@ export type PaymentLinkResult =
       };
     };
 
+/** The part of the Razorpay SDK this module uses. */
+export interface RazorpayOrdersClient {
+  orders: Pick<Razorpay['orders'], 'create'>;
+}
+
 export interface PaymentProviderClients {
   stripe: Stripe;
-  razorpay: Razorpay;
+  /**
+   * A Razorpay client for one workspace's own key pair. Orders are created
+   * in the workspace's Razorpay account, never the platform's.
+   */
+  razorpay: (keyId: string, keySecret: string) => RazorpayOrdersClient;
 }
 
 const DEFAULT_PROVIDER: PaymentProvider = 'stripe';
@@ -137,12 +146,15 @@ export async function createStripeCheckout(
 }
 
 export async function createRazorpayOrder(
-  razorpay: Razorpay,
+  razorpayFor: PaymentProviderClients['razorpay'],
   invoice: InvoiceForPayment,
   settings: PaymentSettingsForProvider
 ): Promise<PaymentLinkResult> {
   if (!settings.razorpayKeyId || !settings.razorpayKeySecretEnc) {
-    throw new CoreError('not_configured', 'Razorpay keys are not configured');
+    throw new CoreError(
+      'not_configured',
+      'Razorpay keys are not configured for this workspace; add them in Settings → Payments'
+    );
   }
 
   const keySecret = decrypt(settings.razorpayKeySecretEnc);
@@ -156,7 +168,7 @@ export async function createRazorpayOrder(
   const amount = toSmallestCurrencyUnit(invoice.amountDue);
   let order: { id?: string };
   try {
-    order = await razorpay.orders.create({
+    order = await razorpayFor(settings.razorpayKeyId, keySecret).orders.create({
       amount,
       currency: invoice.currency.toUpperCase(),
       receipt: invoice.id.slice(0, 40),

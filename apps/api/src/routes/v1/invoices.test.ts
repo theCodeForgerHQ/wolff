@@ -34,13 +34,19 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
   };
   let orderCounter = 0;
   const orderRequests: { amount: number }[] = [];
-  const razorpay = {
-    orders: {
-      create: async (request: { amount: number }) => {
-        orderRequests.push(request);
-        return { id: `order_${++orderCounter}` };
+  // Each order is created with the keys of the workspace that owns the
+  // invoice; the factory records which keys it was given.
+  const razorpayKeys: { keyId: string; keySecret: string }[] = [];
+  const razorpay = (keyId: string, keySecret: string) => {
+    razorpayKeys.push({ keyId, keySecret });
+    return {
+      orders: {
+        create: async (request: { amount: number }) => {
+          orderRequests.push(request);
+          return { id: `order_${++orderCounter}` };
+        },
       },
-    },
+    };
   };
   const app = testApp(db, {
     paymentClients: { stripe: stripe as never, razorpay: razorpay as never },
@@ -127,6 +133,12 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
       amount: 118000,
       currency: 'INR',
       keyId: 'rzp_test_123',
+    });
+
+    // The order is created with the workspace's own Razorpay keys.
+    expect(razorpayKeys.at(-1)).toEqual({
+      keyId: 'rzp_test_123',
+      keySecret: 'rzp_secret_plaintext',
     });
 
     // A pending Payment row is created so the webhook can reconcile.
@@ -374,5 +386,39 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         'paid'
       );
     });
+  });
+
+  it('refuses a Razorpay link, saying why, when the workspace has no Razorpay keys', async () => {
+    await base.paymentSettings.update({
+      where: { workspaceId: ws.id },
+      data: { razorpayKeyId: null, razorpayKeySecretEnc: null },
+    });
+    try {
+      const unpaid = await base.invoice.create({
+        data: {
+          workspaceId: ws.id,
+          clientId,
+          invoiceNumber: `INV-NOKEY-${randomUUID().slice(0, 6)}`,
+          status: 'sent',
+          dueDate: new Date(Date.now() + 7 * 86_400_000),
+          total: 100,
+          amountDue: 100,
+          currency: 'INR',
+        },
+      });
+      const created = razorpayKeys.length;
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${unpaid.id}/payment-links`)
+        .send({ provider: 'razorpay' });
+
+      expect(res.body.error.code).toBe('not_configured');
+      expect(res.body.error.message).toMatch(/Razorpay keys are not configured for this workspace/);
+      expect(razorpayKeys).toHaveLength(created);
+    } finally {
+      await base.paymentSettings.update({
+        where: { workspaceId: ws.id },
+        data: { razorpayKeyId: 'rzp_test_123', razorpayKeySecretEnc: 'rzp_secret_plaintext' },
+      });
+    }
   });
 });

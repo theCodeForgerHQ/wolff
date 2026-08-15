@@ -16,10 +16,7 @@ export function defaultPaymentClients(): PaymentProviderClients {
       apiVersion: '2026-08-26.dahlia',
       typescript: true,
     }),
-    razorpay: new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID ?? 'rzp_test_placeholder',
-      key_secret: process.env.RAZORPAY_KEY_SECRET ?? 'secret_placeholder',
-    }),
+    razorpay: (keyId, keySecret) => new Razorpay({ key_id: keyId, key_secret: keySecret }),
   };
 }
 
