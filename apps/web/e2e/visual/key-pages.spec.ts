@@ -21,9 +21,6 @@ const volatile = (page: Page): Locator[] => [
   page
     .getByText('Demo Mode', { exact: true })
     .locator('xpath=ancestor::div[contains(@class, "container")]/..'),
-  // Known issue (docs/baseline.md): a hydration mismatch in relative
-  // timestamps raises a global error toast on the dashboard.
-  page.getByText('An unexpected error occurred.'),
   // Unread count: every portal visit in the run adds a notification.
   page.getByRole('button', { name: 'Notifications' }).locator('span'),
   page.getByText(/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, /),
@@ -34,9 +31,23 @@ const volatile = (page: Page): Locator[] => [
 
 const AUTH_FILE = path.join(__dirname, '../.auth/visual-demo.json');
 
+const AUTH_USER_FILE = `${AUTH_FILE}.user`;
+
 // Sign in once per run: the credentials provider allows 5 attempts per email per 15 min.
+// The saved session is reused only for the same demo user: after the visual
+// database is re-seeded the user (and workspace) ids change, and a session
+// for the old ones renders an error instead of the dashboard.
 async function ensureStorageState(browser: Browser) {
-  if (fs.existsSync(AUTH_FILE) && Date.now() - fs.statSync(AUTH_FILE).mtimeMs < 60 * 60 * 1000)
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { email: DEMO.email },
+    select: { id: true },
+  });
+  const savedFor = fs.existsSync(AUTH_USER_FILE) ? fs.readFileSync(AUTH_USER_FILE, 'utf8') : '';
+  if (
+    savedFor === user.id &&
+    fs.existsSync(AUTH_FILE) &&
+    Date.now() - fs.statSync(AUTH_FILE).mtimeMs < 60 * 60 * 1000
+  )
     return;
   const page = await browser.newPage({
     baseURL: test.info().project.use.baseURL,
@@ -49,6 +60,7 @@ async function ensureStorageState(browser: Browser) {
   await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
   fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
   await page.context().storageState({ path: AUTH_FILE });
+  fs.writeFileSync(AUTH_USER_FILE, user.id);
   await page.close();
 }
 
