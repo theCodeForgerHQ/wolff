@@ -1,4 +1,4 @@
-import { incrementNumberSequence } from '@wolff/database';
+import { incrementNumberSequence, type Prisma } from '@wolff/database';
 import type { Db, DbOrTx } from '../context';
 import { CoreError } from '../errors';
 import { computeGst, type GstLineInput } from '../gst/engine';
@@ -172,6 +172,91 @@ export function priceGstInvoice(input: {
         sortOrder: index,
       };
     }),
+  };
+}
+
+export type PricedGstInvoice = ReturnType<typeof priceGstInvoice>;
+
+type Numeric = number | { toString(): string };
+
+/** A stored quote or invoice line, with the fields the GST engine reads. */
+export interface StoredGstLine {
+  name: string;
+  description: string | null;
+  quantity: Numeric;
+  rate: Numeric;
+  gstRate: Numeric | null;
+  taxRate: Numeric | null;
+  hsnSac: string | null;
+  itemType: 'goods' | 'services';
+}
+
+/** Stored lines as engine input; the GST rate falls back to the generic rate. */
+export function gstLinesFrom(lines: StoredGstLine[]): GstInvoiceLineInput[] {
+  return lines.map((line) => ({
+    name: line.name,
+    description: line.description,
+    quantity: Number(line.quantity),
+    rate: Number(line.rate),
+    gstRate: Number(line.gstRate ?? line.taxRate ?? 0),
+    hsnSac: line.hsnSac,
+    itemType: line.itemType,
+  }));
+}
+
+/**
+ * Prices an invoice for whichever workspace it belongs to: null for a
+ * workspace without a GSTIN (the caller keeps its generic totals), the
+ * engine's result otherwise. Every path that writes invoice amounts calls
+ * this, so a GST workspace never gets generic totals.
+ *
+ * Throws `gst_unsupported` for a composition supplier and `business_rule`
+ * for an invoice-level discount: GST discounts are per line, before tax.
+ */
+export async function priceForWorkspace(
+  db: DbOrTx,
+  workspaceId: string,
+  input: {
+    client: GstClient;
+    lines: GstInvoiceLineInput[];
+    discountAmount?: number;
+    placeOfSupply?: string | null;
+    reverseCharge?: boolean;
+  }
+): Promise<PricedGstInvoice | null> {
+  const profile = await loadGstProfile(db, workspaceId);
+  if (!isGstWorkspace(profile)) return null;
+  assertGstSupported(profile);
+  if ((input.discountAmount ?? 0) > 0) {
+    throw new CoreError(
+      'business_rule',
+      'GST invoices take discounts per line, before tax; remove the invoice discount'
+    );
+  }
+  return priceGstInvoice({
+    profile,
+    client: input.client,
+    lines: input.lines,
+    placeOfSupply: input.placeOfSupply ?? null,
+    reverseCharge: input.reverseCharge ?? false,
+  });
+}
+
+/** The invoice columns a GST price sets (amountDue is left to the caller). */
+export function gstInvoiceColumns(priced: PricedGstInvoice) {
+  return {
+    subtotal: priced.invoice.subtotal,
+    taxTotal: priced.invoice.taxTotal,
+    total: priced.invoice.total,
+    discountType: null,
+    discountValue: null,
+    discountAmount: 0,
+    placeOfSupply: priced.invoice.placeOfSupply,
+    supplyType: priced.invoice.supplyType,
+    reverseCharge: priced.invoice.reverseCharge,
+    supplierGstin: priced.invoice.supplierGstin,
+    recipientGstin: priced.invoice.recipientGstin,
+    taxBreakup: priced.invoice.taxBreakup as Prisma.InputJsonValue,
   };
 }
 

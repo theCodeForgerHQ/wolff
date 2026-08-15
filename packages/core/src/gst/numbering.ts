@@ -1,5 +1,5 @@
 import { incrementNumberSequence } from '@wolff/database';
-import type { DbOrTx } from '../context';
+import type { DbOrTx, DbTx } from '../context';
 import { getFinancialYear } from './financial-year';
 
 const SERIAL_CHARSET = /^[A-Za-z0-9/-]+$/;
@@ -38,7 +38,21 @@ export async function nextSerialNumber(
   db: DbOrTx,
   input: NextNumberInput
 ): Promise<NextNumberResult> {
-  const workspace = await db.workspace.findUniqueOrThrow({
+  // One INSERT ... ON CONFLICT DO UPDATE: the first request of a year creates
+  // the row and concurrent ones increment it, instead of racing to create it.
+  // A number that turns out too long throws, which rolls the increment back.
+  return db.$transaction((tx) => allocateSerialNumber(tx, input));
+}
+
+/**
+ * `nextSerialNumber` inside a transaction the caller already holds, so the
+ * number is taken back if the document it numbers is not created.
+ */
+export async function allocateSerialNumber(
+  tx: DbTx,
+  input: NextNumberInput
+): Promise<NextNumberResult> {
+  const workspace = await tx.workspace.findUniqueOrThrow({
     where: { id: input.workspaceId },
     include: { businessProfile: true },
   });
@@ -58,28 +72,23 @@ export async function nextSerialNumber(
     throw new Error('Serial suffix contains invalid characters');
   }
 
-  // One INSERT ... ON CONFLICT DO UPDATE: the first request of a year creates
-  // the row and concurrent ones increment it, instead of racing to create it.
-  // A number that turns out too long throws, which rolls the increment back.
-  return db.$transaction(async (tx) => {
-    const sequence = await incrementNumberSequence(
-      tx as unknown as Parameters<typeof incrementNumberSequence>[0],
-      input.workspaceId,
-      input.type,
-      financialYear,
-      { prefix: input.prefix ?? '', currentValue: 1, padding }
-    );
+  const sequence = await incrementNumberSequence(
+    tx as unknown as Parameters<typeof incrementNumberSequence>[0],
+    input.workspaceId,
+    input.type,
+    financialYear,
+    { prefix: input.prefix ?? '', currentValue: 1, padding }
+  );
 
-    const counter = String(sequence.currentValue).padStart(padding, '0');
-    const serialNumber = financialYear
-      ? withSuffix([prefix, shortFinancialYear(financialYear), counter].filter(Boolean).join('/'))
-      : withSuffix([prefix, counter].filter(Boolean).join('-'));
+  const counter = String(sequence.currentValue).padStart(padding, '0');
+  const serialNumber = financialYear
+    ? withSuffix([prefix, shortFinancialYear(financialYear), counter].filter(Boolean).join('/'))
+    : withSuffix([prefix, counter].filter(Boolean).join('-'));
 
-    if (serialNumber.length > MAX_SERIAL_LENGTH) {
-      throw new Error(`Serial number exceeds ${MAX_SERIAL_LENGTH} characters`);
-    }
-    return { serialNumber, financialYear };
-  });
+  if (serialNumber.length > MAX_SERIAL_LENGTH) {
+    throw new Error(`Serial number exceeds ${MAX_SERIAL_LENGTH} characters`);
+  }
+  return { serialNumber, financialYear };
 }
 
 /**

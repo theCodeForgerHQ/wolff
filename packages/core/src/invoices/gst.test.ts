@@ -9,6 +9,7 @@ import {
   priceGstInvoice,
   type GstProfile,
 } from './gst';
+import { generateRecurringInvoice } from './recurring';
 
 const profile: GstProfile = {
   businessName: 'Kaveri Studio',
@@ -242,5 +243,88 @@ describe.skipIf(!url)('GST invoices in the database', () => {
     const error = await assertReadyToIssue(db, ws.id, invoice.id).catch((e: unknown) => e);
 
     expect((error as CoreError).code).toBe('gst_unsupported');
+  });
+
+  describe('recurring copies', () => {
+    // 1 Oct 2026, 10:00 in India.
+    const NOW = new Date('2026-10-01T04:30:00Z');
+    const recurringParent = async (
+      ws: { id: string; clients: { id: string }[] },
+      hsnSac: string | null
+    ) =>
+      base.invoice.create({
+        data: {
+          workspaceId: ws.id,
+          clientId: ws.clients[0]!.id,
+          invoiceNumber: `P-${randomUUID().slice(0, 6)}`,
+          status: 'sent',
+          issueDate: new Date('2026-09-01T00:00:00Z'),
+          dueDate: new Date('2026-09-15T00:00:00Z'),
+          currency: 'INR',
+          // Stored with generic totals, as an invoice from before GST would be.
+          subtotal: 10000,
+          taxTotal: 1800,
+          total: 11800,
+          amountDue: 11800,
+          isRecurring: true,
+          recurringInterval: 'monthly',
+          recurringAutoSend: true,
+          nextRecurringDate: new Date('2026-10-01T00:00:00Z'),
+          lineItems: {
+            create: {
+              name: 'Retainer',
+              quantity: 1,
+              rate: 10000,
+              amount: 10000,
+              taxRate: 18,
+              taxAmount: 1800,
+              hsnSac,
+              itemType: 'services',
+              gstRate: 18,
+            },
+          },
+        },
+      });
+    const child = (parentInvoiceId: string) =>
+      base.invoice.findFirstOrThrow({
+        where: { parentInvoiceId },
+        include: { lineItems: true },
+      });
+
+    it('prices an auto-sent copy with the engine and numbers it in the FY', async () => {
+      const ws = await gstWorkspace();
+      const parent = await recurringParent(ws, '998311');
+
+      const result = await generateRecurringInvoice(
+        { db, workspaceId: ws.id },
+        parent.id,
+        '2026-10',
+        NOW
+      );
+
+      expect(result.outcome).toBe('created');
+      const copy = await child(parent.id);
+      expect(copy).toMatchObject({
+        status: 'sent',
+        invoiceNumber: 'INV/26-27/0001',
+        supplyType: 'intra',
+        placeOfSupply: '33',
+        supplierGstin: profile.gstin,
+      });
+      expect(Number(copy.total)).toBe(11800);
+      expect(Number(copy.lineItems[0]!.cgstAmount)).toBe(900);
+      expect(Number(copy.lineItems[0]!.sgstAmount)).toBe(900);
+    });
+
+    it('keeps an auto-send copy in draft when Rule 46 fields are missing', async () => {
+      const ws = await gstWorkspace();
+      const parent = await recurringParent(ws, null);
+
+      await generateRecurringInvoice({ db, workspaceId: ws.id }, parent.id, '2026-10', NOW);
+
+      const copy = await child(parent.id);
+      expect(copy.status).toBe('draft');
+      expect(copy.sentAt).toBeNull();
+    });
   });
 });

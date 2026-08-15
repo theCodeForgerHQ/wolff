@@ -1,7 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import type { Prisma } from '@wolff/database';
-import type { CoreContext, Db } from '../context';
+import type { CoreContext, Db, DbTx } from '../context';
+import { CoreError } from '../errors';
+import { allocateSerialNumber } from '../gst/numbering';
 import { writeOutboxEvent } from '../outbox';
+import { assertReadyToIssue, gstInvoiceColumns, gstLinesFrom, priceForWorkspace } from './gst';
 import {
   addDays,
   addInterval,
@@ -174,7 +177,31 @@ export async function generateRecurringInvoice(
       }
 
       const termDays = daysBetween(toDateString(parent.issueDate), toDateString(parent.dueDate));
-      const autoSend = parent.recurringAutoSend;
+      // In a GST workspace the copy is priced by the engine and numbered in
+      // the FY of its issue date, like any other GST invoice; it is created
+      // as a draft and sent only once Rule 46 passes (below).
+      const guarded = tx as unknown as DbTx;
+      const client = await tx.client.findFirstOrThrow({
+        where: { id: parent.clientId, workspaceId },
+      });
+      const gst = await priceForWorkspace(guarded, workspaceId, {
+        client,
+        lines: gstLinesFrom(parent.lineItems),
+        discountAmount: Number(parent.discountAmount),
+        placeOfSupply: parent.placeOfSupply,
+        reverseCharge: parent.reverseCharge,
+      });
+      const autoSend = parent.recurringAutoSend && !gst;
+      const invoiceNumber = gst
+        ? (
+            await allocateSerialNumber(guarded, {
+              workspaceId,
+              type: 'invoice',
+              prefix: 'INV',
+              date: now,
+            })
+          ).serialNumber
+        : await nextInvoiceNumber(tx, workspaceId);
       const created = await tx.invoice.create({
         data: {
           workspaceId,
@@ -182,36 +209,42 @@ export async function generateRecurringInvoice(
           projectId: parent.projectId,
           parentInvoiceId: parent.id,
           recurringPeriodKey: periodKey,
-          invoiceNumber: await nextInvoiceNumber(tx, workspaceId),
+          invoiceNumber,
           title: parent.title || 'Invoice',
           status: autoSend ? 'sent' : 'draft',
           currency: parent.currency,
           accessToken: randomBytes(32).toString('hex'),
           issueDate: fromDateString(today),
           dueDate: fromDateString(addDays(today, termDays > 0 ? termDays : 30)),
-          subtotal: parent.subtotal,
-          discountType: parent.discountType,
-          discountValue: parent.discountValue,
-          discountAmount: parent.discountAmount,
-          taxTotal: parent.taxTotal,
-          total: parent.total,
-          amountDue: parent.total,
+          ...(gst
+            ? { ...gstInvoiceColumns(gst), amountDue: gst.invoice.total }
+            : {
+                subtotal: parent.subtotal,
+                discountType: parent.discountType,
+                discountValue: parent.discountValue,
+                discountAmount: parent.discountAmount,
+                taxTotal: parent.taxTotal,
+                total: parent.total,
+                amountDue: parent.total,
+              }),
           amountPaid: 0,
           notes: parent.notes,
           terms: parent.terms,
           settings: parent.settings as Prisma.InputJsonValue,
           sentAt: autoSend ? now : null,
           lineItems: {
-            create: parent.lineItems.map((item, index) => ({
-              name: item.name,
-              description: item.description,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: item.amount,
-              taxRate: item.taxRate,
-              taxAmount: item.taxAmount,
-              sortOrder: index,
-            })),
+            create: gst
+              ? gst.lines
+              : parent.lineItems.map((item, index) => ({
+                  name: item.name,
+                  description: item.description,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: item.amount,
+                  taxRate: item.taxRate,
+                  taxAmount: item.taxAmount,
+                  sortOrder: index,
+                })),
           },
           events: {
             create: [
@@ -234,6 +267,10 @@ export async function generateRecurringInvoice(
         },
         select: { id: true },
       });
+
+      if (gst && parent.recurringAutoSend) {
+        await sendIfIssuable(guarded, workspaceId, created.id, now);
+      }
 
       // The next occurrence counts from today, so a series that fell behind
       // produces one invoice, not one per missed period.
@@ -260,4 +297,46 @@ export async function generateRecurringInvoice(
     if (isDuplicatePeriod(error)) return { outcome: 'skipped' };
     throw error;
   }
+}
+
+/**
+ * Auto-send for a GST copy: it leaves draft only if Rule 46 passes. If it
+ * does not, it stays a draft and its audit trail says why, for the owner to
+ * complete and send.
+ */
+async function sendIfIssuable(
+  tx: DbTx,
+  workspaceId: string,
+  invoiceId: string,
+  now: Date
+): Promise<void> {
+  try {
+    await assertReadyToIssue(tx, workspaceId, invoiceId);
+  } catch (error) {
+    if (!(error instanceof CoreError)) throw error;
+    await tx.invoiceEvent.create({
+      data: {
+        invoiceId,
+        eventType: 'auto_send_blocked',
+        actorType: 'system',
+        metadata: {
+          reason: error.message,
+          details: (error.details ?? {}) as Prisma.InputJsonValue,
+        },
+      },
+    });
+    return;
+  }
+  await tx.invoice.update({
+    where: { id: invoiceId, workspaceId },
+    data: { status: 'sent', sentAt: now },
+  });
+  await tx.invoiceEvent.create({
+    data: {
+      invoiceId,
+      eventType: 'sent',
+      actorType: 'system',
+      metadata: { trigger: 'recurring_auto_send' },
+    },
+  });
 }
