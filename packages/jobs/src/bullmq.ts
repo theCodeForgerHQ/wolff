@@ -235,6 +235,19 @@ export interface DrainSummary {
 }
 
 /**
+ * What a drain runs before working the queue: every job the scheduler
+ * fires (SCHEDULES), the sweep first so requeued events are relayed in the
+ * same drain. Derived from SCHEDULES so a new schedule cannot be left out,
+ * as automations.tick was.
+ */
+export const DRAIN_SCHEDULE: readonly JobType[] = [
+  'outbox.sweep',
+  ...Object.values(SCHEDULES)
+    .map((s) => s.type)
+    .filter((type) => type !== 'outbox.sweep'),
+];
+
+/**
  * The drain run (`worker:drain`): do the scheduled work that is
  * due, relay the outbox, work the queue until it is empty or `maxMs` has
  * passed, then stop. The scheduled processors are idempotent per period, so
@@ -255,12 +268,7 @@ export async function drainJobs(options: {
   const dispatcher = new BullMQDispatcher(queue);
   const relayOptions = options.relay ?? {};
   const deadline = Date.now() + (options.maxMs ?? 10 * 60_000);
-  const scheduled = options.scheduled ?? [
-    'outbox.sweep',
-    'recurring.generate',
-    'invoices.mark_overdue',
-    'reminders.scan',
-  ];
+  const scheduled = options.scheduled ?? DRAIN_SCHEDULE;
 
   let completed = 0;
   let failed = 0;
