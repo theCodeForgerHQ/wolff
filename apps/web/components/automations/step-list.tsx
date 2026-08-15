@@ -73,21 +73,24 @@ export function StepList({ options }: { options: AutomationOptions }) {
         onDragEnd={onDragEnd}
       >
         <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-          <ol className="relative space-y-2" aria-label="Steps">
-            {/* The rail the step markers sit on. */}
+          <div className="relative">
+            {/* The rail the step markers sit on; outside the list, which may
+                only hold list items. */}
             <span aria-hidden className="bg-border absolute bottom-4 left-[19px] top-4 w-px" />
-            <AnimatePresence initial={false}>
-              {fields.map((field, index) => (
-                <SortableStep
-                  key={field.id}
-                  id={field.id}
-                  index={index}
-                  options={options}
-                  onRemove={fields.length > 1 ? () => remove(index) : undefined}
-                />
-              ))}
-            </AnimatePresence>
-          </ol>
+            <ol className="relative space-y-2" aria-label="Steps">
+              <AnimatePresence initial={false}>
+                {fields.map((field, index) => (
+                  <SortableStep
+                    key={field.id}
+                    id={field.id}
+                    index={index}
+                    options={options}
+                    onRemove={fields.length > 1 ? () => remove(index) : undefined}
+                  />
+                ))}
+              </AnimatePresence>
+            </ol>
+          </div>
         </SortableContext>
       </DndContext>
       {formState.errors.steps?.root?.message && (
