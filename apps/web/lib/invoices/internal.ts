@@ -5,7 +5,14 @@
 
 import { randomBytes } from 'crypto';
 import { prisma, type Prisma, incrementNumberSequence, withTenantGuard } from '@wolff/database';
-import { nextInvoiceNumber } from '@wolff/core/invoices';
+import {
+  assertReadyToIssue,
+  gstInvoiceColumns,
+  gstLinesFrom,
+  nextInvoiceNumber,
+  priceForWorkspace,
+} from '@wolff/core/invoices';
+import { CoreError } from '@wolff/core/errors';
 
 /** Generate a cryptographically secure access token */
 function generateAccessToken(): string {
@@ -52,7 +59,13 @@ export async function generateCreditNoteNumber(workspaceId: string): Promise<str
 
 /**
  * Create invoice from quote without requiring auth context.
- * Used by the public portal when auto-invoice is enabled on quote acceptance.
+ * Used by the public portal when auto-invoice is enabled on quote acceptance,
+ * and by POST /api/v1/invoices/from-quote.
+ *
+ * The invoice is issued ('sent') straight away, except in a GST workspace:
+ * there it is priced by the GST engine, created as a draft, and issued only
+ * if Rule 46's mandatory fields are present. `issued` says which happened;
+ * a draft is left for the owner to complete and send.
  *
  * NOT a server action - only callable from server-side code, not from the client.
  */
@@ -60,11 +73,17 @@ export async function createInvoiceFromQuoteInternal(
   quoteId: string,
   workspaceId: string,
   options?: { dueDays?: number }
-): Promise<{ success: boolean; invoice?: { id: string; accessToken: string }; error?: string }> {
+): Promise<{
+  success: boolean;
+  invoice?: { id: string; accessToken: string };
+  issued?: boolean;
+  error?: string;
+}> {
   const quote = await prisma.quote.findFirst({
     where: { id: quoteId, workspaceId, deletedAt: null },
     include: {
       lineItems: { orderBy: { sortOrder: 'asc' } },
+      client: true,
     },
   });
 
@@ -77,6 +96,19 @@ export async function createInvoiceFromQuoteInternal(
   });
   if (existingInvoice) {
     return { success: false, error: 'Invoice already exists for this quote' };
+  }
+
+  const guarded = withTenantGuard(prisma);
+  let gst: Awaited<ReturnType<typeof priceForWorkspace>>;
+  try {
+    gst = await priceForWorkspace(guarded, workspaceId, {
+      client: quote.client,
+      lines: gstLinesFrom(quote.lineItems),
+      discountAmount: Number(quote.discountAmount),
+    });
+  } catch (error) {
+    if (error instanceof CoreError) return { success: false, error: error.message };
+    throw error;
   }
 
   const invoiceNumber = await generateInvoiceNumber(workspaceId);
@@ -94,31 +126,39 @@ export async function createInvoiceFromQuoteInternal(
         invoiceNumber,
         title: quote.title || 'Invoice',
         accessToken: generateAccessToken(),
-        status: 'sent', // Auto-generated from quote acceptance — ready for client payment
-        sentAt: new Date(), // Bug #8: Set sentAt when auto-creating with 'sent' status
+        // Auto-generated from quote acceptance: ready for client payment. A GST
+        // invoice waits in draft for the Rule 46 check below.
+        status: gst ? 'draft' : 'sent',
+        sentAt: gst ? null : new Date(), // Bug #8: Set sentAt when auto-creating with 'sent' status
         issueDate: new Date(),
         dueDate,
-        subtotal: quote.subtotal,
-        discountType: quote.discountType,
-        discountValue: quote.discountValue,
-        discountAmount: quote.discountAmount,
-        taxTotal: quote.taxTotal,
-        total: quote.total,
-        amountDue: quote.total,
+        ...(gst
+          ? { ...gstInvoiceColumns(gst), amountDue: gst.invoice.total }
+          : {
+              subtotal: quote.subtotal,
+              discountType: quote.discountType,
+              discountValue: quote.discountValue,
+              discountAmount: quote.discountAmount,
+              taxTotal: quote.taxTotal,
+              total: quote.total,
+              amountDue: quote.total,
+            }),
         notes: quote.notes,
         terms: quote.terms,
         settings: {} as unknown as Prisma.InputJsonValue,
         lineItems: {
-          create: quote.lineItems.map((item, idx) => ({
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            rate: item.rate,
-            amount: item.amount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            sortOrder: idx,
-          })),
+          create: gst
+            ? gst.lines
+            : quote.lineItems.map((item, idx) => ({
+                name: item.name,
+                description: item.description,
+                quantity: item.quantity,
+                rate: item.rate,
+                amount: item.amount,
+                taxRate: item.taxRate,
+                taxAmount: item.taxAmount,
+                sortOrder: idx,
+              })),
         },
       },
       select: { id: true, accessToken: true },
@@ -150,5 +190,40 @@ export async function createInvoiceFromQuoteInternal(
     return newInvoice;
   });
 
-  return { success: true, invoice: { id: invoice.id, accessToken: invoice.accessToken } };
+  const issued = gst ? await issueIfReady(guarded, workspaceId, invoice.id) : true;
+  return {
+    success: true,
+    issued,
+    invoice: { id: invoice.id, accessToken: invoice.accessToken },
+  };
+}
+
+/** Moves a GST draft to 'sent' if Rule 46 passes; records why if not. */
+async function issueIfReady(
+  db: ReturnType<typeof withTenantGuard>,
+  workspaceId: string,
+  invoiceId: string
+): Promise<boolean> {
+  try {
+    await assertReadyToIssue(db, workspaceId, invoiceId);
+  } catch (error) {
+    if (!(error instanceof CoreError)) throw error;
+    await prisma.invoiceEvent.create({
+      data: {
+        invoiceId,
+        eventType: 'auto_send_blocked',
+        actorType: 'system',
+        metadata: {
+          reason: error.message,
+          details: (error.details ?? {}) as Prisma.InputJsonValue,
+        },
+      },
+    });
+    return false;
+  }
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { status: 'sent', sentAt: new Date() },
+  });
+  return true;
 }

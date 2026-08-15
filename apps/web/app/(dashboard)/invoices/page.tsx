@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getInvoices } from '@/lib/invoices/queries';
 import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
-import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { InvoicesDataTable } from '@/components/invoices/invoices-data-table';
 
 export const dynamic = 'force-dynamic';
@@ -40,8 +39,7 @@ export default function InvoicesPage() {
 }
 
 async function InvoicesContent() {
-  const [invoices, { workspaceId }] = await Promise.all([getInvoices(), getCurrentUserWorkspace()]);
-  const recurringIds = await getRecurringInvoiceIds(workspaceId);
+  const [invoices, recurringIds] = await Promise.all([getInvoices(), getRecurringInvoiceIds()]);
   return <InvoicesDataTable data={invoices} recurringInvoiceIds={recurringIds} />;
 }
 

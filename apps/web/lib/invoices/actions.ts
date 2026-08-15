@@ -4,9 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { prisma, type Prisma } from '@wolff/database';
 import {
   assertGstSupported,
+  gstInvoiceColumns,
+  gstLinesFrom,
   isGstWorkspace,
   loadGstProfile,
+  priceForWorkspace,
   priceGstInvoice,
+  type GstInvoiceLineInput,
+  type PricedGstInvoice,
+  type StoredGstLine,
 } from '@wolff/core/invoices';
 import { CoreError } from '@wolff/core/errors';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -512,6 +518,50 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
 }
 
 /**
+ * GST price of an edited draft, or null outside a GST workspace. Lines that
+ * edit a stored line keep its HSN/SAC and item type unless new ones are
+ * given (the editor does not show them yet); with no new lines the stored
+ * ones are re-priced.
+ */
+async function priceDraftForWorkspace(
+  workspaceId: string,
+  existing: {
+    clientId: string;
+    placeOfSupply: string | null;
+    reverseCharge: boolean;
+    lineItems: Array<StoredGstLine & { id: string }>;
+  },
+  data: UpdateInvoiceData,
+  options: { discountAmount: number }
+): Promise<PricedGstInvoice | null> {
+  const client = await gstDb.client.findFirstOrThrow({
+    where: { id: existing.clientId, workspaceId },
+  });
+  const stored = new Map(existing.lineItems.map((line) => [line.id, line]));
+  const lines: GstInvoiceLineInput[] = data.lineItems
+    ? data.lineItems.map((item) => {
+        const before = item.id ? stored.get(item.id) : undefined;
+        return {
+          name: item.name,
+          description: item.description || null,
+          quantity: Math.round(item.quantity * 100) / 100,
+          rate: item.rate,
+          gstRate: item.taxRate ?? 0,
+          hsnSac: item.hsnSac?.trim() || before?.hsnSac || null,
+          itemType: item.itemType ?? before?.itemType,
+        };
+      })
+    : gstLinesFrom(existing.lineItems);
+  return priceForWorkspace(gstDb, workspaceId, {
+    client,
+    lines,
+    discountAmount: options.discountAmount,
+    placeOfSupply: existing.placeOfSupply,
+    reverseCharge: existing.reverseCharge,
+  });
+}
+
+/**
  * Update an existing invoice
  */
 export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) {
@@ -567,6 +617,27 @@ export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) 
         return { success: false, error: 'Line item quantity cannot be negative' };
       }
     }
+  }
+
+  // A GST workspace re-prices with the engine whenever amounts change.
+  const touchesAmounts =
+    Boolean(data.lineItems) || data.discountType !== undefined || data.discountValue !== undefined;
+  let gst: PricedGstInvoice | null = null;
+  if (touchesAmounts) {
+    try {
+      gst = await priceDraftForWorkspace(workspace.id, existingInvoice, data, {
+        discountAmount: discountType && discountValue ? discountValue : 0,
+      });
+    } catch (error) {
+      if (error instanceof CoreError) return { success: false, error: error.message };
+      throw error;
+    }
+  }
+
+  if (gst) {
+    ({ subtotal, taxTotal, total } = gst.invoice);
+    discountAmount = 0;
+  } else if (data.lineItems) {
     const totals = calculateTotals(data.lineItems, { type: discountType, value: discountValue });
     subtotal = totals.subtotal;
     taxTotal = totals.taxTotal;
@@ -607,6 +678,7 @@ export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) 
         // Always persist discount fields if they changed
         ...(data.discountType !== undefined && { discountType: data.discountType || null }),
         ...(data.discountValue !== undefined && { discountValue: data.discountValue ?? null }),
+        ...(gst && gstInvoiceColumns(gst)),
         ...((data.lineItems ||
           data.discountType !== undefined ||
           data.discountValue !== undefined) && {
@@ -618,18 +690,20 @@ export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) 
         }),
         ...(data.lineItems && {
           lineItems: {
-            create: data.lineItems.map((item, index) => ({
-              name: item.name,
-              description: item.description || null,
-              quantity: item.quantity,
-              rate: item.rate,
-              amount: Math.round(item.quantity * item.rate * 100) / 100,
-              taxRate: item.taxRate || null,
-              taxAmount: item.taxRate
-                ? Math.round(item.quantity * item.rate * (item.taxRate / 100) * 100) / 100
-                : 0,
-              sortOrder: index,
-            })),
+            create: gst
+              ? gst.lines
+              : data.lineItems.map((item, index) => ({
+                  name: item.name,
+                  description: item.description || null,
+                  quantity: item.quantity,
+                  rate: item.rate,
+                  amount: Math.round(item.quantity * item.rate * 100) / 100,
+                  taxRate: item.taxRate || null,
+                  taxAmount: item.taxRate
+                    ? Math.round(item.quantity * item.rate * (item.taxRate / 100) * 100) / 100
+                    : 0,
+                  sortOrder: index,
+                })),
           },
         }),
       },
@@ -713,6 +787,25 @@ export async function duplicateInvoice(invoiceId: string) {
     return { success: false, error: 'Invoice not found' };
   }
 
+  // A GST copy is re-priced from its lines, so it carries the split and the
+  // fields Rule 46 needs, like any new GST invoice.
+  let gst: PricedGstInvoice | null;
+  try {
+    const client = await gstDb.client.findFirstOrThrow({
+      where: { id: original.clientId, workspaceId: workspace.id },
+    });
+    gst = await priceForWorkspace(gstDb, workspace.id, {
+      client,
+      lines: gstLinesFrom(original.lineItems),
+      discountAmount: toNumber(original.discountAmount),
+      placeOfSupply: original.placeOfSupply,
+      reverseCharge: original.reverseCharge,
+    });
+  } catch (error) {
+    if (error instanceof CoreError) return { success: false, error: error.message };
+    throw error;
+  }
+
   const invoiceNumber = await generateInvoiceNumber(workspace.id);
 
   // Set new due date 30 days from now
@@ -731,28 +824,34 @@ export async function duplicateInvoice(invoiceId: string) {
       accessToken: generateAccessToken(),
       issueDate: new Date(),
       dueDate,
-      subtotal: original.subtotal,
-      discountType: original.discountType,
-      discountValue: original.discountValue,
-      discountAmount: original.discountAmount,
-      taxTotal: original.taxTotal,
-      total: original.total,
-      amountDue: original.total,
+      ...(gst
+        ? { ...gstInvoiceColumns(gst), amountDue: gst.invoice.total }
+        : {
+            subtotal: original.subtotal,
+            discountType: original.discountType,
+            discountValue: original.discountValue,
+            discountAmount: original.discountAmount,
+            taxTotal: original.taxTotal,
+            total: original.total,
+            amountDue: original.total,
+          }),
       amountPaid: 0,
       notes: original.notes,
       terms: original.terms,
       settings: original.settings as Prisma.InputJsonValue,
       lineItems: {
-        create: original.lineItems.map((item: (typeof original.lineItems)[number]) => ({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          rate: item.rate,
-          amount: item.amount,
-          taxRate: item.taxRate,
-          taxAmount: item.taxAmount,
-          sortOrder: item.sortOrder,
-        })),
+        create: gst
+          ? gst.lines
+          : original.lineItems.map((item: (typeof original.lineItems)[number]) => ({
+              name: item.name,
+              description: item.description,
+              quantity: item.quantity,
+              rate: item.rate,
+              amount: item.amount,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
+              sortOrder: item.sortOrder,
+            })),
       },
     },
   });
