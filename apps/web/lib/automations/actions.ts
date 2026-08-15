@@ -29,9 +29,24 @@ import type {
 const db = withTenantGuard(prisma);
 
 async function getContext() {
-  const { workspaceId, userId } = await getCurrentUserWorkspace();
-  return { db, workspaceId, actorId: userId };
+  const { workspaceId, userId, role } = await getCurrentUserWorkspace();
+  return { db, workspaceId, actorId: userId, role };
 }
+
+/**
+ * An automation emails clients and moves deals on its own, so changing one
+ * is workspace configuration: owners and admins only, as for API keys.
+ */
+async function getEditorContext() {
+  const { role, ...ctx } = await getContext();
+  if (role !== 'owner' && role !== 'admin') return null;
+  return ctx;
+}
+
+const NOT_ALLOWED: ActionResult = {
+  success: false,
+  error: 'Only an owner or admin can change automations',
+};
 
 export async function getAutomations(): Promise<AutomationListItem[]> {
   const ctx = await getContext();
@@ -106,7 +121,8 @@ async function attempt(work: () => Promise<unknown>): Promise<ActionResult> {
 }
 
 export async function createAutomation(input: AutomationFormInput): Promise<ActionResult> {
-  const ctx = await getContext();
+  const ctx = await getEditorContext();
+  if (!ctx) return NOT_ALLOWED;
   return attempt(() => createAutomationCore(ctx, createAutomationSchema.parse(input)));
 }
 
@@ -114,7 +130,8 @@ export async function updateAutomation(
   id: string,
   input: Partial<AutomationFormInput>
 ): Promise<ActionResult> {
-  const ctx = await getContext();
+  const ctx = await getEditorContext();
+  if (!ctx) return NOT_ALLOWED;
   return attempt(async () => {
     const automation = await updateAutomationCore(ctx, id, updateAutomationSchema.parse(input));
     if (!automation) throw new CoreError('not_found', 'Automation not found');
@@ -122,7 +139,8 @@ export async function updateAutomation(
 }
 
 export async function deleteAutomation(id: string): Promise<ActionResult> {
-  const ctx = await getContext();
+  const ctx = await getEditorContext();
+  if (!ctx) return NOT_ALLOWED;
   return attempt(async () => {
     if (!(await deleteAutomationCore(ctx, id))) {
       throw new CoreError('not_found', 'Automation not found');
