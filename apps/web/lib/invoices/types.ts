@@ -127,11 +127,16 @@ export interface UpdateInvoiceData {
   currency?: string;
   dueDate?: string;
   lineItems?: Array<{
+    /** The stored line this edits; its HSN/SAC and item type carry over if not given. */
+    id?: string;
     name: string;
     description?: string;
     quantity: number;
     rate: number;
+    /** In a GST workspace this is the line's GST rate. */
     taxRate?: number;
+    hsnSac?: string;
+    itemType?: 'goods' | 'services';
   }>;
   discountType?: 'percentage' | 'fixed' | null;
   discountValue?: number | null;

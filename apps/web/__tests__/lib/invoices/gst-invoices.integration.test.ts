@@ -27,7 +27,13 @@ vi.mock('@/lib/notifications/internal', () => ({
 
 import { prisma } from '@wolff/database';
 import { getFinancialYear } from '@wolff/core/gst';
-import { createInvoice, createInvoiceFromQuote } from '@/lib/invoices/actions';
+import {
+  createInvoice,
+  createInvoiceFromQuote,
+  duplicateInvoice,
+  updateInvoice,
+} from '@/lib/invoices/actions';
+import { createInvoiceFromQuoteInternal } from '@/lib/invoices/internal';
 import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
@@ -190,5 +196,102 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
         data: { gstRegistrationType: 'regular' },
       });
     }
+  });
+  const logo = { name: 'Logo design', quantity: 1, rate: 10000, taxRate: 18, hsnSac: '998311' };
+  const gstLines = (id: string) =>
+    prisma.invoiceLineItem.findMany({ where: { invoiceId: id }, orderBy: { sortOrder: 'asc' } });
+  const FY_NUMBER = /^INV\/\d{2}-\d{2}\/\d{4}$/;
+
+  it('re-prices a GST draft with the engine when its lines are edited', async () => {
+    const created = await draft([logo]);
+
+    const result = await updateInvoice(created.invoice!.id, {
+      lineItems: [
+        { ...logo, rate: 20000 },
+        { ...logo, name: 'Brand book', rate: 100.05 },
+      ],
+    } as never);
+
+    expect(result.success).toBe(true);
+    const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+    const lines = await gstLines(invoice.id);
+    // 18% on 100.05 is 18.01: CGST 9.01 and SGST 9.00 (the design's rounding).
+    expect(lines.map((l) => [Number(l.cgstAmount), Number(l.sgstAmount)])).toEqual([
+      [1800, 1800],
+      [9.01, 9],
+    ]);
+    expect(Number(invoice.total)).toBe(23718.06);
+    expect((invoice.taxBreakup as { cgstTotal: number }).cgstTotal).toBe(1809.01);
+  });
+
+  it('refuses an invoice-level discount on a GST draft', async () => {
+    const created = await draft([logo]);
+
+    const result = await updateInvoice(created.invoice!.id, {
+      discountType: 'fixed',
+      discountValue: 500,
+    } as never);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/per line/);
+  });
+
+  it('keeps the GST pricing and FY numbering on a duplicate', async () => {
+    const created = await draft([logo]);
+
+    const result = await duplicateInvoice(created.invoice!.id);
+
+    const copy = await prisma.invoice.findUniqueOrThrow({ where: { id: result.invoiceId! } });
+    expect(copy).toMatchObject({ supplyType: 'intra', placeOfSupply: '33', status: 'draft' });
+    expect(copy.invoiceNumber).toMatch(FY_NUMBER);
+    expect((await gstLines(copy.id)).map((l) => Number(l.cgstAmount))).toEqual([900]);
+  });
+
+  const acceptedQuote = async (hsnSac: string | null) =>
+    prisma.quote.create({
+      data: {
+        workspaceId: workspaceContext.workspaceId,
+        clientId,
+        quoteNumber: `Q-${randomUUID().slice(0, 8)}`,
+        status: 'accepted',
+        currency: 'INR',
+        subtotal: 10000,
+        taxTotal: 1800,
+        total: 11800,
+        lineItems: {
+          create: {
+            name: 'Logo design',
+            quantity: 1,
+            rate: 10000,
+            amount: 10000,
+            taxRate: 18,
+            taxAmount: 1800,
+            gstRate: 18,
+            hsnSac,
+            itemType: 'services',
+          },
+        },
+      },
+    });
+
+  it('issues an auto-created invoice (portal, API) priced by the engine', async () => {
+    const quote = await acceptedQuote('998311');
+
+    const result = await createInvoiceFromQuoteInternal(quote.id, workspaceContext.workspaceId);
+
+    expect(result.success).toBe(true);
+    const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: result.invoice!.id } });
+    expect(invoice).toMatchObject({ status: 'sent', supplyType: 'intra' });
+    expect((await gstLines(invoice.id)).map((l) => Number(l.sgstAmount))).toEqual([900]);
+  });
+
+  it('leaves an auto-created invoice in draft when Rule 46 fields are missing', async () => {
+    const quote = await acceptedQuote(null);
+
+    const result = await createInvoiceFromQuoteInternal(quote.id, workspaceContext.workspaceId);
+
+    expect(result).toMatchObject({ success: true, issued: false });
+    const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: result.invoice!.id } });
+    expect(invoice.status).toBe('draft');
   });
 });

@@ -562,7 +562,9 @@ export async function acceptQuote(data: {
     if (shouldAutoInvoice) {
       try {
         const invoiceResult = await createInvoiceFromQuoteInternal(quote.id, quote.workspaceId);
-        if (invoiceResult.success && invoiceResult.invoice) {
+        // A GST invoice that Rule 46 keeps in draft is not shown to the
+        // client or given a deposit; the owner completes and sends it.
+        if (invoiceResult.success && invoiceResult.issued && invoiceResult.invoice) {
           autoInvoice = invoiceResult.invoice;
         }
       } catch (error) {

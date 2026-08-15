@@ -439,6 +439,7 @@ export function EditInvoiceForm({
         lineItems: lineItems
           .filter((item) => item.name.trim())
           .map((item) => ({
+            id: item.id,
             name: item.name,
             description: item.description || undefined,
             quantity: item.quantity,
