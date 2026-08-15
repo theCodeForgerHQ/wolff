@@ -34,6 +34,7 @@ import {
   updateInvoice,
 } from '@/lib/invoices/actions';
 import { createInvoiceFromQuoteInternal } from '@/lib/invoices/internal';
+import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
 import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
@@ -293,5 +294,35 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
     expect(result).toMatchObject({ success: true, issued: false });
     const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: result.invoice!.id } });
     expect(invoice.status).toBe('draft');
+  });
+
+  it('lists recurring invoices of the session workspace only, whatever the caller passes', async () => {
+    const other = await prisma.workspace.create({
+      data: {
+        name: 'Other',
+        slug: `gst-other-${run}`,
+        clients: { create: { name: 'Theirs', email: `theirs-${run}@example.test` } },
+      },
+      include: { clients: true },
+    });
+    try {
+      const theirs = await prisma.invoice.create({
+        data: {
+          workspaceId: other.id,
+          clientId: other.clients[0]!.id,
+          invoiceNumber: `R-${run}`,
+          dueDate: new Date('2026-12-01'),
+          isRecurring: true,
+        },
+      });
+      // A server action is an endpoint: a browser can call it with any argument.
+      const callFromBrowser = getRecurringInvoiceIds as (workspaceId?: string) => Promise<string[]>;
+
+      expect(await callFromBrowser(other.id)).not.toContain(theirs.id);
+    } finally {
+      await prisma.invoice.deleteMany({ where: { workspaceId: other.id } });
+      await prisma.client.deleteMany({ where: { workspaceId: other.id } });
+      await prisma.workspace.delete({ where: { id: other.id } });
+    }
   });
 });
