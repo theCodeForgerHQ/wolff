@@ -25,14 +25,15 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/public widget routes', () => {
           },
         },
       } as never,
-      razorpay: {
-        orders: {
-          create: async (request: { amount: number; currency: string }) => {
-            orderRequests.push(request);
-            return { id: `order_public_${orderRequests.length}` };
+      razorpay: () =>
+        ({
+          orders: {
+            create: async (request: { amount: number; currency: string }) => {
+              orderRequests.push(request);
+              return { id: `order_public_${orderRequests.length}` };
+            },
           },
-        },
-      } as never,
+        }) as never,
     },
   });
   let a: TestWorkspace;

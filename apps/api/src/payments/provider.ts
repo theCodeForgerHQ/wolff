@@ -34,9 +34,15 @@ export type PaymentLinkResult =
   | {
       provider: 'stripe';
       url: string;
+      /** Stored on the pending payment; checkout.session.completed is matched on it. */
       sessionId: string;
-      /** Internal id used to reconcile the webhook; not exposed in the API response. */
-      paymentIntentId: string;
+      /**
+       * Null from real Stripe: since API 2022-08-01 (so on the pinned
+       * 2026-08-26.dahlia) the PaymentIntent is created when the customer
+       * confirms the session. stripe-mock returns one. Not exposed in the API
+       * response.
+       */
+      paymentIntentId: string | null;
     }
   | {
       provider: 'razorpay';
@@ -51,9 +57,18 @@ export type PaymentLinkResult =
       };
     };
 
+/** The part of the Razorpay SDK this module uses. */
+export interface RazorpayOrdersClient {
+  orders: Pick<Razorpay['orders'], 'create'>;
+}
+
 export interface PaymentProviderClients {
   stripe: Stripe;
-  razorpay: Razorpay;
+  /**
+   * A Razorpay client for one workspace's own key pair. Orders are created
+   * in the workspace's Razorpay account, never the platform's.
+   */
+  razorpay: (keyId: string, keySecret: string) => RazorpayOrdersClient;
 }
 
 const DEFAULT_PROVIDER: PaymentProvider = 'stripe';
@@ -126,20 +141,20 @@ export async function createStripeCheckout(
 
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null;
-  if (!paymentIntentId) {
-    throw new CoreError('internal_error', 'Stripe did not return a payment intent');
-  }
 
   return { provider: 'stripe', url: session.url, sessionId: session.id, paymentIntentId };
 }
 
 export async function createRazorpayOrder(
-  razorpay: Razorpay,
+  razorpayFor: PaymentProviderClients['razorpay'],
   invoice: InvoiceForPayment,
   settings: PaymentSettingsForProvider
 ): Promise<PaymentLinkResult> {
   if (!settings.razorpayKeyId || !settings.razorpayKeySecretEnc) {
-    throw new CoreError('not_configured', 'Razorpay keys are not configured');
+    throw new CoreError(
+      'not_configured',
+      'Razorpay keys are not configured for this workspace; add them in Settings → Payments'
+    );
   }
 
   const keySecret = decrypt(settings.razorpayKeySecretEnc);
@@ -153,7 +168,7 @@ export async function createRazorpayOrder(
   const amount = toSmallestCurrencyUnit(invoice.amountDue);
   let order: { id?: string };
   try {
-    order = await razorpay.orders.create({
+    order = await razorpayFor(settings.razorpayKeyId, keySecret).orders.create({
       amount,
       currency: invoice.currency.toUpperCase(),
       receipt: invoice.id.slice(0, 40),
