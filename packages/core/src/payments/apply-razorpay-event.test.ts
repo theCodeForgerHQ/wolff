@@ -258,4 +258,45 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id } });
     expect(row.workspaceId).toBe(workspaceId);
   });
+
+  it('refuses to record a Razorpay event without the workspace that verified it', async () => {
+    const event = failed('pay_nows');
+
+    await expect(
+      recordProviderEvent(db, {
+        provider: 'razorpay',
+        eventId: event.id,
+        type: event.event,
+        payload: event,
+        outbox: true,
+      })
+    ).rejects.toThrow(/workspace/);
+    expect(await base.providerWebhookEvent.count({ where: { eventId: event.id } })).toBe(0);
+  });
+
+  it("does not let another workspace's delivery of the same event id re-drive or take the event", async () => {
+    const event = failed('pay_shared');
+    const mine = await recordProviderEvent(db, {
+      provider: 'razorpay',
+      workspaceId,
+      eventId: event.id,
+      type: event.event,
+      payload: event,
+      outbox: false,
+    });
+
+    const theirs = await recordProviderEvent(db, {
+      provider: 'razorpay',
+      workspaceId: otherWorkspaceId,
+      eventId: event.id,
+      type: event.event,
+      payload: event,
+      outbox: true,
+    });
+
+    expect(theirs).toEqual({ outcome: 'duplicate', id: mine.id });
+    const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id: mine.id } });
+    expect(row.workspaceId).toBe(workspaceId);
+    expect(await base.outboxEvent.count({ where: { aggregateId: mine.id } })).toBe(0);
+  });
 });
