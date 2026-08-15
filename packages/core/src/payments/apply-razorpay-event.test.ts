@@ -206,6 +206,35 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     expect(partial.status).toBe('partial');
   });
 
+  it('adds up partial refunds, and marks the payment refunded when they reach it', async () => {
+    await processProviderEvent(db, (await record(captured('pay_6b', 25_000))).id);
+
+    await processProviderEvent(db, (await record(refundProcessed('pay_6b', 10_000))).id);
+    await processProviderEvent(db, (await record(refundProcessed('pay_6b', 10_000))).id);
+
+    const twice = await invoice();
+    expect(Number(twice.payments[0]!.refundAmount)).toBe(200);
+    expect(twice.payments[0]!.status).toBe('completed');
+    expect(Number(twice.amountPaid)).toBe(50);
+
+    await processProviderEvent(db, (await record(refundProcessed('pay_6b', 5_000))).id);
+
+    const all = await invoice();
+    expect(Number(all.payments[0]!.refundAmount)).toBe(250);
+    expect(all.payments[0]!.status).toBe('refunded');
+    expect(Number(all.amountPaid)).toBe(0);
+  });
+
+  it('refuses a refund that would take more than is left of the payment', async () => {
+    await processProviderEvent(db, (await record(captured('pay_6c', 25_000))).id);
+    await processProviderEvent(db, (await record(refundProcessed('pay_6c', 20_000))).id);
+
+    const { id } = await record(refundProcessed('pay_6c', 10_000));
+
+    await expect(processProviderEvent(db, id)).rejects.toThrow(/larger than/);
+    expect(Number((await invoice()).amountPaid)).toBe(50);
+  });
+
   it('marks an event for an unknown order as processed without side effects', async () => {
     const { id } = await record(
       razorpayEvent('order.paid', {
