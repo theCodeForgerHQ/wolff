@@ -470,7 +470,7 @@ function completedStep(
   };
 }
 
-async function advanceRun(ctx: CoreContext, run: RunState, message: string) {
+async function advanceRun<R extends RunState>(ctx: CoreContext, run: R, message: string) {
   return (await transition(ctx.db, ctx, run, completedStep(run, message))) ?? run;
 }
 
