@@ -1,6 +1,6 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
-import type { CoreContext, Db } from '../context';
+import type { CoreContext, Db, DbTx } from '../context';
 import { CoreError } from '../errors';
 import { writeOutboxEvent } from '../outbox';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
@@ -325,17 +325,23 @@ export async function tickAutomationRun(
   }
 
   if (step.type === 'approval') {
-    const paused = await transition(ctx.db, ctx, run, {
-      status: 'waiting_approval',
-      waitingSince: options.now,
-      log: pushLog(run, {
-        at: options.now.toISOString(),
-        stepIndex: run.currentStep,
-        action: 'approval_requested',
-        message: `Waiting for ${step.role} approval.`,
-      }),
+    // The step "pauses the run and notifies". The pause and the
+    // in-app notifications commit together, for the tick that paused it.
+    return ctx.db.$transaction(async (tx) => {
+      const paused = await transition(tx, ctx, run, {
+        status: 'waiting_approval',
+        waitingSince: options.now,
+        log: pushLog(run, {
+          at: options.now.toISOString(),
+          stepIndex: run.currentStep,
+          action: 'approval_requested',
+          message: `Waiting for ${step.role} approval.`,
+        }),
+      });
+      if (!paused) return run;
+      await notifyApprovers(tx, ctx.workspaceId, run, step.role);
+      return paused;
     });
-    return paused ?? run;
   }
 
   if (step.type === 'send_email') {
@@ -423,6 +429,37 @@ export async function tickAutomationRun(
   }
 
   return run;
+}
+
+/**
+ * An in-app notification for each member whose role may decide the
+ * approval (the same ranking approveRun checks).
+ */
+async function notifyApprovers(
+  tx: DbTx,
+  workspaceId: string,
+  run: { id: string; automation: { name: string } },
+  role: string
+): Promise<void> {
+  const needed = ROLE_RANK[role] ?? ROLE_RANK.owner!;
+  const members = await tx.workspaceMember.findMany({
+    where: { workspaceId },
+    select: { userId: true, role: true },
+  });
+  const approvers = members.filter((m) => (ROLE_RANK[m.role] ?? -1) >= needed);
+  if (approvers.length === 0) return;
+  await tx.notification.createMany({
+    data: approvers.map((m) => ({
+      userId: m.userId,
+      workspaceId,
+      type: 'automation_approval',
+      title: `Approval needed: ${run.automation.name}`,
+      message: `An automation run is waiting for ${role} approval.`,
+      entityType: 'automation_run',
+      entityId: run.id,
+      link: '/automations',
+    })),
+  });
 }
 
 type RunState = { id: string; currentStep: number; log: Prisma.JsonValue };

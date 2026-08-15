@@ -323,18 +323,23 @@ async function applyRefund(
   const payment = await lockPaymentByPaymentId(tx, workspaceId, paymentId);
   if (!payment || payment.status !== 'completed') return;
   if (refundAmount <= 0) return;
-  if (refundAmount > Number(payment.amount) + 0.001) {
-    throw new Error('Razorpay refund is larger than the payment');
+  // Unlike Stripe's charge.refunded (a running total), each Razorpay
+  // refund.processed carries one refund's amount, so refunds add up. A
+  // redelivered event is stopped earlier, by its event id.
+  const refundedBefore = Number(payment.refundAmount ?? 0);
+  const refundedTotal = Math.round((refundedBefore + refundAmount) * 100) / 100;
+  if (refundedTotal > Number(payment.amount) + 0.001) {
+    throw new Error('Razorpay refund is larger than what is left of the payment');
   }
 
-  const isFullRefund = refundAmount >= Number(payment.amount) - 0.01;
+  const isFullRefund = refundedTotal >= Number(payment.amount) - 0.01;
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
     data: {
       status: isFullRefund ? 'refunded' : 'completed',
       refundedAt: new Date(),
-      refundAmount,
+      refundAmount: refundedTotal,
       refundReason: 'Refunded via Razorpay',
     },
   });

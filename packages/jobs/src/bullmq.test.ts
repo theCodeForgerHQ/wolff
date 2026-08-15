@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { Queue, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import { createPrisma, withTenantGuard } from '@wolff/database';
-import { writeOutboxEvent } from '@wolff/core/outbox';
+import { requeueStaleOutboxEvents, writeOutboxEvent } from '@wolff/core/outbox';
 import { recordProviderEvent } from '@wolff/core/payments';
 import {
   BullMQDispatcher,
@@ -319,23 +319,25 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
         where: { id: event.outboxId },
         data: { enqueuedAt: new Date(Date.now() - 11 * 60_000) },
       });
+      // The sweeper's own function, limited to this suite's rows: the
+      // outbox.sweep job sweeps every workspace, and other suites share the
+      // table (their stale rows are theirs to sweep).
+      expect(
+        await requeueStaleOutboxEvents(db, { isAbandoned: async (id) => mine.includes(id) })
+      ).toBe(1);
+      expect(await outboxStatus(event.outboxId)).toBe('pending');
       // The connection may still be reconnecting to the new Redis.
       await until(
-        () =>
-          dispatcher.dispatch({ type: 'outbox.sweep', payload: {}, jobId: `sweep:${n}` }).then(
-            () => true,
-            () => false
-          ),
-        'the sweep job to be accepted'
+        async () => (await relay().catch(() => ({ enqueued: 0 }))).enqueued === 1,
+        'the relay to enqueue again'
       );
-      await until(
-        async () => (await outboxStatus(event.outboxId)) === 'pending',
-        'the sweeper to requeue'
-      );
-      await until(async () => (await relay()).enqueued === 1, 'the relay to enqueue again');
 
       await until(async () => (await event.status()) === 'paid', 'the invoice to be paid');
-      expect(await outboxStatus(event.outboxId)).toBe('done');
+      // The row is marked done after the job's work commits, so wait for it.
+      await until(
+        async () => (await outboxStatus(event.outboxId)) === 'done',
+        'the outbox event to be done'
+      );
     }, 120_000);
   });
 
