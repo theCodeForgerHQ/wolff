@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
-import { prisma } from '@wolff/database';
+import { prisma, withTenantGuard, type Prisma } from '@wolff/database';
+import { gstInvoiceColumns, priceForWorkspace, type PricedGstInvoice } from '@wolff/core/invoices';
+import { CoreError } from '@wolff/core/errors';
 import { generateInvoiceNumber } from '@/lib/invoices/internal';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber } from '@/lib/utils';
@@ -113,6 +115,8 @@ export async function POST(request: NextRequest) {
       quantity: number;
       rate: number;
       taxRate?: number;
+      hsnSac?: string;
+      itemType?: 'goods' | 'services';
     }>;
     notes?: string;
     terms?: string;
@@ -146,9 +150,6 @@ export async function POST(request: NextRequest) {
     if (!project) return apiError('Project not found', 404);
   }
 
-  // Atomic; a GST workspace numbers per financial year.
-  const invoiceNumber = await generateInvoiceNumber(workspaceId);
-
   const items = lineItems || [];
 
   // Bug #36: Limit line item count
@@ -174,9 +175,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // A GST workspace prices with the engine; the invoice is a
+  // draft, and leaves draft only through the Rule 46 check.
+  let gst: PricedGstInvoice | null;
+  try {
+    gst = await priceForWorkspace(withTenantGuard(prisma), workspaceId, {
+      client,
+      lines: items.map((item) => ({
+        name: item.name,
+        description: item.description || null,
+        quantity: item.quantity,
+        rate: item.rate,
+        gstRate: item.taxRate ?? 0,
+        hsnSac: item.hsnSac?.trim() || null,
+        itemType: item.itemType,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof CoreError) return apiError(error.message, 422);
+    throw error;
+  }
+
+  // Atomic; a GST workspace numbers per financial year.
+  const invoiceNumber = await generateInvoiceNumber(workspaceId);
+
   let subtotal = 0;
   let taxTotal = 0;
-  const processedItems = items.map((item, i) => {
+  const genericItems = items.map((item, i) => {
     const amount = Math.round(item.quantity * item.rate * 100) / 100;
     const taxAmount = item.taxRate ? Math.round(amount * (item.taxRate / 100) * 100) / 100 : 0;
     subtotal += amount;
@@ -194,6 +219,12 @@ export async function POST(request: NextRequest) {
   });
 
   const total = subtotal + taxTotal;
+  const amounts = gst
+    ? { ...gstInvoiceColumns(gst), amountDue: gst.invoice.total }
+    : { subtotal, taxTotal, total, amountDue: total };
+  const processedItems: Prisma.InvoiceLineItemCreateWithoutInvoiceInput[] = gst
+    ? gst.lines
+    : genericItems;
 
   const invoice = await prisma.invoice.create({
     data: {
@@ -212,10 +243,7 @@ export async function POST(request: NextRequest) {
         )?.currency ||
         'USD',
       dueDate: parsedDueDate,
-      subtotal,
-      taxTotal,
-      total,
-      amountDue: total,
+      ...amounts,
       notes: notes || null,
       terms: terms || null,
       settings: {},

@@ -1,6 +1,14 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
+import { withTenantGuard } from '@wolff/database';
+import {
+  assertReadyToIssue,
+  gstInvoiceColumns,
+  priceForWorkspace,
+  type PricedGstInvoice,
+} from '@wolff/core/invoices';
+import { CoreError } from '@wolff/core/errors';
 import { toNumber } from '@/lib/utils';
 
 interface RouteParams {
@@ -110,6 +118,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       quantity: number;
       rate: number;
       taxRate?: number;
+      hsnSac?: string;
+      itemType?: 'goods' | 'services';
     }>;
   };
 
@@ -148,6 +158,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (!allowed || !allowed.includes(status)) {
       return apiError('Invalid status transition', 400);
     }
+    // Leaving draft: a GST invoice must carry Rule 46's mandatory details.
+    // The check reads the stored invoice, so new lines and the status change
+    // go in separate requests.
+    if (invoice.status === 'draft') {
+      if (lineItems) return apiError('Change the lines and the status in separate requests', 400);
+      try {
+        await assertReadyToIssue(withTenantGuard(prisma), workspaceId, id);
+      } catch (error) {
+        if (error instanceof CoreError) return apiError(describe(error), 422);
+        throw error;
+      }
+    }
     updateData.status = status;
     if ((status === 'paid' || status === 'partial') && !invoice.paidAt)
       updateData.paidAt = new Date();
@@ -185,9 +207,40 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // A GST workspace prices with the engine; an issued GST invoice is
+    // corrected with a credit note, not edited.
+    let gst: PricedGstInvoice | null;
+    try {
+      const guarded = withTenantGuard(prisma);
+      const client = await guarded.client.findFirstOrThrow({
+        where: { id: invoice.clientId, workspaceId },
+      });
+      gst = await priceForWorkspace(guarded, workspaceId, {
+        client,
+        lines: lineItems.map((item) => ({
+          name: item.name,
+          description: item.description || null,
+          quantity: item.quantity,
+          rate: item.rate,
+          gstRate: item.taxRate ?? 0,
+          hsnSac: item.hsnSac?.trim() || null,
+          itemType: item.itemType,
+        })),
+        discountAmount: invoice.discountValue ? toNumber(invoice.discountValue) : 0,
+        placeOfSupply: invoice.placeOfSupply,
+        reverseCharge: invoice.reverseCharge,
+      });
+    } catch (error) {
+      if (error instanceof CoreError) return apiError(describe(error), 422);
+      throw error;
+    }
+    if (gst && invoice.status !== 'draft') {
+      return apiError('An issued GST invoice cannot be edited; issue a credit note', 422);
+    }
+
     let subtotal = 0;
     let taxTotal = 0;
-    const processed = lineItems.map((item, i) => {
+    const generic = lineItems.map((item, i) => {
       const amount = Math.round(item.quantity * item.rate * 100) / 100;
       const taxAmount = item.taxRate ? Math.round(amount * (item.taxRate / 100) * 100) / 100 : 0;
       subtotal += amount;
@@ -215,11 +268,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       discountAmount = Math.min(discountValue, subtotal);
     }
 
-    const total = subtotal - discountAmount + taxTotal;
-    updateData.subtotal = subtotal;
-    updateData.taxTotal = taxTotal;
-    updateData.discountAmount = discountAmount;
-    updateData.total = total;
+    const total = gst ? gst.invoice.total : subtotal - discountAmount + taxTotal;
+    if (gst) {
+      Object.assign(updateData, gstInvoiceColumns(gst));
+    } else {
+      updateData.subtotal = subtotal;
+      updateData.taxTotal = taxTotal;
+      updateData.discountAmount = discountAmount;
+      updateData.total = total;
+    }
+    const processed = gst ? gst.lines.map((line) => ({ ...line, invoiceId: id })) : generic;
     // Use fresh amountPaid from DB to avoid stale data
     const freshInvoice = await prisma.invoice.findUnique({
       where: { id },
@@ -298,4 +356,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   });
 
   return apiSuccess({ message: 'Invoice deleted' });
+}
+
+/** A GST refusal with its reasons, as the API's error message. */
+function describe(error: CoreError): string {
+  const reasons = error.details ? Object.values(error.details).flat() : [];
+  return reasons.length > 0 ? `${error.message}: ${reasons.join('; ')}` : error.message;
 }

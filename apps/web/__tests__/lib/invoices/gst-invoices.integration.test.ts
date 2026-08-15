@@ -21,6 +21,12 @@ vi.mock('@/lib/workspace/get-current-workspace', () => ({
 vi.mock('@/lib/email/actions', () => ({
   sendTemplatedEmail: vi.fn().mockResolvedValue({ success: true }),
 }));
+vi.mock('@/lib/api/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api/auth')>()),
+  authenticateApiRequest: vi.fn(async () => ({
+    context: { workspaceId: workspaceContext.workspaceId },
+  })),
+}));
 vi.mock('@/lib/notifications/internal', () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
 }));
@@ -35,6 +41,9 @@ import {
 } from '@/lib/invoices/actions';
 import { createInvoiceFromQuoteInternal } from '@/lib/invoices/internal';
 import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
+import { NextRequest } from 'next/server';
+import { POST as postInvoice } from '@/app/api/v1/invoices/route';
+import { PATCH as patchInvoice } from '@/app/api/v1/invoices/[id]/route';
 import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
@@ -324,5 +333,52 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
       await prisma.client.deleteMany({ where: { workspaceId: other.id } });
       await prisma.workspace.delete({ where: { id: other.id } });
     }
+  });
+
+  describe('legacy /api/v1/invoices', () => {
+    const request = (method: string, body: unknown) =>
+      new NextRequest('http://localhost/api/v1/invoices', {
+        method,
+        body: JSON.stringify(body),
+        headers: { 'content-type': 'application/json' },
+      });
+    const patch = (id: string, body: unknown) =>
+      patchInvoice(request('PATCH', body), { params: Promise.resolve({ id }) });
+
+    it('prices a GST invoice created through the API with the engine', async () => {
+      const response = await postInvoice(
+        request('POST', { clientId, title: 'API', dueDate: '2026-12-01', lineItems: [logo] })
+      );
+
+      expect(response.status).toBe(201);
+      const { id } = (await response.json()) as { id: string };
+      const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id } });
+      expect(invoice).toMatchObject({
+        supplyType: 'intra',
+        invoiceNumber: expect.stringMatching(FY_NUMBER),
+      });
+      expect((await gstLines(invoice.id)).map((l) => Number(l.cgstAmount))).toEqual([900]);
+    });
+
+    it('re-prices GST lines edited through the API', async () => {
+      const created = await draft([logo]);
+
+      const response = await patch(created.invoice!.id, { lineItems: [{ ...logo, rate: 20000 }] });
+
+      expect(response.status).toBe(200);
+      expect((await gstLines(created.invoice!.id)).map((l) => Number(l.cgstAmount))).toEqual([
+        1800,
+      ]);
+    });
+
+    it('keeps a GST draft that fails Rule 46 from being sent through the API', async () => {
+      const created = await draft([{ ...logo, hsnSac: undefined }]);
+
+      const response = await patch(created.invoice!.id, { status: 'sent' });
+
+      expect(response.status).toBe(422);
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+      expect(after.status).toBe('draft');
+    });
   });
 });
