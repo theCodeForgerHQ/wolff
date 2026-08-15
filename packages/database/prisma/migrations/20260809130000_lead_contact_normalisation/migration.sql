@@ -2,16 +2,44 @@
 -- a leading "+" kept). Bring existing rows into that form; new rows are
 -- written in it by core/crm/leads.ts.
 
--- Lower-case emails, except where that would collide with another lead of
--- the same workspace (those stay as they are and can be merged by hand).
+-- Lower-case emails. Leads of one workspace whose emails differ only by
+-- case would all become the same address, which the unique key on
+-- (workspace_id, email) refuses, so per group exactly one is chosen,
+-- deterministically: a lead already in lower case, else the oldest, then
+-- the lowest id. That one is lower-cased; the others keep their email and
+-- get a note naming it, to be merged by hand (a merge would have to move
+-- deals and activity, which a migration should not decide).
+UPDATE "leads" AS l
+SET "message" = concat_ws(
+  E'\n\n',
+  l."message",
+  'Possible duplicate of lead ' || r."keeper" || ' (same email, different case); not merged automatically.'
+)
+FROM (
+  SELECT "id",
+    row_number() OVER w AS "rank",
+    first_value("id") OVER w AS "keeper"
+  FROM "leads"
+  WHERE "email" IS NOT NULL
+  WINDOW w AS (
+    PARTITION BY "workspace_id", lower("email")
+    ORDER BY ("email" = lower("email")) DESC, "created_at", "id"
+  )
+) AS r
+WHERE l."id" = r."id" AND r."rank" > 1;
+
 UPDATE "leads" AS l
 SET "email" = lower(l."email")
-WHERE l."email" IS NOT NULL
-  AND l."email" <> lower(l."email")
-  AND NOT EXISTS (
-    SELECT 1 FROM "leads" o
-    WHERE o."workspace_id" = l."workspace_id" AND o."email" = lower(l."email")
-  );
+FROM (
+  SELECT "id",
+    row_number() OVER (
+      PARTITION BY "workspace_id", lower("email")
+      ORDER BY ("email" = lower("email")) DESC, "created_at", "id"
+    ) AS "rank"
+  FROM "leads"
+  WHERE "email" IS NOT NULL
+) AS r
+WHERE l."id" = r."id" AND r."rank" = 1 AND l."email" <> lower(l."email");
 
 -- Phones: digits only, a leading "+" kept; no digits at all becomes NULL.
 UPDATE "leads"
