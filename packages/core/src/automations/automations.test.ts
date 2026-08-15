@@ -60,6 +60,7 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
 
   afterAll(async () => {
     await base.outboxEvent.deleteMany({ where: { workspaceId } });
+    await base.notification.deleteMany({ where: { workspaceId } });
     await base.scheduledEmail.deleteMany({ where: { workspaceId } });
     await base.emailTemplate.deleteMany({ where: { workspaceId } });
     await base.invoice.deleteMany({ where: { workspaceId } });
@@ -404,5 +405,28 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
       where: { workspaceId, entityId: invoice.id },
     });
     expect(emails).toHaveLength(1);
+  });
+
+  it('notifies the members who may decide when a run reaches an approval step', async () => {
+    const asking = await base.automationRun.create({
+      data: { workspaceId, automationId, subjectId: randomUUID(), status: 'running' },
+    });
+    const racy = racyDb();
+    const tick = () =>
+      tickAutomationRun({ db: racy, workspaceId }, asking.id, {
+        dispatch: async () => {},
+        now: new Date(),
+      });
+
+    // Two concurrent ticks reach the step; one notification per person.
+    await Promise.all([tick(), tick()]);
+
+    const notes = await base.notification.findMany({
+      where: { workspaceId, entityId: asking.id },
+    });
+    // The step asks for an admin: the owner may decide, the member may not.
+    expect(notes.map((n) => [n.userId, n.type, n.link])).toEqual([
+      [ownerId, 'automation_approval', '/automations'],
+    ]);
   });
 });
