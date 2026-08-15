@@ -37,6 +37,28 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
       });
       return;
     }
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded': {
+      // The session is created before its PaymentIntent exists, so the
+      // pending payment only knows the session. This event names both:
+      // link them, and credit the payment if the session is paid. Delayed
+      // methods complete as 'unpaid' and are credited later by
+      // payment_intent.succeeded, which the link now lets through.
+      const sessionId = str(object.id);
+      if (!sessionId) throw new Error(`${event.type} without a session id`);
+      const intent = object.payment_intent;
+      const intentId =
+        str(intent) ??
+        str(
+          typeof intent === 'object' && intent ? (intent as Record<string, unknown>).id : undefined
+        );
+      if (!intentId) return;
+      await linkSessionToIntent(tx, sessionId, intentId);
+      if (object.payment_status === 'paid') {
+        await applyPaymentSucceeded(tx, { paymentIntentId: intentId });
+      }
+      return;
+    }
     case 'payment_intent.payment_failed': {
       const intentId = str(object.id);
       if (!intentId) throw new Error('payment_intent.payment_failed without an intent id');
@@ -66,6 +88,17 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
       // Not an event this application acts on.
       return;
   }
+}
+
+/**
+ * Records the PaymentIntent on the pending payment opened for a Checkout
+ * Session. Only an unlinked row is changed, so a redelivery does nothing.
+ */
+async function linkSessionToIntent(tx: Tx, sessionId: string, paymentIntentId: string) {
+  await tx.$executeRaw`
+    UPDATE payments SET stripe_payment_intent_id = ${paymentIntentId}, updated_at = NOW()
+    WHERE provider = 'stripe' AND provider_order_id = ${sessionId}
+      AND stripe_payment_intent_id IS NULL`;
 }
 
 /** Locks the payment row for the rest of the transaction and loads it. */

@@ -85,7 +85,9 @@ export async function startInvoicePayment(
       currency: invoice.currency,
       status: 'pending',
       provider: link.provider,
-      providerOrderId: link.provider === 'razorpay' ? link.orderId : null,
+      // Razorpay's order, or Stripe's Checkout Session: the id the provider's
+      // completion event names.
+      providerOrderId: link.provider === 'razorpay' ? link.orderId : link.sessionId,
       stripePaymentIntentId: link.provider === 'stripe' ? link.paymentIntentId : null,
       paymentMethod: link.provider,
     },
