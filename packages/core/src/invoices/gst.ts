@@ -265,25 +265,47 @@ export function gstInvoiceColumns(priced: PricedGstInvoice) {
  * issue date (Rule 46(b): unique for the financial year, ≤ 16 characters);
  * any other workspace keeps its single running sequence and stored prefix.
  */
-export async function nextInvoiceNumber(
+export function nextInvoiceNumber(
   db: Db,
   workspaceId: string,
   issueDate: Date = new Date()
+): Promise<string> {
+  return nextDocumentNumber(db, workspaceId, { type: 'invoice', prefix: 'INV' }, issueDate);
+}
+
+/**
+ * The next credit note number, counted like an invoice's: per financial
+ * year in a GST workspace ("CN/26-27/0001"), one running "CN-0001" sequence
+ * otherwise.
+ */
+export function nextCreditNoteNumber(
+  db: Db,
+  workspaceId: string,
+  date: Date = new Date()
+): Promise<string> {
+  return nextDocumentNumber(db, workspaceId, { type: 'credit_note', prefix: 'CN' }, date);
+}
+
+async function nextDocumentNumber(
+  db: Db,
+  workspaceId: string,
+  document: { type: string; prefix: string },
+  date: Date
 ): Promise<string> {
   const profile = await loadGstProfile(db, workspaceId);
   if (isGstWorkspace(profile)) {
     try {
       const { serialNumber } = await nextSerialNumber(db, {
         workspaceId,
-        type: 'invoice',
-        prefix: 'INV',
-        date: issueDate,
+        type: document.type,
+        prefix: document.prefix,
+        date,
       });
       return serialNumber;
     } catch (error) {
       throw new CoreError(
         'business_rule',
-        error instanceof Error ? error.message : 'Could not number this GST invoice'
+        error instanceof Error ? error.message : `Could not number this GST ${document.type}`
       );
     }
   }
@@ -292,13 +314,13 @@ export async function nextInvoiceNumber(
     incrementNumberSequence(
       tx as unknown as Parameters<typeof incrementNumberSequence>[0],
       workspaceId,
-      'invoice',
+      document.type,
       null,
-      { prefix: 'INV', currentValue: 1, padding: 4 }
+      { prefix: document.prefix, currentValue: 1, padding: 4 }
     )
   );
   const parts = [
-    (sequence.prefix || 'INV').replace(/-$/, ''),
+    (sequence.prefix || document.prefix).replace(/-$/, ''),
     String(sequence.currentValue).padStart(sequence.padding, '0'),
   ];
   if (sequence.suffix) parts.push(sequence.suffix);
