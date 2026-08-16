@@ -307,15 +307,24 @@ export async function tickAutomationRun(
 
   if (step.type === 'wait') {
     if (!run.waitingSince) {
-      const started = await transition(ctx.db, ctx, run, {
-        waitingSince: options.now,
-        log: pushLog(run, {
-          at: options.now.toISOString(),
-          stepIndex: run.currentStep,
-          action: 'wait_started',
-          message: `Waiting ${step.days} day(s).`,
-        }),
-      });
+      // Starting a wait does not change the step, so the status/step
+      // condition alone lets two ticks both start it; only one finds
+      // waitingSince still empty.
+      const started = await transition(
+        ctx.db,
+        ctx,
+        run,
+        {
+          waitingSince: options.now,
+          log: pushLog(run, {
+            at: options.now.toISOString(),
+            stepIndex: run.currentStep,
+            action: 'wait_started',
+            message: `Waiting ${step.days} day(s).`,
+          }),
+        },
+        { waitingSince: null }
+      );
       // Only the tick that started the wait schedules its end.
       if (started) await options.dispatch(run.id, run.currentStep, step.days * 86_400_000);
       return started ?? run;
@@ -479,10 +488,12 @@ async function transition(
   db: RunClient,
   ctx: CoreContext,
   run: RunState,
-  data: Prisma.AutomationRunUpdateManyMutationInput
+  data: Prisma.AutomationRunUpdateManyMutationInput,
+  also: Prisma.AutomationRunWhereInput = {}
 ) {
   const changed = await db.automationRun.updateMany({
     where: {
+      ...also,
       id: run.id,
       workspaceId: ctx.workspaceId,
       status: 'running',

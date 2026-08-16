@@ -345,6 +345,42 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     expect(paused).toMatchObject({ status: 'waiting_approval', currentStep: 1 });
   });
 
+  it('starts a wait once, and schedules its end once, for two concurrent ticks', async () => {
+    const automation = await base.automation.create({
+      data: {
+        workspaceId,
+        name: 'Wait',
+        trigger: 'deal.stalled',
+        steps: [{ type: 'wait', days: 2 }],
+        isActive: false,
+      },
+    });
+    const racing = await base.automationRun.create({
+      data: {
+        workspaceId,
+        automationId: automation.id,
+        subjectId: randomUUID(),
+        status: 'running',
+      },
+    });
+    const scheduled: number[] = [];
+    const ctx = { db: racyDb(), workspaceId };
+    const tick = (now: Date) =>
+      tickAutomationRun(ctx, racing.id, {
+        dispatch: async (_id, _step, delay) => void scheduled.push(delay),
+        now,
+      });
+
+    await Promise.all([
+      tick(new Date('2026-10-01T00:00:00Z')),
+      tick(new Date('2026-10-01T00:00:01Z')),
+    ]);
+
+    expect(scheduled).toEqual([2 * 86_400_000]);
+    const after = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
+    expect((after.log as { action: string }[]).map((e) => e.action)).toEqual(['wait_started']);
+  });
+
   it('does not move a deal to a stage of another pipeline in the same workspace', async () => {
     const mine = await pipelineWithStages(workspaceId);
     const otherPipeline = await pipelineWithStages(workspaceId);
