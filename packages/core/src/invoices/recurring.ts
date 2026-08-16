@@ -60,6 +60,8 @@ export type GenerateOutcome =
   | { outcome: 'skipped' }
   /** The series' end date has passed; recurring was switched off. */
   | { outcome: 'ended' }
+  /** The copy could not be priced; the series is paused and the owner told. */
+  | { outcome: 'paused'; reason: string }
   | { outcome: 'not_found' };
 
 const PERIOD_INDEX = 'invoices_parent_period_key';
@@ -184,13 +186,23 @@ export async function generateRecurringInvoice(
       const client = await tx.client.findFirstOrThrow({
         where: { id: parent.clientId, workspaceId },
       });
-      const gst = await priceForWorkspace(guarded, workspaceId, {
-        client,
-        lines: gstLinesFrom(parent.lineItems),
-        discountAmount: Number(parent.discountAmount),
-        placeOfSupply: parent.placeOfSupply,
-        reverseCharge: parent.reverseCharge,
-      });
+      let gst: Awaited<ReturnType<typeof priceForWorkspace>>;
+      try {
+        gst = await priceForWorkspace(guarded, workspaceId, {
+          client,
+          lines: gstLinesFrom(parent.lineItems),
+          discountAmount: Number(parent.discountAmount),
+          placeOfSupply: parent.placeOfSupply,
+          reverseCharge: parent.reverseCharge,
+        });
+      } catch (error) {
+        // A refusal (no place of supply, composition supplier, an invoice
+        // discount) fails the same way on every retry; throwing would roll
+        // back and retry forever while no invoice is ever produced.
+        if (!(error instanceof CoreError)) throw error;
+        await pauseSeries(guarded, workspaceId, parent, periodKey, error);
+        return { outcome: 'paused' as const, reason: error.message };
+      }
       const autoSend = parent.recurringAutoSend && !gst;
       const invoiceNumber = gst
         ? (
@@ -297,6 +309,54 @@ export async function generateRecurringInvoice(
     if (isDuplicatePeriod(error)) return { outcome: 'skipped' };
     throw error;
   }
+}
+
+/**
+ * Stops a series whose next copy cannot be priced: clears the next date (so
+ * the scheduler no longer finds it; saving the recurring settings again
+ * resumes it), records why on the parent, and tells the workspace owners in
+ * the app.
+ */
+async function pauseSeries(
+  tx: DbTx,
+  workspaceId: string,
+  parent: { id: string; invoiceNumber: string },
+  periodKey: string,
+  error: CoreError
+): Promise<void> {
+  await tx.invoice.update({
+    where: { id: parent.id, workspaceId },
+    data: { nextRecurringDate: null },
+  });
+  await tx.invoiceEvent.create({
+    data: {
+      invoiceId: parent.id,
+      eventType: 'recurring_paused',
+      actorType: 'system',
+      metadata: {
+        periodKey,
+        reason: error.message,
+        details: (error.details ?? {}) as Prisma.InputJsonValue,
+      },
+    },
+  });
+  const owners = await tx.workspaceMember.findMany({
+    where: { workspaceId, role: 'owner' },
+    select: { userId: true },
+  });
+  if (owners.length === 0) return;
+  await tx.notification.createMany({
+    data: owners.map((owner) => ({
+      userId: owner.userId,
+      workspaceId,
+      type: 'recurring_paused',
+      title: `Recurring invoice paused: ${parent.invoiceNumber}`,
+      message: `The ${periodKey} copy could not be created: ${error.message}`,
+      entityType: 'invoice',
+      entityId: parent.id,
+      link: `/invoices/${parent.id}`,
+    })),
+  });
 }
 
 /**

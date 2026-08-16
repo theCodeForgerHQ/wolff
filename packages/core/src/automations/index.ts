@@ -1,6 +1,7 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
 import type { CoreContext, Db, DbTx } from '../context';
+import { moveDealInTx } from '../crm/deals';
 import { CoreError } from '../errors';
 import { writeOutboxEvent } from '../outbox';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
@@ -306,15 +307,24 @@ export async function tickAutomationRun(
 
   if (step.type === 'wait') {
     if (!run.waitingSince) {
-      const started = await transition(ctx.db, ctx, run, {
-        waitingSince: options.now,
-        log: pushLog(run, {
-          at: options.now.toISOString(),
-          stepIndex: run.currentStep,
-          action: 'wait_started',
-          message: `Waiting ${step.days} day(s).`,
-        }),
-      });
+      // Starting a wait does not change the step, so the status/step
+      // condition alone lets two ticks both start it; only one finds
+      // waitingSince still empty.
+      const started = await transition(
+        ctx.db,
+        ctx,
+        run,
+        {
+          waitingSince: options.now,
+          log: pushLog(run, {
+            at: options.now.toISOString(),
+            stepIndex: run.currentStep,
+            action: 'wait_started',
+            message: `Waiting ${step.days} day(s).`,
+          }),
+        },
+        { waitingSince: null }
+      );
       // Only the tick that started the wait schedules its end.
       if (started) await options.dispatch(run.id, run.currentStep, step.days * 86_400_000);
       return started ?? run;
@@ -399,7 +409,7 @@ export async function tickAutomationRun(
 
   if (step.type === 'move_deal') {
     const deal = await ctx.db.deal.findFirst({
-      where: { id: run.subjectId, workspaceId: ctx.workspaceId },
+      where: { id: run.subjectId, workspaceId: ctx.workspaceId, deletedAt: null },
     });
     // The stage must be in this workspace and on the deal's own pipeline;
     // the id was checked when the automation was saved, but the stage may
@@ -415,14 +425,17 @@ export async function tickAutomationRun(
         ? 'Deal moved.'
         : 'Stage not found; skipped.';
     // The move and the step advance commit together, and only for the tick
-    // that still finds the run on this step.
+    // that still finds the run on this step. The move goes through the same
+    // code as a manual one: won/lost dates and a stage_changed activity.
     return ctx.db.$transaction(async (tx) => {
       const moved = await transition(tx, ctx, run, completedStep(run, message, options.now));
       if (moved && deal && stage) {
-        await tx.deal.update({
-          where: { id: deal.id, workspaceId: ctx.workspaceId },
-          data: { stageId: stage.id },
-        });
+        await moveDealInTx(
+          tx,
+          { workspaceId: ctx.workspaceId },
+          { dealId: deal.id, stageId: stage.id },
+          { source: 'automation', automationRunId: run.id }
+        );
       }
       return moved ?? run;
     });
@@ -475,10 +488,12 @@ async function transition(
   db: RunClient,
   ctx: CoreContext,
   run: RunState,
-  data: Prisma.AutomationRunUpdateManyMutationInput
+  data: Prisma.AutomationRunUpdateManyMutationInput,
+  also: Prisma.AutomationRunWhereInput = {}
 ) {
   const changed = await db.automationRun.updateMany({
     where: {
+      ...also,
       id: run.id,
       workspaceId: ctx.workspaceId,
       status: 'running',

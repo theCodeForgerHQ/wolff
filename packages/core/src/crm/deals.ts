@@ -1,5 +1,5 @@
 import { CoreError } from '../errors';
-import type { CoreContext, DbOrTx } from '../context';
+import type { CoreContext, DbOrTx, DbTx } from '../context';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
 
 export interface MoveDealInput {
@@ -25,72 +25,82 @@ export interface MoveDealResult {
  */
 export async function moveDeal(ctx: CoreContext, input: MoveDealInput): Promise<MoveDealResult> {
   const { db, workspaceId, actorId } = ctx;
+  return db.$transaction((tx) => moveDealInTx(tx, { workspaceId, actorId }, input));
+}
 
-  return db.$transaction(async (tx) => {
-    const [locked] = await tx.$queryRaw<
-      Array<{ id: string; stage_id: string; pipeline_id: string }>
-    >`
-      SELECT id, stage_id, pipeline_id FROM deals
-      WHERE id = ${input.dealId} AND workspace_id = ${workspaceId} AND deleted_at IS NULL
-      FOR UPDATE`;
-    if (!locked) throw new Error('Deal not found');
+/**
+ * moveDeal's work inside a caller's transaction, for callers whose move must
+ * commit or roll back with their own writes (an automation step). `source`
+ * is recorded on the activity.
+ */
+export async function moveDealInTx(
+  tx: DbTx,
+  { workspaceId, actorId }: { workspaceId: string; actorId?: string },
+  input: MoveDealInput,
+  source?: Record<string, string>
+): Promise<MoveDealResult> {
+  const [locked] = await tx.$queryRaw<Array<{ id: string; stage_id: string; pipeline_id: string }>>`
+    SELECT id, stage_id, pipeline_id FROM deals
+    WHERE id = ${input.dealId} AND workspace_id = ${workspaceId} AND deleted_at IS NULL
+    FOR UPDATE`;
+  if (!locked) throw new Error('Deal not found');
 
-    const targetStage = await tx.stage.findFirst({
-      where: { id: input.stageId, pipelineId: locked.pipeline_id, workspaceId },
-    });
-    if (!targetStage) throw new Error('Target stage not found in deal pipeline');
-
-    const previousStageId = locked.stage_id;
-    const now = new Date();
-    const isWon = targetStage.kind === 'won';
-    const isLost = targetStage.kind === 'lost';
-
-    const updateData: Record<string, unknown> = {
-      stageId: targetStage.id,
-      updatedAt: now,
-    };
-    if (input.position !== undefined) updateData.position = input.position;
-    if (isWon) {
-      updateData.wonAt = now;
-      updateData.lostAt = null;
-      updateData.lostReason = null;
-    } else if (isLost) {
-      updateData.lostAt = now;
-      updateData.wonAt = null;
-      if (input.lostReason) updateData.lostReason = input.lostReason;
-    } else {
-      updateData.wonAt = null;
-      updateData.lostAt = null;
-    }
-
-    await tx.deal.update({
-      where: { id: input.dealId, workspaceId },
-      data: updateData,
-    });
-
-    await tx.dealActivity.create({
-      data: {
-        workspaceId,
-        dealId: input.dealId,
-        type: 'stage_changed',
-        actorId,
-        payload: {
-          fromStageId: previousStageId,
-          toStageId: targetStage.id,
-          toStageKind: targetStage.kind,
-          lostReason: input.lostReason ?? null,
-        },
-      },
-    });
-
-    return {
-      dealId: input.dealId,
-      previousStageId,
-      newStageId: targetStage.id,
-      wonAt: isWon ? now : null,
-      lostAt: isLost ? now : null,
-    };
+  const targetStage = await tx.stage.findFirst({
+    where: { id: input.stageId, pipelineId: locked.pipeline_id, workspaceId },
   });
+  if (!targetStage) throw new Error('Target stage not found in deal pipeline');
+
+  const previousStageId = locked.stage_id;
+  const now = new Date();
+  const isWon = targetStage.kind === 'won';
+  const isLost = targetStage.kind === 'lost';
+
+  const updateData: Record<string, unknown> = {
+    stageId: targetStage.id,
+    updatedAt: now,
+  };
+  if (input.position !== undefined) updateData.position = input.position;
+  if (isWon) {
+    updateData.wonAt = now;
+    updateData.lostAt = null;
+    updateData.lostReason = null;
+  } else if (isLost) {
+    updateData.lostAt = now;
+    updateData.wonAt = null;
+    if (input.lostReason) updateData.lostReason = input.lostReason;
+  } else {
+    updateData.wonAt = null;
+    updateData.lostAt = null;
+  }
+
+  await tx.deal.update({
+    where: { id: input.dealId, workspaceId },
+    data: updateData,
+  });
+
+  await tx.dealActivity.create({
+    data: {
+      workspaceId,
+      dealId: input.dealId,
+      type: 'stage_changed',
+      actorId,
+      payload: {
+        fromStageId: previousStageId,
+        toStageId: targetStage.id,
+        toStageKind: targetStage.kind,
+        lostReason: input.lostReason ?? null,
+        ...source,
+      },
+    },
+  });
+
+  return {
+    dealId: input.dealId,
+    previousStageId,
+    newStageId: targetStage.id,
+    wonAt: isWon ? now : null,
+    lostAt: isLost ? now : null,
+  };
 }
 
 export interface CreateDealInput {
