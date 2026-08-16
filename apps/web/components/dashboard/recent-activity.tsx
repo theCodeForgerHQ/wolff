@@ -94,7 +94,9 @@ export function RecentActivity({ activities, currency = 'USD' }: RecentActivityP
                       </p>
                       <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[11px]">
                         {/* Relative to the clock, so the server's "12 seconds ago" can be
-                            "15 seconds ago" by hydration; the browser's text wins. */}
+                            "15 seconds ago" by hydration. suppressHydrationWarning only
+                            silences that one-level text mismatch: React does not patch it,
+                            so the server's text stays until this component re-renders. */}
                         <time
                           dateTime={new Date(activity.date).toISOString()}
                           suppressHydrationWarning
