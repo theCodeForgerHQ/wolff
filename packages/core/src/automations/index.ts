@@ -1,6 +1,7 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
 import type { Prisma } from '@wolff/database';
 import type { CoreContext, Db, DbTx } from '../context';
+import { moveDealInTx } from '../crm/deals';
 import { CoreError } from '../errors';
 import { writeOutboxEvent } from '../outbox';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
@@ -399,7 +400,7 @@ export async function tickAutomationRun(
 
   if (step.type === 'move_deal') {
     const deal = await ctx.db.deal.findFirst({
-      where: { id: run.subjectId, workspaceId: ctx.workspaceId },
+      where: { id: run.subjectId, workspaceId: ctx.workspaceId, deletedAt: null },
     });
     // The stage must be in this workspace and on the deal's own pipeline;
     // the id was checked when the automation was saved, but the stage may
@@ -415,14 +416,17 @@ export async function tickAutomationRun(
         ? 'Deal moved.'
         : 'Stage not found; skipped.';
     // The move and the step advance commit together, and only for the tick
-    // that still finds the run on this step.
+    // that still finds the run on this step. The move goes through the same
+    // code as a manual one: won/lost dates and a stage_changed activity.
     return ctx.db.$transaction(async (tx) => {
       const moved = await transition(tx, ctx, run, completedStep(run, message, options.now));
       if (moved && deal && stage) {
-        await tx.deal.update({
-          where: { id: deal.id, workspaceId: ctx.workspaceId },
-          data: { stageId: stage.id },
-        });
+        await moveDealInTx(
+          tx,
+          { workspaceId: ctx.workspaceId },
+          { dealId: deal.id, stageId: stage.id },
+          { source: 'automation', automationRunId: run.id }
+        );
       }
       return moved ?? run;
     });

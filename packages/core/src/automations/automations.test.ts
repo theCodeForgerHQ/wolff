@@ -66,6 +66,7 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     await base.invoice.deleteMany({ where: { workspaceId } });
     await base.client.deleteMany({ where: { workspaceId } });
     for (const ws of [workspaceId, otherWorkspaceId]) {
+      await base.dealActivity.deleteMany({ where: { workspaceId: ws } });
       await base.deal.deleteMany({ where: { workspaceId: ws } });
       await base.stage.deleteMany({ where: { workspaceId: ws } });
       await base.pipeline.deleteMany({ where: { workspaceId: ws } });
@@ -130,12 +131,18 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
    * concurrent callers both see the same state: the case a read-then-update
    * gets wrong. Later reads pass straight through.
    */
-  const racyDb = () => {
+  const racyDb = (dealUpdates: string[] = []) => {
     let reads = 0;
     let release: () => void = () => {};
     const bothRead = new Promise<void>((resolve) => (release = resolve));
     return db.$extends({
       query: {
+        deal: {
+          async update({ args, query }) {
+            dealUpdates.push(String(args.where.id));
+            return query(args);
+          },
+        },
         automationRun: {
           async findFirst({ args, query }) {
             const result = await query(args);
@@ -310,7 +317,8 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     const racing = await base.automationRun.create({
       data: { workspaceId, automationId: automation.id, subjectId: deal.id, status: 'running' },
     });
-    const ctx = { db: racyDb(), workspaceId };
+    const dealUpdates: string[] = [];
+    const ctx = { db: racyDb(dealUpdates), workspaceId };
     const tick = () =>
       tickAutomationRun(ctx, racing.id, { dispatch: async () => {}, now: new Date() });
 
@@ -319,6 +327,17 @@ describe.skipIf(!url)('automation approvals (Postgres)', () => {
     const after = await base.automationRun.findUniqueOrThrow({ where: { id: racing.id } });
     expect(after.currentStep).toBe(1);
     expect((after.log as { action: string }[]).map((e) => e.action)).toEqual(['step_completed']);
+    // Only the tick that won the transition moves the deal and records it.
+    expect(dealUpdates).toEqual([deal.id]);
+    const activities = await base.dealActivity.findMany({
+      where: { dealId: deal.id, type: 'stage_changed' },
+    });
+    expect(activities.map((a) => a.payload)).toEqual([
+      expect.objectContaining({ fromStageId: first.id, toStageId: second.id }),
+    ]);
+    expect(
+      await base.deal.findUniqueOrThrow({ where: { id: deal.id } }).then((d) => d.stageId)
+    ).toBe(second.id);
 
     // The next tick reaches the approval and pauses there.
     await tick();
