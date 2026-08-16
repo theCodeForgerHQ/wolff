@@ -59,6 +59,17 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
       }
       return;
     }
+    case 'checkout.session.expired':
+    case 'checkout.session.async_payment_failed': {
+      // The client never paid (the session timed out, or a delayed method
+      // was declined): close the pending payment opened for the session.
+      const sessionId = str(object.id);
+      if (!sessionId) throw new Error(`${event.type} without a session id`);
+      await tx.$executeRaw`
+        UPDATE payments SET status = 'failed', updated_at = NOW()
+        WHERE provider = 'stripe' AND provider_order_id = ${sessionId} AND status = 'pending'`;
+      return;
+    }
     case 'payment_intent.payment_failed': {
       const intentId = str(object.id);
       if (!intentId) throw new Error('payment_intent.payment_failed without an intent id');

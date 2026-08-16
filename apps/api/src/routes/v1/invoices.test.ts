@@ -374,6 +374,35 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
       }
     });
 
+    const openSession = async () => {
+      const invoice = await stripeInvoice();
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${invoice.id}/payment-links`)
+        .send({ provider: 'stripe' });
+      return { invoice, sessionId: res.body.data.sessionId as string };
+    };
+    const paymentOf = (invoiceId: string) =>
+      base.payment.findFirstOrThrow({ where: { invoiceId } });
+
+    it.each(['checkout.session.expired', 'checkout.session.async_payment_failed'])(
+      'marks the pending payment failed on %s',
+      async (type) => {
+        sessionIntent = null;
+        try {
+          const { invoice, sessionId } = await openSession();
+
+          await deliver(type, { id: sessionId, object: 'checkout.session' });
+
+          expect((await paymentOf(invoice.id)).status).toBe('failed');
+          expect((await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).status).toBe(
+            'sent'
+          );
+        } finally {
+          sessionIntent = 'pi_test_123';
+        }
+      }
+    );
+
     it('pays on payment_intent.succeeded when the session came with an intent', async () => {
       const invoice = await stripeInvoice();
       await as(ws.key)
