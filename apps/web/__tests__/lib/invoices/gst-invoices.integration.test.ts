@@ -27,6 +27,10 @@ vi.mock('@/lib/api/auth', async (importOriginal) => ({
     context: { workspaceId: workspaceContext.workspaceId },
   })),
 }));
+vi.mock('@/lib/services/email', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/services/email')>()),
+  sendInvoiceSentEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
 vi.mock('@/lib/notifications/internal', () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
 }));
@@ -44,6 +48,7 @@ import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
 import { NextRequest } from 'next/server';
 import { POST as postInvoice } from '@/app/api/v1/invoices/route';
 import { PATCH as patchInvoice } from '@/app/api/v1/invoices/[id]/route';
+import { POST as postSendInvoice } from '@/app/api/v1/invoices/[id]/send/route';
 import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
@@ -379,6 +384,31 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
       expect(response.status).toBe(422);
       const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
       expect(after.status).toBe('draft');
+    });
+
+    const send = (id: string) =>
+      postSendInvoice(request('POST', {}), { params: Promise.resolve({ id }) });
+
+    it('sends a complete GST draft through the API send endpoint', async () => {
+      const created = await draft([logo]);
+
+      const response = await send(created.invoice!.id);
+
+      expect(response.status).toBe(200);
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+      expect(after.status).toBe('sent');
+    });
+
+    it('keeps a GST draft that fails Rule 46 from being issued by the API send endpoint', async () => {
+      const created = await draft([{ ...logo, hsnSac: undefined }]);
+
+      const response = await send(created.invoice!.id);
+
+      expect(response.status).toBe(422);
+      expect(((await response.json()) as { error: string }).error).toMatch(/HSN/);
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+      expect(after.status).toBe('draft');
+      expect(after.sentAt).toBeNull();
     });
   });
 
