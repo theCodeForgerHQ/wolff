@@ -23,6 +23,7 @@ import { generateInvoiceNumber } from './internal';
 import { domainEvents } from '@/lib/events/emitter';
 import {
   calculateTotals,
+  describeCoreError,
   generateAccessToken,
   getActiveWorkspace,
   gstDb,
@@ -131,21 +132,27 @@ export async function createInvoice(data: CreateInvoiceData) {
     }
   }
 
-  const gst = isGst
-    ? priceGstInvoice({
-        profile: gstProfile,
-        client,
-        lines: data.lineItems.map((item) => ({
-          name: item.name,
-          description: item.description || null,
-          quantity: Math.round(item.quantity * 100) / 100,
-          rate: item.rate,
-          gstRate: item.taxRate ?? 0,
-          hsnSac: item.hsnSac?.trim() || null,
-          itemType: item.itemType,
-        })),
-      })
-    : null;
+  let gst: PricedGstInvoice | null;
+  try {
+    gst = isGst
+      ? priceGstInvoice({
+          profile: gstProfile,
+          client,
+          lines: data.lineItems.map((item) => ({
+            name: item.name,
+            description: item.description || null,
+            quantity: Math.round(item.quantity * 100) / 100,
+            rate: item.rate,
+            gstRate: item.taxRate ?? 0,
+            hsnSac: item.hsnSac?.trim() || null,
+            itemType: item.itemType,
+          })),
+        })
+      : null;
+  } catch (error) {
+    if (error instanceof CoreError) return { success: false, error: describeCoreError(error) };
+    throw error;
+  }
 
   const generic = calculateTotals(data.lineItems, {
     type: data.discountType,
@@ -352,19 +359,24 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
         error: 'GST invoices take discounts per line, before tax; remove the quote discount',
       };
     }
-    gst = priceGstInvoice({
-      profile: gstProfile,
-      client: quote.client,
-      lines: quote.lineItems.map((item) => ({
-        name: item.name,
-        description: item.description,
-        quantity: toNumber(item.quantity),
-        rate: toNumber(item.rate),
-        gstRate: toNumber(item.gstRate ?? item.taxRate),
-        hsnSac: item.hsnSac,
-        itemType: item.itemType,
-      })),
-    });
+    try {
+      gst = priceGstInvoice({
+        profile: gstProfile,
+        client: quote.client,
+        lines: quote.lineItems.map((item) => ({
+          name: item.name,
+          description: item.description,
+          quantity: toNumber(item.quantity),
+          rate: toNumber(item.rate),
+          gstRate: toNumber(item.gstRate ?? item.taxRate),
+          hsnSac: item.hsnSac,
+          itemType: item.itemType,
+        })),
+      });
+    } catch (error) {
+      if (error instanceof CoreError) return { success: false, error: describeCoreError(error) };
+      throw error;
+    }
   }
 
   // Calculate due date (configurable, default: 30 days from now)

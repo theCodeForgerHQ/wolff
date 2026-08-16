@@ -381,4 +381,19 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
       expect(after.status).toBe('draft');
     });
   });
+
+  it('refuses a GST invoice whose place of supply cannot be known, instead of assuming IGST', async () => {
+    const { workspaceId } = workspaceContext;
+    await prisma.businessProfile.update({ where: { workspaceId }, data: { stateCode: null } });
+    await prisma.client.update({ where: { id: clientId }, data: { stateCode: null } });
+    try {
+      const result = await draft([logo]);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/place of supply/);
+    } finally {
+      await prisma.businessProfile.update({ where: { workspaceId }, data: { stateCode: '33' } });
+      await prisma.client.update({ where: { id: clientId }, data: { stateCode: '33' } });
+    }
+  });
 });

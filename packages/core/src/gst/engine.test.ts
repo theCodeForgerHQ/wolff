@@ -3,6 +3,7 @@ import * as fc from 'fast-check';
 import { Decimal } from 'decimal.js';
 import { computeGst, determineSupplyType } from './engine';
 import golden from './__fixtures__/golden.json';
+import { CoreError } from '../errors';
 
 function d(value: number | string): Decimal {
   return new Decimal(value);
@@ -86,7 +87,7 @@ describe('GST engine', () => {
     expect(determineSupplyType({ supplierStateCode: '33', placeOfSupply: '29' })).toBe('inter');
     expect(determineSupplyType({ supplierStateCode: '33', isExport: true })).toBe('export');
     expect(determineSupplyType({ supplierStateCode: '33', isSez: true })).toBe('sez');
-    expect(determineSupplyType({ supplierStateCode: '33' })).toBe('inter');
+    expect(() => determineSupplyType({ supplierStateCode: '33' })).toThrow(CoreError);
   });
 
   it('property: cgst + sgst == igst for the same intra-state line', () => {
@@ -173,5 +174,33 @@ describe('GST engine', () => {
       ),
       { numRuns: 100 }
     );
+  });
+});
+
+describe('place of supply', () => {
+  const line = {
+    description: 'Design',
+    quantity: 1,
+    rate: 100,
+    gstRate: 18,
+    itemType: 'services' as const,
+  };
+
+  it.each([
+    ['the place of supply', { supplierStateCode: '33' }],
+    ["the supplier's state", { placeOfSupply: '29' }],
+  ])('refuses a domestic supply without %s instead of assuming inter-state', (_, states) => {
+    let error: unknown;
+    try {
+      computeGst({ ...states, lines: [line] });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(CoreError);
+    expect((error as CoreError).code).toBe('validation_error');
+  });
+
+  it('needs no state for an export', () => {
+    expect(computeGst({ isExport: true, lines: [line] }).supplyType).toBe('export');
   });
 });

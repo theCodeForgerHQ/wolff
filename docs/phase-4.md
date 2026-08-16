@@ -5,9 +5,11 @@ v0.5 milestone (README v0.5, live demo, video, tag `v0.5.0`) is **not done**:
 nothing is deployed and no tag was made.
 
 The Phase 4 build (up to `3590d9c`) was reviewed twice, together with
-Phases 2 and 3. The second half of this document lists every finding and
-what happened to it. Commit hashes below are from before the planned
-history cleanup and will change with it.
+Phases 2 and 3, and the fixed branch (tip `b9993e4`, tagged
+`phase4-pre-rereview-fixes`) was reviewed again. The second half of this
+document lists every finding and what happened to it. Hashes in the first
+review table are from before the history cleanup; hashes in the
+re-review table are current.
 
 ## State of the Phase 4 criteria
 
@@ -21,9 +23,9 @@ history cleanup and will change with it.
 | Widget interactive ≤ 300 ms after DOMContentLoaded, throttled         | Met locally          | `e2e/widget/perf.spec.ts`: Fast 3G + 4x CPU, the widget's own performance mark                                                                                                      |
 | SRI hash per release                                                  | Met (build output)   | `dist/sri.json` written by `apps/widget/scripts/sri.mjs`; not published anywhere (no CDN)                                                                                           |
 | Rejected from a non-allowed origin                                    | Met                  | `apps/api/src/routes/v1/public.test.ts` (exact Origin, empty list denies, no Referer)                                                                                               |
-| Automation run pauses at approval and resumes on approve (E2E)        | Met                  | `e2e/product/automation-approval.spec.ts`; resuming in the worker is covered by `packages/jobs/src/jobs.test.ts`                                                                    |
+| Automation run pauses at approval and resumes on approve (E2E)        | Met                  | `e2e/product/automation-approval.spec.ts`; resuming in the worker is covered by `packages/jobs/src/jobs.test.ts`. The pause notifies approvers in the app (`c3c4d26`); no email     |
 | axe clean on builder, Kanban, widget, automations                     | Met                  | `e2e/product/axe.spec.ts`, `e2e/widget/axe.spec.ts`                                                                                                                                 |
-| CSP tightening                                                        | Met                  | `apps/web/lib/security/csp.ts`, `e2e/flows/csp.spec.ts`                                                                                                                             |
+| CSP tightening                                                        | Met                  | `apps/web/lib/security/csp.ts`, `e2e/flows/csp.spec.ts`; 27 pages opened in Chromium with no violation after `fbed765` (pay dialog not opened)                                      |
 | web-vitals reporting                                                  | Partly               | Reported to `/api/vitals` and logged; no Sentry/OTel metric, no p75 table in the README                                                                                             |
 
 ## Deviations and decisions
@@ -38,16 +40,32 @@ history cleanup and will change with it.
   (Rule 46(q) proviso), and goods lines cannot pass Rule 46 because no
   unit is stored. Both are for the owner's CA to confirm.
 - The invoice editor has no HSN/SAC field yet; GST invoices get HSN from
-  quotes (deal → quote) or the server action's input. The legacy
-  `/api/v1` invoice POST numbers per FY but does not price GST (Phase 6b).
+  quotes (deal → quote) or the server action's input, and an edited line
+  keeps the HSN of the stored line it edits. The legacy `/api/v1` invoice
+  routes price GST and gate issuing since `6138fb5`; their port to
+  `apps/api` stays in Phase 6b.
+- GST numbers carry the financial year (`INV/26-27/0001`, 14 characters).
+  Credit notes still use one running `CN-0001` sequence; the design does not
+  say how credit notes are numbered, so this is left for the owner's CA.
+- An auto-created or auto-sent GST invoice that fails Rule 46 stays a
+  draft with an `auto_send_blocked` event; the portal does not show it to
+  the client. The design does not say what should happen; this is the
+  conservative reading.
+- Automation create/update/delete need the owner or admin role (same rule
+  as API keys); the design does not name a role.
 - Publishable keys: per-key minute and burst limits apply; the design's
   per-IP 20/min on `/public/leads` is not implemented.
 
 ## Known issues and deferred
 
-- Razorpay orders are created with the platform's env-configured client,
-  not the workspace's own key (the decrypted secret is unused). Must be
-  fixed before any real Razorpay use.
+- The approval step notifies in the app only; no email (core has no
+  direct email port, only templated scheduled emails).
+- Stripe Checkout and Razorpay are verified against mocks and recorded
+  event shapes only; the Checkout change follows Stripe's 2022-08-01
+  changelog, not a live test-mode session.
+- An expired or stale session whose user no longer exists renders the
+  "Something went wrong" page instead of redirecting to sign-in (seen when
+  re-seeding the visual database; the suite now re-signs in).
 - `/api/cron/reset-demo` stays (no `demo.reset` job yet). PDF smoke test,
   uptime check, Neon `bootstrap.sql`, the three Vercel projects: deferred
   with the demo environment (Phase 6).
@@ -60,7 +78,10 @@ history cleanup and will change with it.
 - A test in `apps/api/src/routes/v1/invoices.test.ts` named "returns 404
   for an invoice in another workspace" asserts 200 with the owner's key;
   the real cross-tenant check is in `cross-tenant.test.ts`.
-- Commits to fix in the history cleanup: `9106528` fails the API
+- Re-review fixes `7c46988` to `6138fb5` (eight commits) fail
+  `packages/jobs`' type-check; `c5d63e1` fixes it. The history was not
+  rewritten (see the re-review table).
+- Commits to fix in the history cleanup (done before the re-review): `9106528` fails the API
   type-check (fixed by `3c8a6f4`); `b9eb565` fails its own CSP test (fixed
   by `e4c3e7e`); `159864a` also regenerates `openapi.json` (stale at
   `3590d9c`); `4478be8` is labelled `test` but changes the tenant guard;
@@ -106,29 +127,60 @@ C = critical, H = high, M = medium, L = low.
 
 Also added: widget SRI and CI size check (`ef325d1`).
 
+## Re-review findings and fixes (second review of `b9993e4`)
+
+Each finding was checked against the code before fixing. Each fix has a
+test that failed before it (or with its guard reverted) and passes after.
+
+| #   | Finding                                                                | Outcome                                                                                                                                                                                                                                                                      | Commits                                               |
+| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| H1  | Concurrent automation ticks skipped the approval                       | Confirmed (test ended at step 2). Every transition is conditional on (step, running); move_deal and its advance in one transaction                                                                                                                                           | `7c46988`, `c5d63e1`                                  |
+| H2  | GST numbers repeat each FY, breaking the unique key on 1 April         | Confirmed. FY in the number: `INV/26-27/0001`; test stores invoices numbered 31 Mar 23:59 and 1 Apr 00:00 IST                                                                                                                                                                | `76b761b`                                             |
+| H3  | Edit, duplicate, auto-create, recurring bypass GST pricing and Rule 46 | Confirmed; also found on the legacy `/api/v1` invoice routes and in two cross-tenant recurring server actions (deleted). `actions.ts` split first (pure move)                                                                                                                | `e72e6c3`, `4e6d104`, `da7d1f9`, `2252f72`, `6138fb5` |
+| H4  | Checkout throws when `payment_intent` is null                          | Confirmed from Stripe's 2022-08-01 changelog ("a PaymentIntent is created when the Session is confirmed"), which the pinned 2026-08-26.dahlia includes. Session id stored, `checkout.session.completed` reconciles                                                           | `dc15428`                                             |
+| H5  | Razorpay orders use the platform key                                   | Confirmed. Per-workspace key pair, `not_configured` without keys                                                                                                                                                                                                             | `3195c0d`                                             |
+| M6  | Lead migration fails on emails differing only by case                  | Confirmed (23505). One lead per group lower-cased, others flagged in their message; migration edited in place (never deployed)                                                                                                                                               | `cd27aa1`                                             |
+| M7  | Drain omits `automations.tick`                                         | Confirmed. Drain schedule derived from `SCHEDULES`                                                                                                                                                                                                                           | `9d0cc38`                                             |
+| M8  | Automation actions lack a role check; approval notifies nobody         | Confirmed. Owner/admin only; in-app notification to members who may decide. Email not added                                                                                                                                                                                  | `a353191`, `c3c4d26`                                  |
+| M9  | Four guards without a biting test                                      | Confirmed for all four; tests added, each reverted once and seen red                                                                                                                                                                                                         | `b88f73e`, `276eb51`                                  |
+| M10 | Outbox status read once; global sweep in a test                        | Confirmed. Waits for `done`; sweeps only the suite's rows (the job wiring to the sweeper is no longer exercised there)                                                                                                                                                       | `72c96e8`                                             |
+| M11 | Razorpay refunds overwrite instead of adding up                        | Confirmed. Refunds accumulate; the over-refund check uses the total                                                                                                                                                                                                          | `9f5b5fb`                                             |
+| L12 | Error toast in the darwin dashboard baseline                           | Cause: hydration mismatch of "N seconds ago" in Recent Activity (React #418 → global error toast). Fixed; darwin dashboard re-recorded (diffs in the commit); linux had no toast and was not re-recorded. Also found: a kept session after a re-seed rendered the error page | `3557318`, `d05264f`, `6410384`                       |
+| L13 | 30 baselines per platform but 21 tests                                 | Not a defect: 21 tests take 30 screenshots (three tests take two each), all compared; CI's "10 key pages x 3 widths" is accurate. No change                                                                                                                                  | —                                                     |
+| L14 | `<span>` inside `<ol>` in the step list                                | Fixed                                                                                                                                                                                                                                                                        | `353d465`                                             |
+| L15 | Missing place of supply silently becomes inter-state                   | Fixed: `validation_error` for a domestic supply without both states                                                                                                                                                                                                          | `523a2eb`                                             |
+| L16 | CSP violations in a real browser                                       | One found on every form page: Zod 4's `Function('')` probe (caught, so never logged). Zod set jitless; CSP test now listens for the violation event                                                                                                                          | `fbed765`                                             |
+
+Mid-history: `7c46988` to `6138fb5` fail `packages/jobs`' type-check
+(`tickAutomationRun`'s return type), fixed by `c5d63e1`. Tests passed at
+those commits; the check that missed it was core's `tsc` alone.
+
 ## Checks at the tip
 
-Run on 2026-08-09 at `98145a5` in a fresh worktree with no `.env` files,
-Node 24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, a fresh
-database for each suite.
+Run on 2026-08-09 at `e51683c` (the commit before this one, which only
+adds this section) in a fresh `git worktree` with no `.env` files,
+Node 24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, Redis 7; a
+fresh database per suite, suites run one at a time.
 
-| Check                                                             | Result                                                                                 |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile`                                  | ok                                                                                     |
-| `pnpm type-check`                                                 | 14/14 tasks                                                                            |
-| `pnpm lint`                                                       | 0 errors (56 web, 2 widget warnings)                                                   |
-| Tests with Postgres + stripe-mock                                 | api 181, core 248, jobs 55, database 38, contracts 18, widget 12, web 1149: all passed |
-| `pnpm build`                                                      | ok                                                                                     |
-| `prisma migrate deploy` + `db:migrate:check` on a fresh DB        | "No difference detected."                                                              |
-| OpenAPI regenerate + `git diff --exit-code`                       | no diff                                                                                |
-| E2E, `playwright.flows.config.ts`, all projects, CI=1, no retries | 19/19 (flows 8, setup 1, product 8, widget 2)                                          |
-| Visual, macOS                                                     | 21/21                                                                                  |
-| Visual, linux/arm64 Playwright container                          | 21/21                                                                                  |
+| Check                                                      | Result                                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm install --frozen-lockfile`                           | ok                                                                                                                       |
+| `pnpm type-check`                                          | 14/14 tasks                                                                                                              |
+| `pnpm lint`                                                | 0 errors (56 web, 2 widget warnings)                                                                                     |
+| Tests with Postgres + stripe-mock + Redis                  | core 261, jobs 56, database 39, contracts 18, api 185, widget 12, web 1165: all passed                                   |
+| Tests without services                                     | core 151 (110 skipped), jobs 34 (22), database 27 (12), contracts 18, api 48 (137), widget 12, web 1125 (40): all passed |
+| `pnpm build`                                               | 4/4 tasks                                                                                                                |
+| `prisma migrate deploy` + `db:migrate:check` on a fresh DB | "No difference detected." (needs `SHADOW_DATABASE_URL`)                                                                  |
+| OpenAPI regenerate + `git diff --exit-code`                | no diff                                                                                                                  |
+| E2E, `playwright.flows.config.ts`, all projects, CI=1      | 19/19 with CI's one retry (1 flaky: Kanban keyboard). With `--retries=0`: 3 runs of 4 green                              |
+| Visual, macOS                                              | 21/21 tests (30 screenshots)                                                                                             |
+| Visual, linux/arm64 Playwright container                   | 21/21 tests (30 screenshots)                                                                                             |
 
-Not run: the suites without services, GitHub Actions itself (CI has
-never run on GitHub), the jobs-drain workflow on a real runner (emulated
-in a fresh worktree only).
+Open finding from this run: `e2e/product/kanban-keyboard.spec.ts` fails
+about one full run in four (the "is over <stage>" announcement after
+ArrowRight does not appear); alone it passed 5 of 5. Not investigated
+further; it was not touched in the re-review.
 
-The jobs suite failed twice when other suites hit the same database at
-the same time (timeouts in the BullMQ tests) and passed alone; see the
-`crm.test.ts` note above.
+Not run: GitHub Actions itself (CI has never run on GitHub), the
+jobs-drain workflow on a real runner, a live Stripe or Razorpay test-mode
+payment.

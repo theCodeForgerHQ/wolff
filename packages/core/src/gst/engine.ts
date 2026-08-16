@@ -1,4 +1,5 @@
 import { Decimal } from 'decimal.js';
+import { CoreError } from '../errors';
 
 export type SupplyType = 'intra' | 'inter' | 'export' | 'sez';
 
@@ -86,6 +87,7 @@ function round2(value: Decimal): Decimal {
 
 /**
  * Determines the supply type from supplier state, place of supply and flags.
+ * Throws `validation_error` for a domestic supply missing either state.
  */
 export function determineSupplyType(input: {
   supplierStateCode?: string;
@@ -95,7 +97,22 @@ export function determineSupplyType(input: {
 }): SupplyType {
   if (input.isExport) return 'export';
   if (input.isSez) return 'sez';
-  if (!input.supplierStateCode || !input.placeOfSupply) return 'inter';
+  // Intra- or inter-state is decided by comparing the two states; without
+  // one of them there is nothing to compare, and guessing IGST would issue
+  // the wrong tax split. The caller has to supply both.
+  if (!input.supplierStateCode || !input.placeOfSupply) {
+    throw new CoreError(
+      'validation_error',
+      'GST needs the supplier state code and the place of supply to tell intra- from inter-state',
+      {
+        placeOfSupply: [
+          !input.supplierStateCode
+            ? 'The business profile has no state code'
+            : 'No place of supply: set the client state code or the invoice place of supply',
+        ],
+      }
+    );
+  }
   return input.supplierStateCode === input.placeOfSupply ? 'intra' : 'inter';
 }
 

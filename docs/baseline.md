@@ -91,6 +91,8 @@ DATABASE_URL=… pnpm --filter @wolff/web exec playwright test -c playwright.vis
    Vercel needs both.
 3. **Dashboard hydration mismatch.** React error #418 (text mismatch) on
    `/dashboard` raises the global "An unexpected error occurred." toast.
+   Cause: Recent Activity's "N seconds ago" text differs between server
+   and browser. Fixed in `3557318` (Phase 4 re-review).
 4. **Schema drift** (above).
 
 ## Deferred
