@@ -172,12 +172,12 @@ fresh database per suite, suites run one at a time.
 | `pnpm build`                                               | 4/4 tasks                                                                                                                |
 | `prisma migrate deploy` + `db:migrate:check` on a fresh DB | "No difference detected." (needs `SHADOW_DATABASE_URL`)                                                                  |
 | OpenAPI regenerate + `git diff --exit-code`                | no diff                                                                                                                  |
-| E2E, `playwright.flows.config.ts`, all projects, CI=1      | 19/19 with CI's one retry (1 flaky: Kanban keyboard). With `--retries=0`: 3 runs of 4 green                              |
+| E2E, `playwright.flows.config.ts`, all projects, CI=1      | 19/19 with CI's one retry (1 flaky: Kanban keyboard). Its first attempt failed in 2 of 4 full runs                       |
 | Visual, macOS                                              | 21/21 tests (30 screenshots)                                                                                             |
 | Visual, linux/arm64 Playwright container                   | 21/21 tests (30 screenshots)                                                                                             |
 
 Open finding from this run: `e2e/product/kanban-keyboard.spec.ts` fails
-about one full run in four (the "is over <stage>" announcement after
+in 2 of 4 full runs (the "is over <stage>" announcement after
 ArrowRight does not appear); alone it passed 5 of 5. Not investigated
 further; it was not touched in the re-review.
 
