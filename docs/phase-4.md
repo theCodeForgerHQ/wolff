@@ -157,27 +157,30 @@ those commits; the check that missed it was core's `tsc` alone.
 
 ## Checks at the tip
 
-Run on 2026-08-09 at `98145a5` in a fresh worktree with no `.env` files,
-Node 24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, a fresh
-database for each suite.
+Run on 2026-08-09 at `e51683c` (the commit before this one, which only
+adds this section) in a fresh `git worktree` with no `.env` files,
+Node 24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, Redis 7; a
+fresh database per suite, suites run one at a time.
 
-| Check                                                             | Result                                                                                 |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile`                                  | ok                                                                                     |
-| `pnpm type-check`                                                 | 14/14 tasks                                                                            |
-| `pnpm lint`                                                       | 0 errors (56 web, 2 widget warnings)                                                   |
-| Tests with Postgres + stripe-mock                                 | api 181, core 248, jobs 55, database 38, contracts 18, widget 12, web 1149: all passed |
-| `pnpm build`                                                      | ok                                                                                     |
-| `prisma migrate deploy` + `db:migrate:check` on a fresh DB        | "No difference detected."                                                              |
-| OpenAPI regenerate + `git diff --exit-code`                       | no diff                                                                                |
-| E2E, `playwright.flows.config.ts`, all projects, CI=1, no retries | 19/19 (flows 8, setup 1, product 8, widget 2)                                          |
-| Visual, macOS                                                     | 21/21                                                                                  |
-| Visual, linux/arm64 Playwright container                          | 21/21                                                                                  |
+| Check                                                      | Result                                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm install --frozen-lockfile`                           | ok                                                                                                                       |
+| `pnpm type-check`                                          | 14/14 tasks                                                                                                              |
+| `pnpm lint`                                                | 0 errors (56 web, 2 widget warnings)                                                                                     |
+| Tests with Postgres + stripe-mock + Redis                  | core 261, jobs 56, database 39, contracts 18, api 185, widget 12, web 1165: all passed                                   |
+| Tests without services                                     | core 151 (110 skipped), jobs 34 (22), database 27 (12), contracts 18, api 48 (137), widget 12, web 1125 (40): all passed |
+| `pnpm build`                                               | 4/4 tasks                                                                                                                |
+| `prisma migrate deploy` + `db:migrate:check` on a fresh DB | "No difference detected." (needs `SHADOW_DATABASE_URL`)                                                                  |
+| OpenAPI regenerate + `git diff --exit-code`                | no diff                                                                                                                  |
+| E2E, `playwright.flows.config.ts`, all projects, CI=1      | 19/19 with CI's one retry (1 flaky: Kanban keyboard). With `--retries=0`: 3 runs of 4 green                              |
+| Visual, macOS                                              | 21/21 tests (30 screenshots)                                                                                             |
+| Visual, linux/arm64 Playwright container                   | 21/21 tests (30 screenshots)                                                                                             |
 
-Not run: the suites without services, GitHub Actions itself (CI has
-never run on GitHub), the jobs-drain workflow on a real runner (emulated
-in a fresh worktree only).
+Open finding from this run: `e2e/product/kanban-keyboard.spec.ts` fails
+about one full run in four (the "is over <stage>" announcement after
+ArrowRight does not appear); alone it passed 5 of 5. Not investigated
+further; it was not touched in the re-review.
 
-The jobs suite failed twice when other suites hit the same database at
-the same time (timeouts in the BullMQ tests) and passed alone; see the
-`crm.test.ts` note above.
+Not run: GitHub Actions itself (CI has never run on GitHub), the
+jobs-drain workflow on a real runner, a live Stripe or Razorpay test-mode
+payment.
