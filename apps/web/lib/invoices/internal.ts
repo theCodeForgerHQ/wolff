@@ -4,11 +4,12 @@
  */
 
 import { randomBytes } from 'crypto';
-import { prisma, type Prisma, incrementNumberSequence, withTenantGuard } from '@wolff/database';
+import { prisma, type Prisma, withTenantGuard } from '@wolff/database';
 import {
   assertReadyToIssue,
   gstInvoiceColumns,
   gstLinesFrom,
+  nextCreditNoteNumber,
   nextInvoiceNumber,
   priceForWorkspace,
 } from '@wolff/core/invoices';
@@ -31,30 +32,11 @@ export async function generateInvoiceNumber(
 }
 
 /**
- * Generate next credit note number for a workspace (atomic, race-condition safe).
+ * Generate next credit note number for a workspace (atomic, race-condition
+ * safe). A GST workspace numbers per financial year, like its invoices.
  */
 export async function generateCreditNoteNumber(workspaceId: string): Promise<string> {
-  const result = await prisma.$transaction(async (tx) => {
-    const updated = await incrementNumberSequence(tx, workspaceId, 'credit_note', null, {
-      prefix: 'CN',
-      currentValue: 1,
-      padding: 4,
-    });
-    return {
-      prefix: updated.prefix || 'CN',
-      suffix: updated.suffix,
-      value: updated.currentValue,
-      padding: updated.padding,
-    };
-  });
-
-  const paddedValue = String(result.value).padStart(result.padding, '0');
-  const prefix = result.prefix.replace(/-$/, '');
-  const parts = [prefix, paddedValue];
-  if (result.suffix) {
-    parts.push(result.suffix);
-  }
-  return parts.join('-');
+  return nextCreditNoteNumber(withTenantGuard(prisma), workspaceId);
 }
 
 /**

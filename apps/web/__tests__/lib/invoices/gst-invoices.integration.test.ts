@@ -44,6 +44,7 @@ import {
   updateInvoice,
 } from '@/lib/invoices/actions';
 import { createInvoiceFromQuoteInternal } from '@/lib/invoices/internal';
+import { createCreditNote } from '@/lib/credit-notes/actions';
 import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
 import { NextRequest } from 'next/server';
 import { POST as postInvoice } from '@/app/api/v1/invoices/route';
@@ -94,6 +95,7 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
 
   afterAll(async () => {
     const { workspaceId, userId } = workspaceContext;
+    await prisma.creditNote.deleteMany({ where: { workspaceId } });
     await prisma.invoiceEvent.deleteMany({ where: { invoice: { workspaceId } } });
     await prisma.invoice.deleteMany({ where: { workspaceId } });
     await prisma.quoteEvent.deleteMany({ where: { quote: { workspaceId } } });
@@ -166,6 +168,26 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
     ]);
 
     expect((await updateInvoiceStatus(result.invoice!.id, 'sent')).success).toBe(true);
+  });
+
+  it('numbers a GST credit note within the financial year, like an invoice', async () => {
+    const created = await draft([
+      { name: 'Logo design', quantity: 1, rate: 10000, taxRate: 18, hsnSac: '998311' },
+    ]);
+    expect((await updateInvoiceStatus(created.invoice!.id, 'sent')).success).toBe(true);
+
+    const result = await createCreditNote(created.invoice!.id, {
+      reason: 'Scope reduced',
+      lineItems: [{ name: 'Logo design', quantity: 1, rate: 1000 }],
+    });
+
+    expect(result.success).toBe(true);
+    const fy = getFinancialYear().slice(2);
+    expect(result.creditNote!.creditNoteNumber).toMatch(new RegExp(`^CN/${fy}/\\d{4}$`));
+    const sequence = await prisma.numberSequence.findFirstOrThrow({
+      where: { workspaceId: workspaceContext.workspaceId, type: 'credit_note' },
+    });
+    expect(sequence.financialYear).toBe(getFinancialYear());
   });
 
   it('prices an invoice converted from a quote with the GST engine', async () => {
