@@ -9,7 +9,7 @@ import {
   priceGstInvoice,
   type GstProfile,
 } from './gst';
-import { generateRecurringInvoice } from './recurring';
+import { findDueRecurringInvoices, generateRecurringInvoice } from './recurring';
 
 const profile: GstProfile = {
   businessName: 'Kaveri Studio',
@@ -325,6 +325,53 @@ describe.skipIf(!url)('GST invoices in the database', () => {
       const copy = await child(parent.id);
       expect(copy.status).toBe('draft');
       expect(copy.sentAt).toBeNull();
+    });
+
+    it('pauses the series and tells the owner when a copy cannot be priced', async () => {
+      // Neither the business nor the client has a state code: the place of
+      // supply cannot be known, so the engine refuses to price the copy.
+      const ws = await gstWorkspace({ stateCode: null });
+      const owner = await base.user.create({
+        data: { email: `gst-rec-owner-${run}@example.test`, name: 'Owner' },
+      });
+      try {
+        await base.workspaceMember.create({
+          data: { workspaceId: ws.id, userId: owner.id, role: 'owner' },
+        });
+        await base.client.update({ where: { id: ws.clients[0]!.id }, data: { stateCode: null } });
+        const parent = await recurringParent(ws, '998311');
+
+        const result = await generateRecurringInvoice(
+          { db, workspaceId: ws.id },
+          parent.id,
+          '2026-10',
+          NOW
+        );
+
+        expect(result.outcome).toBe('paused');
+        expect(await base.invoice.count({ where: { parentInvoiceId: parent.id } })).toBe(0);
+        const series = await base.invoice.findUniqueOrThrow({ where: { id: parent.id } });
+        expect(series).toMatchObject({ isRecurring: true, nextRecurringDate: null });
+        const events = await base.invoiceEvent.findMany({ where: { invoiceId: parent.id } });
+        expect(events.map((e) => e.eventType)).toEqual(['recurring_paused']);
+        expect(JSON.stringify(events[0]!.metadata)).toMatch(/place of supply/);
+        const notes = await base.notification.findMany({ where: { workspaceId: ws.id } });
+        expect(notes).toEqual([
+          expect.objectContaining({
+            userId: owner.id,
+            type: 'recurring_paused',
+            entityType: 'invoice',
+            entityId: parent.id,
+          }),
+        ]);
+        // Paused: no longer due, so the job is not retried or re-dispatched.
+        const due = await findDueRecurringInvoices(db, NOW);
+        expect(due.map((d) => d.parentInvoiceId)).not.toContain(parent.id);
+      } finally {
+        await base.workspaceMember.deleteMany({ where: { userId: owner.id } });
+        await base.notification.deleteMany({ where: { userId: owner.id } });
+        await base.user.delete({ where: { id: owner.id } });
+      }
     });
   });
 });
