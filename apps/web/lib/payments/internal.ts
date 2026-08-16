@@ -70,6 +70,13 @@ export async function createInvoicePaymentIntent(
       return { success: false, error: 'Invoice has been voided' };
     }
 
+    // A draft has not been issued (for GST, not through the Rule 46 gate);
+    // a payment would move it to paid without ever being issued. The
+    // apps/api payment link refuses drafts for the same reason.
+    if (invoice.status === 'draft') {
+      return { success: false, error: 'Invoice is still a draft and cannot be paid yet' };
+    }
+
     // Verify workspace has a connected Stripe account with charges enabled
     const paymentSettings = invoice.workspace.paymentSettings;
     if (!paymentSettings?.stripeAccountId) {
