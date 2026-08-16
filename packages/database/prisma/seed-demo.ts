@@ -8,7 +8,7 @@ import { createPrisma } from '../src/client';
  * Run with: pnpm --filter @wolff/database seed:demo
  *
  * Creates:
- * - Workspace "Kaveri Studio" (Chennai, GSTIN 33..., INR, Razorpay test)
+ * - Workspace "Kaveri Studio" (Chennai, GSTIN 33..., INR, Razorpay without keys)
  *   - 40 leads, 25 deals across stages, 30 quotes, 45 invoices
  *   - mix of intra-state TN, inter-state KA/MH, 1 export USD
  *   - payments, 6 overdue in each ageing bucket, 3 contracts
@@ -158,12 +158,12 @@ async function main() {
       },
       paymentSettings: {
         create: {
+          // Razorpay is the workspace's provider, but its keys are left
+          // unset: a seed has no real test keys, and a fake value in an
+          // ...Enc column would be stored as if it were a secret. Add test
+          // keys in Settings → Payments to take a payment.
           activeProviders: ['razorpay'],
           defaultProviderByCurrency: { INR: 'razorpay' },
-          razorpayKeyId: 'rzp_test_kaveri',
-          razorpayKeySecretEnc: 'enc:demo',
-          razorpayWebhookSecretEnc: 'rzp_demo_secret',
-          razorpayVerifiedAt: new Date(),
         },
       },
     },
