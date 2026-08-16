@@ -53,6 +53,10 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
           typeof intent === 'object' && intent ? (intent as Record<string, unknown>).id : undefined
         );
       if (!intentId) return;
+      // The session must charge what the pending payment expects. If not,
+      // it is left unlinked, so its intent's own success credits nothing
+      // either, and the mismatch is recorded on the invoice for review.
+      if (!(await sessionMatchesPayment(tx, sessionId, object))) return;
       await linkSessionToIntent(tx, sessionId, intentId);
       if (object.payment_status === 'paid') {
         await applyPaymentSucceeded(tx, { paymentIntentId: intentId });
@@ -110,6 +114,45 @@ async function linkSessionToIntent(tx: Tx, sessionId: string, paymentIntentId: s
     UPDATE payments SET stripe_payment_intent_id = ${paymentIntentId}, updated_at = NOW()
     WHERE provider = 'stripe' AND provider_order_id = ${sessionId}
       AND stripe_payment_intent_id IS NULL`;
+}
+
+/**
+ * True when the session's amount_total (smallest unit) and currency equal
+ * the pending payment opened for it, or when no such payment exists (there
+ * is nothing to credit then). A missing amount counts as a mismatch.
+ */
+async function sessionMatchesPayment(
+  tx: Tx,
+  sessionId: string,
+  session: Record<string, unknown>
+): Promise<boolean> {
+  const payment = await tx.payment.findFirst({
+    where: { provider: 'stripe', providerOrderId: sessionId },
+    select: { id: true, invoiceId: true, amount: true, currency: true },
+  });
+  if (!payment) return true;
+  const expected = Math.round(Number(payment.amount) * 100);
+  const amountTotal = session.amount_total;
+  const currency = str(session.currency)?.toLowerCase();
+  if (amountTotal === expected && currency === payment.currency.toLowerCase()) return true;
+
+  await tx.invoiceEvent.create({
+    data: {
+      invoiceId: payment.invoiceId,
+      eventType: 'payment_mismatch',
+      actorType: 'system',
+      metadata: {
+        paymentId: payment.id,
+        sessionId,
+        expected: { amount: expected, currency: payment.currency.toLowerCase() },
+        received: {
+          amount: typeof amountTotal === 'number' ? amountTotal : null,
+          currency: currency ?? null,
+        },
+      },
+    },
+  });
+  return false;
 }
 
 /** Locks the payment row for the rest of the transaction and loads it. */

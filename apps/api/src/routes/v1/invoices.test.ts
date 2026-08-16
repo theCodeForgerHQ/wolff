@@ -330,6 +330,8 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
           mode: 'payment',
           payment_status: 'paid',
           payment_intent: 'pi_late_1',
+          amount_total: 118_000,
+          currency: 'usd',
         });
 
         const paid = await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
@@ -360,6 +362,8 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
           id: res.body.data.sessionId,
           payment_status: 'unpaid',
           payment_intent: 'pi_async_1',
+          amount_total: 118_000,
+          currency: 'usd',
         });
         expect((await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).status).toBe(
           'sent'
@@ -402,6 +406,40 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         }
       }
     );
+
+    it.each([
+      ['amount', { amount_total: 100, currency: 'usd' }],
+      ['currency', { amount_total: 118_000, currency: 'eur' }],
+      ['missing amount', { currency: 'usd' }],
+    ])('does not credit a paid session whose %s differs from the payment', async (_, fields) => {
+      sessionIntent = null;
+      try {
+        const { invoice, sessionId } = await openSession();
+        const intentId = `pi_mismatch_${randomUUID().slice(0, 6)}`;
+
+        await deliver('checkout.session.completed', {
+          id: sessionId,
+          object: 'checkout.session',
+          payment_status: 'paid',
+          payment_intent: intentId,
+          ...fields,
+        });
+        // Nor later through the intent: the session was never linked to it.
+        await deliver('payment_intent.succeeded', { id: intentId });
+
+        const after = await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
+        expect(after).toMatchObject({ status: 'sent' });
+        expect(Number(after.amountPaid)).toBe(0);
+        expect(await paymentOf(invoice.id)).toMatchObject({
+          status: 'pending',
+          stripePaymentIntentId: null,
+        });
+        const events = await base.invoiceEvent.findMany({ where: { invoiceId: invoice.id } });
+        expect(events.map((e) => e.eventType)).toContain('payment_mismatch');
+      } finally {
+        sessionIntent = 'pi_test_123';
+      }
+    });
 
     it('pays on payment_intent.succeeded when the session came with an intent', async () => {
       const invoice = await stripeInvoice();
