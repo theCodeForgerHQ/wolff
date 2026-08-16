@@ -3,6 +3,7 @@ import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber, formatCurrency, getBaseUrl } from '@/lib/utils';
 import { sendInvoiceSentEmail } from '@/lib/services/email';
+import { issueBlocker } from '@/lib/invoices/action-helpers';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Prevent sending zero-amount invoices
     if (Math.abs(toNumber(invoice.total)) < 0.01) {
       return apiError('Cannot send an invoice with zero total. Add line items first.', 400);
+    }
+
+    // Leaving draft issues the invoice: a GST invoice must carry Rule 46's
+    // mandatory details first, as on the PATCH route and the dashboard.
+    // Checked before the email so the client never receives an invoice that
+    // stays a draft.
+    if (invoice.status === 'draft') {
+      const blocker = await issueBlocker(workspaceId, id);
+      if (blocker) return apiError(blocker, 422);
     }
 
     // Get workspace for business name

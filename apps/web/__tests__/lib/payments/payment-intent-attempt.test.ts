@@ -116,3 +116,22 @@ describe('createInvoicePaymentIntent attempt numbering', () => {
     );
   });
 });
+
+describe('createInvoicePaymentIntent on a draft', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.invoiceFindFirst.mockResolvedValue({ ...invoice, status: 'draft' });
+    mocks.paymentFindFirst.mockResolvedValue(null);
+    mocks.paymentCount.mockResolvedValue(0);
+    mocks.getOrCreateCustomer.mockResolvedValue({ id: 'cus_1' });
+    mocks.createPaymentIntent.mockResolvedValue({ id: 'pi_new', client_secret: 'pi_new_secret' });
+  });
+
+  it('refuses, so a paid webhook cannot take an unissued invoice past the Rule 46 gate', async () => {
+    const result = await createInvoicePaymentIntent('inv-1', 'token');
+
+    expect(result).toMatchObject({ success: false, error: expect.stringMatching(/draft/i) });
+    expect(mocks.createPaymentIntent).not.toHaveBeenCalled();
+    expect(mocks.paymentCreate).not.toHaveBeenCalled();
+  });
+});

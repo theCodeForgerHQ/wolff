@@ -27,6 +27,10 @@ vi.mock('@/lib/api/auth', async (importOriginal) => ({
     context: { workspaceId: workspaceContext.workspaceId },
   })),
 }));
+vi.mock('@/lib/services/email', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/services/email')>()),
+  sendInvoiceSentEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
 vi.mock('@/lib/notifications/internal', () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
 }));
@@ -44,7 +48,8 @@ import { getRecurringInvoiceIds } from '@/lib/invoices/recurring';
 import { NextRequest } from 'next/server';
 import { POST as postInvoice } from '@/app/api/v1/invoices/route';
 import { PATCH as patchInvoice } from '@/app/api/v1/invoices/[id]/route';
-import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
+import { POST as postSendInvoice } from '@/app/api/v1/invoices/[id]/send/route';
+import { recordPayment, sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
   const run = randomUUID().slice(0, 8);
@@ -140,6 +145,19 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
     expect(issued.error).toMatch(/HSN/);
     expect(sent.success).toBe(false);
     expect((await prisma.invoice.findUniqueOrThrow({ where: { id } })).status).toBe('draft');
+  });
+
+  it('refuses a payment that would take a draft failing Rule 46 to paid', async () => {
+    const result = await draft([{ name: 'Consulting', quantity: 1, rate: 5000, taxRate: 18 }]);
+    const id = result.invoice!.id;
+
+    const paid = await recordPayment(id, { amount: 5900, paymentMethod: 'bank_transfer' });
+
+    expect(paid.success).toBe(false);
+    expect(paid.error).toMatch(/HSN/);
+    const after = await prisma.invoice.findUniqueOrThrow({ where: { id } });
+    expect(after.status).toBe('draft');
+    expect(Number(after.amountPaid)).toBe(0);
   });
 
   it('issues a complete GST invoice', async () => {
@@ -379,6 +397,31 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
       expect(response.status).toBe(422);
       const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
       expect(after.status).toBe('draft');
+    });
+
+    const send = (id: string) =>
+      postSendInvoice(request('POST', {}), { params: Promise.resolve({ id }) });
+
+    it('sends a complete GST draft through the API send endpoint', async () => {
+      const created = await draft([logo]);
+
+      const response = await send(created.invoice!.id);
+
+      expect(response.status).toBe(200);
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+      expect(after.status).toBe('sent');
+    });
+
+    it('keeps a GST draft that fails Rule 46 from being issued by the API send endpoint', async () => {
+      const created = await draft([{ ...logo, hsnSac: undefined }]);
+
+      const response = await send(created.invoice!.id);
+
+      expect(response.status).toBe(422);
+      expect(((await response.json()) as { error: string }).error).toMatch(/HSN/);
+      const after = await prisma.invoice.findUniqueOrThrow({ where: { id: created.invoice!.id } });
+      expect(after.status).toBe('draft');
+      expect(after.sentAt).toBeNull();
     });
   });
 

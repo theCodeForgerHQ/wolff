@@ -296,6 +296,13 @@ export async function recordPayment(
     return { success: false, error: 'Cannot record payment for voided invoice' };
   }
 
+  // A payment takes a draft to partial or paid, which issues it: a GST draft
+  // must pass Rule 46 first, as on every other way out of draft.
+  if (invoice.status === 'draft') {
+    const blocker = await issueBlocker(workspace.id, invoiceId);
+    if (blocker) return { success: false, error: blocker };
+  }
+
   // Bug #125: Prevent payment on already-paid invoices
   if (invoice.status === 'paid') {
     return { success: false, error: 'This invoice is already fully paid' };
