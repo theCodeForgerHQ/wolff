@@ -57,6 +57,13 @@ Phase 3 has a task list and a definition of done.
   close nothing that created or issued an invoice called them, and
   `gst_unsupported` was never raised. Wired in on 2026-08-09 (see
   `docs/phase-4.md`, H7), together with a reverse-charge correction.
+- FY numbering as built restarted at `INV-0001` each FY without the year
+  in the number, so the first GST invoice after 1 April would have hit the
+  unique key on (workspace, number). Since `76b761b` a GST number carries
+  the FY: `INV/26-27/0001`. Several invoice paths (edit, duplicate,
+  auto-create from a quote, recurring, legacy `/api/v1`) also bypassed the
+  engine and the Rule 46 gate until the Phase 4 re-review
+  (`docs/phase-4.md`, second review, items 2-3).
 - GST invoice PDF template with supplier/recipient/tax breakup.
 - The golden vectors were worked by hand from the rules; they were not
   reviewed by a chartered accountant (an earlier version of `golden.json`
@@ -65,6 +72,10 @@ Phase 3 has a task list and a definition of done.
 ### Razorpay / payments
 
 - `PaymentProvider` interface supports Stripe Checkout and Razorpay Orders.
+  As built, Stripe Checkout only worked against stripe-mock: real Stripe
+  (API 2022-08-01 and later) returns no PaymentIntent on a new session and
+  the code threw. Reconciled on `checkout.session.completed` since
+  `dc15428`. Razorpay orders used the platform's key until `3195c0d`.
 - `POST /v1/invoices/:id/payment-links` returns a provider-specific payload.
 - Razorpay inbound webhook verifies HMAC-SHA256 and dedupes by `X-Razorpay-Event-Id`.
 - Webhook events (`payment.captured`, `payment.failed`, `order.paid`, `refund.processed`) apply to invoices/payments.
@@ -156,10 +167,10 @@ A peer review of `phase2-core-api..phase3-crm-gst-razorpay` found the issues bel
 ## Deviations and known issues
 
 - **CSV lead import**: the route accepts JSON arrays. CSV parsing is a future enhancement; the dedupe logic is format-agnostic.
-- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. It remains non-GST-aware; GST workspaces should use the new API or `packages/core/gst/numbering`.
+- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. Invoice numbers in the web app now come from `packages/core` (`nextInvoiceNumber`, FY-aware); credit notes still use the non-FY sequence.
 - **Web lint warnings**: pre-existing React Compiler warnings in `apps/web` remain; they do not fail lint.
 - **Live payment E2E**: the lead-to-paid Playwright flow records a manual payment. Live Stripe/Razorpay checkout and webhook reconciliation require real provider credentials and a background worker (Phase 4).
-- **Razorpay client**: orders are created with the platform's env-configured Razorpay client, not with the workspace's own key (the decrypted workspace secret is not used). Open; see `docs/phase-4.md`.
+- **Razorpay client**: orders were created with the platform's env-configured Razorpay client, not with the workspace's own key. Fixed in `3195c0d` (workspace keys, `not_configured` when it has none); see `docs/phase-4.md`.
 - **Test counts above** are as recorded at Phase 3's close and were not re-run; current counts are in `docs/phase-4.md`.
 
 ## What needs the repo owner
