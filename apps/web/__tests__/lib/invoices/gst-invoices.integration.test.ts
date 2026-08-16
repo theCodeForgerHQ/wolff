@@ -49,7 +49,7 @@ import { NextRequest } from 'next/server';
 import { POST as postInvoice } from '@/app/api/v1/invoices/route';
 import { PATCH as patchInvoice } from '@/app/api/v1/invoices/[id]/route';
 import { POST as postSendInvoice } from '@/app/api/v1/invoices/[id]/send/route';
-import { sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
+import { recordPayment, sendInvoice, updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
 describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
   const run = randomUUID().slice(0, 8);
@@ -145,6 +145,19 @@ describe.skipIf(!url)('GST invoices from the dashboard (Postgres)', () => {
     expect(issued.error).toMatch(/HSN/);
     expect(sent.success).toBe(false);
     expect((await prisma.invoice.findUniqueOrThrow({ where: { id } })).status).toBe('draft');
+  });
+
+  it('refuses a payment that would take a draft failing Rule 46 to paid', async () => {
+    const result = await draft([{ name: 'Consulting', quantity: 1, rate: 5000, taxRate: 18 }]);
+    const id = result.invoice!.id;
+
+    const paid = await recordPayment(id, { amount: 5900, paymentMethod: 'bank_transfer' });
+
+    expect(paid.success).toBe(false);
+    expect(paid.error).toMatch(/HSN/);
+    const after = await prisma.invoice.findUniqueOrThrow({ where: { id } });
+    expect(after.status).toBe('draft');
+    expect(Number(after.amountPaid)).toBe(0);
   });
 
   it('issues a complete GST invoice', async () => {
