@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { forwardRef, useState, type CSSProperties, type HTMLAttributes } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -58,32 +58,26 @@ interface DealsKanbanProps {
   currency?: string;
 }
 
-function DealCard({
-  deal,
-  isOverlay,
-  currency,
-  onCreateQuote,
-}: {
-  deal: DealListItem;
-  isOverlay?: boolean;
-  currency?: string;
-  onCreateQuote?: (deal: DealListItem) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: deal.id,
-    data: { deal },
-  });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.4 : 1,
-  };
-
+/**
+ * The card as drawn. Has no dnd-kit hooks, so the DragOverlay can render it
+ * without registering a second draggable under the dragged deal's id.
+ */
+const DealCardView = forwardRef<
+  HTMLDivElement,
+  {
+    deal: DealListItem;
+    isOverlay?: boolean;
+    currency?: string;
+    style?: CSSProperties;
+    handleProps?: HTMLAttributes<HTMLButtonElement>;
+    onCreateQuote?: (deal: DealListItem) => void;
+  }
+>(function DealCardView({ deal, isOverlay, currency, style, handleProps, onCreateQuote }, ref) {
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       style={style}
-      data-testid="deal-card"
+      data-testid={isOverlay ? undefined : 'deal-card'}
       className={`bg-card rounded-lg border p-3 shadow-sm ${isOverlay ? 'rotate-2 shadow-lg' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -91,15 +85,20 @@ function DealCard({
           <div className="font-medium">{deal.title}</div>
           <div className="text-muted-foreground text-sm">{deal.clientName ?? 'No client'}</div>
         </div>
-        <button
-          type="button"
-          aria-label={`Move ${deal.title} to another stage`}
-          className="text-muted-foreground hover:text-foreground cursor-grab p-1 active:cursor-grabbing"
-          {...listeners}
-          {...attributes}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+        {isOverlay ? (
+          <span aria-hidden="true" className="text-muted-foreground p-1">
+            <GripVertical className="h-4 w-4" />
+          </span>
+        ) : (
+          <button
+            type="button"
+            aria-label={`Move ${deal.title} to another stage`}
+            className="text-muted-foreground hover:text-foreground cursor-grab p-1 active:cursor-grabbing"
+            {...handleProps}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="mt-2 flex items-center justify-between">
         <Badge variant="outline" className="text-xs">
@@ -130,6 +129,32 @@ function DealCard({
         </Button>
       )}
     </div>
+  );
+});
+
+function DealCard({
+  deal,
+  currency,
+  onCreateQuote,
+}: {
+  deal: DealListItem;
+  currency?: string;
+  onCreateQuote?: (deal: DealListItem) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: deal.id,
+    data: { deal },
+  });
+
+  return (
+    <DealCardView
+      ref={setNodeRef}
+      deal={deal}
+      currency={currency}
+      onCreateQuote={onCreateQuote}
+      style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
+      handleProps={{ ...listeners, ...attributes }}
+    />
   );
 }
 
@@ -278,7 +303,9 @@ export function DealsKanban({ board, currency = 'USD' }: DealsKanbanProps) {
             </Button>
           </div>
         </div>
-        <DragOverlay>{activeDeal ? <DealCard deal={activeDeal} isOverlay /> : null}</DragOverlay>
+        <DragOverlay>
+          {activeDeal ? <DealCardView deal={activeDeal} currency={currency} isOverlay /> : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
