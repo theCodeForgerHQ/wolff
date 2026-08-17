@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
+import { request } from '../../testing/request';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { processProviderEvent, recordProviderEvent } from '@wolff/core/payments';
 import {

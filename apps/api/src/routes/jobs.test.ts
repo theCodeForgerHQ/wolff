@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose';
-import request from 'supertest';
+import { request } from '../testing/request';
 import { describe, expect, it, vi } from 'vitest';
 import type { Db } from '@wolff/core/context';
 import { createQStashVerifier } from '@wolff/jobs/qstash';

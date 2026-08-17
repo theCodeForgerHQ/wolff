@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
+import { request, type TestRequest } from '../../testing/request';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { API_SCOPES } from '@wolff/contracts';
 import { TenantScopeError } from '@wolff/database';
@@ -158,7 +158,7 @@ describe.skipIf(!TEST_DATABASE_URL)('cross-tenant isolation of /v1 (Postgres)', 
     await base.$disconnect();
   });
 
-  const calls = (): Array<[string, () => request.Test]> => {
+  const calls = (): Array<[string, () => TestRequest]> => {
     const k = as(a.key);
     return [
       ['GET lead', () => k.get(`/v1/leads/${theirs.lead}`)],

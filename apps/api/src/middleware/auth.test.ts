@@ -1,4 +1,4 @@
-import request from 'supertest';
+import { request } from '../testing/request';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRedis } from '@wolff/jobs/bullmq';
 import { TestRedis } from '@wolff/jobs/testing/redis';
