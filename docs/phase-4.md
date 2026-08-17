@@ -6,10 +6,10 @@ nothing is deployed and no tag was made.
 
 The Phase 4 build (up to `3590d9c`) was reviewed twice, together with
 Phases 2 and 3, and the fixed branch (tip `b9993e4`, tagged
-`phase4-pre-rereview-fixes`) was reviewed again. The second half of this
-document lists every finding and what happened to it. Hashes in the first
-review table are from before the history cleanup; hashes in the
-re-review table are current.
+`phase4-pre-rereview-fixes`) was reviewed again. A third, narrow review of
+`0646a71` followed. The second half of this document lists every finding
+and what happened to it. Hashes in the first review table are from before
+the history cleanup; hashes in the later tables are current.
 
 ## State of the Phase 4 criteria
 
@@ -45,8 +45,32 @@ re-review table are current.
   routes price GST and gate issuing since `6138fb5`; their port to
   `apps/api` stays in Phase 6b.
 - GST numbers carry the financial year (`INV/26-27/0001`, 14 characters).
-  Credit notes still use one running `CN-0001` sequence; the design does not
-  say how credit notes are numbered, so this is left for the owner's CA.
+  Since `829054e` credit notes in a GST workspace are numbered the same way
+  (`CN/26-27/0001`); other workspaces keep `CN-0001`. The design does not
+  say how credit notes are numbered; this follows Rule 46(b)'s serial per
+  FY and is for the owner's CA to confirm.
+- A GST invoice gets its number when the draft is created, in the FY of
+  its `issueDate`, which is set to the creation date and not changed when
+  the invoice is issued. Number and printed date therefore always agree,
+  but a draft created on 31 March and sent on 2 April is dated and
+  numbered in the earlier FY. Numbering at issue was not done: it needs a
+  nullable `invoiceNumber` (a migration, and every list, PDF, search and
+  API response that shows a draft's number) and a rule for re-dating the
+  invoice; Rule 46 also asks for consecutive serials, so renumbering at
+  issue could not leave gaps. Credit notes have the same property. For the
+  owner's CA to decide.
+- A recurring GST series whose next copy cannot be priced (no supplier
+  state code and no client state, a composition supplier, an invoice-level
+  discount) is paused: `nextRecurringDate` is cleared, a
+  `recurring_paused` event on the parent says why, and each workspace
+  owner gets an in-app notification. Saving the recurring settings again
+  resumes it. A client without a state code alone does not pause it:
+  pricing falls back to the supplier's state (`priceGstInvoice`).
+- A Stripe Checkout Session is credited only if its `amount_total` and
+  currency equal the pending payment; otherwise it is not linked to its
+  PaymentIntent and a `payment_mismatch` event is recorded on the invoice.
+  `checkout.session.expired` and `checkout.session.async_payment_failed`
+  mark the pending payment failed. Mock and recorded-shape tests only.
 - An auto-created or auto-sent GST invoice that fails Rule 46 stays a
   draft with an `auto_send_blocked` event; the portal does not show it to
   the client. The design does not say what should happen; this is the
@@ -72,7 +96,9 @@ re-review table are current.
 - One trace api → job: not wired (Phase 6).
 - `packages/core/src/crm/crm.test.ts` deletes all CRM rows of the shared
   test database before each test; suites running in parallel against one
-  database can interfere (seen once as a jobs-suite timeout under load).
+  database can interfere. `turbo test` with every package at once failed
+  2 of 4 runs here (a `packages/jobs` BullMQ test under load; turbo then
+  stops the other packages); one suite at a time passes. Not fixed.
 - `apps/web/__tests__/api/webhooks/stripe.test.ts` never imports the
   route it names (asserts on mocks only).
 - A test in `apps/api/src/routes/v1/invoices.test.ts` named "returns 404
@@ -92,6 +118,8 @@ re-review table are current.
 - A chartered accountant's review of the GST vectors and the two Rule 46
   readings above.
 - Razorpay test keys, a Stripe test account, the demo environment accounts.
+  The demo seed sets no Razorpay keys (`a7e390f`); Kaveri Studio's payment
+  links answer `not_configured` until test keys are added in Settings.
 
 ## Review findings and fixes
 
@@ -155,31 +183,59 @@ Mid-history: `7c46988` to `6138fb5` fail `packages/jobs`' type-check
 (`tickAutomationRun`'s return type), fixed by `c5d63e1`. Tests passed at
 those commits; the check that missed it was core's `tsc` alone.
 
+## Third review findings and fixes (narrow review of `0646a71`)
+
+Each finding was read in the code first. Each fix has a test that failed
+before it (or with its guard reverted) and passes after.
+
+| #   | Finding                                                                            | Outcome                                                                                                                                                                                                                                                                                                                                                                                             | Commits                         |
+| --- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| H1  | `/api/v1/invoices/:id/send` issues a draft without the Rule 46 gate                | Confirmed (an API key could send a GST draft without HSN: 200). Now 422 with the reasons, before any email. The search for other ways out of draft found two more: `recordPayment` (draft → partial/paid, now gated) and the dashboard's Stripe payment intent (refused for drafts, as `apps/api`'s payment link already was)                                                                       | `393a16b`, `ca9c985`, `fe09a0d` |
+| M1  | move_deal race test does not exercise the conditional transition; deal moved twice | Test gap confirmed: with status/step removed from `transition()` it stayed green. "Moved twice" did not hold at `0646a71`: counting writes showed one deal update. The step now moves through `moveDealInTx` (won/lost dates, a `stage_changed` activity) in the winning tick's transaction; the test counts deal updates and activities and goes red without the condition                         | `15caac4`, `13319df`            |
+| M2  | Recurring GST copy that cannot be priced throws and retries forever                | Confirmed, with a correction: a client without a state code alone does not throw (pricing falls back to the supplier's state); it throws when the business profile has none, for a composition supplier, or with an invoice discount. Such a series is now paused, the reason recorded on the parent and the owners notified in the app                                                             | `51e02e6`                       |
+| L1  | Wait start should require `waitingSince IS NULL`                                   | Confirmed: two concurrent ticks each scheduled the wait's end. Fixed                                                                                                                                                                                                                                                                                                                                | `66499b2`                       |
+| L2  | Stripe: expired / async-failed sessions; amount and currency not compared          | Both confirmed and fixed (see Deviations)                                                                                                                                                                                                                                                                                                                                                           | `f44569e`, `863e8cd`            |
+| L3  | Credit notes not numbered per FY; number at draft vs issue                         | Credit notes now `CN/26-27/0001` in a GST workspace. Numbering at issue not done; why is under Deviations                                                                                                                                                                                                                                                                                           | `829054e`                       |
+| L4  | Misleading `suppressHydrationWarning` comment                                      | Fixed                                                                                                                                                                                                                                                                                                                                                                                               | `1b225fb`                       |
+| L5  | apps/api throttle and webhook-endpoints tests fail ~1 run in 4                     | Root cause: supertest listens on `::` and connects to 127.0.0.1; macOS can give that socket a port another process holds on 127.0.0.1 only, which then answers (seen: a 405 where only 401 exists, a body without `data`; reproduced with a two-server script). Tests now bind 127.0.0.1 through `src/testing/request.ts`. Before: 1 of 12 runs failed here; after: 15 of 15 consecutive runs green | `50d437a`                       |
+| L6  | Demo seed stores fake Razorpay values, one plaintext in an `…Enc` column           | Fixed: keys left unset (checked on a scratch database)                                                                                                                                                                                                                                                                                                                                              | `a7e390f`                       |
+| K   | Kanban keyboard E2E flake                                                          | Overlay draws a presentational card (no second `useDraggable` for the same id; the overlay had a second handle with the same name); a card between columns no longer jumps to column 0. Kanban keyboard passed 13 of 13 full runs, retries 0. Those runs exposed a second flake, lead-to-paid (2 of 7: a click before the invoice table hydrated), fixed in the test                                | `fcc929a`, `280f5e3`, `02313a3` |
+
+Paths that move an invoice out of draft, and their gate, at `02313a3`:
+`updateInvoiceStatus` and `sendInvoice` (dashboard), `createInvoice` with
+`isDraft: false`, `createInvoiceFromQuoteInternal` (portal acceptance and
+`/api/v1/invoices/from-quote`, via `issueIfReady`), PATCH and
+`POST …/send` on `/api/v1/invoices/:id`, recurring auto-send
+(`sendIfIssuable`; a non-GST copy is created as sent, where the gate is a
+no-op), and `recordPayment` all run `assertReadyToIssue`. Online payments
+refuse drafts (`createInvoicePaymentIntent`, `apps/api` payment links), so
+Stripe and Razorpay webhooks cannot reach a draft. Other status writes
+(overdue marking, portal view, refunds) never start from draft.
+
 ## Checks at the tip
 
-Run on 2026-08-09 at `e51683c` (the commit before this one, which only
-adds this section) in a fresh `git worktree` with no `.env` files,
-Node 24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, Redis 7; a
-fresh database per suite, suites run one at a time.
+Run on 2026-08-09 in a fresh `git worktree` with no `.env` files, Node
+24.21.0, Postgres 17 + pgvector, stripe-mock 0.205.0, Redis 7; a fresh
+database per suite, suites run one at a time. Install, tests, build,
+migration and OpenAPI checks ran at `50d437a`; `02313a3` changes only an
+E2E spec, and type-check, lint, E2E and visual ran at `02313a3`. The
+commits after it change only this document and `phase-3.md`.
 
-| Check                                                      | Result                                                                                                                   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm install --frozen-lockfile`                           | ok                                                                                                                       |
-| `pnpm type-check`                                          | 14/14 tasks                                                                                                              |
-| `pnpm lint`                                                | 0 errors (56 web, 2 widget warnings)                                                                                     |
-| Tests with Postgres + stripe-mock + Redis                  | core 261, jobs 56, database 39, contracts 18, api 185, widget 12, web 1165: all passed                                   |
-| Tests without services                                     | core 151 (110 skipped), jobs 34 (22), database 27 (12), contracts 18, api 48 (137), widget 12, web 1125 (40): all passed |
-| `pnpm build`                                               | 4/4 tasks                                                                                                                |
-| `prisma migrate deploy` + `db:migrate:check` on a fresh DB | "No difference detected." (needs `SHADOW_DATABASE_URL`)                                                                  |
-| OpenAPI regenerate + `git diff --exit-code`                | no diff                                                                                                                  |
-| E2E, `playwright.flows.config.ts`, all projects, CI=1      | 19/19 with CI's one retry (1 flaky: Kanban keyboard). Its first attempt failed in 2 of 4 full runs                       |
-| Visual, macOS                                              | 21/21 tests (30 screenshots)                                                                                             |
-| Visual, linux/arm64 Playwright container                   | 21/21 tests (30 screenshots)                                                                                             |
-
-Open finding from this run: `e2e/product/kanban-keyboard.spec.ts` fails
-in 2 of 4 full runs (the "is over <stage>" announcement after
-ArrowRight does not appear); alone it passed 5 of 5. Not investigated
-further; it was not touched in the re-review.
+| Check                                                                | Result                                                                                                                                   |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`                                     | ok                                                                                                                                       |
+| `pnpm type-check --force`                                            | 14/14 tasks                                                                                                                              |
+| `pnpm lint`                                                          | 0 errors (56 web, 2 widget warnings)                                                                                                     |
+| Tests with Postgres + stripe-mock + Redis                            | core 263, jobs 56, database 39, contracts 18, api 193, widget 12, web 1173: all passed                                                   |
+| Tests without services                                               | core 151 (112 skipped), jobs 34 (22), database 27 (12), contracts 18, api 51 (142), widget 12, web 1129 (44): all passed                 |
+| apps/api with services, consecutive runs                             | 15 of 15 green after `50d437a` (1 of 12 failed before it)                                                                                |
+| `pnpm build`                                                         | 4/4 tasks                                                                                                                                |
+| `prisma migrate deploy` + `db:migrate:check` on a fresh DB           | "No difference detected."                                                                                                                |
+| OpenAPI regenerate + `git diff --exit-code`                          | no diff                                                                                                                                  |
+| E2E, `playwright.flows.config.ts`, all projects, CI=1, `--retries=0` | 6 of 6 full runs 19/19 at `02313a3`. At `50d437a`: 5 of 7 (lead-to-paid failed twice, fixed by `02313a3`). Kanban keyboard passed all 13 |
+| Visual, macOS                                                        | 21/21 tests (30 screenshots), retries 0                                                                                                  |
+| Visual, linux/arm64 Playwright container                             | 21/21 tests (30 screenshots), retries 0                                                                                                  |
+| Type-check and lint at each commit after `0646a71`                   | 16 of 16 commits pass both                                                                                                               |
 
 Not run: GitHub Actions itself (CI has never run on GitHub), the
 jobs-drain workflow on a real runner, a live Stripe or Razorpay test-mode

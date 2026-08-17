@@ -63,7 +63,10 @@ Phase 3 has a task list and a definition of done.
   the FY: `INV/26-27/0001`. Several invoice paths (edit, duplicate,
   auto-create from a quote, recurring, legacy `/api/v1`) also bypassed the
   engine and the Rule 46 gate until the Phase 4 re-review
-  (`docs/phase-4.md`, second review, items 2-3).
+  (`docs/phase-4.md`, second review, items 2-3); the legacy
+  `/api/v1/invoices/:id/send` endpoint, a recorded payment and a Stripe
+  payment intent could still take a draft out of draft without the gate
+  until the third review (`docs/phase-4.md`, third review, H1).
 - GST invoice PDF template with supplier/recipient/tax breakup.
 - The golden vectors were worked by hand from the rules; they were not
   reviewed by a chartered accountant (an earlier version of `golden.json`
@@ -167,7 +170,7 @@ A peer review of `phase2-core-api..phase3-crm-gst-razorpay` found the issues bel
 ## Deviations and known issues
 
 - **CSV lead import**: the route accepts JSON arrays. CSV parsing is a future enhancement; the dedupe logic is format-agnostic.
-- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. Invoice numbers in the web app now come from `packages/core` (`nextInvoiceNumber`, FY-aware); credit notes still use the non-FY sequence.
+- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. Invoice numbers in the web app now come from `packages/core` (`nextInvoiceNumber`, FY-aware); credit notes used the non-FY sequence until `829054e` (Phase 4, third review): a GST workspace now numbers them per FY, `CN/26-27/0001`.
 - **Web lint warnings**: pre-existing React Compiler warnings in `apps/web` remain; they do not fail lint.
 - **Live payment E2E**: the lead-to-paid Playwright flow records a manual payment. Live Stripe/Razorpay checkout and webhook reconciliation require real provider credentials and a background worker (Phase 4).
 - **Razorpay client**: orders were created with the platform's env-configured Razorpay client, not with the workspace's own key. Fixed in `3195c0d` (workspace keys, `not_configured` when it has none); see `docs/phase-4.md`.
