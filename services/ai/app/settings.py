@@ -1,4 +1,4 @@
-"""Settings for the AI service."""
+"""Settings for the AI service, read from the environment once at start."""
 
 from __future__ import annotations
 
@@ -10,53 +10,44 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 
 class SettingsError(ValueError):
-    """Raised when settings validation fails."""
+    """A variable is present but malformed; the service must not start."""
 
 
 class Settings(BaseModel):
-    """Application settings."""
+    """Everything the service reads from the environment."""
 
     model_config = ConfigDict(frozen=True)
 
     environment: Literal["development", "test", "production"] = "development"
     git_sha: str | None = None
+    #: SQLAlchemy URL of the ai_service login.
+    database_url: str | None = None
 
 
-_FIELD_TO_ENV: dict[str, str] = {
+_ENV_NAMES: dict[str, str] = {
     "environment": "ENVIRONMENT",
     "git_sha": "GIT_SHA",
+    "database_url": "AI_DATABASE_URL",
 }
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
-    """Load settings from environment variables.
+    """Build settings from ``env`` (default: the process environment).
 
-    Args:
-        env: Mapping of environment variables. Defaults to os.environ.
-
-    Returns:
-        Validated Settings instance.
-
-    Raises:
-        SettingsError: If validation fails, with message naming the env var.
+    Blank values count as unset, so an empty line in a .env file falls back
+    to the default instead of failing validation.
     """
-    if env is None:
-        env = os.environ
-
-    values: dict[str, str | None] = {}
-    for field, env_var in _FIELD_TO_ENV.items():
-        raw = env.get(env_var)
-        if raw is not None:
-            stripped = raw.strip()
-            if stripped:
-                values[field] = stripped
-
+    source = os.environ if env is None else env
+    values = {
+        field: raw.strip()
+        for field, name in _ENV_NAMES.items()
+        if (raw := source.get(name)) is not None and raw.strip()
+    }
     try:
-        return Settings(**values)
+        return Settings.model_validate(values)
     except ValidationError as exc:
-        for error in exc.errors():
-            loc = error["loc"]
-            field = str(loc[0]) if loc else "unknown"
-            env_var = _FIELD_TO_ENV.get(field, field.upper())
-            raise SettingsError(f"{env_var}: {error['msg']}") from None
-        raise SettingsError("Unknown validation error") from None
+        problems = [
+            f"{_ENV_NAMES.get(str(error['loc'][0]), error['loc'][0])}: {error['msg']}"
+            for error in exc.errors()
+        ]
+        raise SettingsError("; ".join(problems)) from None
