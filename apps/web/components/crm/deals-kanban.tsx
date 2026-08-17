@@ -34,7 +34,7 @@ import type { DealsBoard, DealListItem, DealStage } from '@/lib/crm/types';
  * cancels. dnd-kit's default getter moves 25 px per key, which takes a dozen
  * presses to cross one column.
  */
-const stageColumnCoordinates: KeyboardCoordinateGetter = (event, { context }) => {
+export const stageColumnCoordinates: KeyboardCoordinateGetter = (event, { context }) => {
   const { collisionRect, droppableRects, droppableContainers } = context;
   if (!collisionRect) return undefined;
   const step = event.code === KeyboardCode.Right ? 1 : event.code === KeyboardCode.Left ? -1 : 0;
@@ -48,6 +48,9 @@ const stageColumnCoordinates: KeyboardCoordinateGetter = (event, { context }) =>
     .sort((a, b) => a.left - b.left);
   const centre = collisionRect.left + collisionRect.width / 2;
   const current = columns.findIndex((rect) => centre >= rect.left && centre <= rect.right);
+  // Between columns (or off the board) there is no column to step from;
+  // stepping from -1 would land on the first column whatever the key.
+  if (current === -1) return undefined;
   const target = columns[Math.min(Math.max(current + step, 0), columns.length - 1)];
   if (!target) return undefined;
   return { x: target.left + 12, y: target.top + 64 };

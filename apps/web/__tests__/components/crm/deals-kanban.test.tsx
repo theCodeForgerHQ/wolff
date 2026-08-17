@@ -5,7 +5,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/lib/crm/actions', () => ({ moveDeal: vi.fn(), createQuoteFromDeal: vi.fn() }));
 
-import { DealsKanban } from '@/components/crm/deals-kanban';
+import { DealsKanban, stageColumnCoordinates } from '@/components/crm/deals-kanban';
 import type { DealsBoard } from '@/lib/crm/types';
 
 const board: DealsBoard = {
@@ -47,5 +47,34 @@ describe('DealsKanban drag overlay', () => {
     expect(
       screen.getAllByRole('button', { name: 'Move Acme retainer to another stage' })
     ).toHaveLength(1);
+  });
+});
+
+describe('stageColumnCoordinates', () => {
+  const rect = (left: number) => ({
+    left,
+    right: left + 100,
+    top: 0,
+    bottom: 400,
+    width: 100,
+    height: 400,
+  });
+  const columns = [rect(0), rect(200)];
+  const context = (centre: number) =>
+    ({
+      context: {
+        collisionRect: { ...rect(centre - 50), width: 100 },
+        droppableRects: new Map(columns.map((r, i) => [`s${i}`, r])),
+        droppableContainers: { getEnabled: () => columns.map((_, i) => ({ id: `s${i}` })) },
+      },
+    }) as unknown as Parameters<typeof stageColumnCoordinates>[1];
+  const key = (code: string) => ({ code, preventDefault: vi.fn() }) as unknown as KeyboardEvent;
+
+  it('jumps to the next column from inside one', () => {
+    expect(stageColumnCoordinates(key('ArrowRight'), context(50))).toEqual({ x: 212, y: 64 });
+  });
+
+  it('does not move a card that is between columns, rather than sending it to the first', () => {
+    expect(stageColumnCoordinates(key('ArrowRight'), context(150))).toBeUndefined();
   });
 });
