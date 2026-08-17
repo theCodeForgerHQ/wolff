@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
+import { request } from '../testing/request';
 import { bootstrap } from '../bootstrap';
 import { loadConfig } from '../config';
 import { createMetricsApp } from '../observability';

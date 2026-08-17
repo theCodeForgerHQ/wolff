@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
+import { request } from '../../testing/request';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createTestWorkspace, testApp, testDb, type TestWorkspace } from '../../testing/harness';
 

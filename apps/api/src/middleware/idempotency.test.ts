@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import express from 'express';
-import request from 'supertest';
+import { request } from '../testing/request';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TEST_DATABASE_URL, testDb } from '../testing/harness';
 import { REPLAY_HEADER, idempotency } from './idempotency';
