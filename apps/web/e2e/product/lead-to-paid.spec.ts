@@ -64,8 +64,15 @@ test.describe('Lead to paid flow', () => {
     const unpaidStatuses = /Sent|Overdue|Partially Paid|Partial/i;
     const invoiceRow = page.locator('tr', { hasText: unpaidStatuses }).first();
     await expect(invoiceRow).toBeVisible();
-    await invoiceRow.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('menuitem', { name: /record payment/i }).click();
+    // The table is server-rendered: a click that lands before hydration
+    // opens nothing (seen in 2 of 7 runs, the trigger still carrying its
+    // server-rendered id). Click again until the menu is there.
+    const recordPayment = page.getByRole('menuitem', { name: /record payment/i });
+    await expect(async () => {
+      await invoiceRow.getByRole('button', { name: 'Open menu' }).click();
+      await expect(recordPayment).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    await recordPayment.click();
 
     const paymentDialog = page.getByRole('dialog');
     await expect(paymentDialog).toBeVisible();
