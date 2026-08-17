@@ -9,14 +9,19 @@ infra/db/bootstrap.sql.
 
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
+from alembic.config import Config
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from alembic import command
 from app.db.session import create_engine
 
+SERVICE_ROOT = Path(__file__).resolve().parent.parent
 DB_URL = os.environ.get("AI_TEST_DATABASE_URL", "")
 ADMIN_URL = os.environ.get("AI_TEST_ADMIN_DATABASE_URL", "")
 
@@ -40,3 +45,18 @@ async def admin_engine() -> AsyncIterator[AsyncEngine]:
     created = create_engine(ADMIN_URL)
     yield created
     await created.dispose()
+
+
+def alembic_config(url: str) -> Config:
+    """Alembic pointed at ``url`` (sync psycopg driver)."""
+    config = Config(str(SERVICE_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(SERVICE_ROOT / "alembic"))
+    config.attributes["database_url"] = url
+    return config
+
+
+@pytest.fixture(scope="session")
+async def migrated(engine: AsyncEngine) -> AsyncEngine:
+    """The service's engine after ``alembic upgrade head``."""
+    await asyncio.to_thread(command.upgrade, alembic_config(DB_URL), "head")
+    return engine

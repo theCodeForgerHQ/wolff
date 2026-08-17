@@ -5,8 +5,11 @@ description = "AI service: retrieval, quote drafting, MCP server and reports"
 license = "AGPL-3.0-only"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic==1.20.0",
     "asyncpg==0.31.0",
     "fastapi==0.142.1",
+    "pgvector==0.5.0",
+    "psycopg[binary]==3.3.6",
     "pydantic==2.13.5",
     "sqlalchemy[asyncio]==2.1.1",
     "uvicorn==0.54.0",
