@@ -37,6 +37,9 @@ const schema = z.object({
   SVC_JWT_SECRET_WORKER: optional,
   SVC_JWT_SECRET_LAMBDA: optional,
 
+  /** The AI service's origin. Unset: AI jobs do nothing and the product runs without it. */
+  AI_URL: optional,
+
   RESEND_API_KEY: optional,
   EMAIL_FROM: optional,
 

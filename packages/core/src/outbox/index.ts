@@ -216,3 +216,24 @@ function describe(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message.slice(0, MAX_ERROR_LENGTH);
 }
+
+/** Documents the AI service indexes; matches its source types. */
+export type AiSourceType = 'quote' | 'invoice' | 'contract' | 'client_note';
+
+/**
+ * Asks the AI service to (re)index a document after it changed. Written in
+ * the change's transaction like any outbox event; the `ai.index` job sends
+ * it on. Writes that skip this are caught by the nightly `ai.sweep`.
+ */
+export async function requestAiIndexing(
+  tx: OutboxWriter,
+  input: { workspaceId: string; sourceType: AiSourceType; sourceId: string }
+): Promise<{ id: string }> {
+  return writeOutboxEvent(tx, {
+    workspaceId: input.workspaceId,
+    type: 'ai.index',
+    aggregateType: input.sourceType,
+    aggregateId: input.sourceId,
+    payload: { sourceType: input.sourceType, sourceId: input.sourceId },
+  });
+}

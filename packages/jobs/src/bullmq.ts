@@ -167,6 +167,7 @@ export const SCHEDULES: Record<string, { type: JobType; pattern?: string; everyM
   overdue: { type: 'invoices.mark_overdue', pattern: '15 0 * * *' },
   'outbox-sweep': { type: 'outbox.sweep', everyMs: 5 * 60_000 },
   automations: { type: 'automations.tick', everyMs: 60_000 },
+  'ai-sweep': { type: 'ai.sweep', pattern: '30 1 * * *' },
 };
 
 /** Registers (or updates) the repeating jobs. Safe to call on every start. */

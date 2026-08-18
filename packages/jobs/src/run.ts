@@ -42,6 +42,8 @@ export const RETRY_POLICIES: Record<JobType, RetryPolicy> = {
   'automations.tick': { attempts: 3, delayMs: exponential(30_000) },
   'pdf.render': { attempts: 3, delayMs: exponential(10_000) },
   'outbox.sweep': { attempts: 1, delayMs: () => 0 },
+  'ai.index': { attempts: 3, delayMs: exponential(30_000) },
+  'ai.sweep': { attempts: 1, delayMs: () => 0 },
 };
 
 export class InvalidJobError extends Error {
