@@ -7,7 +7,7 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -27,6 +27,12 @@ from app.db.scoped import scoped
 SOURCE_TYPES = ("quote", "invoice", "contract", "client_note")
 _TAG = re.compile(r"<[^>]+>")
 _BLOCK = re.compile(r"</?(p|div|br|li|h[1-6]|tr)[^>]*>", re.I)
+
+
+def utc(value: datetime) -> datetime:
+    """Prisma stores UTC in ``timestamp without time zone``; make it aware so
+    it is not read as the process's local time when written to timestamptz."""
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 @dataclass(frozen=True)
@@ -95,7 +101,7 @@ async def _quote(session: AsyncSession, ws: str, source_id: str) -> SourceDocume
         quote.id,
         ws,
         "\n".join(p for p in parts if p),
-        quote.updated_at,
+        utc(quote.updated_at),
         {
             "number": quote.quote_number,
             "client_name": client,
@@ -135,7 +141,7 @@ async def _invoice(session: AsyncSession, ws: str, source_id: str) -> SourceDocu
         invoice.id,
         ws,
         "\n".join(p for p in parts if p),
-        invoice.updated_at,
+        utc(invoice.updated_at),
         {
             "number": invoice.invoice_number,
             "client_name": client,
@@ -160,7 +166,7 @@ async def _contract(session: AsyncSession, ws: str, source_id: str) -> SourceDoc
         contract.id,
         ws,
         text,
-        contract.updated_at,
+        utc(contract.updated_at),
         {"client_name": client, "status": contract.status, "date": str(contract.created_at.date())},
     )
 
@@ -174,7 +180,7 @@ async def _client_note(session: AsyncSession, ws: str, source_id: str) -> Source
         client.id,
         ws,
         f"Notes on client {client.name}:\n{client.notes}",
-        client.updated_at,
+        utc(client.updated_at),
         {"client_name": client.name},
     )
 

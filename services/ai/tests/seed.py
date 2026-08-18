@@ -229,7 +229,7 @@ async def seed_workspace(admin: AsyncEngine, key: str) -> Seeded:
                 text(
                     "INSERT INTO pipeline_stages (id, workspace_id, pipeline_id, name, position, "
                     "probability, kind, updated_at) VALUES (:id, :w, :p, :n, :pos, :pr, "
-                    'CAST(:k AS stage_kind), now())'
+                    "CAST(:k AS stage_kind), now())"
                 ),
                 {
                     "id": sid,

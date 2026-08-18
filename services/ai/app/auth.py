@@ -29,6 +29,10 @@ class AuthError(Exception):
     """The credential is missing, invalid, replayed, or lacks a scope."""
 
 
+class InsufficientScope(AuthError):
+    """Authenticated, but without the scope this action needs (HTTP 403)."""
+
+
 @dataclass(frozen=True, slots=True)
 class Caller:
     """Who is calling, as proven by a service JWT or an API key."""
@@ -43,7 +47,7 @@ class Caller:
     def require(self, scope: str) -> None:
         """Raise unless the caller holds ``scope``."""
         if scope not in self.scopes:
-            raise AuthError(f"missing scope {scope}")
+            raise InsufficientScope(f"missing scope {scope}")
 
 
 class ReplayCache(Protocol):
@@ -65,6 +69,16 @@ class MemoryReplayCache:
             return False
         self._seen[jti] = now + ttl_seconds
         return True
+
+
+class RedisReplayCache:
+    """Shared across instances, so a token replayed elsewhere is refused too."""
+
+    def __init__(self, redis: Any) -> None:
+        self._redis = redis
+
+    async def claim(self, jti: str, ttl_seconds: int) -> bool:
+        return bool(await self._redis.set(f"ai:jti:{jti}", "1", ex=ttl_seconds, nx=True))
 
 
 def _string_list(value: object) -> list[str] | None:

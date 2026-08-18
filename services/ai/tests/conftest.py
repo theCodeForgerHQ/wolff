@@ -11,15 +11,24 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
+import uuid
 from collections.abc import AsyncIterator
+from decimal import Decimal
 from pathlib import Path
 
+import jwt
 import pytest
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alembic import command
 from app.db.session import create_engine
+from app.llm.providers import resolve_provider
+from app.main import create_app
+from app.services import Services, build_services
+from app.settings import Settings
 from tests.seed import Seeded, seed_workspace
 
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
@@ -71,3 +80,59 @@ async def ws_a(admin_engine: AsyncEngine) -> Seeded:
 @pytest.fixture(scope="session")
 async def ws_b(admin_engine: AsyncEngine) -> Seeded:
     return await seed_workspace(admin_engine, "b")
+
+
+WEB_SECRET = "w" * 64
+WORKER_SECRET = "k" * 64
+AI_SECRET = "a" * 64
+
+
+def make_settings(**overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "environment": "test",
+        "svc_jwt_secret_web": WEB_SECRET,
+        "svc_jwt_secret_worker": WORKER_SECRET,
+        "svc_jwt_secret_ai": AI_SECRET,
+        "daily_budget_usd": Decimal("5"),
+        "provider": resolve_provider({"LLM_PROVIDER": "fake"}),
+    }
+    values.update(overrides)
+    return Settings.model_validate(values)
+
+
+def service_token(
+    workspace_id: str,
+    scopes: list[str],
+    *,
+    issuer: str = "web",
+    user: str | None = "user-1",
+    secret: str | None = None,
+) -> str:
+    now = int(time.time())
+    payload: dict[str, object] = {
+        "iss": issuer,
+        "aud": "ai",
+        "iat": now,
+        "exp": now + 60,
+        "jti": str(uuid.uuid4()),
+        "workspaceId": workspace_id,
+        "scopes": scopes,
+    }
+    if user:
+        payload["sub"] = user
+    key = secret or {"web": WEB_SECRET, "worker": WORKER_SECRET}[issuer]
+    return jwt.encode(payload, key, algorithm="HS256", headers={"kid": issuer})
+
+
+@pytest.fixture
+async def services(migrated: AsyncEngine) -> AsyncIterator[Services]:
+    built = build_services(make_settings(), engine=migrated)
+    yield built
+    await built.llm.aclose()
+
+
+@pytest.fixture
+async def client(services: Services) -> AsyncIterator[AsyncClient]:
+    app = create_app(services=services)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://ai") as c:
+        yield c
