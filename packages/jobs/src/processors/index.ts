@@ -251,6 +251,23 @@ const sweepOutbox: Processor<'outbox.sweep'> = async (ctx) => {
   await redriveStaleProviderEvents(ctx.db, { now: ctx.now() });
 };
 
+const indexForAi: Processor<'ai.index'> = async (ctx, job) => {
+  // The AI service is optional: without it the core product runs as before.
+  if (!ctx.ai) return;
+  await ctx.ai.index(job);
+};
+
+const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
+  if (!ctx.ai) return;
+  // Workspaces are listed across tenants (the sweep's documented exemption);
+  // the AI service is then called once per workspace, scoped by its token.
+  const workspaces = await ctx.db.$unscoped.workspace.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+  for (const { id } of workspaces) await ctx.ai.sweep(id);
+};
+
 export const processors: { [T in JobType]: Processor<T> } = {
   'payments.reconcile': reconcilePayment,
   'webhooks.fanout': fanOutWebhooks,
@@ -264,6 +281,8 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'automations.tick': tickAutomation,
   'pdf.render': renderPdf,
   'outbox.sweep': sweepOutbox,
+  'ai.index': indexForAi,
+  'ai.sweep': sweepAiIndex,
 };
 
 export type { JobContext };

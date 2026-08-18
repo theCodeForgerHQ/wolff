@@ -30,6 +30,12 @@ export const jobPayloads = {
     workspaceId: id,
   }),
   'outbox.sweep': z.object({}),
+  'ai.index': z.object({
+    workspaceId: id,
+    sourceType: z.enum(['quote', 'invoice', 'contract', 'client_note']),
+    sourceId: id,
+  }),
+  'ai.sweep': z.object({}),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;
@@ -75,6 +81,13 @@ export interface PdfRenderer {
   render(url: string): Promise<Uint8Array>;
 }
 
+/** The AI service's indexing endpoints (job `ai.index`). */
+export interface AiIndexer {
+  index(input: { workspaceId: string; sourceType: string; sourceId: string }): Promise<void>;
+  /** Re-index what changed in one workspace since it was last indexed. */
+  sweep(workspaceId: string): Promise<void>;
+}
+
 export interface ObjectStorage {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
 }
@@ -88,6 +101,8 @@ export interface JobContext {
   webhooks: WebhookTransport;
   pdf: PdfRenderer;
   storage: ObjectStorage;
+  /** Absent when no AI service is configured; AI jobs then do nothing. */
+  ai?: AiIndexer;
   /** Public origin of the web app, for links in emails and PDF rendering. */
   appUrl: string;
   requireHttpsWebhooks: boolean;

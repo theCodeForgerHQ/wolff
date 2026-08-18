@@ -10,6 +10,7 @@ import { redisRateLimitStore } from './middleware/auth';
 import { MemoryReplayCache, RedisReplayCache } from './middleware/service-jwt';
 import { createHttpTransport } from '@wolff/core/webhooks';
 import {
+  createAiIndexer,
   createChromiumPdfRenderer,
   createLocalStorage,
   createLogEmailTransport,
@@ -141,6 +142,10 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     webhooks: createHttpTransport({ allowPrivateAddresses: config.NODE_ENV === 'development' }),
     pdf: createChromiumPdfRenderer({ executablePath: process.env.CHROME_EXECUTABLE_PATH }),
     storage: createStorage(config),
+    ai:
+      config.AI_URL && config.SVC_JWT_SECRET_WORKER
+        ? createAiIndexer({ baseUrl: config.AI_URL, secret: config.SVC_JWT_SECRET_WORKER })
+        : undefined,
     appUrl: config.APP_URL,
     requireHttpsWebhooks: config.NODE_ENV !== 'development',
     now: () => new Date(),
