@@ -20,7 +20,20 @@ async def test_reads_return_the_callers_rows(migrated: AsyncEngine, ws_a: Seeded
             "currency": "INR",
             "amount_due": 90000.0,
         }
-        assert {r["bucket"] for r in await q.receivables_ageing(s, ws)} == {"bucket_31_60"}
+        assert await q.receivables_ageing(s, ws) == [
+            {"currency": "INR", "bucket": "bucket_31_60", "amount_due": 90000.0, "invoices": 1}
+        ]
+        # Both invoices left draft; each line is 18% intra-state on 90,000.
+        assert await q.gst_summary(s, ws) == [
+            {
+                "gst_rate": 18.0,
+                "taxable_value": 180000.0,
+                "cgst": 16200.0,
+                "sgst": 16200.0,
+                "igst": 0.0,
+                "cess": 0.0,
+            }
+        ]
         assert (await q.get_invoice(s, ws, ws_a.invoice_id))["client"] == "Acme Robotics"  # type: ignore[index]
         assert (await q.get_quote(s, ws, ws_a.quote_id))["total"] == 90000.0  # type: ignore[index]
         assert (await q.find_client(s, ws, "acme"))["client_id"] == ws_a.client_id  # type: ignore[index]
