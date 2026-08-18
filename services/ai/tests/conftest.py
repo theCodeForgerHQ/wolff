@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alembic import command
 from app.db.session import create_engine
+from tests.seed import Seeded, seed_workspace
 
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
 DB_URL = os.environ.get("AI_TEST_DATABASE_URL", "")
@@ -60,3 +61,13 @@ async def migrated(engine: AsyncEngine) -> AsyncEngine:
     """The service's engine after ``alembic upgrade head``."""
     await asyncio.to_thread(command.upgrade, alembic_config(DB_URL), "head")
     return engine
+
+
+@pytest.fixture(scope="session")
+async def ws_a(admin_engine: AsyncEngine) -> Seeded:
+    return await seed_workspace(admin_engine, "a")
+
+
+@pytest.fixture(scope="session")
+async def ws_b(admin_engine: AsyncEngine) -> Seeded:
+    return await seed_workspace(admin_engine, "b")
