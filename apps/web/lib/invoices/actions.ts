@@ -21,6 +21,7 @@ import { toNumber } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 import { generateInvoiceNumber } from './internal';
 import { domainEvents } from '@/lib/events/emitter';
+import { requestAiIndexing } from '@wolff/core/outbox';
 import {
   calculateTotals,
   describeCoreError,
@@ -179,46 +180,54 @@ export async function createInvoice(data: CreateInvoiceData) {
   // A GST invoice is created as a draft and leaves draft only after the
   // Rule 46 check below.
   const wantsSent = data.isDraft === false;
-  const invoice = await prisma.invoice.create({
-    data: {
-      workspaceId: workspace.id,
-      clientId: data.clientId,
-      projectId: data.projectId || null,
-      invoiceNumber,
-      title: data.title,
-      status: wantsSent && !gst ? 'sent' : 'draft',
-      ...(gst && {
-        placeOfSupply: gst.invoice.placeOfSupply,
-        supplyType: gst.invoice.supplyType,
-        reverseCharge: gst.invoice.reverseCharge,
-        supplierGstin: gst.invoice.supplierGstin,
-        recipientGstin: gst.invoice.recipientGstin,
-        taxBreakup: gst.invoice.taxBreakup as Prisma.InputJsonValue,
-      }),
-      currency,
-      accessToken: generateAccessToken(),
-      issueDate: new Date(),
-      dueDate: new Date(data.dueDate),
-      subtotal,
-      discountType: data.discountType || null,
-      discountValue: data.discountValue ?? null,
-      discountAmount,
-      taxTotal,
-      total,
-      amountDue: total,
-      notes: data.notes || null,
-      terms: data.terms || null,
-      internalNotes: data.internalNotes || null,
-      settings: {} as unknown as Prisma.InputJsonValue,
-      lineItems: {
-        create: lineItems,
+  const invoice = await prisma.$transaction(async (tx) => {
+    const created = await tx.invoice.create({
+      data: {
+        workspaceId: workspace.id,
+        clientId: data.clientId,
+        projectId: data.projectId || null,
+        invoiceNumber,
+        title: data.title,
+        status: wantsSent && !gst ? 'sent' : 'draft',
+        ...(gst && {
+          placeOfSupply: gst.invoice.placeOfSupply,
+          supplyType: gst.invoice.supplyType,
+          reverseCharge: gst.invoice.reverseCharge,
+          supplierGstin: gst.invoice.supplierGstin,
+          recipientGstin: gst.invoice.recipientGstin,
+          taxBreakup: gst.invoice.taxBreakup as Prisma.InputJsonValue,
+        }),
+        currency,
+        accessToken: generateAccessToken(),
+        issueDate: new Date(),
+        dueDate: new Date(data.dueDate),
+        subtotal,
+        discountType: data.discountType || null,
+        discountValue: data.discountValue ?? null,
+        discountAmount,
+        taxTotal,
+        total,
+        amountDue: total,
+        notes: data.notes || null,
+        terms: data.terms || null,
+        internalNotes: data.internalNotes || null,
+        settings: {} as unknown as Prisma.InputJsonValue,
+        lineItems: {
+          create: lineItems,
+        },
       },
-    },
-    include: {
-      lineItems: true,
-      client: true,
-      project: true,
-    },
+      include: {
+        lineItems: true,
+        client: true,
+        project: true,
+      },
+    });
+    await requestAiIndexing(tx, {
+      workspaceId: workspace.id,
+      sourceType: 'invoice',
+      sourceId: created.id,
+    });
+    return created;
   });
 
   // H01 fix: Create activity event on invoice creation
@@ -677,7 +686,7 @@ export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) 
       });
     }
 
-    return tx.invoice.update({
+    const updated = await tx.invoice.update({
       where: { id: invoiceId },
       data: {
         projectId: data.projectId !== undefined ? data.projectId : undefined,
@@ -724,6 +733,12 @@ export async function updateInvoice(invoiceId: string, data: UpdateInvoiceData) 
         client: true,
       },
     });
+    await requestAiIndexing(tx, {
+      workspaceId: workspace.id,
+      sourceType: 'invoice',
+      sourceId: invoiceId,
+    });
+    return updated;
   });
 
   revalidatePath(ROUTES.invoices);
