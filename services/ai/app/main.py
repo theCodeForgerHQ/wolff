@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.types import Receive, Scope, Send
 
-from app.api import chat, drafts, ingest, search
+from app.api import chat, drafts, ingest, reports, search
 from app.api.deps import install_error_handlers
 from app.mcp.server import build_mcp_server, mcp_http_app
 from app.services import Services, build_services
@@ -53,6 +53,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(search.router)
     app.include_router(chat.router)
     app.include_router(drafts.router)
+    app.include_router(reports.router)
     return app
 
 

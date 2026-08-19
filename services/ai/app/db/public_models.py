@@ -237,6 +237,7 @@ class Lead(PublicBase):
     workspace_id: Mapped[str] = mapped_column(String)
     name: Mapped[str] = mapped_column(String)
     email: Mapped[str | None] = mapped_column(String, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String, nullable=True)
     company: Mapped[str | None] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String)

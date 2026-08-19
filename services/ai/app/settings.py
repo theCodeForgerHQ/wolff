@@ -39,6 +39,8 @@ class Settings(BaseModel):
     sentry_dsn: str | None = None
     #: The product's slug (packages/core/src/brand.ts): API key prefixes
     #: `<slug>_sk_` and the MCP server's name.
+    #: Where nightly reports are written (S3 arrives with Phase 6's infra).
+    reports_dir: str = "var/reports"
     product_slug: str = Field(default="wolff", pattern=r"^[a-z][a-z0-9-]{1,30}$")
     provider: ProviderProfile = Field(default_factory=lambda: resolve_provider({}))
 
@@ -57,6 +59,7 @@ _ENV_NAMES: dict[str, str] = {
     "max_tokens": "AI_MAX_TOKENS",
     "sentry_dsn": "SENTRY_DSN",
     "product_slug": "PRODUCT_SLUG",
+    "reports_dir": "AI_REPORTS_DIR",
 }
 
 
