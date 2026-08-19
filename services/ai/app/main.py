@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import ingest, search
+from app.api import chat, ingest, search
 from app.api.deps import install_error_handlers
 from app.services import Services, build_services
 from app.settings import Settings, load_settings
@@ -39,6 +39,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     app.include_router(ingest.router)
     app.include_router(search.router)
+    app.include_router(chat.router)
     return app
 
 

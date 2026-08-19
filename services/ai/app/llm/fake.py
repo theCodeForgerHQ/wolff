@@ -39,6 +39,8 @@ _STOP = frozenset(
 _ROUTES: tuple[tuple[str, str], ...] = (
     ("draft", "draft_quote"),
     ("overdue", "list_overdue_invoices"),
+    ("who owes", "top_debtors"),
+    ("owes me most", "top_debtors"),
     ("owe", "receivables_ageing"),
     ("outstanding", "receivables_ageing"),
     ("ageing", "receivables_ageing"),
@@ -99,7 +101,20 @@ def _arguments(name: str, question: str, function: dict[str, Any]) -> dict[str, 
     return args
 
 
-def _answer_from_tool(content: str) -> str:
+_TAG = re.compile(r"</?document[^>]*>")
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+def _best_sentence(question: str, content: str) -> str:
+    """The sentence sharing the most words with the question (extractive)."""
+    wanted = set(words(question))
+    sentences = [x.strip() for x in _SENTENCE.split(_TAG.sub("", content)) if x.strip()]
+    if not sentences:
+        return ""
+    return max(sentences, key=lambda x: len(wanted & set(words(x))))
+
+
+def _answer_from_tool(question: str, content: str) -> str:
     try:
         data = json.loads(content)
     except ValueError:
@@ -108,8 +123,7 @@ def _answer_from_tool(content: str) -> str:
         docs = data["documents"]
         if not docs:
             return "I couldn't find that in your documents."
-        first = str(docs[0].get("content", "")).strip().splitlines()
-        return f"{first[0] if first else ''} [1]"
+        return f"{_best_sentence(question, str(docs[0].get('content', '')))} [1]"
     return "Here is what I found: " + (content if len(content) < 1500 else content[:1500])
 
 
@@ -149,7 +163,7 @@ def _chat(body: dict[str, Any]) -> dict[str, Any]:
         ]
     elif has_tool_result:
         last_tool = next(m for m in reversed(messages) if m.get("role") == "tool")
-        message["content"] = _answer_from_tool(_text(last_tool))
+        message["content"] = _answer_from_tool(_last_user(messages), _text(last_tool))
     else:
         message["content"] = "I can answer questions about your quotes, invoices and contracts."
 
