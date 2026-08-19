@@ -36,6 +36,7 @@ export const jobPayloads = {
     sourceId: id,
   }),
   'ai.sweep': z.object({}),
+  'reports.nightly': z.object({}),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;
@@ -86,6 +87,8 @@ export interface AiIndexer {
   index(input: { workspaceId: string; sourceType: string; sourceId: string }): Promise<void>;
   /** Re-index what changed in one workspace since it was last indexed. */
   sweep(workspaceId: string): Promise<void>;
+  /** Build and store one workspace's nightly report. */
+  nightlyReport(workspaceId: string): Promise<void>;
 }
 
 export interface ObjectStorage {

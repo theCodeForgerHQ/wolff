@@ -257,15 +257,24 @@ const indexForAi: Processor<'ai.index'> = async (ctx, job) => {
   await ctx.ai.index(job);
 };
 
-const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
-  if (!ctx.ai) return;
-  // Workspaces are listed across tenants (the sweep's documented exemption);
-  // the AI service is then called once per workspace, scoped by its token.
-  const workspaces = await ctx.db.$unscoped.workspace.findMany({
+/** Live workspaces, listed across tenants (the sweeps' documented exemption). */
+async function liveWorkspaceIds(ctx: JobContext): Promise<string[]> {
+  const rows = await ctx.db.$unscoped.workspace.findMany({
     where: { deletedAt: null },
     select: { id: true },
   });
-  for (const { id } of workspaces) await ctx.ai.sweep(id);
+  return rows.map((row) => row.id);
+}
+
+const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
+  if (!ctx.ai) return;
+  // The AI service is called once per workspace, scoped by that workspace's token.
+  for (const id of await liveWorkspaceIds(ctx)) await ctx.ai.sweep(id);
+};
+
+const nightlyReports: Processor<'reports.nightly'> = async (ctx) => {
+  if (!ctx.ai) return;
+  for (const id of await liveWorkspaceIds(ctx)) await ctx.ai.nightlyReport(id);
 };
 
 export const processors: { [T in JobType]: Processor<T> } = {
@@ -283,6 +292,7 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'outbox.sweep': sweepOutbox,
   'ai.index': indexForAi,
   'ai.sweep': sweepAiIndex,
+  'reports.nightly': nightlyReports,
 };
 
 export type { JobContext };
