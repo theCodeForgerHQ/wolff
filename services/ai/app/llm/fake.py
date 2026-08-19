@@ -127,16 +127,123 @@ def _answer_from_tool(question: str, content: str) -> str:
     return "Here is what I found: " + (content if len(content) < 1500 else content[:1500])
 
 
+_CLIENT_REF = re.compile(r"\bfor ([^:,.\n]+)", re.I)
+_QUOTE_PLAN = ("get_client", "list_rate_cards", "get_past_quotes")
+
+
+def _tool_results(messages: list[dict[str, Any]]) -> list[Any]:
+    out = []
+    for m in messages:
+        if m.get("role") == "tool":
+            try:
+                out.append(json.loads(_text(m)))
+            except ValueError:
+                continue
+    return out
+
+
+def _called(messages: list[dict[str, Any]]) -> list[str]:
+    return [
+        call["function"]["name"]
+        for m in messages
+        if m.get("role") == "assistant"
+        for call in m.get("tool_calls") or []
+    ]
+
+
+def _first_user(messages: list[dict[str, Any]]) -> str:
+    return next((_text(m) for m in messages if m.get("role") == "user"), "")
+
+
+def _quote_step(messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> dict[str, Any]:
+    """The quote agent's fact gathering: client, then rate cards, then past quotes."""
+    names = {t["function"]["name"] for t in tools if "function" in t}
+    done = _called(messages)
+    client = next(
+        (r for r in _tool_results(messages) if isinstance(r, dict) and "client_id" in r), None
+    )
+    if "get_client" in done and client is None:
+        return {"content": "I could not find that client."}
+    for name in _QUOTE_PLAN:
+        if name in names and name not in done:
+            if name == "get_client":
+                match = _CLIENT_REF.search(_first_user(messages))
+                args: dict[str, Any] = {"ref": match.group(1).strip() if match else ""}
+            elif name == "get_past_quotes":
+                args = {"client_id": client["client_id"] if client else None}
+            else:
+                args = {}
+            call_id = f"call_{name}_{len(done)}"
+            return {
+                "tool_calls": [
+                    {
+                        "id": call_id,
+                        "type": "function",
+                        "function": {"name": name, "arguments": json.dumps(args)},
+                    }
+                ]
+            }
+    return {"content": "I have what I need to draft the quote."}
+
+
+def _quote_draft(messages: list[dict[str, Any]]) -> dict[str, Any]:
+    """QuoteDraft from the gathered facts: rate cards sharing words with the brief."""
+    brief = _first_user(messages)
+    results = _tool_results(messages)
+    client = next((r for r in results if isinstance(r, dict) and "client_id" in r), None)
+    cards = next((r for r in results if isinstance(r, list) and r and "rate_card_id" in r[0]), [])
+    wanted = set(words(brief))
+    chosen = [c for c in cards if wanted & set(words(c["name"]))] or cards[:1]
+    lines = [
+        {
+            "name": c["name"],
+            "description": c.get("description"),
+            "qty": 1,
+            "unit": c.get("unit"),
+            "rate": c["rate"],
+            "hsn_sac": c.get("hsn_sac"),
+            "source": "rate_card",
+            "source_ref": c["rate_card_id"],
+        }
+        for c in chosen
+    ] or [
+        {
+            "name": "Services",
+            "description": None,
+            "qty": 1,
+            "unit": None,
+            "rate": 0,
+            "hsn_sac": None,
+            "source": "new",
+            "source_ref": None,
+        }
+    ]
+    title = brief.split(":", 1)[-1].strip()[:80] or "Draft quote"
+    return {
+        "client_id": client["client_id"] if client else "",
+        "deal_id": None,
+        "title": title[:1].upper() + title[1:],
+        "currency": "INR" if not client or client.get("country_code") in (None, "IN") else "USD",
+        "line_items": lines,
+        "terms": None,
+        "notes": None,
+        "assumptions": ["Quantities assumed to be 1; confirm with the client."],
+        "confidence": 0.6 if client else 0.0,
+    }
+
+
+STRUCTURED_DEFAULTS = {"QuoteDraft": _quote_draft}
+
+
 def _structured(name: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
-    builder = STRUCTURED.get(name)
+    builder = STRUCTURED.get(name) or STRUCTURED_DEFAULTS.get(name)
     if builder is None:
         raise ValueError(f"the fake model has no builder for schema {name!r}")
     result: dict[str, Any] = builder(messages)
     return result
 
 
-#: Builders for structured outputs, by json_schema name. The quote agent
-#: registers one (app/agent/fake_draft.py).
+#: Extra builders for structured outputs, by json_schema name (tests).
 STRUCTURED: dict[str, Any] = {}
 
 
@@ -151,6 +258,8 @@ def _chat(body: dict[str, Any]) -> dict[str, Any]:
     if response_format.get("type") == "json_schema":
         schema_name = response_format["json_schema"]["name"]
         message["content"] = json.dumps(_structured(schema_name, messages))
+    elif any(t.get("function", {}).get("name") == "get_client" for t in tools):
+        message.update(_quote_step(messages, tools))
     elif tools and not has_tool_result and (picked := _pick_tool(_last_user(messages), tools)):
         name, args = picked
         call_id = "call_" + hashlib.sha1(prompt.encode()).hexdigest()[:12]  # noqa: S324

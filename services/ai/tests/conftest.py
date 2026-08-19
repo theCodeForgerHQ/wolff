@@ -17,6 +17,7 @@ from collections.abc import AsyncIterator
 from decimal import Decimal
 from pathlib import Path
 
+import httpx2
 import jwt
 import pytest
 from alembic.config import Config
@@ -24,6 +25,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alembic import command
+from app.agent.api_client import ApiClient
 from app.db.session import create_engine
 from app.llm.providers import resolve_provider
 from app.main import create_app
@@ -125,8 +127,8 @@ def service_token(
 
 
 @pytest.fixture
-async def services(migrated: AsyncEngine) -> AsyncIterator[Services]:
-    built = build_services(make_settings(), engine=migrated)
+async def services(migrated: AsyncEngine, fake_api: FakeApi) -> AsyncIterator[Services]:
+    built = build_services(make_settings(), engine=migrated, api=fake_api.client())
     yield built
     await built.llm.aclose()
 
@@ -136,3 +138,46 @@ async def client(services: Services) -> AsyncIterator[AsyncClient]:
     app = create_app(services=services)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://ai") as c:
         yield c
+
+
+class FakeApi:
+    """apps/api's /internal routes as the AI service sees them, recording calls.
+
+    It checks the forwarded token like apps/api does (aud=api, iss=ai, kid=ai).
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, object], dict[str, object]]] = []
+        self.down: set[str] = set()
+
+    def handler(self, request: httpx2.Request) -> httpx2.Response:
+        import json as _json
+
+        path = request.url.path
+        token = request.headers["authorization"].removeprefix("Bearer ")
+        claims = jwt.decode(token, AI_SECRET, algorithms=["HS256"], audience="api", issuer="ai")
+        body = _json.loads(request.content)
+        self.calls.append((path, claims, body))
+        if path in self.down:
+            return httpx2.Response(503, json={"success": False})
+        if path == "/internal/quotes/draft":
+            return httpx2.Response(
+                201, json={"success": True, "data": {"quoteId": "q-new", "quoteNumber": "QT-0099"}}
+            )
+        if path == "/internal/gst/compute":
+            return httpx2.Response(
+                200, json={"success": True, "data": {"invoice": {"taxTotal": 1}, "lines": []}}
+            )
+        return httpx2.Response(201, json={"success": True, "data": {"id": "x"}})
+
+    def client(self) -> ApiClient:
+        return ApiClient(
+            "http://api.test",
+            AI_SECRET,
+            httpx2.AsyncClient(transport=httpx2.MockTransport(self.handler)),
+        )
+
+
+@pytest.fixture
+def fake_api() -> FakeApi:
+    return FakeApi()
