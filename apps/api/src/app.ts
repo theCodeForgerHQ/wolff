@@ -136,7 +136,7 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use(express.json({ limit: JSON_LIMIT }));
 
-  app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache()));
+  app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache(), db));
 
   // The public API. Every route acts in the workspace of the key it was
   // called with; nothing below reads a workspace from the request itself.
