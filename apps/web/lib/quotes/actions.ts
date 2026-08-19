@@ -17,6 +17,7 @@ import { ROUTES } from '@/lib/routes';
 import { domainEvents } from '@/lib/events/emitter';
 import { toNumber, getBaseUrl, formatCurrency } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { requestAiIndexing } from '@wolff/core/outbox';
 
 /**
  * Bug #134: Safely parse quote settings from JSON with runtime validation.
@@ -259,37 +260,45 @@ export async function createQuote(data: {
   const taxTotal = Math.round(lineItems.reduce((sum, item) => sum + item.taxAmount, 0) * 100) / 100;
   const total = subtotal + taxTotal;
 
-  const quote = await prisma.quote.create({
-    data: {
-      workspaceId: workspace.id,
-      clientId: data.clientId,
-      projectId: data.projectId || null,
-      quoteNumber,
-      title: data.title,
-      status: data.isDraft !== false ? 'draft' : 'sent',
-      currency,
-      expirationDate: data.expirationDate
-        ? new Date(data.expirationDate)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      accessToken: generateAccessToken(),
-      notes: data.notes || null,
-      terms: data.terms || null,
-      subtotal,
-      taxTotal,
-      total,
-      settings: {
-        blocks: data.blocks || [],
+  const quote = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.quote.create({
+      data: {
+        workspaceId: workspace.id,
+        clientId: data.clientId,
+        projectId: data.projectId || null,
+        quoteNumber,
+        title: data.title,
+        status: data.isDraft !== false ? 'draft' : 'sent',
         currency,
-      } as unknown as Prisma.InputJsonValue,
-      lineItems: {
-        create: lineItems,
+        expirationDate: data.expirationDate
+          ? new Date(data.expirationDate)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        accessToken: generateAccessToken(),
+        notes: data.notes || null,
+        terms: data.terms || null,
+        subtotal,
+        taxTotal,
+        total,
+        settings: {
+          blocks: data.blocks || [],
+          currency,
+        } as unknown as Prisma.InputJsonValue,
+        lineItems: {
+          create: lineItems,
+        },
       },
-    },
-    include: {
-      lineItems: true,
-      client: true,
-      project: true,
-    },
+      include: {
+        lineItems: true,
+        client: true,
+        project: true,
+      },
+    });
+    await requestAiIndexing(tx, {
+      workspaceId: workspace.id,
+      sourceType: 'quote',
+      sourceId: created.id,
+    });
+    return created;
   });
 
   // H01 fix: Create activity event on quote creation
@@ -491,7 +500,7 @@ export async function updateQuote(
       }
 
       // Update quote with new data
-      return tx.quote.update({
+      const updated = await tx.quote.update({
         where: { id: quoteId },
         data: {
           title: data.title,
@@ -523,6 +532,12 @@ export async function updateQuote(
           client: true,
         },
       });
+      await requestAiIndexing(tx, {
+        workspaceId: workspace.id,
+        sourceType: 'quote',
+        sourceId: quoteId,
+      });
+      return updated;
     });
 
     revalidatePath(ROUTES.quotes);

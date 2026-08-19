@@ -17,6 +17,7 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
     numberSequence: { upsert: vi.fn() },
     client: { findFirst: vi.fn() },
     businessProfile: { findUnique: vi.fn() },
+    outboxEvent: { create: vi.fn().mockResolvedValue({ id: 'evt-1' }) },
     $transaction: vi.fn((fn: any) => fn(mockPrisma)),
   };
   const mockGetCurrentUserWorkspace = vi.fn();
@@ -126,6 +127,24 @@ describe('Quote Actions', () => {
       expect(result.success).toBe(true);
       expect(result.quote).toBeDefined();
       expect(mockPrisma.quote.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks the AI service to index the new quote, in the same transaction', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({ id: 'client-1', workspaceId: WORKSPACE_ID });
+      mockPrisma.quote.create.mockResolvedValue({ id: 'quote-9', lineItems: [], client: null });
+
+      await createQuote({ title: 'Indexed', clientId: 'client-1', blocks: [] });
+
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          aggregateId: 'quote-9',
+          payload: { sourceType: 'quote', sourceId: 'quote-9' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('rejects empty title', async () => {
@@ -241,6 +260,14 @@ describe('Quote Actions', () => {
       const result = await updateQuote('quote-1', { title: 'Updated Title' });
 
       expect(result.success).toBe(true);
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'quote', sourceId: 'quote-1' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('returns error for non-existent quote', async () => {

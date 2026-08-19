@@ -182,10 +182,17 @@ async def seed_workspace(admin: AsyncEngine, key: str) -> Seeded:
             await x(
                 text(
                     "INSERT INTO invoice_line_items (id, invoice_id, name, quantity, rate, "
-                    "amount, taxable_value, updated_at) VALUES (:id, :i, :n, 1, :a, :a, :a, "
-                    "now())"
+                    "amount, taxable_value, gst_rate, cgst_amount, sgst_amount, hsn_sac, "
+                    "updated_at) VALUES (:id, :i, :n, 1, :a, :a, :a, 18, :half, :half, "
+                    "'998314', now())"
                 ),
-                {"id": _id(), "i": inv, "n": spec["quote_title"], "a": total},
+                {
+                    "id": _id(),
+                    "i": inv,
+                    "n": spec["quote_title"],
+                    "a": total,
+                    "half": total * 9 / 100,
+                },
             )
         await x(
             text(

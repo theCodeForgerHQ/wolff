@@ -18,6 +18,7 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
     quoteEvent: { create: vi.fn() },
     payment: { create: vi.fn(), findMany: vi.fn() },
     numberSequence: { upsert: vi.fn() },
+    outboxEvent: { create: vi.fn().mockResolvedValue({ id: 'evt-1' }) },
     $transaction: vi.fn((fnOrArray: any) => {
       if (typeof fnOrArray === 'function') return fnOrArray(mockPrisma);
       return Promise.all(fnOrArray);
@@ -68,7 +69,12 @@ vi.mock('@wolff/database', () => ({
   prisma: mockPrisma,
   Prisma: { InputJsonValue: {}, TransactionClient: {} },
 }));
-import { createInvoice, deleteInvoice, createInvoiceFromQuote } from '@/lib/invoices/actions';
+import {
+  createInvoice,
+  deleteInvoice,
+  createInvoiceFromQuote,
+  updateInvoice,
+} from '@/lib/invoices/actions';
 import { getInvoices } from '@/lib/invoices/queries';
 import { updateInvoiceStatus } from '@/lib/invoices/status-actions';
 
@@ -174,6 +180,58 @@ describe('Invoice Actions', () => {
       expect(createCall.data.subtotal).toBe(700);
       expect(createCall.data.taxTotal).toBe(20);
       expect(createCall.data.total).toBe(720);
+    });
+
+    it('asks the AI service to index the new invoice', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({ id: 'client-1', workspaceId: WORKSPACE_ID });
+      mockPrisma.invoice.findFirst.mockResolvedValue(null);
+      mockPrisma.invoice.create.mockImplementation(async ({ data }: any) => ({
+        id: 'inv-7',
+        ...data,
+        lineItems: [],
+        client: { id: 'client-1' },
+        project: null,
+      }));
+
+      await createInvoice({
+        clientId: 'client-1',
+        title: 'Test',
+        dueDate: '2024-02-15',
+        lineItems: [{ name: 'A', quantity: 1, rate: 100 }],
+      });
+
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'invoice', sourceId: 'inv-7' },
+        }),
+        select: { id: true },
+      });
+    });
+  });
+
+  describe('updateInvoice', () => {
+    it('asks the AI service to re-index the edited invoice', async () => {
+      mockPrisma.invoice.findFirst.mockResolvedValue({
+        id: 'inv-8',
+        workspaceId: WORKSPACE_ID,
+        status: 'draft',
+        lineItems: [],
+      });
+      mockPrisma.invoice.update.mockResolvedValue({ id: 'inv-8', lineItems: [], client: null });
+
+      const result = await updateInvoice('inv-8', { title: 'Renamed' });
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'invoice', sourceId: 'inv-8' },
+        }),
+        select: { id: true },
+      });
     });
   });
 
