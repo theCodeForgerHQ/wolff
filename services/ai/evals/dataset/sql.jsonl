@@ -1,0 +1,20 @@
+{"question": "Which invoices are overdue?", "oracle": "overdue"}
+{"question": "List my overdue invoices", "oracle": "overdue"}
+{"question": "Show invoices that are overdue right now", "oracle": "overdue"}
+{"question": "What is overdue?", "oracle": "overdue"}
+{"question": "Who owes me most?", "oracle": "top_debtor"}
+{"question": "Which client owes me most money?", "oracle": "top_debtor"}
+{"question": "Tell me who owes me most", "oracle": "top_debtor"}
+{"question": "Who owes me the most right now?", "oracle": "top_debtor"}
+{"question": "What do clients owe me by ageing bucket?", "oracle": "ageing"}
+{"question": "Show outstanding receivables", "oracle": "ageing"}
+{"question": "How much is outstanding?", "oracle": "ageing"}
+{"question": "Receivables ageing please", "oracle": "ageing"}
+{"question": "Show the GST summary", "oracle": "gst"}
+{"question": "What GST did we charge?", "oracle": "gst"}
+{"question": "GST by rate", "oracle": "gst"}
+{"question": "Show my leads", "oracle": "leads"}
+{"question": "List recent leads", "oracle": "leads"}
+{"question": "Any new leads?", "oracle": "leads"}
+{"question": "Show the deals in my pipeline", "oracle": "deals"}
+{"question": "List my deals", "oracle": "deals"}

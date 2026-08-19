@@ -1,0 +1,40 @@
+{"question": "What are the payment terms in our contract with Wiegand, Kunze and Schulist?", "expect": ["15 days"], "sources": [{"type": "contract", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "What interest applies to late payments under the contract with Wiegand, Kunze and Schulist?", "expect": ["1.5%"], "sources": [{"type": "contract", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "How many rounds of revisions does the contract with Wiegand, Kunze and Schulist include?", "expect": ["two rounds"], "sources": [{"type": "contract", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "How much notice is needed to terminate the agreement with Wiegand, Kunze and Schulist?", "expect": ["30 days"], "sources": [{"type": "contract", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "What advance does Haley, Kunze and Schulist pay on signing?", "expect": ["50% advance"], "sources": [{"type": "contract", "client": "Haley, Kunze and Schulist"}]}
+{"question": "Who owns the final logo and brand assets for Haley, Kunze and Schulist?", "expect": ["owns the final logo"], "sources": [{"type": "contract", "client": "Haley, Kunze and Schulist"}]}
+{"question": "How much notice terminates the brand identity agreement with Haley, Kunze and Schulist?", "expect": ["14 days"], "sources": [{"type": "contract", "client": "Haley, Kunze and Schulist"}]}
+{"question": "Can we show the brand work for Haley, Kunze and Schulist in our portfolio?", "expect": ["portfolio"], "sources": [{"type": "contract", "client": "Haley, Kunze and Schulist"}]}
+{"question": "When is the monthly retainer for Heaney - Powlowski billed?", "expect": ["first working day"], "sources": [{"type": "contract", "client": "Heaney - Powlowski"}]}
+{"question": "Within how many days must Heaney - Powlowski pay retainer invoices?", "expect": ["30 days"], "sources": [{"type": "contract", "client": "Heaney - Powlowski"}]}
+{"question": "How many posts per month does the social media scope for Heaney - Powlowski include?", "expect": ["twelve posts"], "sources": [{"type": "contract", "client": "Heaney - Powlowski"}]}
+{"question": "How does the social media retainer with Heaney - Powlowski end?", "expect": ["30 days notice"], "sources": [{"type": "contract", "client": "Heaney - Powlowski"}]}
+{"question": "How does Wiegand, Kunze and Schulist prefer to communicate?", "expect": ["WhatsApp"], "sources": [{"type": "client_note", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "Who approves invoices above one lakh at Wiegand, Kunze and Schulist?", "expect": ["CFO"], "sources": [{"type": "client_note", "client": "Wiegand, Kunze and Schulist"}]}
+{"question": "When is Haley, Kunze and Schulist launching its new product line?", "expect": ["March"], "sources": [{"type": "client_note", "client": "Haley, Kunze and Schulist"}]}
+{"question": "When does Cormier - West usually pay invoices?", "expect": ["last day"], "sources": [{"type": "client_note", "client": "Cormier - West"}]}
+{"question": "What does quote Q-KS-001 include?", "expect": ["Salad"], "sources": [{"type": "quote", "number": "Q-KS-001"}]}
+{"question": "What does quote Q-KS-002 include?", "expect": ["Chair"], "sources": [{"type": "quote", "number": "Q-KS-002"}]}
+{"question": "What does quote Q-KS-003 include?", "expect": ["Chicken"], "sources": [{"type": "quote", "number": "Q-KS-003"}]}
+{"question": "What does quote Q-KS-004 include?", "expect": ["Pizza"], "sources": [{"type": "quote", "number": "Q-KS-004"}]}
+{"question": "What does quote Q-KS-005 include?", "expect": ["Keyboard"], "sources": [{"type": "quote", "number": "Q-KS-005"}]}
+{"question": "What does quote Q-KS-006 include?", "expect": ["Fish"], "sources": [{"type": "quote", "number": "Q-KS-006"}]}
+{"question": "What does quote Q-KS-007 include?", "expect": ["Bacon"], "sources": [{"type": "quote", "number": "Q-KS-007"}]}
+{"question": "What does quote Q-KS-008 include?", "expect": ["Shoes"], "sources": [{"type": "quote", "number": "Q-KS-008"}]}
+{"question": "What does quote Q-KS-009 include?", "expect": ["Car"], "sources": [{"type": "quote", "number": "Q-KS-009"}]}
+{"question": "What does quote Q-KS-010 include?", "expect": ["Chips"], "sources": [{"type": "quote", "number": "Q-KS-010"}]}
+{"question": "What does quote Q-KS-011 include?", "expect": ["Chair"], "sources": [{"type": "quote", "number": "Q-KS-011"}]}
+{"question": "What does quote Q-KS-012 include?", "expect": ["Gloves"], "sources": [{"type": "quote", "number": "Q-KS-012"}]}
+{"question": "What is the total of invoice INV-KS-001?", "expect": ["INR 85,700.08"], "sources": [{"type": "invoice", "number": "INV-KS-001"}]}
+{"question": "What is the total of invoice INV-KS-002?", "expect": ["INR 77,386.72"], "sources": [{"type": "invoice", "number": "INV-KS-002"}]}
+{"question": "What is the total of invoice INV-KS-003?", "expect": ["INR 87,951.76"], "sources": [{"type": "invoice", "number": "INV-KS-003"}]}
+{"question": "What is the total of invoice INV-KS-004?", "expect": ["INR 13,333.00"], "sources": [{"type": "invoice", "number": "INV-KS-004"}]}
+{"question": "What is the total of invoice INV-KS-005?", "expect": ["INR 15,979.04"], "sources": [{"type": "invoice", "number": "INV-KS-005"}]}
+{"question": "What is the total of invoice INV-KS-006?", "expect": ["INR 63,100.10"], "sources": [{"type": "invoice", "number": "INV-KS-006"}]}
+{"question": "What is the total of invoice INV-KS-007?", "expect": ["USD 28,066.00"], "sources": [{"type": "invoice", "number": "INV-KS-007"}]}
+{"question": "What is the total of invoice INV-KS-008?", "expect": ["INR 21,869.12"], "sources": [{"type": "invoice", "number": "INV-KS-008"}]}
+{"question": "What is the total of invoice INV-KS-009?", "expect": ["INR 46,781.44"], "sources": [{"type": "invoice", "number": "INV-KS-009"}]}
+{"question": "What is the total of invoice INV-KS-010?", "expect": ["INR 47,064.52"], "sources": [{"type": "invoice", "number": "INV-KS-010"}]}
+{"question": "What is the total of invoice INV-KS-011?", "expect": ["INR 27,209.90"], "sources": [{"type": "invoice", "number": "INV-KS-011"}]}
+{"question": "What is the total of invoice INV-KS-012?", "expect": ["INR 53,830.00"], "sources": [{"type": "invoice", "number": "INV-KS-012"}]}
