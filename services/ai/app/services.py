@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.agent.api_client import ApiClient
 from app.auth import MemoryReplayCache, RedisReplayCache, ReplayCache, ServiceJwtVerifier
 from app.budget import BudgetGate
 from app.db.session import create_engine, session_factory
@@ -24,16 +25,20 @@ class Services:
     budget: BudgetGate
     #: Verifies tokens from the web app (chat) and the worker (indexing).
     verifier: ServiceJwtVerifier
+    api: ApiClient
     redis: Any = None
 
     async def aclose(self) -> None:
         await self.llm.aclose()
+        await self.api.aclose()
         await self.engine.dispose()
         if self.redis is not None:
             await self.redis.aclose()
 
 
-def build_services(settings: Settings, *, engine: AsyncEngine | None = None) -> Services:
+def build_services(
+    settings: Settings, *, engine: AsyncEngine | None = None, api: ApiClient | None = None
+) -> Services:
     if engine is None:
         if not settings.database_url:
             raise RuntimeError("AI_DATABASE_URL is not set")
@@ -59,4 +64,5 @@ def build_services(settings: Settings, *, engine: AsyncEngine | None = None) -> 
         audience="ai",
         replay_cache=replay,
     )
-    return Services(settings, engine, sessions, llm, budget, verifier, redis)
+    api = api or ApiClient(settings.api_url, settings.svc_jwt_secret_ai)
+    return Services(settings, engine, sessions, llm, budget, verifier, api, redis)

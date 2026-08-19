@@ -1,0 +1,2 @@
+has_email,has_phone,has_company,message_words,source_manual,source_widget,source_api,source_import,has_deal,deal_value,converted
+1,0,1,0,1,0,0,0,0,0.0,0

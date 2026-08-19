@@ -43,6 +43,8 @@ async def test_reads_return_the_callers_rows(migrated: AsyncEngine, ws_a: Seeded
         assert [d["id"] for d in await q.list_deals(s, ws)] == [ws_a.deal_id]
         assert (await q.get_deal(s, ws, ws_a.deal_id))["stage"] == "New"  # type: ignore[index]
         assert [lead["id"] for lead in await q.list_leads(s, ws)] == [ws_a.lead_id]
+        assert [lead["id"] for lead in await q.list_leads(s, ws, "new")] == [ws_a.lead_id]
+        assert await q.list_leads(s, ws, "converted") == []
         assert [p["id"] for p in await q.past_quotes(s, ws, ws_a.client_id)] == [ws_a.quote_id]
 
 

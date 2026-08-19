@@ -6,9 +6,11 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.types import Receive, Scope, Send
 
-from app.api import chat, ingest, search
+from app.api import chat, drafts, ingest, reports, search
 from app.api.deps import install_error_handlers
+from app.mcp.server import build_mcp_server, mcp_http_app
 from app.services import Services, build_services
 from app.settings import Settings, load_settings
 
@@ -20,17 +22,27 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         owned = services is None
-        app.state.services = services or build_services(resolved)
+        svc = services or build_services(resolved)
+        app.state.services = svc
+        server = build_mcp_server(svc)
+        app.state.mcp = mcp_http_app(server, resolved.public_url)
         try:
-            yield
+            async with server.session_manager.run():
+                yield
         finally:
             if owned:
-                await app.state.services.aclose()
+                await svc.aclose()
 
-    app = FastAPI(title="ai", lifespan=lifespan if services is None else None)
+    app = FastAPI(title="ai", lifespan=lifespan)
     app.state.settings = resolved
     if services is not None:
         app.state.services = services
+
+    async def mcp_endpoint(scope: Scope, receive: Receive, send: Send) -> None:
+        # Built in the lifespan, when the services exist.
+        await app.state.mcp(scope, receive, send)
+
+    app.mount("/mcp", mcp_endpoint)
     install_error_handlers(app)
 
     @app.get("/healthz")
@@ -40,6 +52,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(ingest.router)
     app.include_router(search.router)
     app.include_router(chat.router)
+    app.include_router(drafts.router)
+    app.include_router(reports.router)
     return app
 
 
