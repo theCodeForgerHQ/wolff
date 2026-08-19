@@ -168,6 +168,8 @@ export const SCHEDULES: Record<string, { type: JobType; pattern?: string; everyM
   'outbox-sweep': { type: 'outbox.sweep', everyMs: 5 * 60_000 },
   automations: { type: 'automations.tick', everyMs: 60_000 },
   'ai-sweep': { type: 'ai.sweep', pattern: '30 1 * * *' },
+  // 02:00 IST. The design's optional Lambda replica is not built.
+  'reports-nightly': { type: 'reports.nightly', pattern: '30 20 * * *' },
 };
 
 /** Registers (or updates) the repeating jobs. Safe to call on every start. */

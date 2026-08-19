@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { faker } from '@faker-js/faker';
 import Decimal from 'decimal.js';
 import { createPrisma } from '../src/client';
+import { seedAiDemoContent } from './seed-demo-ai';
 
 /**
  * Deterministic demo seed for Phase 3.
@@ -78,6 +79,12 @@ async function main() {
       where: { workspace: { slug: { in: ['kaveri-studio', 'northlight-design'] } } },
     }),
     prisma.lead.deleteMany({
+      where: { workspace: { slug: { in: ['kaveri-studio', 'northlight-design'] } } },
+    }),
+    prisma.contractInstance.deleteMany({
+      where: { workspace: { slug: { in: ['kaveri-studio', 'northlight-design'] } } },
+    }),
+    prisma.rateCard.deleteMany({
       where: { workspace: { slug: { in: ['kaveri-studio', 'northlight-design'] } } },
     }),
     prisma.contract.deleteMany({
@@ -520,11 +527,19 @@ async function main() {
     },
   });
 
+  await seedAiDemoContent(prisma, {
+    kaveriId: kaveri.id,
+    kaveriClientIds: kaveriClients.map((client) => client.id),
+    northlightId: northlight.id,
+    northlightClientId: northlightClient.id,
+  });
+
   console.log('Demo seed complete:');
   console.log(
     `  Kaveri Studio: ${kaveriLeads.length} leads, ${kaveriDeals.length} deals, ${kaveriQuotes.length} quotes, ${kaveriInvoices.length} invoices`
   );
   console.log(`  Northlight Design: 1 invoice`);
+  console.log('  AI content: 9 rate cards, 4 contracts, 3 client notes');
 }
 
 main()

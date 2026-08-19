@@ -41,8 +41,12 @@ describe('ai.index routing', () => {
     expect(job).toBeNull();
   });
 
-  it('schedules the nightly sweep at 01:30 UTC', () => {
+  it('schedules the nightly sweep at 01:30 UTC and reports at 20:30 UTC (02:00 IST)', () => {
     expect(SCHEDULES['ai-sweep']).toEqual({ type: 'ai.sweep', pattern: '30 1 * * *' });
+    expect(SCHEDULES['reports-nightly']).toEqual({
+      type: 'reports.nightly',
+      pattern: '30 20 * * *',
+    });
   });
 });
 
@@ -53,6 +57,7 @@ describe('ai processors', () => {
       calls,
       index: async (input) => void calls.push(['index', input]),
       sweep: async (ws) => void calls.push(['sweep', ws]),
+      nightlyReport: async (ws) => void calls.push(['report', ws]),
     };
   };
 
@@ -83,6 +88,34 @@ describe('ai processors', () => {
       ['sweep', 'w1'],
       ['sweep', 'w2'],
     ]);
+  });
+});
+
+describe('reports.nightly', () => {
+  it('asks for one report per live workspace', async () => {
+    const calls: unknown[] = [];
+    const port = {
+      index: async () => undefined,
+      sweep: async () => undefined,
+      nightlyReport: async (ws: string) => void calls.push(ws),
+    };
+    const findMany = vi.fn().mockResolvedValue([{ id: 'w1' }, { id: 'w2' }]);
+    const ctx = { ai: port, db: { $unscoped: { workspace: { findMany } } } };
+    await processors['reports.nightly'](ctx as unknown as JobContext, {});
+    expect(calls).toEqual(['w1', 'w2']);
+  });
+
+  it('posts with scope reports:run only', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    await createAiIndexer({ baseUrl: 'http://ai', secret: SECRET, fetch }).nightlyReport('ws-9');
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe('http://ai/internal/reports/nightly');
+    const { payload } = await jwtVerify(
+      init.headers.authorization.replace('Bearer ', ''),
+      new TextEncoder().encode(SECRET),
+      { issuer: 'worker', audience: 'ai' }
+    );
+    expect(payload).toMatchObject({ workspaceId: 'ws-9', scopes: ['reports:run'] });
   });
 });
 

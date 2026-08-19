@@ -6,7 +6,8 @@ const TOKEN_TTL_SECONDS = 60;
 
 /**
  * Calls the AI service's indexing endpoints with a worker service JWT
- * (iss=worker, aud=ai, 60 s, scope ai:index, kid=worker). A
+ * (iss=worker, aud=ai, 60 s, kid=worker; scope ai:index, or
+ * reports:run for the nightly report). A
  * non-2xx answer throws, so the job retries.
  */
 export function createAiIndexer(options: {
@@ -17,9 +18,9 @@ export function createAiIndexer(options: {
   const send = options.fetch ?? fetch;
   const base = options.baseUrl.replace(/\/$/, '');
 
-  async function token(workspaceId: string): Promise<string> {
+  async function token(workspaceId: string, scopes: string[]): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
-    return new SignJWT({ workspaceId, scopes: ['ai:index'] })
+    return new SignJWT({ workspaceId, scopes })
       .setProtectedHeader({ alg: 'HS256', kid: 'worker' })
       .setIssuer('worker')
       .setAudience('ai')
@@ -29,11 +30,16 @@ export function createAiIndexer(options: {
       .sign(new TextEncoder().encode(options.secret));
   }
 
-  async function post(path: string, workspaceId: string, body?: unknown): Promise<void> {
+  async function post(
+    path: string,
+    workspaceId: string,
+    scopes: string[],
+    body?: unknown
+  ): Promise<void> {
     const response = await send(`${base}${path}`, {
       method: 'POST',
       headers: {
-        authorization: `Bearer ${await token(workspaceId)}`,
+        authorization: `Bearer ${await token(workspaceId, scopes)}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify(body ?? {}),
@@ -44,7 +50,8 @@ export function createAiIndexer(options: {
 
   return {
     index: ({ workspaceId, sourceType, sourceId }) =>
-      post('/ingest', workspaceId, { sourceType, sourceId }),
-    sweep: (workspaceId) => post('/ingest/sweep', workspaceId),
+      post('/ingest', workspaceId, ['ai:index'], { sourceType, sourceId }),
+    sweep: (workspaceId) => post('/ingest/sweep', workspaceId, ['ai:index']),
+    nightlyReport: (workspaceId) => post('/internal/reports/nightly', workspaceId, ['reports:run']),
   };
 }
