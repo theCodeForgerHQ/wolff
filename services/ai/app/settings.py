@@ -37,6 +37,9 @@ class Settings(BaseModel):
     daily_budget_usd: Decimal = Field(default=Decimal("0.50"), ge=0)
     max_tokens: int = Field(default=1024, gt=0, le=16_384)
     sentry_dsn: str | None = None
+    #: The product's slug (packages/core/src/brand.ts): API key prefixes
+    #: `<slug>_sk_` and the MCP server's name.
+    product_slug: str = Field(default="wolff", pattern=r"^[a-z][a-z0-9-]{1,30}$")
     provider: ProviderProfile = Field(default_factory=lambda: resolve_provider({}))
 
 
@@ -53,6 +56,7 @@ _ENV_NAMES: dict[str, str] = {
     "daily_budget_usd": "AI_DAILY_BUDGET_USD",
     "max_tokens": "AI_MAX_TOKENS",
     "sentry_dsn": "SENTRY_DSN",
+    "product_slug": "PRODUCT_SLUG",
 }
 
 

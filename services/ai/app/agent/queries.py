@@ -10,7 +10,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Table, func, or_, select
+from sqlalchemy import Table, Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.public_models import (
@@ -138,7 +138,7 @@ async def list_leads(
 ) -> list[dict[str, Any]]:
     query = scoped(Lead, ws).order_by(Lead.created_at.desc()).limit(min(limit, MAX_ROWS))
     if status:
-        query = query.where(Lead.status == status)
+        query = query.where(cast(Lead.status, Text) == status)  # enum column
     return [
         {
             "id": lead.id,
