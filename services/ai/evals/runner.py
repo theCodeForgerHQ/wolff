@@ -247,8 +247,21 @@ def leaked(world: World, *outputs: object) -> list[str]:
     return sorted(m for m in world.northlight_markers if m and m in blob)
 
 
+async def spent_today(svc: Services, world: World) -> Decimal:
+    async with svc.sessions() as s:
+        value = await s.scalar(
+            text(
+                "SELECT COALESCE(SUM(cost_usd), 0) FROM ai.usage_daily "
+                "WHERE workspace_id IN (:a, :b) AND day = (now() AT TIME ZONE 'utc')::date"
+            ),
+            {"a": world.kaveri, "b": world.northlight},
+        )
+    return Decimal(str(value))
+
+
 async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
     world = await discover(svc)
+    spent_before = await spent_today(svc, world)
     indexed = await index_everything(svc, world)
     caller = Caller(
         issuer="web",
@@ -342,14 +355,7 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
         leaks += found
         tally.details.append({"kind": "isolation", "q": item["question"], "leaks": found})
 
-    async with svc.sessions() as s:
-        cost = await s.scalar(
-            text(
-                "SELECT COALESCE(SUM(cost_usd), 0) FROM ai.usage_daily WHERE workspace_id IN (:a, :b) "
-                "AND day = CURRENT_DATE"
-            ),
-            {"a": world.kaveri, "b": world.northlight},
-        )
+    cost = await spent_today(svc, world) - spent_before
     latencies = sorted(tally.latencies)
     metrics = {
         "provider": svc.settings.provider.name,
@@ -372,7 +378,8 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
         "isolation_leaks": len(leaks),
         "isolation_refusal_rate": round(refused / len(isolation), 4),
         "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
-        "cost_usd_today": str(Decimal(str(cost))),
+        # The budget gate prices the offline model like gpt-4o-mini.
+        "cost_usd_run": str(cost),
     }
     return {"metrics": metrics, "leaks": sorted(set(leaks)), "details": tally.details}
 
