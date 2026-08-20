@@ -9,9 +9,9 @@ from datetime import datetime
 
 import pandas as pd
 
-BUCKETS = ["current", "bucket_0_30", "bucket_31_60", "bucket_61_90", "bucket_90_plus"]
-SOURCES = ["manual", "widget", "api", "import"]
-LEAD_FEATURE_COLUMNS = [
+BUCKETS: list[str] = ["current", "bucket_0_30", "bucket_31_60", "bucket_61_90", "bucket_90_plus"]
+SOURCES: list[str] = ["manual", "widget", "api", "import"]
+LEAD_FEATURE_COLUMNS: list[str] = [
     "lead_id",
     "has_email",
     "has_phone",
@@ -95,10 +95,10 @@ def lead_score_features(leads: pd.DataFrame, deals: pd.DataFrame, now: datetime)
     created = pd.to_datetime(leads["created_at"])
     out["age_days"] = ((pd.Timestamp(now) - created).dt.total_seconds() / 86_400).round(1)
     for source in SOURCES:
-        out[f"source_{source}"] = (leads["source"] == source).astype(int)
+        out[f"source_{source}"] = (leads["source"] == source).fillna(False).astype(int)
     out["has_deal"] = leads["id"].isin(values.index).astype(int)
     out["deal_value"] = leads["id"].map(values).fillna(0.0).astype(float)
-    out["converted"] = (leads["status"] == "converted").astype(int)
+    out["converted"] = (leads["status"] == "converted").fillna(False).astype(int)
     return out[LEAD_FEATURE_COLUMNS].reset_index(drop=True)
 
 

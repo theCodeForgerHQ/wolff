@@ -11,6 +11,7 @@ from starlette.types import Receive, Scope, Send
 from app.api import chat, drafts, ingest, reports, search
 from app.api.deps import install_error_handlers
 from app.mcp.server import build_mcp_server, mcp_http_app
+from app.observability import init_observability
 from app.services import Services, build_services
 from app.settings import Settings, load_settings
 
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     app.mount("/mcp", mcp_endpoint)
     install_error_handlers(app)
+    app.state.observability = init_observability(app, resolved)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
