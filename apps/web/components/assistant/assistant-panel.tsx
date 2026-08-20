@@ -392,7 +392,9 @@ export function AssistantPanel({
                   </ul>
                 )}
                 <Button asChild size="sm">
-                  <Link href={draft.builderUrl}>Open in builder</Link>
+                  <Link href={draft.builderUrl} onClick={() => onOpenChange(false)}>
+                    Open in builder
+                  </Link>
                 </Button>
               </motion.section>
             )}
