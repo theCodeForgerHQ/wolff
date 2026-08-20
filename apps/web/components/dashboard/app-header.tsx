@@ -26,6 +26,7 @@ import {
 } from '@/lib/notifications/actions';
 
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { AssistantLauncher } from '@/components/assistant/assistant-launcher';
 import { SearchCommand } from '@/components/shared/search-command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -272,6 +273,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
           <SearchCommand open={commandOpen} onOpenChange={setCommandOpen} />
 
           {/* Theme Toggle */}
+          <AssistantLauncher />
           <ThemeToggle />
 
           {/* Notifications */}
