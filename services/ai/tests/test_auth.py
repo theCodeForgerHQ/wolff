@@ -104,7 +104,7 @@ async def test_rejects(bad: dict[str, Any]) -> None:
 
 
 async def test_rejects_garbage_and_unsigned_tokens() -> None:
-    unsigned = jwt.encode({"iss": "web"}, key=None, algorithm="none", headers={"kid": "web"})
+    unsigned = jwt.encode({"iss": "web"}, key="", algorithm="none", headers={"kid": "web"})
     for value in ["", "not-a-jwt", "a.b.c", unsigned]:
         with pytest.raises(AuthError):
             await verifier().verify(value)
