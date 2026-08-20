@@ -22,6 +22,7 @@ def test_tracing_instruments_the_app_when_an_endpoint_is_set() -> None:
         assert getattr(app, "_is_instrumented_by_opentelemetry", False)
     finally:
         FastAPIInstrumentor.uninstrument_app(app)
+        app.state.tracer_provider.shutdown()
 
 
 def test_events_are_scrubbed() -> None:
