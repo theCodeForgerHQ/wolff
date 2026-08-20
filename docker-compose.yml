@@ -10,8 +10,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-wolff}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wolff_dev_only}
       POSTGRES_DB: ${POSTGRES_DB:-wolff}
+      # Password of the AI service's login, created by infra/db/bootstrap.sql
+      # on a fresh volume. On an existing volume run it once by hand:
+      #   docker exec -i -e AI_DB_PASSWORD=... wolff-postgres psql -U wolff -d wolff -f - < infra/db/bootstrap.sql
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD:-ai_dev_only}
     volumes:
       - postgres17_data:/var/lib/postgresql/data
+      - ./infra/db/bootstrap.sql:/docker-entrypoint-initdb.d/10-ai-roles.sql:ro
     ports:
       # Bug #158: Bind to localhost only to prevent network exposure
       - '127.0.0.1:5432:5432'
@@ -42,6 +47,43 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1 # Dev-only: accept any SMTP credentials
       MP_SMTP_AUTH_ALLOW_INSECURE: 1 # Dev-only: allow plaintext auth
+
+  # AI service. Needs the Prisma migrations applied first
+  # (`pnpm db:migrate:deploy`); ai-migrate then creates the `ai` tables.
+  # LLM_PROVIDER defaults to the offline `fake` model; set gemini or openai
+  # and the matching key in .env for real answers.
+  ai-migrate:
+    build: ./services/ai
+    command: ['alembic', 'upgrade', 'head']
+    environment:
+      AI_DATABASE_URL: postgresql://ai_service:${AI_DB_PASSWORD:-ai_dev_only}@postgres:5432/${POSTGRES_DB:-wolff}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  ai:
+    build: ./services/ai
+    container_name: wolff-ai
+    restart: unless-stopped
+    environment:
+      AI_DATABASE_URL: postgresql://ai_service:${AI_DB_PASSWORD:-ai_dev_only}@postgres:5432/${POSTGRES_DB:-wolff}
+      REDIS_URL: redis://redis:6379
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SVC_JWT_SECRET_WEB: ${SVC_JWT_SECRET_WEB:-}
+      SVC_JWT_SECRET_WORKER: ${SVC_JWT_SECRET_WORKER:-}
+      SVC_JWT_SECRET_AI: ${SVC_JWT_SECRET_AI:-}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://host.docker.internal:4000}
+      AI_PUBLIC_URL: http://localhost:8000
+    ports:
+      - '127.0.0.1:8000:8000'
+    depends_on:
+      ai-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
 volumes:
   postgres17_data:
