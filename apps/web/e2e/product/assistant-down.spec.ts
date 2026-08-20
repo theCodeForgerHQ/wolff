@@ -12,10 +12,11 @@ test.describe('with the AI service down', () => {
     const status = await request.get('/api/assistant/status');
     expect(await status.json()).toEqual({ available: false });
 
+    // The launcher asks for the status once on mount; wait for that answer.
+    const statusSeen = page.waitForResponse((r) => r.url().endsWith('/api/assistant/status'));
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    // The launcher asks for the status once on mount; give it a moment.
-    await page.waitForResponse((r) => r.url().endsWith('/api/assistant/status'));
+    await statusSeen;
     await expect(page.getByRole('button', { name: 'Open the assistant' })).toHaveCount(0);
 
     await page.goto('/analytics');
