@@ -10,6 +10,7 @@ similarity, Postgres full-text rank and recency, and the best 6 kept.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -29,6 +30,9 @@ TOP_K = 6
 MIN_SIMILARITY = 0.15
 RECENCY_HALF_LIFE_DAYS = 180.0
 WEIGHTS = (0.75, 0.15, 0.10)  # similarity, text rank, recency
+
+#: Document numbers such as Q-KS-001, INV/26-27/0001 or CN-0001.
+_NUMBER = re.compile(r"\b[A-Z]{1,5}(?:[-/][A-Z0-9]{1,6}){1,3}\b")
 
 Embed = Callable[[Sequence[str]], Awaitable[list[list[float]]]]
 
@@ -76,22 +80,39 @@ class WorkspaceRetriever(BaseRetriever):
         if self.source_types:
             statement = statement.where(DocumentChunk.source_type.in_(self.source_types))
 
+        numbers = sorted(set(_NUMBER.findall(query)))
         async with self.sessions() as session, session.begin():
             await session.execute(text("SET LOCAL hnsw.ef_search = 64"))
             await session.execute(text("SET LOCAL hnsw.iterative_scan = relaxed_order"))
-            rows = (await session.execute(statement)).all()
+            rows = list((await session.execute(statement)).all())
+            if numbers:
+                # Exact document numbers are the strongest signal a query can
+                # carry, and embeddings blur them: also take the chunks of
+                # documents whose number the query names (same filters).
+                exact = (
+                    statement.order_by(None)
+                    .where(DocumentChunk.metadata_["number"].astext.in_(numbers))
+                    .order_by(DocumentChunk.chunk_index)
+                    .limit(TOP_K)
+                )
+                seen = {row[0].id for row in rows}
+                rows += [
+                    row for row in (await session.execute(exact)).all() if row[0].id not in seen
+                ]
 
         now = datetime.now(UTC)
         scored: list[tuple[float, Document]] = []
         for row in rows:
             chunk: DocumentChunk = row[0]
             similarity, text_rank = float(row[1]), float(row[2])
-            if similarity < MIN_SIMILARITY:
+            named = chunk.metadata_.get("number") in numbers
+            if similarity < MIN_SIMILARITY and not named:
                 continue
             score = (
                 WEIGHTS[0] * similarity
                 + WEIGHTS[1] * min(text_rank * 10, 1.0)
                 + WEIGHTS[2] * _recency(chunk.updated_at, now)
+                + (1.0 if named else 0.0)
             )
             scored.append(
                 (

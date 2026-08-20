@@ -361,6 +361,9 @@ importers:
       isomorphic-dompurify:
         specifier: ^3.0.0
         version: 3.19.0(@noble/hashes@1.8.0)
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.3.0)

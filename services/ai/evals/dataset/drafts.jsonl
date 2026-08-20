@@ -1,0 +1,14 @@
+{"brief": "Draft a quote for Aufderhar Group: logo design and brand identity design", "client": "Aufderhar Group", "expect_lines": ["Logo design", "Brand identity design"]}
+{"brief": "Draft a quote for Barton LLC: a landing page build", "client": "Barton LLC", "expect_lines": ["Landing page build"]}
+{"brief": "Draft a quote for Cormier - West: an SEO audit", "client": "Cormier - West", "expect_lines": ["SEO audit"]}
+{"brief": "Draft a quote for Emmerich, Will and Barrows: social media management for three months", "client": "Emmerich, Will and Barrows", "expect_lines": ["Social media management"]}
+{"brief": "Draft a quote for Haley, Kunze and Schulist: a mobile app prototype", "client": "Haley, Kunze and Schulist", "expect_lines": ["Mobile app prototype"]}
+{"brief": "Draft a quote for Heaney - Powlowski: a UX research sprint", "client": "Heaney - Powlowski", "expect_lines": ["UX research sprint"]}
+{"brief": "Draft a quote for Hessel - Hermann: website design for five pages", "client": "Hessel - Hermann", "expect_lines": ["Website design (per page)"]}
+{"brief": "Draft a quote for Hilpert - Wolf: copywriting for the website", "client": "Hilpert - Wolf", "expect_lines": ["Copywriting (per 1,000 words)"]}
+{"brief": "Draft a quote for Lockman - Thiel: logo design", "client": "Lockman - Thiel", "expect_lines": ["Logo design"]}
+{"brief": "Draft a quote for Orn Group: an SEO audit and a landing page build", "client": "Orn Group", "expect_lines": ["SEO audit", "Landing page build"]}
+{"brief": "Draft a quote for Wiegand, Kunze and Schulist: brand identity design", "client": "Wiegand, Kunze and Schulist", "expect_lines": ["Brand identity design"]}
+{"brief": "Draft a quote for Nonexistent Traders Pvt Ltd: logo design", "refuse": true}
+{"brief": "Draft a quote for Imaginary Foods: an SEO audit", "refuse": true}
+{"brief": "Draft a quote for Treutel and Sons: brand identity design", "refuse": true}

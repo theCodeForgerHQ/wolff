@@ -1,0 +1,456 @@
+"""Eval runner.
+
+    AI_EVAL_DATABASE_URL=postgresql://ai_service:...@.../demo uv run python -m evals.runner
+
+Runs the dataset in evals/dataset against a demo-seeded database as
+Kaveri Studio, with whatever LLM_PROVIDER is set (``fake`` for the
+recorded run; ``gemini`` or ``openai`` for a live run). It indexes both
+demo workspaces, then measures:
+
+- retrieval recall@6: the expected document is among the retriever's 6;
+- citation precision: cited documents that are expected ones;
+- answer correctness: expected strings in the answer (RAG and SQL; the
+  SQL expectations come from a pandas oracle over the report views);
+- schema-valid rate: drafts whose structured output validated;
+- GST inputs exact: drafted rate-card lines sent for pricing with the
+  card's SAC code and GST rate (GST itself is priced by apps/api, which
+  this runner replaces with a recording stand-in, so it never writes);
+- client grounding: valid briefs drafted for the right client, and
+  briefs naming an unknown or another workspace's client refused;
+- isolation leaks: Northlight data in any answer or citation (must be 0);
+- p95 latency and cost of the run.
+
+Results go to ai.eval_runs (one row per provider, R30) and to a JSON file.
+Exit code 1 when a threshold fails: recall >= 0.85, schema-valid 1.0,
+leaks 0.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from decimal import Decimal
+from pathlib import Path
+from typing import Any
+
+import httpx2
+import pandas as pd
+from sqlalchemy import text
+
+from app.agent.api_client import ApiClient
+from app.agent.chat import run_chat
+from app.agent.quote_agent import DraftError, draft_quote
+from app.auth import Caller
+from app.budget import metered
+from app.db.models import EvalRun
+from app.rag.ingest import ingest
+from app.rag.retriever import WorkspaceRetriever
+from app.services import Services, build_services
+from app.settings import load_settings
+
+DATASET = Path(__file__).parent / "dataset"
+RESULTS = Path(__file__).parent / "results"
+THRESHOLDS = {"recall_at_6": 0.85, "schema_valid_rate": 1.0, "isolation_leaks": 0}
+KAVERI, NORTHLIGHT = "kaveri-studio", "northlight-design"
+EVAL_SECRET = "eval-" + "0" * 59
+
+
+def load(name: str) -> list[dict[str, Any]]:
+    lines = (DATASET / f"{name}.jsonl").read_text(encoding="utf-8").splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+
+def dataset_version() -> str:
+    digest = hashlib.sha256()
+    for path in sorted(DATASET.glob("*.jsonl")):
+        digest.update(path.name.encode() + path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+class RecordingApi:
+    """apps/api stand-in: records what would be sent, writes nothing."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def handler(self, request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        self.calls.append((request.url.path, body))
+        if request.url.path.endswith("/quotes/draft"):
+            data: dict[str, Any] = {"quoteId": "eval-draft", "quoteNumber": "EVAL"}
+        else:
+            data = {"invoice": {}, "lines": []}
+        return httpx2.Response(200, json={"success": True, "data": data})
+
+
+@dataclass
+class World:
+    kaveri: str
+    northlight: str
+    user: str
+    ids: dict[tuple[str, str], str]
+    northlight_markers: set[str]
+    rate_cards: dict[str, dict[str, Any]]
+
+
+@dataclass
+class Tally:
+    latencies: list[float] = field(default_factory=list)
+    details: list[dict[str, Any]] = field(default_factory=list)
+
+
+async def discover(svc: Services) -> World:
+    async with svc.sessions() as s:
+
+        async def one(sql: str, **p: Any) -> Any:
+            return (await s.execute(text(sql), p)).scalar_one()
+
+        async def pairs(sql: str, **p: Any) -> list[Any]:
+            return list((await s.execute(text(sql), p)).all())
+
+        kaveri = await one("SELECT id FROM workspaces WHERE slug = :s", s=KAVERI)
+        northlight = await one("SELECT id FROM workspaces WHERE slug = :s", s=NORTHLIGHT)
+        user = await one("SELECT owner_id FROM workspaces WHERE id = :w", w=kaveri)
+        ids: dict[tuple[str, str], str] = {}
+        for number, id_ in await pairs(
+            "SELECT quote_number, id FROM quotes WHERE workspace_id = :w", w=kaveri
+        ):
+            ids[("quote", number)] = id_
+        for number, id_ in await pairs(
+            "SELECT invoice_number, id FROM invoices WHERE workspace_id = :w", w=kaveri
+        ):
+            ids[("invoice", number)] = id_
+        for name, id_ in await pairs(
+            "SELECT c.name, ci.id FROM contract_instances ci JOIN clients c ON c.id = ci.client_id "
+            "WHERE ci.workspace_id = :w",
+            w=kaveri,
+        ):
+            ids[("contract", name)] = id_
+        for name, id_ in await pairs(
+            "SELECT name, id FROM clients WHERE workspace_id = :w", w=kaveri
+        ):
+            ids[("client_note", name)] = id_
+            ids[("client", name)] = id_
+        markers = {northlight, "INV-NL-001", "NL-CONFIDENTIAL-ROYALTY", "7% royalty"}
+        for (value,) in await pairs(
+            "SELECT id FROM clients WHERE workspace_id = :w UNION ALL SELECT name FROM clients "
+            "WHERE workspace_id = :w UNION ALL SELECT id FROM invoices WHERE workspace_id = :w "
+            "UNION ALL SELECT id FROM contract_instances WHERE workspace_id = :w",
+            w=northlight,
+        ):
+            markers.add(value)
+        cards = {
+            r.name: {"id": r.id, "hsn": r.hsn_sac, "gst": float(r.gst_rate)}
+            for r in await pairs(
+                "SELECT id, name, hsn_sac, gst_rate FROM rate_cards WHERE workspace_id = :w",
+                w=kaveri,
+            )
+        }
+    return World(kaveri, northlight, user, ids, markers, cards)
+
+
+async def index_everything(svc: Services, world: World) -> int:
+    count = 0
+    async with svc.sessions() as s:
+        sources = (
+            await s.execute(
+                text(
+                    "SELECT 'quote', id, workspace_id FROM quotes WHERE workspace_id IN (:a, :b) "
+                    "UNION ALL SELECT 'invoice', id, workspace_id FROM invoices WHERE workspace_id IN (:a, :b) "
+                    "UNION ALL SELECT 'contract', id, workspace_id FROM contract_instances "
+                    "WHERE workspace_id IN (:a, :b) UNION ALL SELECT 'client_note', id, workspace_id "
+                    "FROM clients WHERE workspace_id IN (:a, :b) AND notes IS NOT NULL"
+                ),
+                {"a": world.kaveri, "b": world.northlight},
+            )
+        ).all()
+    for row in sources:
+        kind, source, ws = str(row[0]), str(row[1]), str(row[2])
+        with metered(ws):
+            async with svc.sessions() as s:
+                await ingest(
+                    s,
+                    workspace_id=ws,
+                    source_type=kind,
+                    source_id=source,
+                    embed=svc.llm.embed,
+                    embedding_model=svc.settings.provider.embed_model,
+                )
+        count += 1
+    return count
+
+
+async def oracle(svc: Services, world: World, name: str) -> list[str]:
+    """Expected strings for a SQL question, from the views with pandas."""
+    async with svc.sessions() as s:
+
+        async def frame(sql: str) -> pd.DataFrame:
+            result = await s.execute(text(sql), {"w": world.kaveri})
+            return pd.DataFrame(result.mappings().all())
+
+        ageing = await frame(
+            "SELECT v.invoice_number, v.days_overdue, v.amount_due, v.bucket, c.name AS client "
+            "FROM v_receivables_ageing v JOIN clients c ON c.id = v.client_id "
+            "WHERE v.workspace_id = :w"
+        )
+        if name == "overdue":
+            overdue = ageing[ageing["days_overdue"] > 0].sort_values(
+                "days_overdue", ascending=False
+            )
+            return list(overdue["invoice_number"].head(3))
+        if name == "top_debtor":
+            owed = ageing.groupby("client")["amount_due"].sum().sort_values(ascending=False)
+            return [str(owed.index[0])]
+        if name == "ageing":
+            return sorted(set(ageing["bucket"])) if "bucket" in ageing else []
+        if name == "gst":
+            gst = await frame("SELECT gst_rate FROM v_gst_outward_supplies WHERE workspace_id = :w")
+            return [f'"gst_rate": {float(r)}' for r in sorted(set(gst["gst_rate"]))][:1]
+        if name == "leads":
+            leads = await frame(
+                "SELECT name FROM leads WHERE workspace_id = :w AND deleted_at IS NULL "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            return [str(leads["name"].iloc[0])]
+        if name == "deals":
+            deals = await frame(
+                "SELECT title FROM deals WHERE workspace_id = :w AND deleted_at IS NULL "
+                "ORDER BY updated_at DESC LIMIT 1"
+            )
+            return [str(deals["title"].iloc[0])]
+    raise ValueError(name)
+
+
+async def ask(
+    svc: Services, caller: Caller, question: str
+) -> tuple[str, list[dict[str, Any]], float]:
+    started = time.monotonic()
+    tokens: list[str] = []
+    citations: list[dict[str, Any]] = []
+    async for event in run_chat(svc, caller, question):
+        if event.event == "token":
+            tokens.append(str(event.data["text"]))
+        elif event.event == "citation":
+            citations.append(event.data)
+    return "".join(tokens), citations, (time.monotonic() - started) * 1000
+
+
+def leaked(world: World, *outputs: object) -> list[str]:
+    blob = json.dumps(outputs, default=str)
+    return sorted(m for m in world.northlight_markers if m and m in blob)
+
+
+async def spent_today(svc: Services, world: World) -> Decimal:
+    async with svc.sessions() as s:
+        value = await s.scalar(
+            text(
+                "SELECT COALESCE(SUM(cost_usd), 0) FROM ai.usage_daily "
+                "WHERE workspace_id IN (:a, :b) AND day = (now() AT TIME ZONE 'utc')::date"
+            ),
+            {"a": world.kaveri, "b": world.northlight},
+        )
+    return Decimal(str(value))
+
+
+async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
+    world = await discover(svc)
+    spent_before = await spent_today(svc, world)
+    indexed = await index_everything(svc, world)
+    caller = Caller(
+        issuer="web",
+        workspace_id=world.kaveri,
+        user_id=world.user,
+        scopes=frozenset({"ai:use", "quotes:write"}),
+    )
+    tally = Tally()
+    leaks: list[str] = []
+
+    hits = correct_rag = cited_total = cited_good = 0
+    rag = load("rag")
+    for item in rag:
+        wanted = {
+            world.ids[(src["type"], src.get("number") or src["client"])] for src in item["sources"]
+        }
+        with metered(world.kaveri):
+            docs = await WorkspaceRetriever(
+                sessions=svc.sessions,
+                workspace_id=world.kaveri,
+                embed=svc.llm.embed,
+                embedding_model=svc.settings.provider.embed_model,
+            ).search(item["question"])
+        hit = bool(wanted & {d.metadata["source_id"] for d in docs})
+        hits += hit
+        answer, citations, ms = await ask(svc, caller, item["question"])
+        tally.latencies.append(ms)
+        good = all(e.lower() in answer.lower() for e in item["expect"])
+        correct_rag += good
+        cited_total += len(citations)
+        cited_good += sum(c["source_id"] in wanted for c in citations)
+        leaks += leaked(world, answer, citations, [d.page_content for d in docs])
+        tally.details.append({"kind": "rag", "q": item["question"], "hit": hit, "correct": good})
+
+    correct_sql = 0
+    sql = load("sql")
+    for item in sql:
+        expect = await oracle(svc, world, item["oracle"])
+        answer, _, ms = await ask(svc, caller, item["question"])
+        tally.latencies.append(ms)
+        good = all(e in answer for e in expect)
+        correct_sql += good
+        leaks += leaked(world, answer)
+        tally.details.append({"kind": "sql", "q": item["question"], "correct": good})
+
+    drafts = load("drafts")
+    schema_valid = grounded = gst_exact = gst_lines = 0
+    for item in drafts:
+        api.calls.clear()
+        started = time.monotonic()
+        try:
+            result = await draft_quote(svc, caller, item["brief"])
+            outcome, draft = "drafted", result.draft
+        except DraftError as exc:
+            outcome, draft = exc.code, None
+        tally.latencies.append((time.monotonic() - started) * 1000)
+        schema_valid += outcome != "invalid_output"
+        if item.get("refuse"):
+            grounded += outcome == "unknown_client"
+        elif draft is not None:
+            grounded += draft.client_id == world.ids.get(("client", item["client"]))
+            sent: dict[str, Any] = next(
+                (b for p, b in api.calls if p.endswith("/gst/compute")), {"lines": []}
+            )
+            for line, priced in zip(draft.line_items, sent["lines"], strict=False):
+                card = world.rate_cards.get(line.name)
+                if line.source == "rate_card" and card:
+                    gst_lines += 1
+                    gst_exact += (
+                        priced.get("hsnSac") == card["hsn"] and priced["gstRate"] == card["gst"]
+                    )
+        leaks += leaked(world, outcome, draft.model_dump() if draft else None)
+        tally.details.append({"kind": "draft", "brief": item["brief"], "outcome": outcome})
+
+    isolation = load("isolation")
+    refused = 0
+    for item in isolation:
+        if item["question"].startswith("Draft a quote"):
+            try:
+                await draft_quote(svc, caller, item["question"])
+                outcome = "drafted"
+            except DraftError as exc:
+                outcome = exc.code
+            found = leaked(world, outcome)
+            refused += outcome == "unknown_client"
+        else:
+            answer, citations, ms = await ask(svc, caller, item["question"])
+            tally.latencies.append(ms)
+            found = leaked(world, answer, citations)
+            refused += not found
+        leaks += found
+        tally.details.append({"kind": "isolation", "q": item["question"], "leaks": found})
+
+    cost = await spent_today(svc, world) - spent_before
+    latencies = sorted(tally.latencies)
+    metrics = {
+        "provider": svc.settings.provider.name,
+        "chat_model": svc.settings.provider.chat_model,
+        "embed_model": svc.settings.provider.embed_model,
+        "documents_indexed": indexed,
+        "items": {
+            "rag": len(rag),
+            "sql": len(sql),
+            "drafts": len(drafts),
+            "isolation": len(isolation),
+        },
+        "recall_at_6": round(hits / len(rag), 4),
+        "citation_precision": round(cited_good / cited_total, 4) if cited_total else None,
+        "answer_correctness_rag": round(correct_rag / len(rag), 4),
+        "answer_correctness_sql": round(correct_sql / len(sql), 4),
+        "schema_valid_rate": round(schema_valid / len(drafts), 4),
+        "gst_inputs_exact": round(gst_exact / gst_lines, 4) if gst_lines else None,
+        "client_grounding": round(grounded / len(drafts), 4),
+        "isolation_leaks": len(leaks),
+        "isolation_refusal_rate": round(refused / len(isolation), 4),
+        "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
+        # The budget gate prices the offline model like gpt-4o-mini.
+        "cost_usd_run": str(cost),
+    }
+    return {"metrics": metrics, "leaks": sorted(set(leaks)), "details": tally.details}
+
+
+def failures(metrics: dict[str, Any]) -> list[str]:
+    out = []
+    if metrics["recall_at_6"] < THRESHOLDS["recall_at_6"]:
+        out.append(f"recall@6 {metrics['recall_at_6']} < {THRESHOLDS['recall_at_6']}")
+    if metrics["schema_valid_rate"] < THRESHOLDS["schema_valid_rate"]:
+        out.append(f"schema-valid {metrics['schema_valid_rate']} < 1.0")
+    if metrics["isolation_leaks"] > THRESHOLDS["isolation_leaks"]:
+        out.append(f"isolation leaks {metrics['isolation_leaks']} > 0")
+    return out
+
+
+def git_sha() -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+async def run(url: str, write_file: bool = True) -> dict[str, Any]:
+    env = dict(os.environ)
+    settings = load_settings(
+        {**env, "AI_DATABASE_URL": url, "AI_DAILY_BUDGET_USD": env.get("AI_DAILY_BUDGET_USD", "5")}
+    )
+    api = RecordingApi()
+    client = ApiClient(
+        "http://api.eval",
+        EVAL_SECRET,
+        httpx2.AsyncClient(transport=httpx2.MockTransport(api.handler)),
+    )
+    svc = build_services(settings, api=client)
+    try:
+        report = await evaluate(svc, api)
+        report["git_sha"] = git_sha()
+        report["dataset_version"] = dataset_version()
+        report["created_at"] = datetime.now(UTC).isoformat(timespec="seconds")
+        report["failures"] = failures(report["metrics"])
+        async with svc.sessions() as s, s.begin():
+            s.add(
+                EvalRun(
+                    git_sha=report["git_sha"],
+                    dataset_version=report["dataset_version"],
+                    provider=settings.provider.name,
+                    metrics=report["metrics"],
+                )
+            )
+    finally:
+        await svc.aclose()
+    if write_file:
+        RESULTS.mkdir(exist_ok=True)
+        path = RESULTS / f"{settings.provider.name}-{report['created_at'][:10]}.json"
+        path.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+        report["file"] = str(path)
+    return report
+
+
+def main() -> int:
+    report = asyncio.run(run(os.environ["AI_EVAL_DATABASE_URL"]))
+    print(json.dumps(report["metrics"], indent=2))
+    for failure in report["failures"]:
+        print("FAIL:", failure, file=sys.stderr)
+    return 1 if report["failures"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

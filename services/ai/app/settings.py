@@ -37,6 +37,8 @@ class Settings(BaseModel):
     daily_budget_usd: Decimal = Field(default=Decimal("0.50"), ge=0)
     max_tokens: int = Field(default=1024, gt=0, le=16_384)
     sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = Field(default=0.1, ge=0, le=1)
+    otel_exporter_otlp_endpoint: str | None = None
     #: The product's slug (packages/core/src/brand.ts): API key prefixes
     #: `<slug>_sk_` and the MCP server's name.
     #: Where nightly reports are written (S3 arrives with Phase 6's infra).
@@ -58,6 +60,8 @@ _ENV_NAMES: dict[str, str] = {
     "daily_budget_usd": "AI_DAILY_BUDGET_USD",
     "max_tokens": "AI_MAX_TOKENS",
     "sentry_dsn": "SENTRY_DSN",
+    "sentry_traces_sample_rate": "SENTRY_TRACES_SAMPLE_RATE",
+    "otel_exporter_otlp_endpoint": "OTEL_EXPORTER_OTLP_ENDPOINT",
     "product_slug": "PRODUCT_SLUG",
     "reports_dir": "AI_REPORTS_DIR",
 }

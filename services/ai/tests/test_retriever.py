@@ -120,3 +120,16 @@ async def test_search_endpoint_is_scoped_to_the_token(
         "/search", json={"query": "x"}, headers={"authorization": f"Bearer {no_scope}"}
     )
     assert r.status_code == 403
+
+
+@requires_db
+async def test_a_named_document_number_is_found_in_the_callers_workspace_only(
+    migrated: AsyncEngine, indexed: tuple[Seeded, Seeded]
+) -> None:
+    a, b = indexed
+    docs = await retriever(migrated, a).search("What does Q-A-001 include?")
+    assert docs[0].metadata["source_id"] == a.quote_id
+    assert all(
+        d.metadata["source_id"] != a.quote_id
+        for d in await retriever(migrated, b).search("What does Q-A-001 include?")
+    )
