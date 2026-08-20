@@ -31,6 +31,10 @@ export const E2E_ENV = {
   GOOGLE_CLIENT_SECRET: 'wolff-e2e-google-secret',
   AUTH_GOOGLE_ISSUER: 'http://localhost:9099',
   ENCRYPTION_KEY: 'e2e0'.repeat(16),
+  // The AI service is configured but down (a closed port) for the whole
+  // run: every flow here must pass without it.
+  AI_URL: 'http://127.0.0.1:9',
+  SVC_JWT_SECRET_WEB: 'e2e-web-'.repeat(8),
 } as const;
 
 const PRODUCT_AUTH_FILE = path.join(__dirname, 'e2e/.auth/product-user.json');

@@ -116,7 +116,8 @@ describe('AssistantPanel', () => {
         },
       })
     );
-    render(<AssistantPanel open onOpenChange={() => {}} />);
+    const onOpenChange = vi.fn();
+    render(<AssistantPanel open onOpenChange={onOpenChange} />);
     await click('tab', 'Draft a quote');
     type('Quote brief', 'Draft a quote for Acme: logo');
     await click('button', 'Draft');
@@ -129,6 +130,9 @@ describe('AssistantPanel', () => {
       '/quotes/q7/builder'
     );
     expect(fetchMock.mock.calls[0]![0]).toBe('/api/assistant/drafts');
+    // The sheet is modal: it must close, or the builder behind it is inert.
+    fireEvent.click(screen.getByRole('link', { name: 'Open in builder' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('explains a refused draft', async () => {
