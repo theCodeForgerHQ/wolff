@@ -15,6 +15,8 @@ concurrency:
 
 env:
   DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff
+  # Password of the AI service's login, created by infra/db/bootstrap.sql.
+  AI_DB_PASSWORD: ai_ci_only
   SHADOW_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_shadow
   NEXTAUTH_SECRET: ci-test-secret
   NEXTAUTH_URL: http://localhost:3000
@@ -115,13 +117,91 @@ jobs:
         run: pnpm db:migrate:deploy
       - name: Migrations must match schema.prisma (empty diff)
         run: pnpm db:migrate:check
+      - name: Create the AI service's roles
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.5'
+      - name: Alembic migrations for the ai schema, then `alembic check` (empty diff)
+        working-directory: services/ai
+        env:
+          AI_DATABASE_URL: postgresql://ai_service:${{ env.AI_DB_PASSWORD }}@localhost:5432/wolff
+        run: |
+          uv run --frozen alembic upgrade head
+          uv run --frozen alembic check
       - name: Seed the migrated database
         run: pnpm db:seed
+
+  ai:
+    name: AI service (ruff, mypy, pytest, evals)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.2-pg17
+        env:
+          POSTGRES_USER: wolff
+          POSTGRES_PASSWORD: wolff
+          POSTGRES_DB: wolff
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      AI_TEST_DATABASE_URL: postgresql://ai_service:ai_ci_only@localhost:5432/wolff
+      AI_TEST_ADMIN_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff
+      EVAL_ADMIN_URL: postgresql://wolff:wolff@localhost:5432/wolff_eval
+      # Not AI_EVAL_DATABASE_URL: that would switch the eval test on in the
+      # plain pytest step, before the eval database exists.
+      EVAL_DATABASE_URL: postgresql://ai_service:ai_ci_only@localhost:5432/wolff_eval
+    defaults:
+      run:
+        working-directory: services/ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.5'
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen ruff format --check .
+      - run: uv run --frozen mypy
+      - name: Migrate the test database (Prisma, roles, Alembic)
+        run: |
+          pnpm db:migrate:deploy
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
+          (cd services/ai && AI_DATABASE_URL="$AI_TEST_DATABASE_URL" uv run --frozen alembic upgrade head)
+        working-directory: .
+      - name: pytest (schema contract, isolation suite, MCP in-memory client, everything else)
+        run: uv run --frozen pytest -q
+      - name: Isolation suite on its own (must report 0 leaks)
+        run: uv run --frozen pytest -q -m isolation
+      - name: Demo-seeded database for the evals
+        run: |
+          psql "$DATABASE_URL" -c 'CREATE DATABASE wolff_eval'
+          DATABASE_URL="$EVAL_ADMIN_URL" pnpm db:migrate:deploy
+          DATABASE_URL="$EVAL_ADMIN_URL" pnpm --filter @wolff/database seed:demo
+          psql "$EVAL_ADMIN_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
+          (cd services/ai && AI_DATABASE_URL="$EVAL_DATABASE_URL" uv run --frozen alembic upgrade head)
+        working-directory: .
+      - name: Evals against recorded behaviour (offline model, thresholds)
+        run: AI_EVAL_DATABASE_URL="$EVAL_DATABASE_URL" uv run --frozen pytest -q -m eval
+      - name: AI service image builds
+        run: docker build -t ai:ci .
 
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, migrations]
+    needs: [lint, type-check, test, migrations, ai]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -173,6 +253,7 @@ jobs:
     env:
       E2E_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_e2e
       VISUAL_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_visual
+      ASSISTANT_DATABASE_URL: postgresql://wolff:wolff@localhost:5432/wolff_assistant
       STRIPE_MOCK_URL: http://localhost:12111
     steps:
       - uses: actions/checkout@v4
@@ -187,24 +268,35 @@ jobs:
         run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - name: Migrate and seed one database per suite
         run: |
-          for url in "$E2E_DATABASE_URL" "$VISUAL_DATABASE_URL"; do
+          for url in "$E2E_DATABASE_URL" "$VISUAL_DATABASE_URL" "$ASSISTANT_DATABASE_URL"; do
             psql "$DATABASE_URL" -c "CREATE DATABASE ${url##*/}"
             DATABASE_URL="$url" pnpm db:migrate:deploy
             DATABASE_URL="$url" pnpm db:seed
           done
+          psql "$ASSISTANT_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.5'
+      - run: uv sync --frozen
+        working-directory: services/ai
       - name: Build (the payment flow needs a publishable key at build time)
         run: pnpm build
         env:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_wolffE2E
       - run: pnpm --filter @wolff/web exec playwright install --with-deps chromium
       # Projects: flows (signed out: login, quote -> paid, CSP), setup +
-      # product (signed in: lead -> paid, Kanban keyboard, automations, axe)
-      # and widget (the built embed on its preview server: axe, perf). The
-      # config starts `next start` and the widget preview itself.
-      - name: E2E flows, product and widget projects
+      # product (signed in: lead -> paid, Kanban keyboard, automations, axe,
+      # assistant hidden) and widget (the built embed on its preview server:
+      # axe, perf). The config starts `next start` and the widget preview
+      # itself, with AI_URL pointing at a closed port: the AI service is down.
+      - name: E2E flows, product and widget projects (AI service down)
         run: pnpm --filter @wolff/web exec playwright test -c playwright.flows.config.ts
         env:
           DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
+      - name: E2E assistant (web + apps/api + AI service, offline model)
+        run: pnpm --filter @wolff/web exec playwright test -c playwright.assistant.config.ts
+        env:
+          DATABASE_URL: ${{ env.ASSISTANT_DATABASE_URL }}
       - name: Visual regression (10 key pages x 3 widths)
         # Compares against the committed linux baselines. Missing baselines
         # fail the step; record them with apps/web/e2e/visual/run-in-linux.sh.
