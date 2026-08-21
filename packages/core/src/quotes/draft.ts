@@ -66,7 +66,8 @@ function checkLines(lines: DraftQuoteLine[]): void {
 
 /**
  * Creates the draft in one transaction: checks that the client, the deal and
- * every referenced rate card belong to the workspace, numbers the quote,
+ * every referenced rate card belong to the workspace (and the deal to the
+ * client), numbers the quote,
  * links the deal, records a `created` event and asks for AI indexing.
  * Anything wrong throws before a row is written.
  */
@@ -89,9 +90,14 @@ export async function createDraftQuote(
     if (input.dealId) {
       const deal = await tx.deal.findFirst({
         where: { id: input.dealId, workspaceId, deletedAt: null },
-        select: { id: true, quoteId: true },
+        select: { id: true, quoteId: true, clientId: true },
       });
       if (!deal) throw new CoreError('not_found', 'Deal not found');
+      // A deal is quoted to its own client; a draft for another client must
+      // not attach to it.
+      if (deal.clientId && deal.clientId !== client.id) {
+        invalid('dealId', 'The deal belongs to another client');
+      }
       if (deal.quoteId) throw new CoreError('conflict', 'Deal already has a quote');
     }
 

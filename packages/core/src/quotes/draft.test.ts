@@ -12,6 +12,7 @@ describe.skipIf(!url)('createDraftQuote', () => {
   const ids: string[] = [];
   let a: { ws: string; user: string; client: string; card: string; deal: string };
   let b: { ws: string; client: string; card: string; deal: string };
+  let otherClientOfA: string;
 
   async function workspace(label: string) {
     const run = randomUUID();
@@ -66,6 +67,11 @@ describe.skipIf(!url)('createDraftQuote', () => {
   beforeAll(async () => {
     a = await workspace('Draft A');
     b = await workspace('Draft B');
+    otherClientOfA = (
+      await base.client.create({
+        data: { workspaceId: a.ws, name: 'Other client', email: `${randomUUID()}@client.test` },
+      })
+    ).id;
   });
 
   afterAll(async () => {
@@ -105,6 +111,11 @@ describe.skipIf(!url)('createDraftQuote', () => {
   it.each([
     ['a client of another workspace', () => input({ clientId: b.client }), 'not_found'],
     ['a deal of another workspace', () => input({ dealId: b.deal }), 'not_found'],
+    [
+      'a deal of another client of the workspace',
+      () => input({ clientId: otherClientOfA, dealId: a.deal }),
+      'validation_error',
+    ],
     [
       'a rate card of another workspace',
       () =>
