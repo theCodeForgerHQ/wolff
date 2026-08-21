@@ -305,3 +305,24 @@ async def test_a_negative_limit_is_clamped_not_sent_to_postgres(
             assert len(await queries.top_debtors(s, ws_a.workspace_id, -1)) == 1
             assert len(await queries.past_quotes(s, ws_a.workspace_id, None, -1)) == 1
 
+
+@requires_db
+async def test_an_unexpected_error_is_logged_as_an_error(
+    services: Services, ws_a: Seeded, migrated: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def boom(*args: object) -> None:
+        raise RuntimeError("database fell over")
+
+    monkeypatch.setattr(queries, "list_leads", boom)
+    async with mcp_as(services, ws_a) as c:
+        result = await c.call_tool("list_leads", {})
+    assert result.is_error
+    async with migrated.connect() as conn:
+        status = await conn.scalar(
+            text(
+                "SELECT status FROM ai.agent_runs WHERE workspace_id = :w AND kind = 'mcp' "
+                "AND input->>'tool' = 'list_leads' ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"w": ws_a.workspace_id},
+        )
+    assert status == "error"
