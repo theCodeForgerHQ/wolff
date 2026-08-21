@@ -22,7 +22,7 @@ from app.mcp.server import TOOL_NAMES, build_mcp_server
 from app.rag.ingest import ingest
 from app.services import Services
 from tests.conftest import FakeApi, requires_db
-from tests.seed import Seeded
+from tests.seed import KEY_SCOPES, Seeded
 
 
 async def caller_for(svc: Services, raw_key: str) -> Caller:
@@ -176,15 +176,57 @@ async def test_each_tool_checks_its_scope(
             ]:
                 assert "scope" in error_text(await c.call_tool(name, args)), name
     finally:
-        async with admin_engine.begin() as conn:
-            await conn.execute(
-                text(
-                    "UPDATE api_keys SET scopes = ARRAY['ai:use','leads:read','leads:write',"
-                    "'deals:read','deals:write','invoices:read','quotes:read','quotes:write',"
-                    "'reports:read'] WHERE id = :id"
-                ),
-                {"id": ws_a.api_key_id},
+        await set_scopes(admin_engine, ws_a, KEY_SCOPES)
+
+
+async def set_scopes(admin: AsyncEngine, ws: Seeded, scopes: Sequence[str]) -> None:
+    async with admin.begin() as conn:
+        await conn.execute(
+            text("UPDATE api_keys SET scopes = :scopes WHERE id = :id"),
+            {"id": ws.api_key_id, "scopes": list(scopes)},
+        )
+
+
+@requires_db
+async def test_search_documents_returns_only_types_the_key_may_read(
+    services: Services, admin_engine: AsyncEngine, migrated: AsyncEngine, ws_a: Seeded
+) -> None:
+    for kind, source_id in (
+        ("quote", ws_a.quote_id),
+        ("invoice", ws_a.invoice_id),
+        ("contract", ws_a.contract_id),
+        ("client_note", ws_a.client_id),
+    ):
+        async with session_factory(migrated)() as s:
+            await ingest(
+                s,
+                workspace_id=ws_a.workspace_id,
+                source_type=kind,
+                source_id=source_id,
+                embed=embed,
+                embedding_model="fake-embed",
             )
+    # Words from all four documents: the quote's lines, the invoice title,
+    # the contract's payment clause and the client note.
+    query = {"query": "Website redesign UX audit landing page payment due prefers invoices"}
+    try:
+        await set_scopes(admin_engine, ws_a, ["ai:use", "quotes:read"])
+        async with mcp_as(services, ws_a) as c:
+            docs = payload(await c.call_tool("search_documents", query))
+            assert docs and {d["source_type"] for d in docs} == {"quote"}
+            asked = await c.call_tool("search_documents", {**query, "types": ["invoice"]})
+            assert "scope" in error_text(asked)
+
+        await set_scopes(admin_engine, ws_a, ["ai:use", "clients:read"])
+        async with mcp_as(services, ws_a) as c:
+            docs = payload(await c.call_tool("search_documents", query))
+            assert docs and {d["source_type"] for d in docs} <= {"contract", "client_note"}
+
+        await set_scopes(admin_engine, ws_a, ["ai:use"])
+        async with mcp_as(services, ws_a) as c:
+            assert "scope" in error_text(await c.call_tool("search_documents", query))
+    finally:
+        await set_scopes(admin_engine, ws_a, KEY_SCOPES)
 
 
 @requires_db
@@ -215,13 +257,9 @@ async def test_key_verification(
                 await conn.execute(
                     text(
                         "UPDATE api_keys SET revoked_at = NULL, expires_at = NULL, "
-                        "kind = 'secret', "
-                        "scopes = ARRAY['ai:use','leads:read','leads:write','deals:read',"
-                        "'deals:write','invoices:read','quotes:read','quotes:write',"
-                        "'reports:read'] "
-                        "WHERE id = :id"
+                        "kind = 'secret', scopes = :scopes WHERE id = :id"
                     ),
-                    {"id": ws_a.api_key_id},
+                    {"id": ws_a.api_key_id, "scopes": list(KEY_SCOPES)},
                 )
 
 

@@ -18,13 +18,20 @@ class Gate:
     def __init__(self, refuse: bool = False) -> None:
         self.refuse = refuse
         self.used: list[Usage] = []
+        self.reserved: list[tuple[int, int]] = []
+        self.released = 0
 
-    async def before(self, model: str) -> None:
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> object:
         if self.refuse:
             raise LlmUnavailable("budget")
+        self.reserved.append((tokens_in, max_tokens_out))
+        return len(self.reserved)
 
-    async def after(self, usage: Usage) -> None:
-        self.used.append(usage)
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        if usage is None:
+            self.released += 1
+        else:
+            self.used.append(usage)
 
 
 class Sleeps:
@@ -165,3 +172,62 @@ async def test_token_bucket_refills_over_time() -> None:
     await bucket.take(60)
     await bucket.take(30)
     assert sum(s.calls) == pytest.approx(30)
+
+
+async def test_reserves_the_worst_case_output_before_sending() -> None:
+    t, _, gate, _ = make([httpx.Response(200, json=OK)] * 3)
+    async with httpx.AsyncClient(transport=t, base_url="http://x") as client:
+        await client.post("/chat/completions", json={"model": "m", "max_tokens": 300})
+        await client.post("/chat/completions", json={"model": "m"})
+        await client.post("/embeddings", json={"model": "m", "input": ["a"]})
+    assert [out for _, out in gate.reserved] == [300, 1024, 0]
+    assert all(tokens_in > 0 for tokens_in, _ in gate.reserved)
+    assert len(gate.used) == 3 and gate.released == 0
+
+
+async def test_a_failed_request_releases_its_reservation() -> None:
+    t, _, gate, _ = make([httpx.Response(429)] * 3)
+    assert (await post(t)).status_code == 429
+    t2, _, gate2, _ = make([], rpd=0)
+    with pytest.raises(LlmUnavailable, match="daily request limit"):
+        await post(t2)
+    assert gate.released == 1 and gate.used == []
+    assert gate2.released == 1
+
+
+async def test_a_retry_reuses_the_one_reservation() -> None:
+    t, seen, gate, _ = make([httpx.Response(429), httpx.Response(200, json=OK)])
+    assert (await post(t)).status_code == 200
+    assert len(seen) == 2
+    assert len(gate.reserved) == 1 and len(gate.used) == 1 and gate.released == 0
+
+
+async def test_a_cancelled_request_still_releases_its_reservation() -> None:
+    import asyncio
+
+    started = asyncio.Event()
+
+    async def hang(request: httpx.Request) -> httpx.Response:
+        started.set()
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    gate = Gate()
+    t = RateLimitedTransport(
+        httpx.MockTransport(hang),
+        provider="p",
+        rpm=1000,
+        tpm=10_000_000,
+        rpd=1000,
+        max_concurrency=1,
+        allowed_models=frozenset({"m"}),
+        gate=gate,
+        daily=MemoryDailyCounter(),
+    )
+    task = asyncio.create_task(post(t))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await asyncio.sleep(0)
+    assert len(gate.reserved) == 1 and gate.released == 1

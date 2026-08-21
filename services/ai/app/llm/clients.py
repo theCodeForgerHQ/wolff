@@ -95,6 +95,7 @@ def build_clients(
         allowed_models=frozenset({profile.chat_model, profile.embed_model}),
         gate=gate,
         daily=daily,
+        default_max_tokens=max_tokens,
     )
     http = httpx.AsyncClient(transport=transport, timeout=REQUEST_TIMEOUT_SECONDS)
     key = "fake" if not profile.api_key_env else os.environ.get(profile.api_key_env, "missing")

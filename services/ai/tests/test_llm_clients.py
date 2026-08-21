@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import math
+import re
+from collections.abc import Awaitable, Callable
+from pathlib import Path
 
+import httpx2 as httpx
 import pytest
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 
+from app.agent.schemas import QuoteDraft
 from app.llm.clients import build_clients, fit_dimensions
-from app.llm.fake import embed
+from app.llm.fake import FakeOpenAITransport, embed
 from app.llm.providers import resolve_provider
 from app.llm.transport import MemoryDailyCounter, Usage
 
@@ -16,11 +21,12 @@ class Gate:
     def __init__(self) -> None:
         self.used: list[Usage] = []
 
-    async def before(self, model: str) -> None:
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> object:
         return None
 
-    async def after(self, usage: Usage) -> None:
-        self.used.append(usage)
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        if usage is not None:
+            self.used.append(usage)
 
 
 def clients(gate: Gate):  # type: ignore[no-untyped-def]
@@ -76,3 +82,75 @@ def test_fit_dimensions_truncates_and_normalises() -> None:
     assert len(out) == 1536 and out[:2] == [0.6, 0.8]
     with pytest.raises(ValueError, match="dimensions"):
         fit_dimensions([1.0] * 10)
+
+
+class OrderGate:
+    """Logs reserve/settle; the inner transport logs each send."""
+
+    def __init__(self, log: list[str]) -> None:
+        self.log = log
+
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> object:
+        self.log.append("reserve")
+        return len(self.log)
+
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        self.log.append("settle")
+
+
+class LoggingFake(FakeOpenAITransport):
+    def __init__(self, log: list[str]) -> None:
+        super().__init__()
+        self.log = log
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.log.append("send")
+        return await super().handle_async_request(request)
+
+
+async def test_every_provider_path_reserves_before_sending_and_settles() -> None:
+    """Embeddings, plain chat, tool calling and json_schema output all go
+    out through the gate: each send has a reservation before it and a
+    settle after it. (The app never asks a provider to stream.)"""
+    log: list[str] = []
+    llm = build_clients(
+        resolve_provider({"LLM_PROVIDER": "fake"}),
+        gate=OrderGate(log),
+        daily=MemoryDailyCounter(),
+        inner=LoggingFake(log),
+    )
+
+    @tool
+    def search_documents(query: str) -> str:
+        """Search."""
+        return query
+
+    paths: dict[str, Callable[[], Awaitable[object]]] = {
+        "embed": lambda: llm.embed(["a"]),
+        "chat": lambda: llm.chat_model().ainvoke([HumanMessage("hi")]),
+        "tools": lambda: (
+            llm.chat_model().bind_tools([search_documents]).ainvoke([HumanMessage("hi")])
+        ),
+        "json_schema": lambda: (
+            llm.chat_model()
+            .with_structured_output(QuoteDraft, method="json_schema", strict=True, include_raw=True)
+            .ainvoke([HumanMessage("Draft a quote for Acme Robotics: UX audit")])
+        ),
+    }
+    for name, call in paths.items():
+        log.clear()
+        await call()
+        assert log == ["reserve", "send", "settle"], (name, log)
+    await llm.aclose()
+
+
+def test_only_the_llm_clients_module_builds_a_provider_client() -> None:
+    """Nothing in app/ may reach a provider around the gated transport."""
+    root = Path(__file__).resolve().parent.parent / "app"
+    pattern = re.compile(r"AsyncOpenAI\(|\bOpenAI\(|ChatOpenAI\(|OpenAIEmbeddings|init_chat_model")
+    offenders = [
+        str(path.relative_to(root))
+        for path in root.rglob("*.py")
+        if pattern.search(path.read_text()) and path.name != "clients.py"
+    ]
+    assert offenders == []
