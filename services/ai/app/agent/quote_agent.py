@@ -131,20 +131,37 @@ async def _structured(svc: Services, messages: list[AnyMessage]) -> tuple[QuoteD
     raise DraftError("invalid_output", "The model did not return a valid draft")
 
 
-async def validate_against_workspace(svc: Services, ws: str, draft: QuoteDraft) -> None:
-    """Refuse a draft that names anything outside the workspace."""
+async def validate_against_workspace(svc: Services, ws: str, draft: QuoteDraft) -> QuoteDraft:
+    """Refuse a draft that names anything outside the workspace, and return
+    it with every rate-card line priced from the card itself.
+
+    The model's rate and HSN/SAC for a rate-card line are not trusted: text
+    it read while drafting (a contract, a note) could have told it to change
+    them. A line from a past quote or a new line keeps the model's values.
+    """
     async with svc.sessions() as session:
         client = (
             await queries.find_client(session, ws, draft.client_id) if draft.client_id else None
         )
         if client is None or client["client_id"] != draft.client_id:
             raise DraftError("unknown_client", "The draft does not name a client of this workspace")
-        if draft.deal_id and await queries.get_deal(session, ws, draft.deal_id) is None:
-            raise DraftError("unknown_deal", "The draft names a deal outside this workspace")
-        cards = {c["rate_card_id"] for c in await queries.list_rate_cards(session, ws)}
+        if draft.deal_id:
+            deal = await queries.get_deal(session, ws, draft.deal_id)
+            if deal is None:
+                raise DraftError("unknown_deal", "The draft names a deal outside this workspace")
+            if deal["client_id"] and deal["client_id"] != draft.client_id:
+                raise DraftError("unknown_deal", "The draft's deal belongs to another client")
+        cards = {c["rate_card_id"]: c for c in await queries.list_rate_cards(session, ws)}
+    lines = []
     for line in draft.line_items:
-        if line.source == "rate_card" and line.source_ref not in cards:
+        if line.source != "rate_card":
+            lines.append(line)
+            continue
+        card = cards.get(line.source_ref or "")
+        if card is None:
             raise DraftError("unknown_rate_card", f"Line {line.name!r} cites an unknown rate card")
+        lines.append(line.model_copy(update={"rate": card["rate"], "hsn_sac": card["hsn_sac"]}))
+    return draft.model_copy(update={"line_items": lines})
 
 
 async def _gst(
@@ -191,7 +208,7 @@ async def draft_quote(
                 draft, usage = await _structured(svc, [SystemMessage(prompt.text), *messages[-12:]])
         if deal_id:
             draft = draft.model_copy(update={"deal_id": deal_id})
-        await validate_against_workspace(svc, ws, draft)
+        draft = await validate_against_workspace(svc, ws, draft)
         async with svc.sessions() as session:
             rates = {
                 c["rate_card_id"]: c["gst_rate"] for c in await queries.list_rate_cards(session, ws)
