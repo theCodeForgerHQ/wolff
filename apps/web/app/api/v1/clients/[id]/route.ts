@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
+import { requestAiIndexing } from '@wolff/core/outbox';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -133,9 +134,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   });
   if (!client) return apiError('Client not found', 404);
 
-  await prisma.client.update({
-    where: { id },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.client.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    // The AI service drops the soft-deleted document from its index.
+    await requestAiIndexing(tx, { workspaceId, sourceType: 'client_note', sourceId: id });
   });
 
   return apiSuccess({ message: 'Client deleted' });

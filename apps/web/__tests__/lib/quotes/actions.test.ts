@@ -464,6 +464,15 @@ describe('Quote Actions', () => {
           data: expect.objectContaining({ deletedAt: expect.any(Date) }),
         })
       );
+      // The AI index drops it: ingest of a soft-deleted quote removes its chunks.
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'quote', sourceId: 'quote-1' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('blocks deletion when linked invoice exists', async () => {

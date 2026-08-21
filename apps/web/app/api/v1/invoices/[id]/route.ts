@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
+import { requestAiIndexing } from '@wolff/core/outbox';
 import { withTenantGuard } from '@wolff/database';
 import {
   assertReadyToIssue,
@@ -350,9 +351,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return apiError(`Cannot delete a ${invoice.status} invoice. Void it instead.`, 400);
   }
 
-  await prisma.invoice.update({
-    where: { id },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    // The AI service drops the soft-deleted document from its index.
+    await requestAiIndexing(tx, { workspaceId, sourceType: 'invoice', sourceId: id });
   });
 
   return apiSuccess({ message: 'Invoice deleted' });

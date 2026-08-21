@@ -7,12 +7,13 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, or_, select, union_all
+from sqlalchemy import and_, delete, exists, literal, or_, select, tuple_, union_all
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ok, require_service, services
 from app.auth import Caller
 from app.budget import metered
-from app.db.models import IngestState
+from app.db.models import DocumentChunk, IngestState
 from app.db.public_models import Client, ContractInstance, Invoice, Quote
 from app.db.scoped import workspace_filter
 from app.rag.ingest import ingest
@@ -52,22 +53,11 @@ async def sweep(
     caller: Annotated[Caller, Depends(worker)],
     svc: Annotated[Services, Depends(services)],
 ) -> dict[str, Any]:
-    """Re-index the workspace's sources changed since they were indexed."""
+    """Re-index the workspace's sources changed since they were indexed, and
+    drop the chunks and state of sources that are gone: deleted, soft-deleted,
+    or a client whose notes were cleared."""
     ws = caller.workspace_id
-    sources = union_all(
-        select(Quote.id.label("id"), Quote.updated_at.label("updated"))
-        .add_columns(select_literal("quote"))
-        .where(*workspace_filter(Quote, ws)),
-        select(Invoice.id, Invoice.updated_at)
-        .add_columns(select_literal("invoice"))
-        .where(*workspace_filter(Invoice, ws)),
-        select(ContractInstance.id, ContractInstance.updated_at)
-        .add_columns(select_literal("contract"))
-        .where(*workspace_filter(ContractInstance, ws)),
-        select(Client.id, Client.updated_at)
-        .add_columns(select_literal("client_note"))
-        .where(*workspace_filter(Client, ws), Client.notes.is_not(None)),
-    ).subquery()
+    sources = _live_sources(ws)
     state = IngestState
     stale = (
         select(sources.c.kind, sources.c.id)
@@ -85,6 +75,7 @@ async def sweep(
     outcomes: dict[str, int] = {}
     with metered(ws):
         async with svc.sessions() as session:
+            removed = await _remove_orphans(session, ws)
             rows = (await session.execute(stale)).all()
             for kind, source_id in rows:
                 result = await ingest(
@@ -96,10 +87,61 @@ async def sweep(
                     embedding_model=svc.settings.provider.embed_model,
                 )
                 outcomes[result.outcome] = outcomes.get(result.outcome, 0) + 1
-    return ok({"processed": len(rows), "outcomes": outcomes})
+    return ok({"processed": len(rows), "outcomes": outcomes, "removed": removed})
+
+
+def _live_sources(ws: str) -> Any:
+    """Every live source of the workspace as (id, updated, kind)."""
+    return union_all(
+        select(Quote.id.label("id"), Quote.updated_at.label("updated"))
+        .add_columns(select_literal("quote"))
+        .where(*workspace_filter(Quote, ws)),
+        select(Invoice.id, Invoice.updated_at)
+        .add_columns(select_literal("invoice"))
+        .where(*workspace_filter(Invoice, ws)),
+        select(ContractInstance.id, ContractInstance.updated_at)
+        .add_columns(select_literal("contract"))
+        .where(*workspace_filter(ContractInstance, ws)),
+        select(Client.id, Client.updated_at)
+        .add_columns(select_literal("client_note"))
+        .where(*workspace_filter(Client, ws), Client.notes.is_not(None)),
+    ).subquery()
+
+
+async def _remove_orphans(session: AsyncSession, ws: str) -> int:
+    """Delete chunks and ingest state whose source is no longer live. Commits."""
+    live = _live_sources(ws)
+
+    def gone(source_type: Any, source_id: Any) -> Any:
+        return ~exists().where(live.c.kind == source_type, live.c.id == source_id)
+
+    orphans = (
+        select(DocumentChunk.source_type, DocumentChunk.source_id)
+        .where(DocumentChunk.workspace_id == ws)
+        .where(gone(DocumentChunk.source_type, DocumentChunk.source_id))
+        .union(
+            select(IngestState.source_type, IngestState.source_id)
+            .where(IngestState.workspace_id == ws)
+            .where(gone(IngestState.source_type, IngestState.source_id))
+        )
+    )
+    keys = [(str(t), str(i)) for t, i in (await session.execute(orphans)).all()]
+    if keys:
+        await session.execute(
+            delete(DocumentChunk).where(
+                DocumentChunk.workspace_id == ws,
+                tuple_(DocumentChunk.source_type, DocumentChunk.source_id).in_(keys),
+            )
+        )
+        await session.execute(
+            delete(IngestState).where(
+                IngestState.workspace_id == ws,
+                tuple_(IngestState.source_type, IngestState.source_id).in_(keys),
+            )
+        )
+    await session.commit()
+    return len(keys)
 
 
 def select_literal(kind: str) -> Any:
-    from sqlalchemy import literal
-
     return literal(kind).label("kind")

@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import uuid
+from typing import Any
+
 from httpx import AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.conftest import requires_db, service_token
 from tests.seed import Seeded
@@ -50,3 +55,116 @@ async def test_sweep_indexes_what_changed_in_the_callers_workspace_only(
     ).json()["data"]
     assert again["processed"] == 0, (first, again)
     assert first["processed"] >= 1
+
+
+async def _extra_quote(admin: AsyncEngine, ws: Seeded, title: str) -> str:
+    quote_id = str(uuid.uuid4())
+    async with admin.begin() as c:
+        await c.execute(
+            text(
+                "INSERT INTO quotes (id, workspace_id, client_id, quote_number, status, title, "
+                "subtotal, total, currency, access_token, updated_at) VALUES "
+                "(:id, :w, :c, :n, 'draft', :t, 1, 1, 'INR', :tok, now())"
+            ),
+            {
+                "id": quote_id,
+                "w": ws.workspace_id,
+                "c": ws.client_id,
+                "n": f"Q-DEL-{quote_id[:6]}",
+                "t": title,
+                "tok": str(uuid.uuid4()),
+            },
+        )
+    return quote_id
+
+
+async def _found(client: AsyncClient, ws: Seeded, query: str, source_id: str) -> bool:
+    token = service_token(ws.workspace_id, ["ai:use"], issuer="web")
+    r = await client.post("/search", json={"query": query}, headers=auth(token))
+    assert r.status_code == 200, r.text
+    return any(d["metadata"]["source_id"] == source_id for d in r.json()["data"])
+
+
+async def _ingest(client: AsyncClient, ws: Seeded, kind: str, source_id: str) -> str:
+    token = service_token(ws.workspace_id, ["ai:index"], issuer="worker", user=None)
+    r = await client.post(
+        "/ingest", json={"sourceType": kind, "sourceId": source_id}, headers=auth(token)
+    )
+    assert r.status_code == 200, r.text
+    return str(r.json()["data"]["outcome"])
+
+
+async def _sweep(client: AsyncClient, ws: Seeded) -> dict[str, Any]:
+    token = service_token(ws.workspace_id, ["ai:index"], issuer="worker", user=None)
+    r = await client.post("/ingest/sweep", headers=auth(token))
+    assert r.status_code == 200, r.text
+    data: dict[str, Any] = r.json()["data"]
+    return data
+
+
+async def _soft_delete(admin: AsyncEngine, quote_id: str) -> None:
+    async with admin.begin() as c:
+        await c.execute(
+            text("UPDATE quotes SET deleted_at = now(), updated_at = now() WHERE id = :id"),
+            {"id": quote_id},
+        )
+
+
+@requires_db
+async def test_ingest_after_soft_delete_removes_the_document_from_search(
+    client: AsyncClient, ws_a: Seeded, admin_engine: AsyncEngine
+) -> None:
+    query = "zeppelin hangar refit"
+    quote_id = await _extra_quote(admin_engine, ws_a, "Zeppelin hangar refit")
+    assert await _ingest(client, ws_a, "quote", quote_id) == "indexed"
+    assert await _found(client, ws_a, query, quote_id)
+
+    await _soft_delete(admin_engine, quote_id)
+    assert await _ingest(client, ws_a, "quote", quote_id) == "removed"
+    assert not await _found(client, ws_a, query, quote_id)
+
+
+@requires_db
+async def test_sweep_removes_soft_deleted_documents_and_their_state(
+    client: AsyncClient, ws_a: Seeded, admin_engine: AsyncEngine, engine: AsyncEngine
+) -> None:
+    query = "dirigible mooring mast"
+    quote_id = await _extra_quote(admin_engine, ws_a, "Dirigible mooring mast")
+    await _sweep(client, ws_a)
+    assert await _found(client, ws_a, query, quote_id)
+
+    await _soft_delete(admin_engine, quote_id)
+    swept = await _sweep(client, ws_a)
+    assert swept["removed"] >= 1, swept
+    assert not await _found(client, ws_a, query, quote_id)
+    async with engine.connect() as c:
+        state = await c.scalar(
+            text("SELECT count(*) FROM ai.ingest_state WHERE source_id = :id"), {"id": quote_id}
+        )
+    assert state == 0
+    assert (await _sweep(client, ws_a))["removed"] == 0
+
+
+@requires_db
+async def test_sweep_removes_a_client_note_once_the_notes_are_cleared(
+    client: AsyncClient, ws_a: Seeded, admin_engine: AsyncEngine
+) -> None:
+    client_id = str(uuid.uuid4())
+    async with admin_engine.begin() as c:
+        await c.execute(
+            text(
+                "INSERT INTO clients (id, workspace_id, name, email, notes, updated_at) "
+                "VALUES (:id, :w, 'Quokka Ltd', :e, 'Quokka wants marsupial branding.', now())"
+            ),
+            {"id": client_id, "w": ws_a.workspace_id, "e": f"{client_id}@client.dev"},
+        )
+    await _sweep(client, ws_a)
+    assert await _found(client, ws_a, "quokka marsupial branding", client_id)
+
+    async with admin_engine.begin() as c:
+        await c.execute(
+            text("UPDATE clients SET notes = NULL, updated_at = now() WHERE id = :id"),
+            {"id": client_id},
+        )
+    await _sweep(client, ws_a)
+    assert not await _found(client, ws_a, "quokka marsupial branding", client_id)

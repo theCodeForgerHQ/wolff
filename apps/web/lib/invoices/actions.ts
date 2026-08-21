@@ -775,9 +775,17 @@ export async function deleteInvoice(invoiceId: string) {
     return { success: false, error: 'Can only delete draft invoices. Use void for sent invoices.' };
   }
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { deletedAt: new Date() },
+    });
+    // The AI service drops a soft-deleted invoice from its index.
+    await requestAiIndexing(tx, {
+      workspaceId: workspace.id,
+      sourceType: 'invoice',
+      sourceId: invoiceId,
+    });
   });
 
   revalidatePath(ROUTES.invoices);
