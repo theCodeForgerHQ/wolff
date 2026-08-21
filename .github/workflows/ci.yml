@@ -111,6 +111,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The seed step at the end imports the generated Prisma client.
+      - run: pnpm db:generate
       - name: Create the shadow database
         run: psql "$DATABASE_URL" -c 'CREATE DATABASE wolff_shadow'
       - name: Apply every migration to a fresh database
@@ -170,6 +172,9 @@ jobs:
         with:
           version: '0.11.5'
       - run: pnpm install --frozen-lockfile
+        working-directory: .
+      # The demo seed below imports the generated Prisma client.
+      - run: pnpm db:generate
         working-directory: .
       - run: uv sync --frozen
       - run: uv run --frozen ruff check .
