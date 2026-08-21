@@ -193,3 +193,41 @@ async def test_a_failed_request_releases_its_reservation() -> None:
         await post(t2)
     assert gate.released == 1 and gate.used == []
     assert gate2.released == 1
+
+
+async def test_a_retry_reuses_the_one_reservation() -> None:
+    t, seen, gate, _ = make([httpx.Response(429), httpx.Response(200, json=OK)])
+    assert (await post(t)).status_code == 200
+    assert len(seen) == 2
+    assert len(gate.reserved) == 1 and len(gate.used) == 1 and gate.released == 0
+
+
+async def test_a_cancelled_request_still_releases_its_reservation() -> None:
+    import asyncio
+
+    started = asyncio.Event()
+
+    async def hang(request: httpx.Request) -> httpx.Response:
+        started.set()
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    gate = Gate()
+    t = RateLimitedTransport(
+        httpx.MockTransport(hang),
+        provider="p",
+        rpm=1000,
+        tpm=10_000_000,
+        rpd=1000,
+        max_concurrency=1,
+        allowed_models=frozenset({"m"}),
+        gate=gate,
+        daily=MemoryDailyCounter(),
+    )
+    task = asyncio.create_task(post(t))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await asyncio.sleep(0)
+    assert len(gate.reserved) == 1 and gate.released == 1
