@@ -34,6 +34,8 @@ from app.agent.schemas import QuoteDraft
 from app.auth import Caller
 from app.budget import cost, metered
 from app.db.models import AgentRun
+from app.db.public_models import BusinessProfile
+from app.db.scoped import scoped
 from app.llm.transport import Usage
 from app.prompts import load_prompt
 from app.services import Services
@@ -131,13 +133,20 @@ async def _structured(svc: Services, messages: list[AnyMessage]) -> tuple[QuoteD
     raise DraftError("invalid_output", "The model did not return a valid draft")
 
 
-async def validate_against_workspace(svc: Services, ws: str, draft: QuoteDraft) -> QuoteDraft:
+async def validate_against_workspace(
+    svc: Services, ws: str, draft: QuoteDraft
+) -> tuple[QuoteDraft, list[str]]:
     """Refuse a draft that names anything outside the workspace, and return
-    it with every rate-card line priced from the card itself.
+    it with every value the workspace already knows taken from there, plus
+    warnings for what the user must confirm.
 
-    The model's rate and HSN/SAC for a rate-card line are not trusted: text
-    it read while drafting (a contract, a note) could have told it to change
-    them. A line from a past quote or a new line keeps the model's values.
+    Text the model read while drafting (a contract, a note) may carry
+    instructions, so nothing it could be steered into is trusted where a
+    real value exists: a rate-card line's rate and HSN/SAC come from the
+    card (its GST rate is looked up by card id later), and the currency is
+    the workspace's. A past-quote or new line keeps the model's price and
+    is listed in the warnings as priced by the assistant. Quantity, line
+    count and field lengths are bounded by the QuoteDraft schema.
     """
     async with svc.sessions() as session:
         client = (
@@ -152,16 +161,26 @@ async def validate_against_workspace(svc: Services, ws: str, draft: QuoteDraft) 
             if deal["client_id"] and deal["client_id"] != draft.client_id:
                 raise DraftError("unknown_deal", "The draft's deal belongs to another client")
         cards = {c["rate_card_id"]: c for c in await queries.list_rate_cards(session, ws)}
+        currency = await session.scalar(
+            scoped(BusinessProfile, ws).with_only_columns(BusinessProfile.currency)
+        )
     lines = []
+    warnings: list[str] = []
     for line in draft.line_items:
         if line.source != "rate_card":
+            warnings.append(
+                f"Line {line.name!r} is priced by the assistant, not a rate card: confirm the price"
+            )
             lines.append(line)
             continue
         card = cards.get(line.source_ref or "")
         if card is None:
             raise DraftError("unknown_rate_card", f"Line {line.name!r} cites an unknown rate card")
         lines.append(line.model_copy(update={"rate": card["rate"], "hsn_sac": card["hsn_sac"]}))
-    return draft.model_copy(update={"line_items": lines})
+    update: dict[str, Any] = {"line_items": lines}
+    if currency:
+        update["currency"] = currency
+    return draft.model_copy(update=update), warnings
 
 
 async def _gst(
@@ -208,7 +227,7 @@ async def draft_quote(
                 draft, usage = await _structured(svc, [SystemMessage(prompt.text), *messages[-12:]])
         if deal_id:
             draft = draft.model_copy(update={"deal_id": deal_id})
-        draft = await validate_against_workspace(svc, ws, draft)
+        draft, checks = await validate_against_workspace(svc, ws, draft)
         async with svc.sessions() as session:
             rates = {
                 c["rate_card_id"]: c["gst_rate"] for c in await queries.list_rate_cards(session, ws)
@@ -248,7 +267,7 @@ async def draft_quote(
         except ApiUnavailable as exc:
             raise DraftError("api_unavailable", "The quote could not be saved; try again") from exc
         result = DraftResult(
-            created["quoteId"], created["quoteNumber"], draft, gst, tax_pending, warnings
+            created["quoteId"], created["quoteNumber"], draft, gst, tax_pending, checks + warnings
         )
         status = "ok"
         return result
