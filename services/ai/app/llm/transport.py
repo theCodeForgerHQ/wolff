@@ -10,14 +10,16 @@ every request passes the same checks:
 - two retries on 429/5xx/timeouts, honouring ``Retry-After`` (the SDKs'
   own retries are switched off so they do not multiply);
 - the model allowlist, checked on the request body;
-- a ``UsageGate`` called before (budget check) and after (record usage)
-  each request.
+- a ``UsageGate`` that reserves the request's worst-case cost before it
+  waits for a slot (refusing it when the budget cannot cover that) and
+  settles the reservation to the real usage afterwards.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import math
 import random
 import time
 from collections.abc import Awaitable, Callable
@@ -48,11 +50,13 @@ class Usage:
 
 
 class UsageGate(Protocol):
-    async def before(self, model: str) -> None:
-        """Raise (e.g. budget exceeded) to stop the request."""
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> object:
+        """Hold the worst-case cost of a request, or raise (e.g. budget
+        exceeded) to stop it. Returns a handle for ``settle``."""
 
-    async def after(self, usage: Usage) -> None:
-        """Record what the request used."""
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        """Replace the reservation with what the request used; ``None``
+        releases it (the request failed or was never sent)."""
 
 
 class DailyCounter(Protocol):
@@ -126,6 +130,16 @@ def _retry_after(response: httpx.Response, attempt: int) -> float:
     return min(2.0**attempt + random.uniform(0, 1), MAX_RETRY_AFTER_SECONDS)  # noqa: S311
 
 
+def _worst_case(request: httpx.Request, body: dict[str, Any], default_max_tokens: int) -> int:
+    """Output tokens a request may use: its own max_tokens, else the default
+    for a chat call; embeddings produce none."""
+    for key in ("max_completion_tokens", "max_tokens"):
+        value = body.get(key)
+        if isinstance(value, int) and value > 0:
+            return value
+    return 0 if request.url.path.endswith("/embeddings") else default_max_tokens
+
+
 def _usage(model: str, body: bytes) -> Usage:
     try:
         data = json.loads(body)
@@ -150,6 +164,7 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         allowed_models: frozenset[str],
         gate: UsageGate,
         daily: DailyCounter,
+        default_max_tokens: int = 1024,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -163,33 +178,44 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         self._allowed = allowed_models
         self._gate = gate
         self._daily = daily
+        self._default_max_tokens = default_max_tokens
         self._sleep = sleep
         self._now = now
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         body = request.content
         try:
-            model = str(json.loads(body).get("model", ""))
+            parsed = json.loads(body)
         except ValueError:
-            model = ""
+            parsed = {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+        model = str(parsed.get("model", ""))
         if model not in self._allowed:
             raise LlmUnavailable(f"model {model!r} is not allowed")
-        await self._gate.before(model)
+        estimated_in = math.ceil(len(body) / 4)
+        reservation = await self._gate.reserve(
+            model, estimated_in, _worst_case(request, parsed, self._default_max_tokens)
+        )
+        used: Usage | None = None
+        try:
+            now = self._now()
+            if await self._daily.increment(f"llm:rpd:{self._provider}:{now.date()}") > self._rpd:
+                raise LlmUnavailable(
+                    "daily request limit reached", retry_after=_seconds_to_utc_midnight(now)
+                )
 
-        now = self._now()
-        if await self._daily.increment(f"llm:rpd:{self._provider}:{now.date()}") > self._rpd:
-            raise LlmUnavailable(
-                "daily request limit reached", retry_after=_seconds_to_utc_midnight(now)
-            )
+            async with self._slots:
+                await self._requests.take(1)
+                await self._tokens.take(estimated_in)
+                response = await self._send_with_retries(request)
 
-        async with self._slots:
-            await self._requests.take(1)
-            await self._tokens.take(len(body) / 4)
-            response = await self._send_with_retries(request)
-
-        content = await response.aread()
-        if response.status_code < 400:
-            await self._gate.after(_usage(model, content))
+            content = await response.aread()
+            if response.status_code < 400:
+                used = _usage(model, content)
+        finally:
+            # Shielded so a cancelled caller cannot leave the reservation held.
+            await asyncio.shield(self._gate.settle(reservation, used))
         return httpx.Response(
             response.status_code, headers=response.headers, content=content, request=request
         )

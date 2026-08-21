@@ -16,11 +16,12 @@ class Gate:
     def __init__(self) -> None:
         self.used: list[Usage] = []
 
-    async def before(self, model: str) -> None:
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> object:
         return None
 
-    async def after(self, usage: Usage) -> None:
-        self.used.append(usage)
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        if usage is not None:
+            self.used.append(usage)
 
 
 def clients(gate: Gate):  # type: ignore[no-untyped-def]

@@ -1,9 +1,14 @@
 """Per-workspace daily spend cap.
 
-Every LLM request passes ``BudgetGate`` (it is the transport's UsageGate):
-before sending, the workspace's spend for the UTC day is compared with
-``AI_DAILY_BUDGET_USD``; after a successful response, its tokens and cost
-are added to ``ai.usage_daily``. The workspace comes from a context
+Every LLM request passes ``BudgetGate`` (it is the transport's UsageGate).
+Before it waits for a slot, the request reserves its worst-case cost
+(estimated prompt tokens plus its max_tokens) in ``ai.usage_daily`` with
+one conditional upsert, which is refused when the day's spend plus the
+reservation would pass ``AI_DAILY_BUDGET_USD``. Because the check and the
+increment are one row-locked statement, requests queued at the same time
+cannot all pass on the same stale total. Afterwards the reservation is
+replaced by the real tokens and cost, or released if the call failed. So
+``cost_usd`` includes in-flight reservations. The workspace comes from a context
 variable set by whoever starts the work (an authenticated request or a
 job); a request with no workspace is refused, so nothing is unmetered.
 """
@@ -13,10 +18,11 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -26,6 +32,8 @@ from app.llm.transport import LlmUnavailable, Usage
 
 _workspace: ContextVar[str | None] = ContextVar("ai_workspace", default=None)
 MILLION = Decimal(1_000_000)
+#: ai.usage_daily.cost_usd is numeric(10, 6).
+USD_STEP = Decimal("0.000001")
 
 
 class BudgetExceeded(LlmUnavailable):
@@ -48,6 +56,15 @@ def current_workspace() -> str | None:
 
 def cost(profile: ProviderProfile, usage: Usage) -> Decimal:
     return (usage.tokens_in * profile.price_in + usage.tokens_out * profile.price_out) / MILLION
+
+
+@dataclass(frozen=True, slots=True)
+class Reservation:
+    """Cost held for one in-flight request, on the day it was made."""
+
+    workspace_id: str
+    day: date
+    amount: Decimal
 
 
 class BudgetGate:
@@ -75,36 +92,56 @@ class BudgetGate:
             )
         return value or Decimal(0)
 
-    async def before(self, model: str) -> None:
+    def _exceeded(self) -> BudgetExceeded:
+        now = self._now()
+        midnight = datetime.combine(now.date() + timedelta(days=1), datetime.min.time(), UTC)
+        return BudgetExceeded(
+            "daily AI budget exceeded", retry_after=(midnight - now).total_seconds()
+        )
+
+    async def reserve(self, model: str, tokens_in: int, max_tokens_out: int) -> Reservation:
         workspace = current_workspace()
         if workspace is None:
             raise LlmUnavailable("LLM call outside a metered workspace")
-        if await self.spent_today(workspace) >= self._budget:
-            now = self._now()
-            midnight = datetime.combine(now.date() + timedelta(days=1), datetime.min.time(), UTC)
-            raise BudgetExceeded(
-                "daily AI budget exceeded", retry_after=(midnight - now).total_seconds()
-            )
-
-    async def after(self, usage: Usage) -> None:
-        workspace = current_workspace()
-        if workspace is None:
-            return
-        amount = cost(self._profile, usage)
-        statement = insert(UsageDaily).values(
-            workspace_id=workspace,
-            day=self._today(),
-            tokens_in=usage.tokens_in,
-            tokens_out=usage.tokens_out,
-            cost_usd=amount,
+        # Rounded up to the column's 6 places, so settling subtracts exactly
+        # what was stored.
+        amount = cost(self._profile, Usage(model, tokens_in, max_tokens_out)).quantize(
+            USD_STEP, ROUND_CEILING
         )
-        statement = statement.on_conflict_do_update(
-            index_elements=[UsageDaily.workspace_id, UsageDaily.day],
-            set_={
-                "tokens_in": UsageDaily.tokens_in + usage.tokens_in,
-                "tokens_out": UsageDaily.tokens_out + usage.tokens_out,
-                "cost_usd": UsageDaily.cost_usd + amount,
-            },
+        if amount > self._budget:
+            raise self._exceeded()
+        day = self._today()
+        statement = (
+            insert(UsageDaily)
+            .values(workspace_id=workspace, day=day, tokens_in=0, tokens_out=0, cost_usd=amount)
+            .on_conflict_do_update(
+                index_elements=[UsageDaily.workspace_id, UsageDaily.day],
+                set_={"cost_usd": UsageDaily.cost_usd + amount},
+                where=UsageDaily.cost_usd + amount <= self._budget,
+            )
+            .returning(UsageDaily.cost_usd)
+        )
+        async with self._sessions() as session, session.begin():
+            held = (await session.execute(statement)).scalar_one_or_none()
+        if held is None:
+            raise self._exceeded()
+        return Reservation(workspace, day, amount)
+
+    async def settle(self, reservation: object, usage: Usage | None) -> None:
+        if not isinstance(reservation, Reservation):
+            raise TypeError("not a BudgetGate reservation")
+        actual = cost(self._profile, usage).quantize(USD_STEP) if usage else Decimal(0)
+        statement = (
+            update(UsageDaily)
+            .where(
+                UsageDaily.workspace_id == reservation.workspace_id,
+                UsageDaily.day == reservation.day,
+            )
+            .values(
+                tokens_in=UsageDaily.tokens_in + (usage.tokens_in if usage else 0),
+                tokens_out=UsageDaily.tokens_out + (usage.tokens_out if usage else 0),
+                cost_usd=UsageDaily.cost_usd - reservation.amount + actual,
+            )
         )
         async with self._sessions() as session, session.begin():
             await session.execute(statement)
