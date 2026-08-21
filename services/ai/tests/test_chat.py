@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import uuid
 from collections.abc import Sequence
 from decimal import Decimal
 
+import anyio
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -177,3 +179,33 @@ def test_document_content_cannot_close_its_wrapper() -> None:
     assert wrapped.count("</document>") == 1 and wrapped.endswith("</document>")
     assert wrapped.count("<document") == 1
     assert "&lt;/document&gt;" in wrapped
+
+
+@requires_db
+async def test_a_disconnected_chat_still_records_its_run(
+    services: Services, ws_a: Seeded, migrated: AsyncEngine
+) -> None:
+    """When the client goes away the server cancels the stream (an anyio
+    cancel scope); the agent_runs row must still be written."""
+    from app.agent.chat import run_chat
+    from app.auth import Caller
+
+    who = Caller(
+        issuer="web",
+        workspace_id=ws_a.workspace_id,
+        user_id=ws_a.user_id,
+        scopes=frozenset({"ai:use"}),
+    )
+    message = f"disconnect-{uuid.uuid4()}"
+    with anyio.CancelScope() as scope:
+        async for event in run_chat(services, who, message):
+            if event.event == "session":
+                scope.cancel()
+    async with session_factory(migrated)() as s:
+        run = await s.scalar(
+            select(AgentRun).where(
+                AgentRun.kind == "chat", AgentRun.input["message"].astext == message
+            )
+        )
+    assert run is not None
+    assert run.status == "cancelled"
