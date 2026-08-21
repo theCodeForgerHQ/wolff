@@ -37,6 +37,20 @@ class Seeded:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
+#: The scopes of each seeded workspace's MCP API key.
+KEY_SCOPES = (
+    "ai:use",
+    "leads:read",
+    "leads:write",
+    "deals:read",
+    "deals:write",
+    "clients:read",
+    "invoices:read",
+    "quotes:read",
+    "quotes:write",
+    "reports:read",
+)
+
 WORKSPACES: dict[str, dict[str, Any]] = {
     "a": {
         "client": "Acme Robotics",
@@ -276,17 +290,7 @@ async def seed_workspace(admin: AsyncEngine, key: str) -> Seeded:
                 "w": ws,
                 "h": hashlib.sha256(raw_key.encode()).hexdigest(),
                 "p": raw_key[:10],
-                "sc": [
-                    "ai:use",
-                    "leads:read",
-                    "leads:write",
-                    "deals:read",
-                    "deals:write",
-                    "invoices:read",
-                    "quotes:read",
-                    "quotes:write",
-                    "reports:read",
-                ],
+                "sc": list(KEY_SCOPES),
             },
         )
     return Seeded(

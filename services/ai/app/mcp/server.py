@@ -25,13 +25,22 @@ from mcp.server.mcpserver.exceptions import ResourceError, ToolError
 from app.agent import queries
 from app.agent.api_client import ApiError, ApiUnavailable
 from app.agent.quote_agent import DraftError, draft_quote
-from app.auth import AuthError, Caller
+from app.auth import AuthError, Caller, InsufficientScope
 from app.budget import metered
 from app.db.models import AgentRun
 from app.llm.transport import LlmUnavailable
 from app.mcp.auth import ApiKeyTokenVerifier, caller_from_token
 from app.rag.retriever import WorkspaceRetriever
 from app.services import Services
+
+#: The read scope each searchable source type needs. There is no contracts
+#: scope; a contract instance belongs to a client, so it needs clients:read.
+SEARCH_SCOPES = {
+    "quote": "quotes:read",
+    "invoice": "invoices:read",
+    "contract": "clients:read",
+    "client_note": "clients:read",
+}
 
 TOOL_NAMES = (
     "search_documents",
@@ -87,7 +96,8 @@ def build_mcp_server(svc: Services, *, fixed_caller: Caller | None = None) -> MC
                 return await work(caller)
         except AuthError as exc:
             status, error = "denied", "insufficient_scope"
-            raise ToolError(f"This API key lacks the {scope} scope") from exc
+            missing = str(exc).removeprefix("missing scope ")
+            raise ToolError(f"This API key lacks the {missing} scope") from exc
         except (ApiError, DraftError) as exc:
             status, error = "error", getattr(exc, "code", "error")
             raise ToolError(str(exc)) from exc
@@ -124,15 +134,22 @@ def build_mcp_server(svc: Services, *, fixed_caller: Caller | None = None) -> MC
 
     @server.tool()
     async def search_documents(query: str, types: list[str] | None = None) -> list[dict[str, Any]]:
-        """Search quotes, invoices, contracts and client notes; returns cited chunks."""
+        """Search quotes, invoices, contracts and client notes; returns cited chunks.
+        Only the types the key may read are searched (quotes:read, invoices:read,
+        clients:read for contracts and client notes)."""
 
         async def work(caller: Caller) -> list[dict[str, Any]]:
+            wanted = [t for t in SEARCH_SCOPES if not types or t in types]
+            readable = [t for t in wanted if SEARCH_SCOPES[t] in caller.scopes]
+            if not readable:
+                needed = sorted({SEARCH_SCOPES[t] for t in wanted} or set(SEARCH_SCOPES.values()))
+                raise InsufficientScope(f"missing scope {' or '.join(needed)}")
             docs = await WorkspaceRetriever(
                 sessions=svc.sessions,
                 workspace_id=caller.workspace_id,
                 embed=svc.llm.embed,
                 embedding_model=settings.provider.embed_model,
-                source_types=types or None,
+                source_types=readable,
             ).search(query)
             return [{"content": d.page_content, **d.metadata} for d in docs]
 
