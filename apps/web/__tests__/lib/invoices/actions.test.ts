@@ -415,6 +415,14 @@ describe('Invoice Actions', () => {
       const result = await deleteInvoice('inv-1');
 
       expect(result.success).toBe(true);
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'invoice', sourceId: 'inv-1' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('prevents deleting non-draft invoices', async () => {

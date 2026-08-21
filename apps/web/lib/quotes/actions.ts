@@ -789,6 +789,12 @@ export async function deleteQuote(quoteId: string) {
         signatureData: Prisma.JsonNull,
       },
     });
+    // The AI service drops a soft-deleted quote from its index.
+    await requestAiIndexing(tx, {
+      workspaceId: workspace.id,
+      sourceType: 'quote',
+      sourceId: quoteId,
+    });
   });
 
   revalidatePath(ROUTES.quotes);

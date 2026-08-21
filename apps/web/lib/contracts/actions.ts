@@ -27,6 +27,7 @@ import { createNotification, notifyWorkspaceMembers } from '@/lib/notifications/
 import { checkRateLimit, strictRateLimitOptions } from '@/lib/rate-limit';
 import { computeContractDocumentHash, verifyDocumentHash } from '@/lib/signing/document-hash';
 import { logger } from '@/lib/logger';
+import { requestAiIndexing } from '@wolff/core/outbox';
 
 // HTML escape for safe email template interpolation
 function escapeHtml(str: string): string {
@@ -940,9 +941,13 @@ export async function deleteContractInstance(id: string): Promise<void> {
     throw new Error('Cannot delete a signed contract. Signed contracts are legal records.');
   }
 
-  await prisma.contractInstance.update({
-    where: { id },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.contractInstance.update({
+      where: { id, workspaceId },
+      data: { deletedAt: new Date() },
+    });
+    // The AI service drops a soft-deleted contract from its index.
+    await requestAiIndexing(tx, { workspaceId, sourceType: 'contract', sourceId: id });
   });
 
   revalidatePath('/contracts');

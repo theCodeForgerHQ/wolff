@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@wolff/database';
 import { NotFoundError, UnauthorizedError } from '@/lib/api/errors';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
+import { requestAiIndexing } from '@wolff/core/outbox';
 import type {
   ClientListItem,
   ClientDetail,
@@ -512,9 +513,16 @@ export async function updateClient(input: UpdateClientInput): Promise<{ id: stri
       : Prisma.JsonNull;
   }
 
-  const client = await prisma.client.update({
-    where: { id: input.id },
-    data: updateData,
+  const client = await prisma.$transaction(async (tx) => {
+    const updated = await tx.client.update({
+      where: { id: input.id },
+      data: updateData,
+    });
+    // The notes are the client's AI document; cleared notes drop it from the index.
+    if (input.notes !== undefined) {
+      await requestAiIndexing(tx, { workspaceId, sourceType: 'client_note', sourceId: input.id });
+    }
+    return updated;
   });
 
   revalidatePath(ROUTES.clients);
@@ -545,9 +553,12 @@ export async function deleteClient(id: string): Promise<void> {
     throw new NotFoundError('Client', id);
   }
 
-  await prisma.client.update({
-    where: { id },
-    data: { deletedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.client.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    await requestAiIndexing(tx, { workspaceId, sourceType: 'client_note', sourceId: id });
   });
 
   revalidatePath(ROUTES.clients);
@@ -561,13 +572,20 @@ export async function deleteClients(ids: string[]): Promise<{ deleted: number }>
     throw new Error('Insufficient permissions: viewers cannot delete clients');
   }
 
-  const result = await prisma.client.updateMany({
-    where: {
-      id: { in: ids },
-      workspaceId,
-      deletedAt: null,
-    },
-    data: { deletedAt: new Date() },
+  const result = await prisma.$transaction(async (tx) => {
+    const live = await tx.client.findMany({
+      where: { id: { in: ids }, workspaceId, deletedAt: null },
+      select: { id: true },
+    });
+    const liveIds = live.map((client) => client.id);
+    const deleted = await tx.client.updateMany({
+      where: { id: { in: liveIds }, workspaceId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    for (const id of liveIds) {
+      await requestAiIndexing(tx, { workspaceId, sourceType: 'client_note', sourceId: id });
+    }
+    return deleted;
   });
 
   revalidatePath(ROUTES.clients);

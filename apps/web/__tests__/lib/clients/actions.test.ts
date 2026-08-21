@@ -13,6 +13,8 @@ const { mockPrisma, mockGetCurrentUserWorkspace } = vi.hoisted(() => {
     quote: { findMany: vi.fn() },
     invoice: { findMany: vi.fn(), aggregate: vi.fn() },
     payment: { findMany: vi.fn() },
+    outboxEvent: { create: vi.fn().mockResolvedValue({ id: 'evt-1' }) },
+    $transaction: vi.fn((fn: any) => fn(mockPrisma)),
   };
   const mockGetCurrentUserWorkspace = vi.fn();
   return { mockPrisma, mockGetCurrentUserWorkspace };
@@ -210,6 +212,28 @@ describe('Client Actions', () => {
 
       expect(result.id).toBe('client-1');
       expect(mockPrisma.client.update).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.outboxEvent.create).not.toHaveBeenCalled();
+    });
+
+    it('asks the AI service to re-index the client note when notes change or are cleared', async () => {
+      mockPrisma.client.findFirst.mockResolvedValue({
+        id: 'client-1',
+        workspaceId: WORKSPACE_ID,
+        metadata: {},
+      });
+      mockPrisma.client.update.mockResolvedValue({ id: 'client-1' });
+
+      await updateClient({ id: 'client-1', notes: '' });
+
+      expect(mockPrisma.client.update.mock.calls[0]![0].data.notes).toBeNull();
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'client_note', sourceId: 'client-1' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('throws for client in different workspace', async () => {
@@ -233,6 +257,14 @@ describe('Client Actions', () => {
           data: expect.objectContaining({ deletedAt: expect.any(Date) }),
         })
       );
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          workspaceId: WORKSPACE_ID,
+          type: 'ai.index',
+          payload: { sourceType: 'client_note', sourceId: 'client-1' },
+        }),
+        select: { id: true },
+      });
     });
 
     it('throws for non-existent client', async () => {
@@ -244,6 +276,7 @@ describe('Client Actions', () => {
 
   describe('deleteClients (bulk)', () => {
     it('soft deletes multiple clients', async () => {
+      mockPrisma.client.findMany.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }]);
       mockPrisma.client.updateMany.mockResolvedValue({ count: 3 });
 
       const result = await deleteClients(['c1', 'c2', 'c3']);
@@ -251,6 +284,25 @@ describe('Client Actions', () => {
       expect(result.deleted).toBe(3);
       const updateCall = mockPrisma.client.updateMany.mock.calls[0]![0];
       expect(updateCall.where.workspaceId).toBe(WORKSPACE_ID);
+      expect(updateCall.where.id).toEqual({ in: ['c1', 'c2', 'c3'] });
+      const indexed = mockPrisma.outboxEvent.create.mock.calls.map(
+        (call: any[]) => call[0].data.payload
+      );
+      expect(indexed).toEqual(
+        ['c1', 'c2', 'c3'].map((id) => ({ sourceType: 'client_note', sourceId: id }))
+      );
+    });
+
+    it('re-indexes only the clients of the caller workspace', async () => {
+      // An id from another workspace is filtered out by the lookup.
+      mockPrisma.client.findMany.mockResolvedValue([{ id: 'c1' }]);
+      mockPrisma.client.updateMany.mockResolvedValue({ count: 1 });
+
+      await deleteClients(['c1', 'other-ws']);
+
+      expect(mockPrisma.client.findMany.mock.calls[0]![0].where.workspaceId).toBe(WORKSPACE_ID);
+      expect(mockPrisma.client.updateMany.mock.calls[0]![0].where.id).toEqual({ in: ['c1'] });
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledTimes(1);
     });
   });
 
