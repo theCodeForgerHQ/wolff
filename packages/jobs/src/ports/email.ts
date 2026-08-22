@@ -46,15 +46,20 @@ export function createResendTransport(options: {
 }
 
 /**
- * For development without an email account: nothing is sent, and what would
- * have been is reported without the recipient or the body.
+ * For development without an email account: nothing is sent. What would have
+ * been is reported by job key and counts only: no address, no subject (it
+ * names clients, and in demo mode the intended recipients), no body.
  */
 export function createLogEmailTransport(
-  log: (entry: { subject: string; idempotencyKey: string }) => void
+  log: (entry: { idempotencyKey: string; recipientCount: number; redirected: boolean }) => void
 ): EmailTransport {
   return {
     async send(message) {
-      log({ subject: message.subject, idempotencyKey: message.idempotencyKey });
+      log({
+        idempotencyKey: message.idempotencyKey,
+        recipientCount: 1,
+        redirected: message.redirected === true,
+      });
     },
   };
 }
@@ -67,7 +72,7 @@ export function withDemoRedirect(inner: EmailTransport, redirect: string): Email
   return {
     async send(message) {
       const { to, subject } = redirectForDemo(message, redirect);
-      await inner.send({ ...message, to: to[0] ?? redirect, subject });
+      await inner.send({ ...message, to: to[0] ?? redirect, subject, redirected: true });
     },
   };
 }

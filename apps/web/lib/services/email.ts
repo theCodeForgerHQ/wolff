@@ -47,6 +47,11 @@ export interface EmailResult {
   error?: string;
 }
 
+function recipientCount(options: EmailOptions): number {
+  const to = Array.isArray(options.to) ? options.to.length : 1;
+  return to + (options.cc?.length ?? 0) + (options.bcc?.length ?? 0);
+}
+
 // Initialize email client
 let resend: Resend | null = null;
 
@@ -97,7 +102,10 @@ export async function sendEmail(
   const client = getEmailClient();
 
   if (!client) {
-    logger.warn({ subject: options.subject }, 'Email client not configured. Email not sent');
+    logger.warn(
+      { recipientCount: recipientCount(options) },
+      'Email client not configured. Email not sent'
+    );
     return {
       success: false,
       error: 'Email service not configured',
@@ -105,12 +113,17 @@ export async function sendEmail(
   }
 
   const config = getDefaultConfig();
+  // Logs carry counts and ids only: no address (original or redirected), no
+  // subject (it names clients and, in demo mode, the intended recipients),
+  // no body, and not the provider's error text, which can echo an address.
+  const logContext = { recipientCount: recipientCount(options), redirected: false };
 
   try {
     // Free demo: every email goes to DEMO_EMAIL_REDIRECT (throws, and so
     // fails the send, if demo mode is on without it).
     const redirect = demoEmailRedirect(process.env);
     const addressed = redirect ? redirectForDemo(options, redirect) : options;
+    logContext.redirected = redirect !== undefined;
 
     // Strip newlines and non-printable characters to prevent email header injection
     // Low #32: Also remove control characters that can break email client rendering
@@ -149,20 +162,24 @@ export async function sendEmail(
     });
 
     if (error) {
-      logger.error({ err: error }, 'Email send error');
+      logger.error({ ...logContext, errorName: error.name }, 'Email send error');
       return {
         success: false,
         error: error.message,
       };
     }
 
+    logger.info({ ...logContext, messageId: data?.id }, 'Email sent');
     return {
       success: true,
       messageId: data?.id,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    logger.error({ err: message }, 'Email send exception');
+    logger.error(
+      { ...logContext, errorName: err instanceof Error ? err.name : typeof err },
+      'Email send exception'
+    );
     return {
       success: false,
       error: message,

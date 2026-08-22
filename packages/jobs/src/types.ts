@@ -71,6 +71,8 @@ export interface EmailMessage {
   html: string;
   /** Sent as Resend's Idempotency-Key, so a retried job sends one email. */
   idempotencyKey: string;
+  /** Set by the demo redirect: `to` is the redirect, not the intended recipient. */
+  redirected?: boolean;
 }
 
 export interface EmailTransport {
