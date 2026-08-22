@@ -1,8 +1,8 @@
 # Phase 5: AI service
 
-Branch `phase5-ai-service`, from `phase4-closed`. **Built, not yet
-reviewed.** A separate reviewer has to go over
-`phase4-closed..phase5-ai-service` before the phase can be closed. Nothing
+Branch `phase5-ai-service`, from `phase4-closed`. **Built, reviewed, and
+the review's findings fixed** (see "Review findings and fixes"). The tip
+before the fixes is tagged `phase5-pre-review-fixes` (`c7729ed`). Nothing
 is pushed and nothing is deployed.
 
 There is no LLM key in this environment. Every LLM and embedding call in
@@ -41,14 +41,22 @@ How the parts connect:
   It is built on `RateLimitedTransport`, which handles RPM/TPM token
   buckets, a requests-per-day counter (Redis when configured), bounded
   concurrency, two retries on 429/5xx honouring `Retry-After`, and the
-  model allowlist. It also calls `BudgetGate`, which refuses a call with
-  no metered workspace or over `AI_DAILY_BUDGET_USD` and records usage in
-  `ai.usage_daily`.
+  model allowlist. Before a request waits for a slot, `BudgetGate`
+  reserves its worst-case cost (estimated prompt tokens plus `max_tokens`)
+  in `ai.usage_daily` with one conditional upsert, refusing it when the
+  day's spend plus the reservation would pass `AI_DAILY_BUDGET_USD` or
+  when no workspace is metered. After the call the reservation is settled
+  to the real usage, or released on failure or cancellation. Retries
+  inside the transport reuse the one reservation. There is no `tenacity`:
+  the transport does its own retries.
 - **Writes are proposals.** The model never calls a write tool. Our code
   checks the structured draft against the workspace first: the client, the
-  deal and every rate-card reference must belong to it. Only then does it
-  call `/internal/quotes/draft`, which creates a `draft` as the forwarded
-  user.
+  deal (and that the deal is the client's) and every rate-card reference
+  must belong to it. Rate-card lines take the card's rate, HSN/SAC and GST
+  rate, the currency is the workspace's, and lines priced by the model
+  come back as warnings to confirm. Only then does it call
+  `/internal/quotes/draft`, which creates a `draft` as the forwarded user
+  and repeats the client, deal and rate-card checks.
 
 ## Phase 5 DoD
 
@@ -57,7 +65,7 @@ How the parts connect:
 | Isolation suite 0 leaks                                   | Met                                   | `uv run pytest -m isolation`: `12 passed`. That is 11 cases (every HTTP endpoint, all 10 MCP tools and both resources, MCP writes, shared queries) with 0 leaks, plus a control that sees B's data when asking as B. Removing the workspace clause from the retriever, `scoped()` or the view filter fails 3, 7 and 1 cases |
 | Eval thresholds met on the recorded run                   | Met, offline model only               | `evals/results/fake-2026-08-09.json` (run at `23ea69b`, also in `ai.eval_runs`): recall@6 1.0 (≥0.85), schema-valid 1.0, isolation leaks 0. Final run `pytest -m eval` on a fresh demo DB: `1 passed`                                                                                                                       |
 | …plus one live run logged                                 | **Not done**: needs a key (owner)     | `LLM_PROVIDER=gemini GEMINI_API_KEY=… AI_EVAL_DATABASE_URL=… uv run python -m evals.runner`                                                                                                                                                                                                                                 |
-| In-memory MCP client test of every tool in CI             | Met (locally; CI never run on GitHub) | `tests/test_mcp.py`, 6 tests through `mcp.Client(server)` in-process: the tool list equals the design's ten, every tool and both resources as A, cross-tenant denials, per-tool scope refusals, key checks, and `/mcp` over HTTP (401 without or with a bad key). Runs in the `ai` CI job's pytest step                           |
+| In-memory MCP client test of every tool in CI             | Met (locally; CI never run on GitHub) | `tests/test_mcp.py`, 9 tests through `mcp.Client(server)` in-process: the tool list equals the design's ten, every tool and both resources as A, cross-tenant denials, per-tool scope refusals, key checks, and `/mcp` over HTTP (401 without or with a bad key). Runs in the `ai` CI job's pytest step                           |
 | A drafted quote opens in the builder and saves (E2E)      | Met                                   | `playwright.assistant.config.ts` (web + apps/api + AI service, offline model): `2 passed` (sign-in setup + the spec), CI=1, no retries                                                                                                                                                                                      |
 | With ai stopped, reports and the core flow still pass E2E | Met                                   | `playwright.flows.config.ts` now runs with `AI_URL` on a closed port: `20 passed`. That covers lead to paid, quote to paid, Kanban, automations, CSP, axe, the widget and the new `assistant-down` spec (assistant hidden, analytics renders, chat route 502)                                                               |
 
@@ -80,19 +88,63 @@ are 40 RAG, 20 SQL, 14 quote briefs and 10 isolation/jailbreak prompts.
 | p95 latency             | 118 ms                                            | none      |
 | cost of the run         | $0.023888 (offline model priced like gpt-4o-mini) | none      |
 
-What these numbers can and cannot show:
+What the offline evals prove, and what they do not:
 
-- **Offline model.** The run uses the offline model, so it measures our
-  pipeline, not a language model: retrieval and SQL routing, schema
-  validation, workspace checks and the leak guards.
-- **RAG answer correctness (0.125).** The fake answers with one extracted
-  sentence, so this number says nothing about a real model.
-- **Injection refusal (1.0).** The fake cannot follow injected
-  instructions, so this rate is not evidence about a real model.
-- **Embeddings are lexical.** The fake's embeddings are a hashed bag of
-  words. Recall was 0.625 until the retriever learned to match document
-  numbers named in a question (`af0b8d7`). That is a real retrieval
-  change, but it was found and measured on this lexical model.
+- **They prove** that the pipeline around the model works: retrieval
+  returns the expected sources, structured questions are routed to SQL
+  and give the oracle's numbers, drafts are checked against the workspace,
+  and no cross-workspace data leaks through any tool.
+- **recall@6 is a regression test of lexical retrieval.** The fake's
+  embeddings are a hashed bag of words, so recall measures how well the
+  retriever's SQL, rerank and document-number matching serve a lexical
+  model. Recall was 0.625 until the retriever learned to match document
+  numbers named in a question (`af0b8d7`). It says nothing about how a
+  real embedding model ranks.
+- **schema-valid 1.0 is tautological with the fake.** The fake builds its
+  output from the schema, so it cannot fail it. Only a live run can show
+  a real model's schema-valid rate.
+- **Injection resistance is not shown.** The fake cannot follow injected
+  instructions, so the 1.0 refusal rate is not evidence about a real
+  model. What is shown, by unit tests that make the fake obey injected
+  instructions, is that the draft validator overrides or refuses what a
+  steered model returns (see the review fixes for item 6).
+- **RAG answer correctness (0.125)** says nothing about a real model: the
+  fake answers with one extracted sentence.
+
+## Review findings and fixes
+
+The review of `phase4-closed..c7729ed` ranked 10 findings. Each one was
+checked against the code first; all ten held. Each fix is its own commit,
+test first. "Bites" means: with the fix reverted in a scratch worktree
+(source only, the new tests kept), the named tests fail.
+
+| #   | Severity | Finding (verified)                                                                                                             | Fix                                                                                                                                                                                                                                                        | Commit(s)                       | Bites                                                                                                               |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 1   | HIGH     | Deleted documents stayed searchable: no `ai.index` on delete, and the sweep listed only live rows, so it never removed chunks  | The sweep deletes chunks and `ingest_state` of sources that are deleted, soft-deleted, or a client whose notes were cleared. Soft deletes of quotes, invoices, contracts and clients (web actions and `/api/v1` DELETE) and note edits emit `ai.index`     | `f9300e0`, `dd0d149`            | 2 of 6 ingest-API tests; 10 of 64 web tests                                                                         |
+| 2   | MEDIUM   | CI `ai` and `migrations` jobs seeded without `pnpm db:generate` (reproduced: "Cannot find module './generated/prisma/client'") | `pnpm db:generate` before the seeds                                                                                                                                                                                                                        | `da55163`                       | Reproduced and cleared in a clean worktree                                                                          |
+| 3   | MEDIUM   | The test seed used the local date, the views UTC `CURRENT_DATE` (reproduced with `TZ=Etc/GMT+12`)                              | The seed reads `CURRENT_DATE` from the database                                                                                                                                                                                                            | `c081cf4`                       | Fails under `TZ=Etc/GMT+12` without it                                                                              |
+| 4   | MEDIUM   | MCP `search_documents` checked only `ai:use`                                                                                   | Each source type needs its read scope (`quotes:read`, `invoices:read`, `clients:read` for contracts and notes; there is no contracts scope)                                                                                                                | `9d3d082`                       | 2 of 9 MCP tests                                                                                                    |
+| 5   | MEDIUM   | `BudgetGate.before` checked spend before the slot wait and reserved nothing                                                    | Atomic worst-case reservation in `ai.usage_daily`, settled or released after; tests that every provider path (embeddings, chat, tools, `json_schema`), retries and cancellation go through it, and that only `app/llm/clients.py` builds a provider client | `cf1e1fb`, `3132d10`            | Concurrency test (10 queued, budget for 3: 10 passed before); 5 transport/client tests with the reservation skipped |
+| 6   | MEDIUM   | The quote agent took the model's rate for rate-card lines; `createDraftQuote` did not check the deal's client                  | Rate, HSN/SAC (and GST rate) from the card; workspace currency; model-priced lines flagged; deal must be the client's (AI service and core). Tests drive an injection-style brief through each control                                                     | `0e974d9`, `2828d77`, `a6acf22` | 3 of 16 agent tests; the currency/flag test; 1 of 9 core tests                                                      |
+| 7   | LOW      | MCP `run()` logged unexpected exceptions as `ok`; a negative `limit` reached Postgres                                          | Unexpected errors recorded as `error`/`internal`; limits bounded to 1..cap                                                                                                                                                                                 | `bb339e3`, `fcea2a5`            | 1 test each                                                                                                         |
+| 8   | LOW      | Document text could close the chat's `<document>` wrapper                                                                      | Content HTML-escaped inside the wrapper                                                                                                                                                                                                                    | `41803ee`                       | 1 test                                                                                                              |
+| 9   | LOW      | A client disconnect cancelled `_record`, so no `agent_runs` row                                                                | Cancellation recorded as `cancelled`; history load inside the `try`; `_record` in a shielded cancel scope                                                                                                                                                  | `51c7af8`                       | 1 test                                                                                                              |
+| 10  | LOW      | Unused `tenacity` pin                                                                                                          | Removed (still in the lock via langchain-core)                                                                                                                                                                                                             | `74750b3`                       | n/a                                                                                                                 |
+
+Notes:
+
+- Item 5's fix changes behaviour: a call is refused when the remaining
+  budget cannot cover its worst case, not only once the budget is spent.
+  `cost_usd` includes in-flight reservations.
+- Item 6: quantity (0 < qty ≤ 1e6), the 50-line cap, field lengths and the
+  absence of a discount field were already enforced by the strict
+  `QuoteDraft` schema; they now have tests. Free-text fields (title,
+  terms, notes, assumptions) are kept as written for the user to review
+  in the builder; when the saved quote is later retrieved in chat it is
+  wrapped and escaped as data (item 8).
+- One guard check for item 4 was done by stashing in the repo rather than
+  in a scratch copy; it was restored at once and every later check used
+  the scratch worktree.
 
 ## Deviations and why
 
@@ -165,15 +217,24 @@ What these numbers can and cannot show:
 15. **GST preview default.** The quote agent prices preview GST at 18% for
     rate cards with no GST rate. The saved draft has tax 0, and the builder
     prices GST on save.
+16. **No `tenacity`.** The design names it for retries on 429. The LLM
+    transport retries twice itself, honouring `Retry-After`, so one place
+    owns retries and the budget reservation; the unused pin was removed.
 
 ## Known issues and deferred
 
-- **Write paths that emit `ai.index`.** `createQuote`, `updateQuote`,
-  `createInvoice` and `updateInvoice` emit it in the change's transaction,
-  as does `createDraftQuote`. Status changes, portal acceptance,
-  duplicates, recurring copies, contracts and client notes emit nothing.
-  The nightly `ai.sweep` (01:30 UTC) re-indexes them, so the index can lag
-  up to a day for those.
+- **Write paths that emit `ai.index`.** Creates and updates of quotes and
+  invoices, `createDraftQuote`, and every soft delete of a quote, invoice,
+  contract or client (web actions and the `/api/v1` DELETE handlers), plus
+  client updates that touch notes, emit it in the change's transaction.
+  Status changes, portal acceptance, duplicates, recurring copies, contract
+  creation and client creation emit nothing. The nightly `ai.sweep` (01:30
+  UTC) re-indexes changed rows and deletes the chunks and state of sources
+  that are gone, so for those paths the index can lag up to a day.
+- **A cancelled chat leaves a SQLAlchemy warning.** When a disconnect
+  cancels a chat while it holds a database connection, the run is recorded
+  but SQLAlchemy warns that the garbage collector cleaned up the
+  connection. Seen once in the test suite; harmless, not fixed.
 - **Demo-mode banner (pre-existing).** The banner is fixed over the right
   side of the dashboard header for demo users. The header buttons (the
   assistant, theme, notifications) cannot be clicked until it is
@@ -242,52 +303,33 @@ What these numbers can and cannot show:
 
 ## Checks at the tip
 
-Unless noted, everything ran on 2026-08-09 in a fresh `git worktree` with
-no `.env` files. Versions: Node 24.21.0, Python 3.12.13 (uv 0.11.5),
-Postgres 17 + pgvector 0.8.2, stripe-mock 0.205.0, Redis 7
-(testcontainers). Each suite got a fresh database and the suites ran one
-at a time.
+After the review fixes, everything below ran on 2026-08-20 at `74750b3`
+(the last code commit; this doc is the only later change) in a fresh
+`git worktree` with no `.env` files, on Node 24.21.0, Python 3.12.13 (uv
+0.11.5), Postgres 17 + pgvector 0.8.2, stripe-mock 0.205.0 and Redis 7.
+Each suite got a fresh database and the suites ran one at a time.
 
-The checks ran at three tips:
+| Check                                                                                              | Result                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`, `pnpm db:generate`                                               | ok                                                                                                                                           |
+| `pnpm type-check --force`                                                                          | 14/14 tasks, 0 cached                                                                                                                        |
+| `pnpm lint --force`                                                                                | 14/14 tasks, 0 errors (56 web warnings, unchanged)                                                                                           |
+| TS tests with Postgres + stripe-mock + Redis                                                       | core 272, jobs 66, database 39, contracts 18, api 199, widget 12, web 1219: all passed                                                       |
+| TS tests without services                                                                          | core 151 (121 skipped), jobs 44 (22), database 27 (12), contracts 18, api 51 (148), widget 12, web 1175 (44): all passed                     |
+| `uv run ruff check .` / `ruff format --check .`                                                    | passed / passed                                                                                                                              |
+| `uv run mypy` (strict, `--no-incremental`)                                                         | no issues in 73 files                                                                                                                        |
+| `uv run pytest` (fresh DB: Prisma migrations, bootstrap, Alembic)                                  | 163 passed, 1 skipped (the eval test, which needs `AI_EVAL_DATABASE_URL`)                                                                    |
+| `uv run pytest -m isolation`                                                                       | 12 passed                                                                                                                                    |
+| `uv run pytest -m eval` (fresh demo-seeded DB)                                                     | 1 passed                                                                                                                                     |
+| `pnpm build --force`                                                                               | 4/4 tasks, 0 cached                                                                                                                          |
+| `prisma migrate deploy` + `db:migrate:check`, fresh DB                                             | "No difference detected."                                                                                                                    |
+| `alembic upgrade head` + `alembic check`, same DB; then `pnpm db:seed`                             | "No new upgrade operations detected."; seed ok                                                                                               |
+| E2E `playwright.flows.config.ts`, all projects, CI=1, `--retries=0`, AI down                       | 20/20, including `assistant-down`                                                                                                            |
+| E2E `playwright.assistant.config.ts`, CI=1, `--retries=0`                                          | 2/2 (sign-in setup + "a drafted quote opens in the builder and saves")                                                                       |
+| ruff, `mypy --no-incremental`, pytest (no DB) at each of the 12 fix commits touching `services/ai` | mypy and pytest pass at all 12; ruff format fails at `fcea2a5` only (a trailing blank line in `tests/test_mcp.py`, fixed by the next commit) |
+| type-check and lint at the 2 fix commits touching TypeScript (`dd0d149`, `a6acf22`)                | pass                                                                                                                                         |
 
-- **`528dfcd`:** install, type-check, lint, the TS suites with services
-  (jobs was rerun at `914effe` after its fix), build, E2E and visual.
-- **`914effe`:** the TS suites without services.
-- **`9c8f8f3`:** the Python checks, migrations and OpenAPI.
-
-What changed between these tips:
-
-- `914effe` changes one jobs test.
-- `9c8f8f3` changes one Python test.
-
-| Check                                                                                      | Result                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm install --frozen-lockfile`                                                           | ok                                                                                                                                                                       |
-| `pnpm type-check --force`                                                                  | 14/14 tasks                                                                                                                                                              |
-| `pnpm lint`                                                                                | 0 errors (56 web, 2 widget warnings, unchanged from Phase 4)                                                                                                             |
-| TS tests with Postgres + stripe-mock + Redis                                               | core 271, jobs 66, database 39, contracts 18, api 199, widget 12, web 1211: all passed                                                                                   |
-| TS tests without services                                                                  | core 151 (120 skipped), jobs 44 (22), database 27 (12), contracts 18, api 51 (148), widget 12, web 1167 (44): all passed                                                 |
-| `uv run ruff check .` / `ruff format --check .`                                            | all passed / 75 files formatted                                                                                                                                          |
-| `uv run mypy` (strict, `--no-incremental`)                                                 | no issues in 73 files                                                                                                                                                    |
-| `uv run pytest` (fresh DB: Prisma migrations, bootstrap, Alembic)                          | 139 passed, 1 skipped (the eval test, which needs `AI_EVAL_DATABASE_URL`)                                                                                                |
-| `uv run pytest -m isolation`                                                               | 12 passed                                                                                                                                                                |
-| `uv run pytest -m eval` (fresh demo-seeded DB)                                             | 1 passed                                                                                                                                                                 |
-| `pnpm build`                                                                               | 4/4 tasks                                                                                                                                                                |
-| `prisma migrate deploy` + `db:migrate:check`, fresh DB                                     | "No difference detected."                                                                                                                                                |
-| `alembic upgrade head` + `alembic check`, same DB                                          | "No new upgrade operations detected."                                                                                                                                    |
-| OpenAPI regenerate + `git status`                                                          | no diff                                                                                                                                                                  |
-| E2E `playwright.flows.config.ts`, all projects, CI=1, `--retries=0`, AI down               | 20/20                                                                                                                                                                    |
-| E2E `playwright.assistant.config.ts`, CI=1, `--retries=0`                                  | 2/2                                                                                                                                                                      |
-| Visual, macOS                                                                              | 21/21                                                                                                                                                                    |
-| AI image: `docker build`, `alembic upgrade head` in the container, `/healthz`              | ok                                                                                                                                                                       |
-| `actionlint .github/workflows/ci.yml`                                                      | ok                                                                                                                                                                       |
-| Type-check and lint at each commit that touches TypeScript (13 commits)                    | 13 of 13 pass both                                                                                                                                                       |
-| ruff, `mypy --no-incremental` and pytest (no DB) at each commit that touches `services/ai` | 27 commits: ruff and pytest pass at all 27; mypy passes at 17 and fails at the 10 from `8d0d005` to `b6e8094` (the PyJWT typing issue above), passing again at `9c8f8f3` |
-
-Not run:
-
-- GitHub Actions itself.
-- Visual baselines in the linux/arm64 container. The launcher renders
-  nothing without `AI_URL`, which the visual config does not set; the
-  macOS run shows no change.
-- A live LLM provider.
+Not run after the fixes: visual regression (no fix touches a rendered
+page), the AI image build, `actionlint` (passes on the changed workflow,
+run when `da55163` was made), GitHub Actions itself and a live LLM
+provider.
