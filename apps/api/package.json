@@ -7,6 +7,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc",
+    "build:vercel": "node scripts/bundle-vercel.mjs",
     "start": "node dist/src/server.js",
     "dev": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",

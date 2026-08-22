@@ -63,6 +63,7 @@ Thumbs.db
 *.Zone.Identifier
 *:Zone.Identifier
 .vercel
+.vercel-bundle
 .env*.local
 
 # Playwright auth state

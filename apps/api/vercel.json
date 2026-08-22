@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "express",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile --config.node-linker=hoisted",
+  "buildCommand": "cd ../.. && pnpm --filter @wolff/database generate && cd apps/api && pnpm build:vercel",
+  "outputDirectory": ".vercel-bundle",
+  "regions": ["iad1"]
+}
