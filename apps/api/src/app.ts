@@ -40,7 +40,7 @@ export interface AppDeps {
   /** Enables `/jobs/run/:type`. Absent: the route refuses every request. */
   jobs?: JobRunDeps;
   /** Told about outbox events a request wrote, once it committed (push dispatch). */
-  onOutboxEvents?: (ids: string[]) => void;
+  onOutboxEvents?: (ids: string[]) => void | Promise<void>;
   /** Rate-limit counters. Redis when instances share traffic; per process otherwise. */
   rateLimitStore?: RateLimitStoreFactory;
   /** Injected Stripe/Razorpay clients for tests. Defaults to env-configured clients. */

@@ -20,8 +20,12 @@ import { verifyRazorpaySignature } from './razorpay';
 export interface WebhookDeps {
   db: Db;
   config: ApiConfig;
-  /** Told about outbox events written by a request, after it committed. */
-  onOutboxEvents?: (ids: string[]) => void;
+  /**
+   * Told about outbox events written by a request, after it committed. The
+   * handler waits for it before answering: on a serverless host the function
+   * is frozen once the response is out, which would cut the push short.
+   */
+  onOutboxEvents?: (ids: string[]) => void | Promise<void>;
 }
 
 const RAW_LIMIT = '1mb';
@@ -58,7 +62,7 @@ export function webhookRoutes(deps: WebhookDeps): Router {
       payload: event,
       outbox: true,
     });
-    if (result.outboxEventId) deps.onOutboxEvents?.([result.outboxEventId]);
+    if (result.outboxEventId) await deps.onOutboxEvents?.([result.outboxEventId]);
     res.json({ received: true, ...(result.outcome === 'duplicate' ? { duplicate: true } : {}) });
   };
 
@@ -112,7 +116,7 @@ export function webhookRoutes(deps: WebhookDeps): Router {
       payload,
       outbox: true,
     });
-    if (result.outboxEventId) deps.onOutboxEvents?.([result.outboxEventId]);
+    if (result.outboxEventId) await deps.onOutboxEvents?.([result.outboxEventId]);
     res.json({ received: true, ...(result.outcome === 'duplicate' ? { duplicate: true } : {}) });
   });
 

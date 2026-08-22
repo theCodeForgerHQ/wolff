@@ -25,10 +25,32 @@ Three projects from the same monorepo, each with its root directory set:
 - `api` → `apps/api`
 - `ai` → `services/ai` (created in Phase 5)
 
-The `api` project uses Vercel's Express zero-config support: `apps/api/src/index.ts`
-exports the Express app as default. Webhook routes receive the raw body via
-`express.raw`. The function must not leak unhandled errors; the app's error
-handler catches them.
+The `api` project deploys from `apps/api/vercel.json` as committed; no
+build settings are set in the dashboard. Its build command bundles
+`src/index.ts` with esbuild (`pnpm build:vercel`, script
+`apps/api/scripts/bundle-vercel.mjs`) into `.vercel-bundle/index.mjs`: the
+`@wolff/*` workspace packages, which export TypeScript sources, are compiled
+into the bundle, and npm packages stay external for Vercel to trace. The
+install uses pnpm's hoisted linker (`--config.node-linker=hoisted` in the
+install command) because the bundle imports dependencies of the workspace
+packages that pnpm's isolated layout hides from `apps/api`. Vercel's Express
+preset then serves the bundle's default export. Checked locally with
+`vercel build` (CLI 62.2.0): the function handler is the bundle, and the
+built function directory answers `/healthz` and `/readyz` on its own. The bundle has no source map, and `build:vercel` fails if anything but
+`index.mjs` is in `.vercel-bundle`; after a local `vercel build`,
+`pnpm --filter @wolff/api check:vercel-output` fails if any `.js`/`.mjs`/`.map`
+is in `.vercel/output/static`, a source map is in a function, or the handler
+is not the bundle. Do not
+set `NODE_ENV` on the project: the install then skips devDependencies, and
+esbuild is one.
+
+Webhook routes receive the raw body via `express.raw`. The function must not
+leak unhandled errors; the app's error handler catches them, and it waits
+(up to 2 s) for the Sentry event to be sent before answering, because Vercel
+freezes the function once the response is out.
+
+Request logs keep the path only: query strings (the Vercel protection bypass
+on webhook URLs) and the Vercel bypass/OIDC headers are not logged.
 
 ## Environment variables
 
@@ -37,8 +59,13 @@ ones are:
 
 ```bash
 # Database
-DATABASE_URL=neos://...          # Neon pooled URL for functions
-DIRECT_URL=postgresql://...       # Neon direct URL for migrations
+DATABASE_URL=postgresql://...?sslmode=require   # Neon pooled URL for functions
+DIRECT_URL=postgresql://...?sslmode=require     # Neon direct URL for migrations
+# AI service: one standard URL serves Alembic (psycopg) and the service
+# (asyncpg). sslmode is translated for asyncpg: verify-full/verify-ca become
+# a verifying SSL context, require stays require, channel_binding is dropped,
+# and an unknown sslmode is an error. Neon's copied URL works unchanged.
+AI_DATABASE_URL=postgresql://ai_service:...@...?sslmode=require
 
 # Redis / queue
 REDIS_URL=rediss://...            # Redis Cloud, TLS on
@@ -61,6 +88,12 @@ STORAGE_SECRET_KEY=...
 # Email
 RESEND_API_KEY=...
 EMAIL_FROM=...
+# Demo: every email (web sends and job emails) goes to DEMO_EMAIL_REDIRECT,
+# with the intended recipients in the subject. web and api refuse to start
+# with DEMO_MODE=true and no valid redirect. Use the Resend account's own
+# address: Resend's shared onboarding sender delivers only there.
+DEMO_MODE=true
+DEMO_EMAIL_REDIRECT=owner@...
 
 # Observability
 SENTRY_DSN=...
@@ -70,7 +103,15 @@ OTEL_EXPORTER_OTLP_ENDPOINT=...
 LLM_PROVIDER=gemini
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 LLM_API_KEY=...
+AI_CHAT_MODEL=...                 # see the Gemini note below
 ```
+
+Gemini model note (2026-08-20): `gemini-2.5-flash` returns 404 for new API
+users, so the default chat model cannot be used on a new key. Set the chat
+model with `AI_CHAT_MODEL` to a model the key can use (the demo was
+provisioned with a newer Flash model); if `AI_MODEL_ALLOWLIST` is set, it
+must include that model or the service refuses to start.
+Embeddings (`gemini-embedding-001`) work on a new key.
 
 ## Jobs
 
