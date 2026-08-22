@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { demoEmailRedirect, redirectForDemo } from '@wolff/core/email';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
@@ -106,9 +107,14 @@ export async function sendEmail(
   const config = getDefaultConfig();
 
   try {
+    // Free demo: every email goes to DEMO_EMAIL_REDIRECT (throws, and so
+    // fails the send, if demo mode is on without it).
+    const redirect = demoEmailRedirect(process.env);
+    const addressed = redirect ? redirectForDemo(options, redirect) : options;
+
     // Strip newlines and non-printable characters to prevent email header injection
     // Low #32: Also remove control characters that can break email client rendering
-    const safeSubject = options.subject
+    const safeSubject = addressed.subject
       .replace(/[\r\n]+/g, ' ')
       .replace(/[\x00-\x1F\x7F]/g, '')
       .trim();
@@ -131,13 +137,13 @@ export async function sendEmail(
 
     const { data, error } = await client.emails.send({
       from: config.from,
-      to: Array.isArray(options.to) ? options.to : [options.to],
+      to: Array.isArray(addressed.to) ? addressed.to : [addressed.to],
       subject: safeSubject,
       html: htmlContent,
       text: textContent,
       replyTo: options.replyTo ?? config.replyTo,
-      cc: options.cc,
-      bcc: options.bcc,
+      cc: addressed.cc,
+      bcc: addressed.bcc,
       attachments: options.attachments,
       tags: options.tags,
     });
