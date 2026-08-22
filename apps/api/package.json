@@ -7,13 +7,14 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc",
-    "build:vercel": "node scripts/bundle-vercel.mjs",
+    "build:vercel": "node scripts/bundle-vercel.mjs && tsx scripts/check-vercel-output.ts bundle .vercel-bundle",
     "start": "node dist/src/server.js",
     "dev": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",
     "worker:drain": "tsx src/worker-drain.ts",
     "openapi:gen": "tsx scripts/generate-openapi.ts && prettier --write openapi.json",
-    "openapi:postman": "tsx scripts/generate-postman.ts"
+    "openapi:postman": "tsx scripts/generate-postman.ts",
+    "check:vercel-output": "tsx scripts/check-vercel-output.ts output ../../.vercel/output"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",

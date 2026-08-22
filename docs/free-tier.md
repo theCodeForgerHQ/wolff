@@ -36,7 +36,11 @@ install command) because the bundle imports dependencies of the workspace
 packages that pnpm's isolated layout hides from `apps/api`. Vercel's Express
 preset then serves the bundle's default export. Checked locally with
 `vercel build` (CLI 62.2.0): the function handler is the bundle, and the
-built function directory answers `/healthz` and `/readyz` on its own. Do not
+built function directory answers `/healthz` and `/readyz` on its own. The bundle has no source map, and `build:vercel` fails if anything but
+`index.mjs` is in `.vercel-bundle`; after a local `vercel build`,
+`pnpm --filter @wolff/api check:vercel-output` fails if any `.js`/`.mjs`/`.map`
+is in `.vercel/output/static`, a source map is in a function, or the handler
+is not the bundle. Do not
 set `NODE_ENV` on the project: the install then skips devDependencies, and
 esbuild is one.
 

@@ -16,7 +16,8 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node24',
-  sourcemap: true,
+  // No source map: nothing should describe the server source in a deployment.
+  sourcemap: false,
   logLevel: 'info',
   plugins: [
     {
