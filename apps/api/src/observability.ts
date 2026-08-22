@@ -14,12 +14,27 @@ import type { ApiConfig } from './config';
 
 let otelSdk: NodeSDK | undefined;
 
-export function initObservability(config: ApiConfig): { report: (error: unknown) => void } {
-  const report = (error: unknown) => {
-    if (error) {
-      Sentry.captureException(error);
-      console.error(error);
-    }
+/**
+ * How long a report may hold the response. On Vercel the function is frozen
+ * as soon as it answers, so an event still queued in the SDK is lost: the
+ * report waits for delivery, but not longer than this.
+ */
+const SENTRY_FLUSH_MS = 2000;
+
+export interface ObservabilityOptions {
+  /** Replaced in tests to observe what leaves the process. */
+  transport?: Sentry.NodeOptions['transport'];
+}
+
+export function initObservability(
+  config: ApiConfig,
+  options: ObservabilityOptions = {}
+): { report: (error: unknown) => Promise<void> } {
+  const report = async (error: unknown) => {
+    if (!error) return;
+    Sentry.captureException(error);
+    console.error(error);
+    if (config.SENTRY_DSN) await Sentry.flush(SENTRY_FLUSH_MS);
   };
 
   if (config.SENTRY_DSN) {
@@ -28,6 +43,7 @@ export function initObservability(config: ApiConfig): { report: (error: unknown)
       environment: config.NODE_ENV,
       release: config.GIT_SHA,
       tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+      ...(options.transport ? { transport: options.transport } : {}),
     });
   }
 

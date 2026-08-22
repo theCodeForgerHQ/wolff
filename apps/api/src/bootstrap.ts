@@ -16,6 +16,7 @@ import {
   createLogEmailTransport,
   createResendTransport,
   createS3Storage,
+  withDemoRedirect,
 } from '@wolff/jobs/ports';
 import { relayOutboxToJobs, type Job, type JobContext, type JobDispatcher } from '@wolff/jobs';
 import type { Db } from '@wolff/core/context';
@@ -87,11 +88,14 @@ function createJobRunDeps(config: ApiConfig, ctx: JobContext, redis?: Redis): Ap
   };
 }
 
-function createEmailTransport(config: ApiConfig): JobContext['email'] {
-  if (config.RESEND_API_KEY && config.EMAIL_FROM) {
-    return createResendTransport({ apiKey: config.RESEND_API_KEY, from: config.EMAIL_FROM });
-  }
-  return createLogEmailTransport((entry) => logger.info(entry, 'email would be sent'));
+export function createEmailTransport(config: ApiConfig): JobContext['email'] {
+  const transport =
+    config.RESEND_API_KEY && config.EMAIL_FROM
+      ? createResendTransport({ apiKey: config.RESEND_API_KEY, from: config.EMAIL_FROM })
+      : createLogEmailTransport((entry) => logger.info(entry, 'email would be sent'));
+  return config.demoEmailRedirect
+    ? withDemoRedirect(transport, config.demoEmailRedirect)
+    : transport;
 }
 
 function createStorage(config: ApiConfig): JobContext['storage'] {

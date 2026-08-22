@@ -26,9 +26,9 @@ function zodDetails(error: z.ZodError): Record<string, string[]> {
  */
 export function errorHandler(
   logger: Logger,
-  report?: (error: unknown) => void
+  report?: (error: unknown) => void | Promise<void>
 ): ErrorRequestHandler {
-  return (error, req, res, _next) => {
+  return async (error, req, res, _next) => {
     if (res.headersSent) {
       res.end();
       return;
@@ -57,7 +57,14 @@ export function errorHandler(
     }
 
     logger.error({ err: error, method: req.method, path: req.path }, 'Unhandled error');
-    report?.(error);
+    // Awaited before answering: a serverless function is frozen once it
+    // responds, which would strand the report. A failed report must not
+    // cost the client its response.
+    try {
+      await report?.(error);
+    } catch (reportError) {
+      logger.error({ err: reportError }, 'Error report failed');
+    }
     sendError(res, 'internal_error', 'An unexpected error occurred');
   };
 }

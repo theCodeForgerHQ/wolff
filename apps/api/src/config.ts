@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { demoEmailRedirect } from '@wolff/core/email';
 
 /**
  * Everything the API and the worker read from the environment, parsed once.
@@ -42,6 +43,9 @@ const schema = z.object({
 
   RESEND_API_KEY: optional,
   EMAIL_FROM: optional,
+  /** "true" in the free demo; see demoEmailRedirect for what it requires. */
+  DEMO_MODE: optional,
+  DEMO_EMAIL_REDIRECT: optional,
 
   SENTRY_DSN: optional,
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
@@ -50,7 +54,11 @@ const schema = z.object({
   GIT_SHA: optional,
 });
 
-export type ApiConfig = z.infer<typeof schema> & { isProduction: boolean };
+export type ApiConfig = z.infer<typeof schema> & {
+  isProduction: boolean;
+  /** Set in demo mode: every outgoing email goes here instead. */
+  demoEmailRedirect?: string;
+};
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): ApiConfig {
   const parsed = schema.safeParse(env);
@@ -58,5 +66,13 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     const problems = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
     throw new Error(`Invalid configuration:\n  ${problems.join('\n  ')}`);
   }
-  return { ...parsed.data, isProduction: parsed.data.NODE_ENV === 'production' };
+  return {
+    ...parsed.data,
+    isProduction: parsed.data.NODE_ENV === 'production',
+    // Throws in demo mode without a redirect: the process must not start.
+    demoEmailRedirect: demoEmailRedirect({
+      DEMO_MODE: parsed.data.DEMO_MODE,
+      DEMO_EMAIL_REDIRECT: parsed.data.DEMO_EMAIL_REDIRECT,
+    }),
+  };
 }

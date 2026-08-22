@@ -93,6 +93,46 @@ describe('API shell', () => {
     }
   );
 
+  it('answers a 500 only after the error report has finished', async () => {
+    const order: string[] = [];
+    const reporting = createApp({
+      db: db(true),
+      config: testConfig(),
+      report: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        order.push('reported');
+      },
+      extend: (router) => {
+        router.get('/boom', () => {
+          throw new Error('boom');
+        });
+      },
+    });
+
+    const res = await request(reporting).get('/boom');
+    order.push('answered');
+
+    expect(res.status).toBe(500);
+    expect(order).toEqual(['reported', 'answered']);
+  });
+
+  it('still answers a 500 when the error report itself fails', async () => {
+    const failing = createApp({
+      db: db(true),
+      config: testConfig(),
+      report: async () => {
+        throw new Error('sentry is down');
+      },
+      extend: (router) => {
+        router.get('/boom', () => {
+          throw new Error('boom');
+        });
+      },
+    });
+
+    expect((await request(failing).get('/boom')).status).toBe(500);
+  });
+
   it('maps a core error to its documented status', async () => {
     const res = await request(app()).get('/rule');
 
