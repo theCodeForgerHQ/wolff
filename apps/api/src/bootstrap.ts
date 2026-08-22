@@ -116,8 +116,9 @@ function createStorage(config: ApiConfig): JobContext['storage'] {
 
 /**
  * Pushes the outbox events a request just committed to the dispatcher, so
- * they don't wait for the relay's next pass. Fire and forget: the outbox row
+ * they don't wait for the relay's next pass. Never rejects: the outbox row
  * is the record, and a failed push is picked up by the relay and sweeper.
+ * Callers await it before answering, so a serverless freeze can't cut it off.
  */
 export function createOutboxPush(db: Db, dispatcher: JobDispatcher) {
   // The same routine as the relay: each row becomes the job its type maps

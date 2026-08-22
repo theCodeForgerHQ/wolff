@@ -110,6 +110,32 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Stripe webhooks (Postgres)', () => 
     expect(recorded).toContain(jobs[0]!.id);
   });
 
+  it('answers only after the job push has finished, so a serverless freeze cannot drop it', async () => {
+    let pushed = false;
+    const waiting = createApp({
+      db,
+      config: testConfig({ STRIPE_WEBHOOK_SECRET: PLATFORM }),
+      onOutboxEvents: () =>
+        new Promise<void>((resolve) =>
+          setTimeout(() => {
+            pushed = true;
+            resolve();
+          }, 50)
+        ),
+    });
+    const payload = event();
+    const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: PLATFORM });
+
+    const res = await request(waiting)
+      .post('/webhooks/stripe')
+      .set('Content-Type', 'application/json')
+      .set('Stripe-Signature', signature)
+      .send(payload);
+
+    expect(res.status).toBe(200);
+    expect(pushed).toBe(true);
+  });
+
   it('acknowledges a redelivery without storing or queueing it again', async () => {
     const payload = event();
 
