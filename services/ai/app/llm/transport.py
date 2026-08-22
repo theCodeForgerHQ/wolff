@@ -32,6 +32,7 @@ import httpx2 as httpx
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_SECONDS = 30.0
+_DECODED_BODY_HEADERS = frozenset({"content-encoding", "content-length"})
 
 
 class LlmUnavailable(Exception):
@@ -216,8 +217,15 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         finally:
             # Shielded so a cancelled caller cannot leave the reservation held.
             await asyncio.shield(self._gate.settle(reservation, used))
+        # ``aread`` decoded the body, so the rebuilt response must not claim
+        # the original encoding or length, or the client decodes it twice.
+        headers = [
+            (name, value)
+            for name, value in response.headers.multi_items()
+            if name.lower() not in _DECODED_BODY_HEADERS
+        ]
         return httpx.Response(
-            response.status_code, headers=response.headers, content=content, request=request
+            response.status_code, headers=headers, content=content, request=request
         )
 
     async def _send_with_retries(self, request: httpx.Request) -> httpx.Response:
