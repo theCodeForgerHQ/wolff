@@ -1,3 +1,4 @@
+import { redirectForDemo } from '@wolff/core/email';
 import type { EmailTransport } from '../types';
 
 /** No line breaks or other control characters in a header value. */
@@ -54,6 +55,19 @@ export function createLogEmailTransport(
   return {
     async send(message) {
       log({ subject: message.subject, idempotencyKey: message.idempotencyKey });
+    },
+  };
+}
+
+/**
+ * The free demo's guard (DEMO_MODE): every email goes to `redirect`, with
+ * the intended recipient in the subject. Wraps whichever transport is set up.
+ */
+export function withDemoRedirect(inner: EmailTransport, redirect: string): EmailTransport {
+  return {
+    async send(message) {
+      const { to, subject } = redirectForDemo(message, redirect);
+      await inner.send({ ...message, to: to[0] ?? redirect, subject });
     },
   };
 }
