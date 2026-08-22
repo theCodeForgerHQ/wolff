@@ -33,8 +33,8 @@ export interface AppDeps {
   db: Db;
   config: ApiConfig;
   logger?: Logger;
-  /** Reports an unexpected error to the error tracker. */
-  report?: (error: unknown) => void;
+  /** Reports an unexpected error to the error tracker; resolves once it is sent. */
+  report?: (error: unknown) => void | Promise<void>;
   /** Where used service-token ids are remembered. Redis when instances share traffic. */
   replayCache?: ReplayCache;
   /** Enables `/jobs/run/:type`. Absent: the route refuses every request. */
