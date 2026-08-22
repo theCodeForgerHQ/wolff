@@ -2,9 +2,8 @@ import { apiReference } from '@scalar/express-api-reference';
 import cors from 'cors';
 import express, { Router, type Express } from 'express';
 import helmet from 'helmet';
-import { pinoHttp } from 'pino-http';
 import type { Db } from '@wolff/core/context';
-import { logger as defaultLogger, REDACT_PATHS, type Logger } from '@wolff/core/logger';
+import { logger as defaultLogger, type Logger } from '@wolff/core/logger';
 import type { ApiConfig } from './config';
 import {
   apiKeyRateLimit,
@@ -14,6 +13,7 @@ import {
 } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
+import { requestLogger } from './middleware/request-log';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
 import { generateOpenAPIDocument } from './openapi/document';
 import { internalRoutes } from './routes/internal';
@@ -67,13 +67,7 @@ export function createApp(deps: AppDeps): Express {
   // One proxy in front (ALB or Vercel): take the client IP from its header.
   app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(
-    pinoHttp({
-      logger,
-      redact: REDACT_PATHS,
-      autoLogging: config.NODE_ENV !== 'test',
-    })
-  );
+  app.use(requestLogger(logger, { autoLogging: config.NODE_ENV !== 'test' }));
 
   // Liveness: the process answers. Readiness: its dependencies answer.
   app.get('/healthz', (_req, res) => {
