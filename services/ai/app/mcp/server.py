@@ -107,6 +107,9 @@ def build_mcp_server(svc: Services, *, fixed_caller: Caller | None = None) -> MC
         except ToolError:
             status, error = "error", "not_found"
             raise
+        except Exception:
+            status, error = "error", "internal"
+            raise
         finally:
             async with svc.sessions() as session, session.begin():
                 session.add(

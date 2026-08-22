@@ -8,6 +8,7 @@ a tool at another workspace.
 from __future__ import annotations
 
 import functools
+import html
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -36,8 +37,10 @@ def _dump(value: object) -> str:
 
 
 def _quote_document(n: int, content: str) -> str:
-    # Wrapped and labelled as data.
-    return f'<document n="{n}">\n{content}\n</document>'
+    # Wrapped and labelled as data. The content
+    # is escaped so a document cannot close its wrapper and continue as
+    # instructions.
+    return f'<document n="{n}">\n{html.escape(content, quote=False)}\n</document>'
 
 
 def chat_tools(

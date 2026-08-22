@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+import anyio
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from sqlalchemy import select
@@ -122,13 +123,13 @@ async def run_chat(
         evidence=evidence,
     )
     agent = create_agent(svc.llm.chat_model(), tools=tools, system_prompt=prompt.text)
-    history = await _history(svc, sid)
     usage = Usage(model=svc.settings.provider.chat_model, tokens_in=0, tokens_out=0)
     final = ""
     tool_calls: list[dict[str, Any]] = []
     status, error = "ok", None
 
     try:
+        history = await _history(svc, sid)
         with metered(caller.workspace_id):
             async with asyncio.timeout(WALL_CLOCK_SECONDS):
                 stream = agent.astream(
@@ -155,22 +156,29 @@ async def run_chat(
     except Exception as exc:
         status, error = "error", type(exc).__name__
         raise
+    except BaseException:
+        # The client disconnected: the server cancels the stream or closes
+        # the generator.
+        status, error = "cancelled", "client_disconnected"
+        raise
     finally:
         answer, citations = finalize_answer(final, evidence) if status == "ok" else ("", [])
-        await _record(
-            svc,
-            caller,
-            sid,
-            message,
-            answer,
-            citations,
-            tool_calls,
-            usage,
-            prompt.version,
-            status,
-            error,
-            started,
-        )
+        # Shielded: a cancelled request must still leave its agent_runs row.
+        with anyio.CancelScope(shield=True):
+            await _record(
+                svc,
+                caller,
+                sid,
+                message,
+                answer,
+                citations,
+                tool_calls,
+                usage,
+                prompt.version,
+                status,
+                error,
+                started,
+            )
 
     for word in re.findall(r"\S+\s*", answer):
         yield ChatEvent("token", {"text": word})

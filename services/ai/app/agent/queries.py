@@ -53,6 +53,11 @@ def _like(text: str) -> str:
     return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
+def _bounded(limit: int, cap: int) -> int:
+    """A caller's row limit within 1..cap: Postgres rejects a negative LIMIT."""
+    return max(1, min(limit, cap))
+
+
 async def overdue_invoices(session: AsyncSession, ws: str) -> list[dict[str, Any]]:
     v = v_receivables_ageing
     rows = await session.execute(
@@ -98,7 +103,7 @@ async def top_debtors(session: AsyncSession, ws: str, limit: int = 5) -> list[di
         .where(_view(v, ws), Client.workspace_id == ws)
         .group_by(Client.name, v.c.currency)
         .order_by(func.sum(v.c.amount_due).desc())
-        .limit(min(limit, MAX_ROWS))
+        .limit(_bounded(limit, MAX_ROWS))
     )
     return [{"client": n, "currency": c, "amount_due": _num(o)} for n, c, o in rows]
 
@@ -136,7 +141,7 @@ async def gst_summary(
 async def list_leads(
     session: AsyncSession, ws: str, status: str | None = None, limit: int = 20
 ) -> list[dict[str, Any]]:
-    query = scoped(Lead, ws).order_by(Lead.created_at.desc()).limit(min(limit, MAX_ROWS))
+    query = scoped(Lead, ws).order_by(Lead.created_at.desc()).limit(_bounded(limit, MAX_ROWS))
     if status:
         query = query.where(cast(Lead.status, Text) == status)  # enum column
     return [
@@ -161,7 +166,7 @@ async def list_deals(
         .where(*workspace_filter(Deal, ws))
         .where(PipelineStage.workspace_id == ws)
         .order_by(Deal.updated_at.desc())
-        .limit(min(limit, MAX_ROWS))
+        .limit(_bounded(limit, MAX_ROWS))
     )
     if stage:
         query = query.where(func.lower(PipelineStage.name) == stage.lower())
@@ -323,7 +328,7 @@ async def list_rate_cards(
 async def past_quotes(
     session: AsyncSession, ws: str, client_id: str | None = None, limit: int = 5
 ) -> list[dict[str, Any]]:
-    statement = scoped(Quote, ws).order_by(Quote.created_at.desc()).limit(min(limit, 20))
+    statement = scoped(Quote, ws).order_by(Quote.created_at.desc()).limit(_bounded(limit, 20))
     if client_id:
         statement = statement.where(Quote.client_id == client_id)
     out = []

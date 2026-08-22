@@ -961,7 +961,6 @@ dependencies = [
     { name = "redis" },
     { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "tenacity" },
     { name = "uvicorn" },
 ]
 
@@ -999,7 +998,6 @@ requires-dist = [
     { name = "redis", specifier = "==8.1.0" },
     { name = "sentry-sdk", extras = ["fastapi"], specifier = "==2.71.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.1" },
-    { name = "tenacity", specifier = "==9.1.4" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
 

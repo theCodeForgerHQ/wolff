@@ -14,6 +14,7 @@ from mcp import Client
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.agent import queries
 from app.auth import Caller
 from app.db.session import session_factory
 from app.llm.fake import embed as fake_embed
@@ -290,3 +291,38 @@ async def test_http_transport_at_mcp_requires_a_valid_key(services: Services, ws
         response = await http.post("/mcp/", json=init, headers=good)
         assert response.status_code == 200, response.text
         assert response.json()["result"]["serverInfo"]["name"] == "wolff"
+
+
+@requires_db
+async def test_a_negative_limit_is_clamped_not_sent_to_postgres(
+    services: Services, ws_a: Seeded
+) -> None:
+    async with mcp_as(services, ws_a) as c:
+        for name in ("list_leads", "list_deals"):
+            rows = payload(await c.call_tool(name, {"limit": -5}))
+            assert len(rows) == 1, name
+        async with services.sessions() as s:
+            assert len(await queries.top_debtors(s, ws_a.workspace_id, -1)) == 1
+            assert len(await queries.past_quotes(s, ws_a.workspace_id, None, -1)) == 1
+
+
+@requires_db
+async def test_an_unexpected_error_is_logged_as_an_error(
+    services: Services, ws_a: Seeded, migrated: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def boom(*args: object) -> None:
+        raise RuntimeError("database fell over")
+
+    monkeypatch.setattr(queries, "list_leads", boom)
+    async with mcp_as(services, ws_a) as c:
+        result = await c.call_tool("list_leads", {})
+    assert result.is_error
+    async with migrated.connect() as conn:
+        status = await conn.scalar(
+            text(
+                "SELECT status FROM ai.agent_runs WHERE workspace_id = :w AND kind = 'mcp' "
+                "AND input->>'tool' = 'list_leads' ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"w": ws_a.workspace_id},
+        )
+    assert status == "error"
