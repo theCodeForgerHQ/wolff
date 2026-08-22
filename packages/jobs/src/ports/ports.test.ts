@@ -92,7 +92,7 @@ describe('Resend email transport', () => {
     await transport.send(message);
 
     expect(received).toHaveLength(0);
-    expect(logged).toEqual([{ subject: 'Reminder', idempotencyKey: 'email:abc' }]);
+    expect(logged).toEqual([{ idempotencyKey: 'email:abc', recipientCount: 1, redirected: false }]);
   });
 });
 
