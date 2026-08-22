@@ -155,3 +155,28 @@ never generating the Prisma client (H5), the old Stripe endpoint not using
 `/metrics`, burst and auth-failure rate limits, the SSRF ranges (L2), and
 the Vercel cron (L5). The test counts above are as recorded at Phase 2's
 close and were not re-run; current counts are in `docs/phase-4.md`.
+
+## Verified on the deployed demo (2026-08-20)
+
+Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
+Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
+from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+timestamps) is kept outside the repo.
+
+- QStash delivers immediate jobs to `/jobs/run/:type`, which verifies the
+  signature (`payments.reconcile`, `pdf.render`, `webhooks.deliver`).
+  Found and fixed on the deployed api: the webhook handlers pushed jobs
+  after answering, and Vercel froze the function mid-publish (`fc6ba48`).
+- `worker:drain` from a local machine against Redis Cloud and Neon relays
+  the pending outbox rows and runs the due jobs (0 remaining).
+- `pdf.render` stores a PDF in Supabase Storage through the S3 API and
+  sets `pdf_url`. Open issue: with Vercel Authentication on the web
+  project, the renderer captures Vercel's login page instead of the
+  invoice.
+- The same Stripe event sent to the old web endpoint and the api endpoint
+  (both orders) is stored once and applied once.
+- An outbound webhook test event reaches an external receiver, signed.
+  Open issue: outbox work other than inbound webhooks (emails, outbound
+  deliveries) waits for the drain, which has no scheduled runner yet.
+- Demo mode sends every email to the redirect address; a payment receipt
+  arrived there.

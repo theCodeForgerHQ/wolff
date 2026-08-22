@@ -180,3 +180,15 @@ A peer review of `phase2-core-api..phase3-crm-gst-razorpay` found the issues bel
 
 - Real Stripe test account and Razorpay test keys for end-to-end payment smoke tests.
 - Review the new CRM UI routes (`/leads`, `/deals`) and dashboard cards for product/UX feedback before Phase 4 polish.
+
+## Verified on the deployed demo (2026-08-20)
+
+Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
+Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
+from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+timestamps) is kept outside the repo.
+
+- A Razorpay test payment (Netbanking, test mode) on a GST invoice marks it
+  paid only when the `payment.captured` / `order.paid` webhooks, signed
+  with the workspace's secret, are processed.
+- A GST workspace's new invoice is numbered `INV/26-27/0001`.

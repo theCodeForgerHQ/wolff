@@ -240,3 +240,17 @@ commits after it change only this document and `phase-3.md`.
 Not run: GitHub Actions itself (CI has never run on GitHub), the
 jobs-drain workflow on a real runner, a live Stripe or Razorpay test-mode
 payment.
+
+## Verified on the deployed demo (2026-08-20)
+
+Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
+Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
+from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+timestamps) is kept outside the repo.
+
+- The widget, embedded on a page served from an allowed origin, opens
+  Razorpay checkout for an invoice; the same call with another `Origin`
+  is refused (401 "Origin not allowed"). The CORS preflight itself answers
+  for any origin.
+- Web vitals (CLS, LCP, FCP, INP, TTFB) from the live site reach
+  `/api/vitals` and are logged.

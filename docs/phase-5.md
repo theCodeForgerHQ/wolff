@@ -333,3 +333,22 @@ Not run after the fixes: visual regression (no fix touches a rendered
 page), the AI image build, `actionlint` (passes on the changed workflow,
 run when `da55163` was made), GitHub Actions itself and a live LLM
 provider.
+
+## Verified on the deployed demo (2026-08-20)
+
+Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
+Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
+from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+timestamps) is kept outside the repo.
+
+- Ingestion runs on Neon: `/ingest/sweep` embeds quotes, invoices,
+  contracts and client notes with `gemini-embedding-001`. A large backlog
+  does not fit one call (Vercel's 300 s limit, the indexer's 60 s abort);
+  repeated sweeps finish it.
+- Not working on Gemini: chat and quote drafts. Every Gemini model a new
+  key can use is a Gemini 3 thinking model, and its tool calls need the
+  `thought_signature` returned with the previous turn sent back;
+  langchain-openai drops it, so the second turn answers 400. Needs a
+  decision (carry the signature through, or a Gemini-native client).
+- The live eval run is therefore still not done; the free tier also caps
+  the chat model at 20 requests a day.

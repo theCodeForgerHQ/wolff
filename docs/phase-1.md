@@ -267,3 +267,22 @@ everything else ran on 24.21.0.
 The Postgres 16 volume (`wolff_postgres_data`) is left in place. The dev
 database was moved to the new Postgres 17 volume with
 `pg_dump -Fc | pg_restore --no-owner`, and migrations were applied on top.
+
+## Verified on the deployed demo (2026-08-20)
+
+Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
+Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
+from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+timestamps) is kept outside the repo.
+
+- Demo login reaches the dashboard.
+- A Stripe test-card payment on the client portal marks the invoice paid
+  only once the `payment_intent.succeeded` webhook has been processed by
+  the api's reconcile job.
+- A partial refund (`charge.refunded`) moves the invoice to `partial`
+  with the refunded amount due again.
+- "Connect with Stripe" creates a Standard test connected account and an
+  onboarding link; after onboarding with Stripe test data, `account.updated`
+  turns on charges and payouts in the payment settings.
+- Sentry receives an api error (a failed job answering 500) and a browser
+  error from the web app. A server-side web error was not produced.
