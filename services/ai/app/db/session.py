@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ssl
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.ext.asyncio import (
@@ -15,29 +16,58 @@ from sqlalchemy.ext.asyncio import (
 # asyncpg negotiates SCRAM channel binding itself.
 _LIBPQ_ONLY = frozenset({"channel_binding"})
 
+# libpq sslmode values that asyncpg takes as the same words and the same
+# meaning. The verifying modes are not in this set: they are turned into an
+# explicit SSLContext below, so certificate and hostname checks never depend
+# on how a string is interpreted further down.
+_PLAIN_SSL_MODES = frozenset({"disable", "allow", "prefer", "require"})
+_VERIFYING_SSL_MODES = frozenset({"verify-ca", "verify-full"})
 
-def _asyncpg_query(query: str) -> str:
-    """Rewrite libpq's ``sslmode`` as asyncpg's ``ssl`` (same values),
-    keeping an explicit ``ssl`` if both are given, and drop parameters
-    asyncpg does not understand."""
-    pairs = parse_qsl(query, keep_blank_values=True)
-    has_ssl = any(key == "ssl" for key, _ in pairs)
-    kept: list[tuple[str, str]] = []
-    for key, value in pairs:
-        if key in _LIBPQ_ONLY or (key == "sslmode" and has_ssl):
-            continue
-        kept.append(("ssl", value) if key == "sslmode" else (key, value))
-    return urlencode(kept)
+SslArgument = str | ssl.SSLContext
 
 
-def async_url(url: str) -> str:
-    """Accept a standard ``postgresql://`` URL, as libpq, psycopg and
-    Alembic take it, and turn it into an asyncpg one."""
+def _verifying_context(mode: str) -> ssl.SSLContext:
+    """Certificate checked against the system CAs; for verify-full the
+    hostname too (verify-ca checks the chain only, as in libpq)."""
+    context = ssl.create_default_context()
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.check_hostname = mode == "verify-full"
+    return context
+
+
+def _ssl_argument(mode: str) -> SslArgument:
+    if mode in _VERIFYING_SSL_MODES:
+        return _verifying_context(mode)
+    if mode in _PLAIN_SSL_MODES:
+        return mode
+    raise ValueError(f"AI_DATABASE_URL has an unknown sslmode {mode!r}")
+
+
+def asyncpg_target(url: str) -> tuple[str, SslArgument | None]:
+    """Split a standard ``postgresql://`` URL (as libpq, psycopg and Alembic
+    take it) into an asyncpg URL and the ``ssl`` argument for connect().
+
+    ``sslmode`` (libpq) and ``ssl`` (asyncpg) are both read; if both are given
+    they must agree. No SSL parameter gives ``None``: asyncpg's default, as
+    before. An unknown value is an error, never dropped.
+    """
     for prefix in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
         if url.startswith(prefix):
-            parts = urlsplit("postgresql+asyncpg://" + url.removeprefix(prefix))
-            return urlunsplit(parts._replace(query=_asyncpg_query(parts.query)))
-    raise ValueError("AI_DATABASE_URL must be a postgresql:// URL")
+            break
+    else:
+        raise ValueError("AI_DATABASE_URL must be a postgresql:// URL")
+    parts = urlsplit("postgresql+asyncpg://" + url.removeprefix(prefix))
+    kept: list[tuple[str, str]] = []
+    modes: set[str] = set()
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if key in ("ssl", "sslmode"):
+            modes.add(value)
+        elif key not in _LIBPQ_ONLY:
+            kept.append((key, value))
+    if len(modes) > 1:
+        raise ValueError("AI_DATABASE_URL has conflicting ssl and sslmode values")
+    ssl_argument = _ssl_argument(modes.pop()) if modes else None
+    return urlunsplit(parts._replace(query=urlencode(kept))), ssl_argument
 
 
 def create_engine(url: str) -> AsyncEngine:
@@ -46,14 +76,14 @@ def create_engine(url: str) -> AsyncEngine:
     The statement cache is off because the free demo connects through a
     transaction-mode pooler (Neon), where prepared statements break.
     """
-    return create_async_engine(
-        async_url(url),
-        pool_pre_ping=True,
-        connect_args={
-            "statement_cache_size": 0,
-            "server_settings": {"search_path": "ai,public"},
-        },
-    )
+    target, ssl_argument = asyncpg_target(url)
+    connect_args: dict[str, object] = {
+        "statement_cache_size": 0,
+        "server_settings": {"search_path": "ai,public"},
+    }
+    if ssl_argument is not None:
+        connect_args["ssl"] = ssl_argument
+    return create_async_engine(target, pool_pre_ping=True, connect_args=connect_args)
 
 
 def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from alembic import command
 from app.db.alembic_filter import include_name, include_object
 from app.db.models import AiBase
-from app.db.session import async_url, create_engine
+from app.db.session import asyncpg_target, create_engine
 from tests.conftest import DB_URL, alembic_config, requires_db
 
 AI_TABLES = {
@@ -49,7 +49,10 @@ async def test_migrations_match_the_models() -> None:
     # Connect as Alembic does, without the service's `ai,public` search path:
     # with `ai` as the default schema, reflection would report references
     # inside `ai` unqualified and differ from the models.
-    plain = create_async_engine(async_url(DB_URL))
+    url, ssl_argument = asyncpg_target(DB_URL)
+    plain = create_async_engine(
+        url, connect_args={} if ssl_argument is None else {"ssl": ssl_argument}
+    )
     try:
         async with plain.connect() as conn:
             assert await conn.run_sync(diff) == []
