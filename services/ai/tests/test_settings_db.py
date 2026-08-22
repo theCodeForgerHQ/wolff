@@ -30,3 +30,35 @@ def test_async_url_selects_asyncpg(given: str, expected: str) -> None:
 def test_async_url_rejects_other_databases() -> None:
     with pytest.raises(ValueError, match="postgresql"):
         async_url("mysql://u@h/d")
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        # libpq's sslmode is what Neon and Alembic (psycopg) use; asyncpg
+        # spells it ssl and rejects sslmode.
+        (
+            "postgresql://u@h/d?sslmode=require",
+            "postgresql+asyncpg://u@h/d?ssl=require",
+        ),
+        (
+            "postgresql://u@h/d?sslmode=verify-full&application_name=ai",
+            "postgresql+asyncpg://u@h/d?ssl=verify-full&application_name=ai",
+        ),
+        # Neon's copied URL also carries channel_binding, which asyncpg
+        # does not accept either; it negotiates SCRAM by itself.
+        (
+            "postgresql://u@h/d?sslmode=require&channel_binding=require",
+            "postgresql+asyncpg://u@h/d?ssl=require",
+        ),
+        ("postgresql://u@h/d?ssl=require", "postgresql+asyncpg://u@h/d?ssl=require"),
+    ],
+)
+def test_async_url_translates_libpq_ssl_parameters(given: str, expected: str) -> None:
+    assert async_url(given) == expected
+
+
+def test_async_url_keeps_an_explicit_ssl_over_sslmode() -> None:
+    assert async_url("postgresql://u@h/d?ssl=disable&sslmode=require") == (
+        "postgresql+asyncpg://u@h/d?ssl=disable"
+    )

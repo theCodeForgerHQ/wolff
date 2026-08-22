@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import gzip
+import json
 from datetime import UTC, datetime
 
 import httpx2 as httpx
@@ -96,6 +98,21 @@ async def test_passes_through_and_records_usage() -> None:
     t, seen, gate, _ = make([httpx.Response(200, json=OK)])
     assert (await post(t)).status_code == 200
     assert len(seen) == 1
+    assert gate.used == [Usage(model="m", tokens_in=10, tokens_out=5)]
+
+
+async def test_a_gzip_encoded_response_is_decoded_once() -> None:
+    # Real providers (Gemini) compress responses; the transport reads the
+    # body, so the client must not be told it is still compressed.
+    raw = gzip.compress(json.dumps(OK).encode())
+    upstream = httpx.Response(
+        200,
+        headers={"content-encoding": "gzip", "content-length": str(len(raw))},
+        content=raw,
+    )
+    t, _, gate, _ = make([upstream])
+    response = await post(t)
+    assert response.json() == OK
     assert gate.used == [Usage(model="m", tokens_in=10, tokens_out=5)]
 
 

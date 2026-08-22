@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from alembic import command
 from app.db.alembic_filter import include_name, include_object
 from app.db.models import AiBase
-from app.db.session import async_url
+from app.db.session import async_url, create_engine
 from tests.conftest import DB_URL, alembic_config, requires_db
 
 AI_TABLES = {
@@ -84,3 +84,15 @@ async def test_downgrade_removes_only_ai_tables_and_upgrade_restores_them(
         assert public_after == public_before
     finally:
         await asyncio.to_thread(command.upgrade, config, "head")
+
+
+@requires_db
+async def test_a_libpq_style_url_connects_through_asyncpg() -> None:
+    """One URL serves Alembic (psycopg) and the service (asyncpg)."""
+    separator = "&" if "?" in DB_URL else "?"
+    engine = create_engine(DB_URL + separator + "sslmode=disable&channel_binding=disable")
+    try:
+        async with engine.connect() as connection:
+            assert (await connection.execute(text("SELECT 1"))).scalar_one() == 1
+    finally:
+        await engine.dispose()
