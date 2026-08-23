@@ -57,7 +57,18 @@ def build_services(
         replay, daily = MemoryReplayCache(), MemoryDailyCounter()
 
     budget = BudgetGate(sessions, settings.provider, settings.daily_budget_usd)
-    llm = build_clients(settings.provider, gate=budget, daily=daily, max_tokens=settings.max_tokens)
+    fallback = settings.fallback
+    llm = build_clients(
+        settings.provider,
+        gate=budget,
+        daily=daily,
+        max_tokens=settings.max_tokens,
+        fallback=fallback,
+        # Its own prices, the same per-workspace daily budget.
+        fallback_gate=(
+            BudgetGate(sessions, fallback, settings.daily_budget_usd) if fallback else None
+        ),
+    )
     verifier = ServiceJwtVerifier(
         secrets={"web": settings.svc_jwt_secret_web, "worker": settings.svc_jwt_secret_worker},
         issuers=("web", "worker"),

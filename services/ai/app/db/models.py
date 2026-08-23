@@ -13,7 +13,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import (
     CheckConstraint,
     Date,
@@ -31,7 +31,9 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-EMBEDDING_DIMENSIONS = 1536
+# halfvec: pgvector indexes `vector` up to 2000 dimensions only, halfvec up
+# to 4000, and NIM's embedding model serves 2048 (alembic 0002).
+EMBEDDING_DIMENSIONS = 2048
 SOURCE_TYPES = ("quote", "invoice", "contract", "client_note")
 RUN_KINDS = ("quote_draft", "chat", "mcp")
 
@@ -73,7 +75,7 @@ class DocumentChunk(AiBase):
             "ix_document_chunks_embedding",
             "embedding",
             postgresql_using="hnsw",
-            postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_ops={"embedding": "halfvec_cosine_ops"},
         ),
     )
 
@@ -85,7 +87,7 @@ class DocumentChunk(AiBase):
     content: Mapped[str] = mapped_column(Text)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
     content_hash: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+    embedding: Mapped[list[float]] = mapped_column(HALFVEC(EMBEDDING_DIMENSIONS))
     embedding_model: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(

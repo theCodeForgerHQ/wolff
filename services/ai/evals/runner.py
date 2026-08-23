@@ -282,7 +282,7 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
             docs = await WorkspaceRetriever(
                 sessions=svc.sessions,
                 workspace_id=world.kaveri,
-                embed=svc.llm.embed,
+                embed=svc.llm.embed_queries,
                 embedding_model=svc.settings.provider.embed_model,
             ).search(item["question"])
         hit = bool(wanted & {d.metadata["source_id"] for d in docs})
