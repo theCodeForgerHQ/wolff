@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 
@@ -21,3 +22,34 @@ async def test_a_chat_that_times_out_is_scored_not_fatal(monkeypatch: pytest.Mon
     answer, citations, _, timed_out = await runner.ask(None, None, "question")  # type: ignore[arg-type]
 
     assert (answer, citations, timed_out) == ("", [], True)
+
+
+async def test_a_resumed_run_reuses_recorded_items(tmp_path: Path) -> None:
+    """A live run interrupted by an outage resumes; finished items are not
+    asked again (they cost free-tier requests)."""
+    path = tmp_path / "checkpoint.jsonl"
+    calls: list[str] = []
+
+    async def compute(key: str) -> dict[str, object]:
+        calls.append(key)
+        return {"correct": True, "key": key}
+
+    first = runner.Checkpoint(path)
+    assert await first.item("rag:0", lambda: compute("rag:0")) == {"correct": True, "key": "rag:0"}
+    # The process dies while writing the next record.
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"key": "rag:1", "rec')
+
+    resumed = runner.Checkpoint(path)
+    assert await resumed.item("rag:0", lambda: compute("rag:0")) == {
+        "correct": True,
+        "key": "rag:0",
+    }
+    assert await resumed.item("rag:1", lambda: compute("rag:1")) == {
+        "correct": True,
+        "key": "rag:1",
+    }
+    assert calls == ["rag:0", "rag:1"]
+
+    resumed.discard()
+    assert not path.exists()

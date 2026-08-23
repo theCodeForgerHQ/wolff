@@ -35,9 +35,11 @@ import os
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -99,13 +101,6 @@ class World:
     ids: dict[tuple[str, str], str]
     northlight_markers: set[str]
     rate_cards: dict[str, dict[str, Any]]
-
-
-@dataclass
-class Tally:
-    latencies: list[float] = field(default_factory=list)
-    timeouts: int = 0
-    details: list[dict[str, Any]] = field(default_factory=list)
 
 
 async def discover(svc: Services) -> World:
@@ -267,107 +262,205 @@ async def spent_today(svc: Services, world: World) -> Decimal:
     return Decimal(str(value))
 
 
-async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
+class Checkpoint:
+    """Finished items of a run, one JSON line each, so a live run that dies
+    (an outage, a quota) resumes where it stopped instead of asking the
+    provider again. ``path=None`` keeps them in memory only."""
+
+    def __init__(self, path: Path | None) -> None:
+        self.path = path
+        self.records: dict[str, dict[str, Any]] = {}
+        if path is not None and path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue  # the line being written when the process died
+                self.records[entry["key"]] = entry["record"]
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        return self.records.get(key)
+
+    def put(self, key: str, record: dict[str, Any]) -> None:
+        self.records[key] = record
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"key": key, "record": record}, default=str) + "\n")
+
+    async def item(
+        self, key: str, compute: Callable[[], Awaitable[dict[str, Any]]]
+    ) -> dict[str, Any]:
+        record = self.get(key)
+        if record is None:
+            record = await compute()
+            self.put(key, record)
+        return record
+
+    def discard(self) -> None:
+        if self.path is not None:
+            self.path.unlink(missing_ok=True)
+
+
+async def rag_item(
+    svc: Services, world: World, caller: Caller, item: dict[str, Any]
+) -> dict[str, Any]:
+    wanted = {
+        world.ids[(src["type"], src.get("number") or src["client"])] for src in item["sources"]
+    }
+    with metered(world.kaveri):
+        docs = await WorkspaceRetriever(
+            sessions=svc.sessions,
+            workspace_id=world.kaveri,
+            embed=svc.llm.embed_queries,
+            embedding_model=svc.settings.provider.embed_model,
+        ).search(item["question"])
+    answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
+    return {
+        "kind": "rag",
+        "q": item["question"],
+        "hit": bool(wanted & {d.metadata["source_id"] for d in docs}),
+        "correct": all(e.lower() in answer.lower() for e in item["expect"]),
+        "cited": len(citations),
+        "cited_good": sum(c["source_id"] in wanted for c in citations),
+        "leaks": leaked(world, answer, citations, [d.page_content for d in docs]),
+        "ms": ms,
+        "timed_out": timed_out,
+    }
+
+
+async def sql_item(
+    svc: Services, world: World, caller: Caller, item: dict[str, Any]
+) -> dict[str, Any]:
+    expect = await oracle(svc, world, item["oracle"])
+    answer, _, ms, timed_out = await ask(svc, caller, item["question"])
+    return {
+        "kind": "sql",
+        "q": item["question"],
+        "correct": all(e in answer for e in expect),
+        "leaks": leaked(world, answer),
+        "ms": ms,
+        "timed_out": timed_out,
+    }
+
+
+async def draft_item(
+    svc: Services, api: RecordingApi, world: World, caller: Caller, item: dict[str, Any]
+) -> dict[str, Any]:
+    api.calls.clear()
+    started = time.monotonic()
+    try:
+        result = await draft_quote(svc, caller, item["brief"])
+        outcome, draft = "drafted", result.draft
+    except DraftError as exc:
+        outcome, draft = exc.code, None
+    ms = (time.monotonic() - started) * 1000
+    grounded = gst_exact = gst_lines = 0
+    if item.get("refuse"):
+        grounded = int(outcome == "unknown_client")
+    elif draft is not None:
+        grounded = int(draft.client_id == world.ids.get(("client", item["client"])))
+        sent: dict[str, Any] = next(
+            (b for p, b in api.calls if p.endswith("/gst/compute")), {"lines": []}
+        )
+        for line, priced in zip(draft.line_items, sent["lines"], strict=False):
+            card = world.rate_cards.get(line.name)
+            if line.source == "rate_card" and card:
+                gst_lines += 1
+                gst_exact += (
+                    priced.get("hsnSac") == card["hsn"] and priced["gstRate"] == card["gst"]
+                )
+    return {
+        "kind": "draft",
+        "brief": item["brief"],
+        "outcome": outcome,
+        "schema_valid": outcome != "invalid_output",
+        "grounded": grounded,
+        "gst_exact": gst_exact,
+        "gst_lines": gst_lines,
+        "leaks": leaked(world, outcome, draft.model_dump() if draft else None),
+        "ms": ms,
+        "timed_out": False,
+    }
+
+
+async def isolation_item(
+    svc: Services, world: World, caller: Caller, item: dict[str, Any]
+) -> dict[str, Any]:
+    if item["question"].startswith("Draft a quote"):
+        try:
+            await draft_quote(svc, caller, item["question"])
+            outcome = "drafted"
+        except DraftError as exc:
+            outcome = exc.code
+        found = leaked(world, outcome)
+        return {
+            "kind": "isolation",
+            "q": item["question"],
+            "leaks": found,
+            "refused": outcome == "unknown_client",
+            "ms": None,
+            "timed_out": False,
+        }
+    answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
+    found = leaked(world, answer, citations)
+    return {
+        "kind": "isolation",
+        "q": item["question"],
+        "leaks": found,
+        "refused": not found,
+        "ms": ms,
+        "timed_out": timed_out,
+    }
+
+
+async def evaluate(
+    svc: Services, api: RecordingApi, checkpoint: Checkpoint | None = None
+) -> dict[str, Any]:
+    cp = checkpoint or Checkpoint(None)
     world = await discover(svc)
     spent_before = await spent_today(svc, world)
-    indexed = await index_everything(svc, world)
+    spent_earlier = Decimal(str((cp.get("_cost") or {}).get("usd", "0")))
+
+    async def index() -> dict[str, Any]:
+        return {"count": await index_everything(svc, world)}
+
+    indexed = (await cp.item("_indexed", index))["count"]
     caller = Caller(
         issuer="web",
         workspace_id=world.kaveri,
         user_id=world.user,
         scopes=frozenset({"ai:use", "quotes:write"}),
     )
-    tally = Tally()
-    leaks: list[str] = []
+    rag, sql, drafts, isolation = load("rag"), load("sql"), load("drafts"), load("isolation")
+    jobs: list[tuple[str, Callable[[], Awaitable[dict[str, Any]]]]] = []
+    jobs += [(f"rag:{i}", partial(rag_item, svc, world, caller, it)) for i, it in enumerate(rag)]
+    jobs += [(f"sql:{i}", partial(sql_item, svc, world, caller, it)) for i, it in enumerate(sql)]
+    jobs += [
+        (f"draft:{i}", partial(draft_item, svc, api, world, caller, it))
+        for i, it in enumerate(drafts)
+    ]
+    jobs += [
+        (f"isolation:{i}", partial(isolation_item, svc, world, caller, it))
+        for i, it in enumerate(isolation)
+    ]
+    records: list[dict[str, Any]] = []
+    for key, compute in jobs:
+        records.append(await cp.item(key, compute))
+        spent = spent_earlier + await spent_today(svc, world) - spent_before
+        cp.put("_cost", {"usd": str(spent)})
 
-    hits = correct_rag = cited_total = cited_good = 0
-    rag = load("rag")
-    for item in rag:
-        wanted = {
-            world.ids[(src["type"], src.get("number") or src["client"])] for src in item["sources"]
-        }
-        with metered(world.kaveri):
-            docs = await WorkspaceRetriever(
-                sessions=svc.sessions,
-                workspace_id=world.kaveri,
-                embed=svc.llm.embed_queries,
-                embedding_model=svc.settings.provider.embed_model,
-            ).search(item["question"])
-        hit = bool(wanted & {d.metadata["source_id"] for d in docs})
-        hits += hit
-        answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
-        tally.latencies.append(ms)
-        tally.timeouts += timed_out
-        good = all(e.lower() in answer.lower() for e in item["expect"])
-        correct_rag += good
-        cited_total += len(citations)
-        cited_good += sum(c["source_id"] in wanted for c in citations)
-        leaks += leaked(world, answer, citations, [d.page_content for d in docs])
-        tally.details.append({"kind": "rag", "q": item["question"], "hit": hit, "correct": good})
+    def of(kind: str) -> list[dict[str, Any]]:
+        return [r for r in records if r["kind"] == kind]
 
-    correct_sql = 0
-    sql = load("sql")
-    for item in sql:
-        expect = await oracle(svc, world, item["oracle"])
-        answer, _, ms, timed_out = await ask(svc, caller, item["question"])
-        tally.latencies.append(ms)
-        tally.timeouts += timed_out
-        good = all(e in answer for e in expect)
-        correct_sql += good
-        leaks += leaked(world, answer)
-        tally.details.append({"kind": "sql", "q": item["question"], "correct": good})
+    def total(kind: str, field_: str) -> int:
+        return sum(int(r[field_]) for r in of(kind))
 
-    drafts = load("drafts")
-    schema_valid = grounded = gst_exact = gst_lines = 0
-    for item in drafts:
-        api.calls.clear()
-        started = time.monotonic()
-        try:
-            result = await draft_quote(svc, caller, item["brief"])
-            outcome, draft = "drafted", result.draft
-        except DraftError as exc:
-            outcome, draft = exc.code, None
-        tally.latencies.append((time.monotonic() - started) * 1000)
-        schema_valid += outcome != "invalid_output"
-        if item.get("refuse"):
-            grounded += outcome == "unknown_client"
-        elif draft is not None:
-            grounded += draft.client_id == world.ids.get(("client", item["client"]))
-            sent: dict[str, Any] = next(
-                (b for p, b in api.calls if p.endswith("/gst/compute")), {"lines": []}
-            )
-            for line, priced in zip(draft.line_items, sent["lines"], strict=False):
-                card = world.rate_cards.get(line.name)
-                if line.source == "rate_card" and card:
-                    gst_lines += 1
-                    gst_exact += (
-                        priced.get("hsnSac") == card["hsn"] and priced["gstRate"] == card["gst"]
-                    )
-        leaks += leaked(world, outcome, draft.model_dump() if draft else None)
-        tally.details.append({"kind": "draft", "brief": item["brief"], "outcome": outcome})
-
-    isolation = load("isolation")
-    refused = 0
-    for item in isolation:
-        if item["question"].startswith("Draft a quote"):
-            try:
-                await draft_quote(svc, caller, item["question"])
-                outcome = "drafted"
-            except DraftError as exc:
-                outcome = exc.code
-            found = leaked(world, outcome)
-            refused += outcome == "unknown_client"
-        else:
-            answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
-            tally.latencies.append(ms)
-            tally.timeouts += timed_out
-            found = leaked(world, answer, citations)
-            refused += not found
-        leaks += found
-        tally.details.append({"kind": "isolation", "q": item["question"], "leaks": found})
-
-    cost = await spent_today(svc, world) - spent_before
-    latencies = sorted(tally.latencies)
+    leaks = [m for r in records for m in r["leaks"]]
+    cited = total("rag", "cited")
+    gst_lines = total("draft", "gst_lines")
+    latencies = sorted(float(r["ms"]) for r in records if r["ms"] is not None)
+    cost = spent_earlier + await spent_today(svc, world) - spent_before
     metrics = {
         "provider": svc.settings.provider.name,
         "chat_model": svc.settings.provider.chat_model,
@@ -379,21 +472,26 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
             "drafts": len(drafts),
             "isolation": len(isolation),
         },
-        "recall_at_6": round(hits / len(rag), 4),
-        "citation_precision": round(cited_good / cited_total, 4) if cited_total else None,
-        "answer_correctness_rag": round(correct_rag / len(rag), 4),
-        "answer_correctness_sql": round(correct_sql / len(sql), 4),
-        "schema_valid_rate": round(schema_valid / len(drafts), 4),
-        "gst_inputs_exact": round(gst_exact / gst_lines, 4) if gst_lines else None,
-        "client_grounding": round(grounded / len(drafts), 4),
+        "recall_at_6": round(total("rag", "hit") / len(rag), 4),
+        "citation_precision": round(total("rag", "cited_good") / cited, 4) if cited else None,
+        "answer_correctness_rag": round(total("rag", "correct") / len(rag), 4),
+        "answer_correctness_sql": round(total("sql", "correct") / len(sql), 4),
+        "schema_valid_rate": round(total("draft", "schema_valid") / len(drafts), 4),
+        "gst_inputs_exact": round(total("draft", "gst_exact") / gst_lines, 4)
+        if gst_lines
+        else None,
+        "client_grounding": round(total("draft", "grounded") / len(drafts), 4),
         "isolation_leaks": len(leaks),
-        "isolation_refusal_rate": round(refused / len(isolation), 4),
-        "chat_timeouts": tally.timeouts,
+        "isolation_refusal_rate": round(total("isolation", "refused") / len(isolation), 4),
+        "chat_timeouts": sum(int(r["timed_out"]) for r in records),
         "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
         # The budget gate prices the offline model like gpt-4o-mini.
         "cost_usd_run": str(cost),
     }
-    return {"metrics": metrics, "leaks": sorted(set(leaks)), "details": tally.details}
+    details = [
+        {k: v for k, v in r.items() if k not in {"ms", "cited", "cited_good"}} for r in records
+    ]
+    return {"metrics": metrics, "leaks": sorted(set(leaks)), "details": details}
 
 
 def failures(metrics: dict[str, Any]) -> list[str]:
@@ -431,8 +529,13 @@ async def run(url: str, write_file: bool = True) -> dict[str, Any]:
         httpx2.AsyncClient(transport=httpx2.MockTransport(api.handler)),
     )
     svc = build_services(settings, api=client)
+    checkpoint = Checkpoint(
+        RESULTS / f".checkpoint-{settings.provider.name}-{dataset_version()}.jsonl"
+        if write_file
+        else None
+    )
     try:
-        report = await evaluate(svc, api)
+        report = await evaluate(svc, api, checkpoint)
         report["git_sha"] = git_sha()
         report["dataset_version"] = dataset_version()
         report["created_at"] = datetime.now(UTC).isoformat(timespec="seconds")
@@ -448,6 +551,7 @@ async def run(url: str, write_file: bool = True) -> dict[str, Any]:
             )
     finally:
         await svc.aclose()
+    checkpoint.discard()
     if write_file:
         RESULTS.mkdir(exist_ok=True)
         path = RESULTS / f"{settings.provider.name}-{report['created_at'][:10]}.json"
