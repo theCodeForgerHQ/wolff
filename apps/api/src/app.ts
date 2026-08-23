@@ -3,6 +3,7 @@ import cors from 'cors';
 import express, { Router, type Express } from 'express';
 import helmet from 'helmet';
 import type { Db } from '@wolff/core/context';
+import { isPublishableKeyOrigin } from '@wolff/core/auth/api-keys';
 import { logger as defaultLogger, type Logger } from '@wolff/core/logger';
 import type { ApiConfig } from './config';
 import {
@@ -101,13 +102,20 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/jobs', jobRoutes(config, deps.jobs));
 
-  // Public widget routes: CORS reflects the caller's Origin when a valid
-  // publishable key is presented; credentials are never used.
+  // Public widget routes: CORS (preflight included) answers only an origin
+  // that some live publishable key allows; the request itself is then held
+  // to its own key's origins (requirePublishableKey). No credentials.
   app.use('/v1/public', express.json({ limit: JSON_LIMIT }));
   app.use(
     '/v1/public',
     cors({
-      origin: (origin, allow) => allow(null, origin ?? false),
+      origin: (origin, allow) => {
+        if (!origin) return allow(null, false);
+        isPublishableKeyOrigin(db, origin).then(
+          (ok) => allow(null, ok ? origin : false),
+          (error: unknown) => allow(error as Error)
+        );
+      },
       credentials: false,
     })
   );

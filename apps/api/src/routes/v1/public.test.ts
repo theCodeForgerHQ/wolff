@@ -89,6 +89,38 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1/public widget routes', () => {
     expect(res.status).toBe(401);
   });
 
+  it('answers the CORS preflight only for an origin some publishable key allows', async () => {
+    const preflight = (origin: string) =>
+      request(app)
+        .options('/v1/public/leads')
+        .set('Origin', origin)
+        .set('Access-Control-Request-Method', 'POST')
+        .set('Access-Control-Request-Headers', 'content-type,x-publishable-key');
+
+    const allowed = await preflight('https://client.example.com');
+    const other = await preflight('https://evil.example.com');
+
+    expect(allowed.headers['access-control-allow-origin']).toBe('https://client.example.com');
+    expect(other.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('stops answering the preflight for an origin once its key is revoked', async () => {
+    const issued = await issueKey(base, a.id, {
+      kind: 'publishable',
+      prefix: 'wolff_pk_',
+      scopes: ['lead:create'],
+      allowedOrigins: ['https://revoked.example.com'],
+    });
+    await base.apiKey.update({ where: { id: issued.id }, data: { revokedAt: new Date() } });
+
+    const res = await request(app)
+      .options('/v1/public/leads')
+      .set('Origin', 'https://revoked.example.com')
+      .set('Access-Control-Request-Method', 'POST');
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
   it('rejects a missing publishable key', async () => {
     const res = await request(app)
       .post('/v1/public/leads')
