@@ -150,7 +150,7 @@ def build_mcp_server(svc: Services, *, fixed_caller: Caller | None = None) -> MC
             docs = await WorkspaceRetriever(
                 sessions=svc.sessions,
                 workspace_id=caller.workspace_id,
-                embed=svc.llm.embed,
+                embed=svc.llm.embed_queries,
                 embedding_model=settings.provider.embed_model,
                 source_types=readable,
             ).search(query)

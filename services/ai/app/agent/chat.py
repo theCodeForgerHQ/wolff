@@ -29,6 +29,7 @@ from app.agent.tools import Evidence, chat_tools
 from app.auth import Caller
 from app.budget import cost, metered
 from app.db.models import AgentRun, ChatMessage, ChatSession
+from app.llm.clients import is_fallback_error
 from app.llm.transport import Usage
 from app.prompts import load_prompt
 from app.services import Services
@@ -118,11 +119,14 @@ async def run_chat(
     tools = chat_tools(
         workspace_id=caller.workspace_id,
         sessions=svc.sessions,
-        embed=svc.llm.embed,
+        embed=svc.llm.embed_queries,
         embedding_model=svc.settings.provider.embed_model,
         evidence=evidence,
     )
-    agent = create_agent(svc.llm.chat_model(), tools=tools, system_prompt=prompt.text)
+    agents = [
+        create_agent(model, tools=tools, system_prompt=prompt.text)
+        for model in svc.llm.chat_models()
+    ]
     usage = Usage(model=svc.settings.provider.chat_model, tokens_in=0, tokens_out=0)
     final = ""
     tool_calls: list[dict[str, Any]] = []
@@ -132,27 +136,37 @@ async def run_chat(
         history = await _history(svc, sid)
         with metered(caller.workspace_id):
             async with asyncio.timeout(WALL_CLOCK_SECONDS):
-                stream = agent.astream(
-                    {"messages": [*history, HumanMessage(message)]},
-                    config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
-                    stream_mode="updates",
-                )
-                async for update in stream:
-                    for node in update.values():
-                        for msg in (node or {}).get("messages", []):
-                            if not isinstance(msg, AIMessage):
-                                continue
-                            meta: dict[str, Any] = dict(msg.usage_metadata or {})
-                            usage = Usage(
-                                usage.model,
-                                usage.tokens_in + int(meta.get("input_tokens", 0)),
-                                usage.tokens_out + int(meta.get("output_tokens", 0)),
-                            )
-                            for call in msg.tool_calls:
-                                tool_calls.append({"name": call["name"], "args": call["args"]})
-                                yield ChatEvent("tool_call", {"name": call["name"]})
-                            if not msg.tool_calls:
-                                final = str(msg.content)
+                # The fallback provider (LLM_FALLBACK) gets the question again
+                # from the start if the first one fails as a provider.
+                for attempt, agent in enumerate(agents):
+                    try:
+                        stream = agent.astream(
+                            {"messages": [*history, HumanMessage(message)]},
+                            config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
+                            stream_mode="updates",
+                        )
+                        async for update in stream:
+                            for node in update.values():
+                                for msg in (node or {}).get("messages", []):
+                                    if not isinstance(msg, AIMessage):
+                                        continue
+                                    meta: dict[str, Any] = dict(msg.usage_metadata or {})
+                                    usage = Usage(
+                                        usage.model,
+                                        usage.tokens_in + int(meta.get("input_tokens", 0)),
+                                        usage.tokens_out + int(meta.get("output_tokens", 0)),
+                                    )
+                                    for call in msg.tool_calls:
+                                        tool_calls.append(
+                                            {"name": call["name"], "args": call["args"]}
+                                        )
+                                        yield ChatEvent("tool_call", {"name": call["name"]})
+                                    if not msg.tool_calls:
+                                        final = _text(msg.content)
+                        break
+                    except Exception as exc:
+                        if attempt == len(agents) - 1 or not is_fallback_error(exc):
+                            raise
     except Exception as exc:
         status, error = "error", type(exc).__name__
         raise
@@ -185,6 +199,20 @@ async def run_chat(
     for citation in citations:
         yield ChatEvent("citation", citation)
     yield ChatEvent("done", {"sessionId": sid})
+
+
+def _text(content: object) -> str:
+    """A message's text. Reasoning models may answer with a list of content
+    blocks (text and reasoning); only the text blocks are the answer."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            str(block.get("text", "")) if isinstance(block, dict) else str(block)
+            for block in content
+            if not isinstance(block, dict) or block.get("type", "text") == "text"
+        )
+    return str(content)
 
 
 async def _record(

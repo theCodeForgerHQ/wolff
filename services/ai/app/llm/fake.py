@@ -5,7 +5,7 @@ recorded eval run and local E2E talk to this instead. It is an httpx
 transport: the real OpenAI SDK and LangChain code paths run unchanged,
 and only the model's answers are simulated.
 
-- ``/embeddings``: a hashed bag of words, L2-normalised to 1536 floats, so
+- ``/embeddings``: a hashed bag of words, L2-normalised to 2048 floats, so
   texts sharing words are close. Retrieval quality measured with it is
   lexical, not semantic.
 - ``/chat/completions``: when tools are offered and the conversation has
@@ -28,7 +28,7 @@ from typing import Any
 
 import httpx2 as httpx
 
-DIMENSIONS = 1536
+DIMENSIONS = 2048
 _WORD = re.compile(r"[a-z0-9]+")
 _STOP = frozenset(
     "a an the of to for in on and or is are was were be by with what which who how my me i "

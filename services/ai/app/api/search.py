@@ -27,7 +27,7 @@ def retriever_for(svc: Services, workspace_id: str, types: list[str] | None) -> 
     return WorkspaceRetriever(
         sessions=svc.sessions,
         workspace_id=workspace_id,
-        embed=svc.llm.embed,
+        embed=svc.llm.embed_queries,
         embedding_model=svc.settings.provider.embed_model,
         source_types=types,
     )

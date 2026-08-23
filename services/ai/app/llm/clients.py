@@ -4,31 +4,52 @@ from __future__ import annotations
 
 import math
 import os
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from typing import TypeVar
 
 import httpx2 as httpx
 from langchain_openai import ChatOpenAI
-from openai import AsyncOpenAI
+from openai import APIConnectionError, APIStatusError, AsyncOpenAI
 from pydantic import SecretStr
 
+from app.budget import BudgetExceeded
 from app.llm.fake import FakeOpenAITransport
 from app.llm.providers import ProviderProfile
-from app.llm.transport import DailyCounter, RateLimitedTransport, UsageGate
+from app.llm.transport import DailyCounter, LlmUnavailable, RateLimitedTransport, UsageGate
 
-EMBEDDING_DIMENSIONS = 1536
+T = TypeVar("T")
+
+#: Width of the stored vectors (ai.document_chunks.embedding, halfvec):
+#: NIM's nemotron-3-embed-1b serves 2048 only. Models with fewer dimensions
+#: are zero-padded, which leaves cosine similarity between them unchanged.
+EMBEDDING_DIMENSIONS = 2048
 DEFAULT_MAX_TOKENS = 1024
 REQUEST_TIMEOUT_SECONDS = 30.0
 
 
 def fit_dimensions(vector: Sequence[float], dimensions: int = EMBEDDING_DIMENSIONS) -> list[float]:
-    """Truncate and L2-normalise (Matryoshka models such as gemini-embedding-001
-    support truncation), for an endpoint that ignores ``dimensions``."""
-    if len(vector) < dimensions:
-        raise ValueError(f"embedding has {len(vector)} dimensions, need {dimensions}")
+    """L2-normalised and exactly ``dimensions`` long: truncated when longer
+    (Matryoshka models such as gemini-embedding-001 support it, for an
+    endpoint that ignores ``dimensions``), zero-padded when shorter."""
+    if not vector:
+        raise ValueError("embedding is empty")
     cut = list(vector[:dimensions])
     norm = math.sqrt(sum(v * v for v in cut)) or 1.0
-    return [v / norm for v in cut]
+    return [v / norm for v in cut] + [0.0] * (dimensions - len(cut))
+
+
+def is_fallback_error(exc: BaseException) -> bool:
+    """The provider, not the request, failed: rate limited or out of daily
+    requests, a 5xx, or unreachable. A spent budget is not one of them: the
+    budget is per workspace, shared by every provider."""
+    if isinstance(exc, BudgetExceeded):
+        return False
+    if isinstance(exc, LlmUnavailable | APIConnectionError):
+        return True
+    if isinstance(exc, APIStatusError):
+        return exc.status_code == 429 or exc.status_code >= 500
+    return isinstance(exc, httpx.TimeoutException | httpx.NetworkError)
 
 
 @dataclass(frozen=True)
@@ -37,6 +58,27 @@ class LlmClients:
     openai: AsyncOpenAI
     http: httpx.AsyncClient
     max_tokens: int
+    #: Chat-only fallback (LLM_FALLBACK), on its own gated transport.
+    fallback: LlmClients | None = None
+
+    def chat_models(self, **kwargs: object) -> list[ChatOpenAI]:
+        """The chat model, then the fallback's, in the order to try them."""
+        chain = [self.chat_model(**kwargs)]
+        if self.fallback is not None:
+            chain.append(self.fallback.chat_model(**kwargs))
+        return chain
+
+    async def run_chat(self, run: Callable[[ChatOpenAI], Awaitable[T]], **kwargs: object) -> T:
+        """``run`` with the chat model, again with the fallback's if the
+        provider failed (is_fallback_error). Other errors propagate."""
+        models = self.chat_models(**kwargs)
+        for index, model in enumerate(models):
+            try:
+                return await run(model)
+            except Exception as exc:
+                if index == len(models) - 1 or not is_fallback_error(exc):
+                    raise
+        raise AssertionError("unreachable")
 
     def chat_model(self, **kwargs: object) -> ChatOpenAI:
         """A LangChain chat model on the shared transport, SDK retries off."""
@@ -60,12 +102,26 @@ class LlmClients:
         return key
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:
-        """Embeddings in input order, 1536 floats each, in provider-sized batches."""
+        """Document embeddings in input order, EMBEDDING_DIMENSIONS floats
+        each, in provider-sized batches."""
+        return await self._embed(texts, "passage")
+
+    async def embed_queries(self, texts: Sequence[str]) -> list[list[float]]:
+        """Search queries' embeddings (asymmetric models embed them differently
+        from documents); same shape as ``embed``, for the retriever."""
+        return await self._embed(texts, "query")
+
+    async def _embed(self, texts: Sequence[str], kind: str) -> list[list[float]]:
+        profile = self.profile
+        extra = {"input_type": kind} if profile.embed_input_type else None
         vectors: list[list[float]] = []
-        for start in range(0, len(texts), self.profile.embed_batch):
-            batch = list(texts[start : start + self.profile.embed_batch])
+        for start in range(0, len(texts), profile.embed_batch):
+            batch = list(texts[start : start + profile.embed_batch])
             response = await self.openai.embeddings.create(
-                model=self.profile.embed_model, input=batch, dimensions=EMBEDDING_DIMENSIONS
+                model=profile.embed_model,
+                input=batch,
+                dimensions=profile.embed_dimensions,
+                extra_body=extra,
             )
             ordered = sorted(response.data, key=lambda item: item.index)
             vectors.extend(fit_dimensions(item.embedding) for item in ordered)
@@ -73,6 +129,8 @@ class LlmClients:
 
     async def aclose(self) -> None:
         await self.http.aclose()
+        if self.fallback is not None:
+            await self.fallback.aclose()
 
 
 def build_clients(
@@ -82,6 +140,9 @@ def build_clients(
     daily: DailyCounter,
     max_tokens: int = DEFAULT_MAX_TOKENS,
     inner: httpx.AsyncBaseTransport | None = None,
+    fallback: ProviderProfile | None = None,
+    fallback_gate: UsageGate | None = None,
+    fallback_inner: httpx.AsyncBaseTransport | None = None,
 ) -> LlmClients:
     if inner is None:
         inner = FakeOpenAITransport() if profile.name == "fake" else httpx.AsyncHTTPTransport()
@@ -92,7 +153,7 @@ def build_clients(
         tpm=profile.tpm,
         rpd=profile.rpd,
         max_concurrency=profile.max_concurrency,
-        allowed_models=frozenset({profile.chat_model, profile.embed_model}),
+        allowed_models=frozenset({profile.chat_model, profile.embed_model} - {""}),
         gate=gate,
         daily=daily,
         default_max_tokens=max_tokens,
@@ -100,4 +161,17 @@ def build_clients(
     http = httpx.AsyncClient(transport=transport, timeout=REQUEST_TIMEOUT_SECONDS)
     key = "fake" if not profile.api_key_env else os.environ.get(profile.api_key_env, "missing")
     client = AsyncOpenAI(base_url=profile.base_url, api_key=key, http_client=http, max_retries=0)
-    return LlmClients(profile=profile, openai=client, http=http, max_tokens=max_tokens)
+    backup = (
+        build_clients(
+            fallback,
+            gate=fallback_gate or gate,
+            daily=daily,
+            max_tokens=max_tokens,
+            inner=fallback_inner,
+        )
+        if fallback is not None
+        else None
+    )
+    return LlmClients(
+        profile=profile, openai=client, http=http, max_tokens=max_tokens, fallback=backup
+    )

@@ -21,6 +21,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from decimal import Decimal
+from functools import partial
 from typing import Any
 
 from langchain.agents import create_agent
@@ -93,24 +94,32 @@ def _tools(svc: Services, ws: str) -> list[BaseTool]:
 
 
 async def _gather(svc: Services, ws: str, brief: str, system: str) -> list[AnyMessage]:
-    agent = create_agent(svc.llm.chat_model(), tools=_tools(svc, ws), system_prompt=system)
-    result = await agent.ainvoke(
-        {"messages": [HumanMessage(brief)]},
-        config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
-    )
-    messages: list[AnyMessage] = result["messages"]
-    return messages
+    async def run(model: Any) -> list[AnyMessage]:
+        agent = create_agent(model, tools=_tools(svc, ws), system_prompt=system)
+        result = await agent.ainvoke(
+            {"messages": [HumanMessage(brief)]},
+            config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
+        )
+        messages: list[AnyMessage] = result["messages"]
+        return messages
+
+    return await svc.llm.run_chat(run)
 
 
 async def _structured(svc: Services, messages: list[AnyMessage]) -> tuple[QuoteDraft, Usage]:
-    model = svc.llm.chat_model().with_structured_output(
-        QuoteDraft, method="json_schema", strict=True, include_raw=True
-    )
+    async def structured(model: Any, sent: list[AnyMessage]) -> dict[str, Any]:
+        runnable = model.with_structured_output(
+            QuoteDraft, method="json_schema", strict=True, include_raw=True
+        )
+        result: dict[str, Any] = await runnable.ainvoke(sent)
+        return result
+
     usage = Usage(svc.settings.provider.chat_model, 0, 0)
     attempt = list(messages)
     for _ in range(2):  # the first try and one repair
         try:
-            out: dict[str, Any] = await model.ainvoke(attempt)
+            sent = list(attempt)
+            out = await svc.llm.run_chat(partial(structured, sent=sent))
         except ValidationError as exc:
             # The SDK's own parse of the json_schema output failed.
             out = {"raw": None, "parsed": None, "parsing_error": exc}

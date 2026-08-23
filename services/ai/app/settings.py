@@ -9,7 +9,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from app.llm.providers import ProviderError, ProviderProfile, resolve_provider
+from app.llm.providers import (
+    ProviderError,
+    ProviderProfile,
+    resolve_fallback,
+    resolve_provider,
+)
 
 
 class SettingsError(ValueError):
@@ -45,6 +50,8 @@ class Settings(BaseModel):
     reports_dir: str = "var/reports"
     product_slug: str = Field(default="wolff", pattern=r"^[a-z][a-z0-9-]{1,30}$")
     provider: ProviderProfile = Field(default_factory=lambda: resolve_provider({}))
+    #: Chat-only fallback provider (LLM_FALLBACK), or None.
+    fallback: ProviderProfile | None = None
 
 
 _ENV_NAMES: dict[str, str] = {
@@ -81,6 +88,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     }
     try:
         values["provider"] = resolve_provider(source)
+        values["fallback"] = resolve_fallback(source)
     except ProviderError as exc:
         raise SettingsError(str(exc)) from None
     try:
