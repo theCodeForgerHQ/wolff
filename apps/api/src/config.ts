@@ -20,6 +20,11 @@ const schema = z.object({
   WEB_ORIGIN: url.default('http://localhost:3000'),
   /** The web app's public URL, for links in emails and PDF rendering. */
   APP_URL: url.default('http://localhost:3000'),
+  /**
+   * The web project's Vercel protection-bypass secret. Only the PDF renderer
+   * sends it, only to APP_URL's origin; unset when the web is not protected.
+   */
+  WEB_PROTECTION_BYPASS: optional,
   /** This service's public URL, as QStash calls it. */
   PUBLIC_API_URL: url.default('http://localhost:4000'),
 
