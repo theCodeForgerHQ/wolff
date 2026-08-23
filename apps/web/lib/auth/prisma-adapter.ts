@@ -20,6 +20,7 @@ import type {
   VerificationToken,
 } from 'next-auth/adapters';
 import type { Account, PrismaClient, Session, User } from '@wolff/database';
+import { DEMO_USER_EMAIL } from '@/lib/demo/constants';
 import { createUserWithWorkspace } from './provision-user';
 
 type DbUser = Pick<User, 'id' | 'email' | 'name' | 'avatarUrl' | 'emailVerifiedAt'>;
@@ -157,6 +158,17 @@ export function WolffPrismaAdapter(prisma: PrismaClient): Adapter {
     },
 
     async linkAccount(account) {
+      // The demo account's password is public, so an OAuth identity linked to
+      // it would hand that person's login to everyone. The auth route already
+      // keeps sessions out of OAuth callbacks (oauth-callback.ts); this is
+      // the backstop if another path ever reaches linkAccount.
+      const owner = await prisma.user.findUnique({
+        where: { id: account.userId },
+        select: { email: true },
+      });
+      if (owner?.email.toLowerCase() === DEMO_USER_EMAIL.toLowerCase()) {
+        throw new Error('Refusing to link an OAuth account to the shared demo user');
+      }
       await prisma.account.create({ data: toAccountData(account) });
     },
 

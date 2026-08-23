@@ -97,4 +97,37 @@ test.describe('Google login (mock OIDC provider)', () => {
       await prisma.user.update({ where: { email }, data: { deletedAt: null } });
     }
   });
+
+  test('signed in as the demo user, a Google sign-in becomes its own user', async ({ page }) => {
+    // Start from a Google identity the app has never seen, so this is the
+    // first-sign-in path where Auth.js would link to the current session.
+    const email = process.env.E2E_GOOGLE_EMAIL!;
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      await prisma.workspace.deleteMany({ where: { ownerId: existing.id } });
+      await prisma.user.delete({ where: { id: existing.id } });
+    }
+
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(DEMO.email);
+    await page.getByLabel('Password').fill(DEMO.password);
+    await page.getByRole('button', { name: /^sign in$/i }).click();
+    await page.waitForURL(/\/dashboard/);
+
+    // /register shows the Google button to a signed-in visitor (/login would
+    // redirect to the dashboard); a login page restored by the Back button does too.
+    await page.goto('/register');
+    await page.getByRole('button', { name: 'Google' }).click();
+    await page.waitForURL(/\/onboarding/, { timeout: 30_000 });
+
+    expect(await prisma.account.count({ where: { user: { email: DEMO.email } } })).toBe(0);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email },
+      include: { accounts: true, workspaceMembers: true },
+    });
+    expect(user.accounts.map((a) => a.provider)).toEqual(['google']);
+    expect(user.workspaceMembers).toHaveLength(1);
+    const session = await page.request.get('/api/auth/session').then((r) => r.json());
+    expect(session.user.email).toBe(email);
+  });
 });

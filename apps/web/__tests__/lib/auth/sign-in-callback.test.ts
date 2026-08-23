@@ -81,6 +81,13 @@ describe('signInErrorMessage', () => {
     expect(signInErrorMessage(ACCOUNT_DEACTIVATED_ERROR)).toMatch(/deactivated/i);
   });
 
+  it('tells a person whose email already has an account how to get in', () => {
+    // Auth.js sends this code when an OAuth email matches another user.
+    expect(signInErrorMessage('OAuthAccountNotLinked')).toMatch(
+      /already has an account.*password/i
+    );
+  });
+
   it('does not echo unknown codes from the query string', () => {
     const message = signInErrorMessage('<script>alert(1)</script>');
     expect(message).toBe('Sign-in failed. Please try again.');
