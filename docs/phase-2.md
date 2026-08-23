@@ -100,6 +100,19 @@ SHADOW_DATABASE_URL=postgresql://wolff:wolff_dev_only@localhost:5432/wolff_shado
 
 ## Deviations and known issues
 
+0. **Scheduled jobs run from QStash schedules, not the GitHub Actions cron
+   (deliberate deviation from the plan, owner decision 2026-08-23).** The
+   repo is not pushed, so `jobs-drain.yml` has never run, and the deployed
+   demo left emails and webhook deliveries pending until a drain was run by
+   hand. Seven QStash schedules (`QSTASH_SCHEDULES` in
+   `packages/jobs/src/qstash.ts`, synced with `pnpm --filter @wolff/api
+schedules:sync`) now call the signed `/jobs/run/:type` route directly:
+   the outbox sweep and automations tick every 15 minutes, recurring
+   invoices and the AI sweep hourly, reminders, overdue marking and the
+   nightly reports daily (about 245 of QStash's 1,000 free messages a day,
+   7 of 10 schedules). The outbox sweep now also relays due events, and
+   every scheduled job is bounded to finish inside Vercel's 300 s limit.
+   `jobs-drain.yml` stays as a manual (`workflow_dispatch`) workflow.
 1. **Distributed trace api → job**: OTel auto-instrumentations cover HTTP
    and Node libraries, but trace context is not explicitly propagated in
    the BullMQ job data or QStash headers. The DoD is marked partial and

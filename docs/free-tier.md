@@ -141,14 +141,35 @@ via QStash to `POST /jobs/run/:type` on the `api` project. The handler
 verifies the `Upstash-Signature` JWT and runs the same processor a BullMQ
 worker would.
 
-Scheduled and batch jobs (recurring invoices, reminders, overdue, nightly
-reports) run from `.github/workflows/jobs-drain.yml`. The workflow checks
-out the repo, installs dependencies, and runs `pnpm --filter @wolff/api
-worker:drain`, which starts a BullMQ worker against Redis Cloud, runs the
-due schedulers, drains the queue, and exits. It runs every 15 minutes while
-the repo is private and every 5 minutes once public. A monthly
-`workflow_dispatch` or keep-alive commit avoids GitHub's 60-day auto-disable
-for inactive scheduled workflows.
+Scheduled jobs come from QStash schedules (owner decision 2026-08-23; a
+deviation from the design, see docs/phase-2.md). QStash calls the same
+signed `POST /jobs/run/:type` route on its own, so nothing runs outside
+Vercel. The schedules are defined in `QSTASH_SCHEDULES`
+(`packages/jobs/src/qstash.ts`) and created or updated with:
+
+```bash
+QSTASH_TOKEN=... PUBLIC_API_URL=https://<api> pnpm --filter @wolff/api schedules:sync
+```
+
+| Schedule (`wolff-*`) | Job                                                                     | Cron (UTC)           |
+| -------------------- | ----------------------------------------------------------------------- | -------------------- |
+| outbox-sweep         | `outbox.sweep`: requeue stale events, relay due ones (emails, webhooks) | `*/15 * * * *`       |
+| automations          | `automations.tick`                                                      | `7,22,37,52 * * * *` |
+| recurring            | `recurring.generate`                                                    | `0 * * * *`          |
+| ai-sweep             | `ai.sweep`: re-embed what changed, bounded batches                      | `30 * * * *`         |
+| reminders            | `reminders.scan`                                                        | `0 3 * * *`          |
+| overdue              | `invoices.mark_overdue`                                                 | `15 0 * * *`         |
+| reports-nightly      | `reports.nightly`                                                       | `30 20 * * *`        |
+
+7 of the free tier's 10 schedules, about 245 messages a day of 1,000. Every
+job must end inside Vercel's 300 s limit: the outbox sweep relays at most
+200 events per run, and the AI sweep stops starting calls after 200 s, each
+call embedding at most 25 sources in at most about 40 s; the rest is picked
+up by the next run.
+
+`.github/workflows/jobs-drain.yml` (`worker:drain` against Redis Cloud) is
+kept as a manual workflow for a deployment that queues on Redis without a
+worker.
 
 ## Migrations
 
