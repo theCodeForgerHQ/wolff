@@ -221,6 +221,22 @@ Notes:
     transport retries twice itself, honouring `Retry-After`, so one place
     owns retries and the budget reservation; the unused pin was removed.
 
+17. **D16 superseded: NVIDIA NIM by default, Groq as chat fallback
+    (2026-08-23).** The design makes the Gemini free tier the default. On a
+    new key every Gemini model is a Gemini 3 thinking model whose tool
+    calls need thought signatures that langchain-openai drops, and the
+    free quota is 20 requests a day, so chat and drafts could not work.
+    `LLM_PROVIDER=nvidia` (NIM's free API: chat
+    `nvidia/nemotron-3-super-120b-a12b`, embeddings
+    `nvidia/nemotron-3-embed-1b`) is now the default, and `LLM_FALLBACK`
+    adds a chat-only fallback (`groq`, `openai/gpt-oss-120b`) for provider
+    failures. Both stay on the OpenAI SDK interface, each on its own
+    rate-limited, budget-gated transport. Gemini is retained as a selectable
+    provider but is no longer used by the demo. The embedding model serves
+    2048 dimensions only, so the column is `halfvec(2048)` (Alembic 0002;
+    HNSW indexes `vector` only up to 2000 dimensions), and the chunks were
+    re-embedded. Limits and probes: docs/free-tier.md.
+
 ## Known issues and deferred
 
 - **Write paths that emit `ai.index`.** Creates and updates of quotes and
