@@ -104,6 +104,7 @@ class World:
 @dataclass
 class Tally:
     latencies: list[float] = field(default_factory=list)
+    timeouts: int = 0
     details: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -231,16 +232,22 @@ async def oracle(svc: Services, world: World, name: str) -> list[str]:
 
 async def ask(
     svc: Services, caller: Caller, question: str
-) -> tuple[str, list[dict[str, Any]], float]:
+) -> tuple[str, list[dict[str, Any]], float, bool]:
+    """The answer, its citations, the latency and whether the chat hit its
+    wall clock. A timed-out chat scores as an empty answer, so one slow
+    reply costs one item instead of aborting the run."""
     started = time.monotonic()
     tokens: list[str] = []
     citations: list[dict[str, Any]] = []
-    async for event in run_chat(svc, caller, question):
-        if event.event == "token":
-            tokens.append(str(event.data["text"]))
-        elif event.event == "citation":
-            citations.append(event.data)
-    return "".join(tokens), citations, (time.monotonic() - started) * 1000
+    try:
+        async for event in run_chat(svc, caller, question):
+            if event.event == "token":
+                tokens.append(str(event.data["text"]))
+            elif event.event == "citation":
+                citations.append(event.data)
+    except TimeoutError:
+        return "", [], (time.monotonic() - started) * 1000, True
+    return "".join(tokens), citations, (time.monotonic() - started) * 1000, False
 
 
 def leaked(world: World, *outputs: object) -> list[str]:
@@ -288,8 +295,9 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
             ).search(item["question"])
         hit = bool(wanted & {d.metadata["source_id"] for d in docs})
         hits += hit
-        answer, citations, ms = await ask(svc, caller, item["question"])
+        answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
         tally.latencies.append(ms)
+        tally.timeouts += timed_out
         good = all(e.lower() in answer.lower() for e in item["expect"])
         correct_rag += good
         cited_total += len(citations)
@@ -301,8 +309,9 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
     sql = load("sql")
     for item in sql:
         expect = await oracle(svc, world, item["oracle"])
-        answer, _, ms = await ask(svc, caller, item["question"])
+        answer, _, ms, timed_out = await ask(svc, caller, item["question"])
         tally.latencies.append(ms)
+        tally.timeouts += timed_out
         good = all(e in answer for e in expect)
         correct_sql += good
         leaks += leaked(world, answer)
@@ -349,8 +358,9 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
             found = leaked(world, outcome)
             refused += outcome == "unknown_client"
         else:
-            answer, citations, ms = await ask(svc, caller, item["question"])
+            answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
             tally.latencies.append(ms)
+            tally.timeouts += timed_out
             found = leaked(world, answer, citations)
             refused += not found
         leaks += found
@@ -378,6 +388,7 @@ async def evaluate(svc: Services, api: RecordingApi) -> dict[str, Any]:
         "client_grounding": round(grounded / len(drafts), 4),
         "isolation_leaks": len(leaks),
         "isolation_refusal_rate": round(refused / len(isolation), 4),
+        "chat_timeouts": tally.timeouts,
         "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
         # The budget gate prices the offline model like gpt-4o-mini.
         "cost_usd_run": str(cost),
