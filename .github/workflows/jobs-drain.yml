@@ -1,12 +1,12 @@
 name: jobs-drain
 
+# Optional since 2026-08-23: the demo's scheduled jobs come from QStash
+# schedules (QSTASH_SCHEDULES, `pnpm --filter @wolff/api schedules:sync`;
+# docs/phase-2.md). This stays for a deployment with a BullMQ queue on
+# Redis and no worker: run it by hand, or add back a schedule such as
+#   schedule:
+#     - cron: '0 * * * *'
 on:
-  schedule:
-    # Hourly while the repo is private (Phase 2): scheduled runs
-    # use the private repo's Actions minutes. Scheduled workflows can start
-    # late or be skipped under load; the jobs are re-runnable, so a skipped
-    # hour is picked up by the next run.
-    - cron: '0 * * * *'
   workflow_dispatch:
 
 concurrency:
