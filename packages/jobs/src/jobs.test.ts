@@ -411,6 +411,31 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(after.pdfUrl).toBe(key);
   });
 
+  it('relays pending outbox events from the periodic sweep, for hosts with no relay loop', async () => {
+    // On Vercel + QStash nothing runs between requests, so the scheduled
+    // outbox.sweep is what turns pending events (emails, webhooks) into jobs.
+    const event = await base.outboxEvent.create({
+      data: {
+        workspaceId,
+        type: 'invoice.paid',
+        aggregateType: 'invoice',
+        aggregateId: randomUUID(),
+        payload: { run },
+        availableAt: new Date(NOW.getTime() - 60_000),
+      },
+    });
+    const dispatched: Job[] = [];
+
+    await runJob(
+      { ...ctx, dispatch: async (job) => void dispatched.push(job) },
+      { type: 'outbox.sweep', payload: {}, jobId: 'sweep' }
+    );
+
+    expect(dispatched.map((j) => j.jobId)).toContain(`outbox:${event.id}`);
+    const after = await base.outboxEvent.findUniqueOrThrow({ where: { id: event.id } });
+    expect(after.status).toBe('enqueued');
+  });
+
   it('marks overdue invoices through its job', async () => {
     const late = await invoice({ dueDate: new Date('2026-09-15T00:00:00Z') });
 
