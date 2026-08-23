@@ -18,9 +18,15 @@ if (!token || !apiUrl) {
   process.exit(1);
 }
 
-const ids = await syncQStashSchedules(
+// No top-level await: tsx runs this package's scripts as CommonJS.
+syncQStashSchedules(
   new Client({ token, baseUrl: process.env.QSTASH_URL }),
   apiUrl,
   process.env.SCHEDULE_PREFIX ?? 'wolff'
+).then(
+  (ids) => console.log(`Synced ${ids.length} schedules: ${ids.join(', ')}`),
+  (error: unknown) => {
+    console.error('Schedule sync failed:', error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 );
-console.log(`Synced ${ids.length} schedules: ${ids.join(', ')}`);
