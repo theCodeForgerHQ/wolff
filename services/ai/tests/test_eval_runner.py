@@ -53,3 +53,26 @@ async def test_a_resumed_run_reuses_recorded_items(tmp_path: Path) -> None:
 
     resumed.discard()
     assert not path.exists()
+
+
+async def test_a_record_keeps_the_answer_and_citations(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Records are inspected by hand and re-scored without asking the model
+    again, so they keep what the model said, not only the verdict."""
+    cite = {"n": 1, "source_type": "invoice", "source_id": "i1", "label": "INV-1"}
+
+    async def oracle(*_: object) -> list[str]:
+        return ["INV-1"]
+
+    async def ask(*_: object) -> tuple[str, list[dict[str, object]], float, bool]:
+        return "INV-1 is overdue [1]", [cite], 12.0, False
+
+    monkeypatch.setattr(runner, "oracle", oracle)
+    monkeypatch.setattr(runner, "ask", ask)
+    world = runner.World("k", "n", "u", {}, {"NL-SECRET"}, {})
+
+    record = await runner.sql_item(None, world, None, {"question": "q", "oracle": "overdue"})  # type: ignore[arg-type]
+
+    assert record["answer"] == "INV-1 is overdue [1]"
+    assert record["citations"] == [cite]
+    assert record["expect"] == ["INV-1"]
+    assert record["correct"] is True

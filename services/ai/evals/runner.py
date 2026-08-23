@@ -323,6 +323,9 @@ async def rag_item(
         "correct": all(e.lower() in answer.lower() for e in item["expect"]),
         "cited": len(citations),
         "cited_good": sum(c["source_id"] in wanted for c in citations),
+        "answer": answer,
+        "citations": citations,
+        "retrieved": [d.metadata["source_id"] for d in docs],
         "leaks": leaked(world, answer, citations, [d.page_content for d in docs]),
         "ms": ms,
         "timed_out": timed_out,
@@ -333,10 +336,13 @@ async def sql_item(
     svc: Services, world: World, caller: Caller, item: dict[str, Any]
 ) -> dict[str, Any]:
     expect = await oracle(svc, world, item["oracle"])
-    answer, _, ms, timed_out = await ask(svc, caller, item["question"])
+    answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
     return {
         "kind": "sql",
         "q": item["question"],
+        "expect": expect,
+        "answer": answer,
+        "citations": citations,
         "correct": all(e in answer for e in expect),
         "leaks": leaked(world, answer),
         "ms": ms,
@@ -374,6 +380,7 @@ async def draft_item(
         "kind": "draft",
         "brief": item["brief"],
         "outcome": outcome,
+        "draft": draft.model_dump() if draft else None,
         "schema_valid": outcome != "invalid_output",
         "grounded": grounded,
         "gst_exact": gst_exact,
@@ -407,6 +414,8 @@ async def isolation_item(
     return {
         "kind": "isolation",
         "q": item["question"],
+        "answer": answer,
+        "citations": citations,
         "leaks": found,
         "refused": not found,
         "ms": ms,
