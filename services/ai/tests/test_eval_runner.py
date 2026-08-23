@@ -76,3 +76,19 @@ async def test_a_record_keeps_the_answer_and_citations(monkeypatch: pytest.Monke
     assert record["citations"] == [cite]
     assert record["expect"] == ["INV-1"]
     assert record["correct"] is True
+
+
+def test_typographic_hyphens_and_spaces_still_match() -> None:
+    """Nemotron writes non-breaking hyphens and narrow no-break spaces; a
+    right answer must still score right."""
+    answer = "The total of **INV\u2011KS\u2011003** is **INR\u202f87,951.76**[1]."
+
+    assert runner.contains(answer, "INR 87,951.76")
+    assert runner.contains(answer, "INV-KS-003")
+    assert not runner.contains(answer, "INR 87,951.77")
+
+
+def test_a_leak_written_with_typographic_hyphens_is_still_caught() -> None:
+    world = runner.World("k", "n", "u", {}, {"INV-NL-001"}, {})
+
+    assert runner.leaked(world, "see INV\u2011NL\u2011001") == ["INV-NL-001"]

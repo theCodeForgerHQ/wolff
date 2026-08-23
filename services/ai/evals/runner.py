@@ -245,9 +245,29 @@ async def ask(
     return "".join(tokens), citations, (time.monotonic() - started) * 1000, False
 
 
+# Models write non-breaking hyphens (INV\u2011KS\u2011003) and thin or
+# no-break spaces (INR\u202f87,951.76). Compared as plain ASCII, a right
+# answer scores wrong and a leaked id slips past the leak check.
+_TYPOGRAPHY = str.maketrans(
+    {c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2212"}
+    | {c: " " for c in "\u00a0\u2007\u2009\u202f"}
+)
+
+
+def normalise(value: str) -> str:
+    return value.translate(_TYPOGRAPHY)
+
+
+def contains(answer: str, expected: str, *, ignore_case: bool = False) -> bool:
+    answer, expected = normalise(answer), normalise(expected)
+    if ignore_case:
+        answer, expected = answer.lower(), expected.lower()
+    return expected in answer
+
+
 def leaked(world: World, *outputs: object) -> list[str]:
-    blob = json.dumps(outputs, default=str)
-    return sorted(m for m in world.northlight_markers if m and m in blob)
+    blob = normalise(json.dumps(outputs, default=str, ensure_ascii=False))
+    return sorted(m for m in world.northlight_markers if m and normalise(m) in blob)
 
 
 async def spent_today(svc: Services, world: World) -> Decimal:
@@ -320,7 +340,7 @@ async def rag_item(
         "kind": "rag",
         "q": item["question"],
         "hit": bool(wanted & {d.metadata["source_id"] for d in docs}),
-        "correct": all(e.lower() in answer.lower() for e in item["expect"]),
+        "correct": all(contains(answer, e, ignore_case=True) for e in item["expect"]),
         "cited": len(citations),
         "cited_good": sum(c["source_id"] in wanted for c in citations),
         "answer": answer,
@@ -343,7 +363,7 @@ async def sql_item(
         "expect": expect,
         "answer": answer,
         "citations": citations,
-        "correct": all(e in answer for e in expect),
+        "correct": all(contains(answer, e) for e in expect),
         "leaks": leaked(world, answer),
         "ms": ms,
         "timed_out": timed_out,
