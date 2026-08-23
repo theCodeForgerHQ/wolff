@@ -116,6 +116,31 @@ export async function authenticateApiKey(
   };
 }
 
+/**
+ * Whether any usable publishable key lists `origin`. A CORS preflight cannot
+ * carry the key (the browser sends only the header names), so this is the
+ * most the preflight can check; the real request is then held to its own
+ * key's list by the publishable-key middleware. Same rules as that check:
+ * exact match, revoked and expired keys don't count.
+ */
+export async function isPublishableKeyOrigin(
+  db: Db,
+  origin: string,
+  now: Date = new Date()
+): Promise<boolean> {
+  // Exempt from the tenant guard: the caller has no workspace yet.
+  const key = await db.$unscoped.apiKey.findFirst({
+    where: {
+      kind: 'publishable',
+      revokedAt: null,
+      allowedOrigins: { has: origin },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date(now.getTime() - CLOCK_SKEW_MS) } }],
+    },
+    select: { id: true },
+  });
+  return key !== null;
+}
+
 const MAX_ALLOWED_ORIGINS = 20;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 

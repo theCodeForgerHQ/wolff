@@ -56,7 +56,10 @@ describe('ai processors', () => {
     return {
       calls,
       index: async (input) => void calls.push(['index', input]),
-      sweep: async (ws) => void calls.push(['sweep', ws]),
+      sweep: async (ws) => {
+        calls.push(['sweep', ws]);
+        return { more: false };
+      },
       nightlyReport: async (ws) => void calls.push(['report', ws]),
     };
   };
@@ -81,7 +84,11 @@ describe('ai processors', () => {
   it('sweeps each live workspace with its own call', async () => {
     const port = ai();
     const findMany = vi.fn().mockResolvedValue([{ id: 'w1' }, { id: 'w2' }]);
-    const ctx = { ai: port, db: { $unscoped: { workspace: { findMany } } } };
+    const ctx = {
+      ai: port,
+      db: { $unscoped: { workspace: { findMany } } },
+      now: () => new Date(0),
+    };
     await processors['ai.sweep'](ctx as unknown as JobContext, {});
     expect(findMany).toHaveBeenCalledWith({ where: { deletedAt: null }, select: { id: true } });
     expect(port.calls).toEqual([
@@ -91,12 +98,52 @@ describe('ai processors', () => {
   });
 });
 
+describe('ai.sweep in bounded batches', () => {
+  function setup(backlog: Record<string, number>, msPerCall: number) {
+    let clock = 0;
+    const calls: string[] = [];
+    const left = { ...backlog };
+    const port = {
+      index: async () => undefined,
+      nightlyReport: async () => undefined,
+      sweep: async (ws: string) => {
+        calls.push(ws);
+        clock += msPerCall;
+        left[ws] = Math.max(0, (left[ws] ?? 0) - 1);
+        return { more: left[ws]! > 0 };
+      },
+    };
+    const findMany = vi.fn().mockResolvedValue(Object.keys(backlog).map((id) => ({ id })));
+    const ctx = {
+      ai: port,
+      db: { $unscoped: { workspace: { findMany } } },
+      now: () => new Date(clock),
+    };
+    return { ctx: ctx as unknown as JobContext, calls, left };
+  }
+
+  it('calls again while a workspace has more, taking workspaces in turns', async () => {
+    const { ctx, calls, left } = setup({ w1: 3, w2: 1, w3: 2 }, 1_000);
+    await processors['ai.sweep'](ctx, {});
+    expect(calls).toEqual(['w1', 'w2', 'w3', 'w1', 'w3', 'w1']);
+    expect(left).toEqual({ w1: 0, w2: 0, w3: 0 });
+  });
+
+  it('stops at its time budget and leaves the rest for the next run', async () => {
+    const { ctx, calls, left } = setup({ w1: 1_000, w2: 1_000 }, 30_000);
+    await processors['ai.sweep'](ctx, {});
+    // 30 s per call, so a 200 s budget allows 7 calls: well inside Vercel's 300 s.
+    expect(calls).toHaveLength(7);
+    expect(left.w1! + left.w2!).toBe(2_000 - 7);
+  });
+});
+
 describe('reports.nightly', () => {
   it('asks for one report per live workspace', async () => {
     const calls: unknown[] = [];
     const port = {
       index: async () => undefined,
-      sweep: async () => undefined,
+      sweep: async () => ({ more: false }),
       nightlyReport: async (ws: string) => void calls.push(ws),
     };
     const findMany = vi.fn().mockResolvedValue([{ id: 'w1' }, { id: 'w2' }]);
@@ -143,5 +190,15 @@ describe('createAiIndexer', () => {
     const fetch = vi.fn().mockResolvedValue(new Response('no', { status: 503 }));
     const indexer = createAiIndexer({ baseUrl: 'http://ai', secret: SECRET, fetch });
     await expect(indexer.sweep('ws')).rejects.toThrow('/ingest/sweep answered 503');
+  });
+
+  it('reads whether the sweep has more left', async () => {
+    const answer = (more: unknown) =>
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { more } }), { status: 200 }));
+    const sweep = (fetch: typeof globalThis.fetch) =>
+      createAiIndexer({ baseUrl: 'http://ai', secret: SECRET, fetch }).sweep('ws');
+    await expect(sweep(answer(true))).resolves.toEqual({ more: true });
+    await expect(sweep(answer(false))).resolves.toEqual({ more: false });
+    await expect(sweep(answer('yes'))).resolves.toEqual({ more: false });
   });
 });

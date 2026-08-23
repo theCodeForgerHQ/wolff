@@ -168,3 +168,43 @@ async def test_sweep_removes_a_client_note_once_the_notes_are_cleared(
         )
     await _sweep(client, ws_a)
     assert not await _found(client, ws_a, "quokka marsupial branding", client_id)
+
+
+@requires_db
+async def test_sweep_works_in_bounded_batches_and_resumes(
+    client: AsyncClient, admin_engine: AsyncEngine, monkeypatch: Any
+) -> None:
+    """One call must fit in a serverless time limit, so a backlog is worked
+    off over several calls; each says whether more is left."""
+    from app.api import ingest as ingest_api
+    from tests.seed import seed_workspace
+
+    ws = await seed_workspace(admin_engine, "a")
+    monkeypatch.setattr(ingest_api, "SWEEP_BATCH", 1)
+
+    calls = []
+    while True:
+        data = await _sweep(client, ws)
+        calls.append(data)
+        assert data["processed"] <= 1
+        if not data["more"]:
+            break
+        assert len(calls) < 20
+    assert len(calls) >= 3, calls
+    assert sum(c["processed"] for c in calls) == len(calls) - 1 + calls[-1]["processed"]
+    assert (await _sweep(client, ws)) == {**calls[-1], "processed": 0, "outcomes": {}}
+
+
+@requires_db
+async def test_sweep_stops_at_its_time_budget(
+    client: AsyncClient, admin_engine: AsyncEngine, monkeypatch: Any
+) -> None:
+    from app.api import ingest as ingest_api
+    from tests.seed import seed_workspace
+
+    ws = await seed_workspace(admin_engine, "a")
+    monkeypatch.setattr(ingest_api, "SWEEP_SECONDS", 0.0)
+
+    data = await _sweep(client, ws)
+    assert data["processed"] == 1
+    assert data["more"] is True

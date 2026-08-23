@@ -3,6 +3,7 @@ with a worker JWT carrying scope ai:index."""
 
 from __future__ import annotations
 
+import time
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends
@@ -21,7 +22,12 @@ from app.services import Services
 
 router = APIRouter()
 worker = require_service(frozenset({"worker"}), "ai:index")
-SWEEP_LIMIT = 200
+# One sweep call has to finish well inside the caller's 60 s request timeout
+# and Vercel's 300 s function limit, whatever the embedding provider's
+# latency. It works off at most SWEEP_BATCH sources and stops starting new
+# ones after SWEEP_SECONDS; "more" tells the caller to call again.
+SWEEP_BATCH = 25
+SWEEP_SECONDS = 40.0
 
 
 class IngestRequest(BaseModel):
@@ -70,14 +76,19 @@ async def sweep(
             ),
         )
         .where(or_(state.indexed_at.is_(None), state.source_updated_at < sources.c.updated))
-        .limit(SWEEP_LIMIT)
+        .limit(SWEEP_BATCH + 1)
     )
     outcomes: dict[str, int] = {}
+    deadline = time.monotonic() + SWEEP_SECONDS
+    processed = 0
     with metered(ws):
         async with svc.sessions() as session:
             removed = await _remove_orphans(session, ws)
             rows = (await session.execute(stale)).all()
-            for kind, source_id in rows:
+            for kind, source_id in rows[:SWEEP_BATCH]:
+                # Always make progress: the first source runs even past the deadline.
+                if processed and time.monotonic() >= deadline:
+                    break
                 result = await ingest(
                     session,
                     workspace_id=ws,
@@ -87,7 +98,9 @@ async def sweep(
                     embedding_model=svc.settings.provider.embed_model,
                 )
                 outcomes[result.outcome] = outcomes.get(result.outcome, 0) + 1
-    return ok({"processed": len(rows), "outcomes": outcomes, "removed": removed})
+                processed += 1
+    more = processed < len(rows)
+    return ok({"processed": processed, "outcomes": outcomes, "removed": removed, "more": more})
 
 
 def _live_sources(ws: str) -> Any:

@@ -145,7 +145,12 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     dispatch: () => Promise.resolve(),
     email: createEmailTransport(config),
     webhooks: createHttpTransport({ allowPrivateAddresses: config.NODE_ENV === 'development' }),
-    pdf: createChromiumPdfRenderer({ executablePath: process.env.CHROME_EXECUTABLE_PATH }),
+    pdf: createChromiumPdfRenderer({
+      executablePath: process.env.CHROME_EXECUTABLE_PATH,
+      protectionBypass: config.WEB_PROTECTION_BYPASS
+        ? { origin: config.APP_URL, secret: config.WEB_PROTECTION_BYPASS }
+        : undefined,
+    }),
     storage: createStorage(config),
     ai:
       config.AI_URL && config.SVC_JWT_SECRET_WORKER

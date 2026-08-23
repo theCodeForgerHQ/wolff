@@ -1,3 +1,4 @@
+import { relayOutboxToJobs } from '../relay';
 import { createHash } from 'node:crypto';
 import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
 import {
@@ -246,9 +247,26 @@ const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => 
   }
 };
 
+/** Events per relay transaction: each is one publish, inside one DB transaction. */
+const SWEEP_RELAY_BATCH = 20;
+const SWEEP_RELAY_PASSES = 10;
+
 const sweepOutbox: Processor<'outbox.sweep'> = async (ctx) => {
   await requeueStaleOutboxEvents(ctx.db, { now: ctx.now() });
   await redriveStaleProviderEvents(ctx.db, { now: ctx.now() });
+  // Then relay what is due. A worker host also has a relay loop, so this is
+  // redundant there (rows are claimed with SKIP LOCKED, so never doubled);
+  // on Vercel + QStash nothing runs between requests, and this scheduled
+  // sweep is the only thing that moves emails and webhook deliveries along.
+  // Bounded: at most 200 events per run, the rest wait for the next one.
+  const dispatcher = { dispatch: ctx.dispatch };
+  for (let pass = 0; pass < SWEEP_RELAY_PASSES; pass++) {
+    const { enqueued, failed } = await relayOutboxToJobs(ctx.db, dispatcher, {
+      limit: SWEEP_RELAY_BATCH,
+      now: ctx.now(),
+    });
+    if (enqueued + failed < SWEEP_RELAY_BATCH || failed > 0) return;
+  }
 };
 
 const indexForAi: Processor<'ai.index'> = async (ctx, job) => {
@@ -266,10 +284,28 @@ async function liveWorkspaceIds(ctx: JobContext): Promise<string[]> {
   return rows.map((row) => row.id);
 }
 
+/**
+ * Time the sweep may start new calls for. Each AI call does one bounded batch
+ * (under 60 s), so the job ends inside Vercel's 300 s function limit; what is
+ * left is picked up by the next scheduled run (the sweep is incremental).
+ */
+export const AI_SWEEP_BUDGET_MS = 200_000;
+
 const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
-  if (!ctx.ai) return;
-  // The AI service is called once per workspace, scoped by that workspace's token.
-  for (const id of await liveWorkspaceIds(ctx)) await ctx.ai.sweep(id);
+  const ai = ctx.ai;
+  if (!ai) return;
+  const deadline = ctx.now().getTime() + AI_SWEEP_BUDGET_MS;
+  // One call per workspace per round, scoped by that workspace's token, so a
+  // big backlog in one workspace cannot starve the others.
+  let pending = await liveWorkspaceIds(ctx);
+  while (pending.length > 0) {
+    const next: string[] = [];
+    for (const id of pending) {
+      if (ctx.now().getTime() >= deadline) return;
+      if ((await ai.sweep(id)).more) next.push(id);
+    }
+    pending = next;
+  }
 };
 
 const nightlyReports: Processor<'reports.nightly'> = async (ctx) => {
