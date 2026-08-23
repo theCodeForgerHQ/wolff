@@ -1,6 +1,6 @@
 import { Receiver } from '@upstash/qstash';
 import type { JobDispatcher } from './dispatcher';
-import type { Job } from './types';
+import type { Job, JobType } from './types';
 
 /**
  * The push runtime for hosts with no worker process. QStash
@@ -74,4 +74,74 @@ export function createQStashVerifier(keys: {
       return false;
     }
   };
+}
+
+/**
+ * The schedules of the free demo (owner decision 2026-08-23, a deliberate
+ * deviation from the design's GitHub Actions cron; see docs/phase-2.md).
+ * QStash calls `POST /jobs/run/:type` itself, signed, so nothing has to run
+ * outside Vercel. Free tier: at most 10 schedules and 1,000 messages a day;
+ * these fire about 245 times a day, the rest is left for the jobs they fan
+ * out to. Every job has to end inside Vercel's 300 s function limit; the
+ * sweeps are bounded per run and pick up where they stopped. UTC.
+ */
+export const QSTASH_SCHEDULES: Record<string, { type: JobType; cron: string }> = {
+  // Requeues stale events and relays what is due: emails, webhook deliveries.
+  'outbox-sweep': { type: 'outbox.sweep', cron: '*/15 * * * *' },
+  automations: { type: 'automations.tick', cron: '7,22,37,52 * * * *' },
+  recurring: { type: 'recurring.generate', cron: '0 * * * *' },
+  // Hourly rather than nightly: each run embeds a bounded batch, so a
+  // backlog is worked off over a few hours instead of failing at 300 s.
+  'ai-sweep': { type: 'ai.sweep', cron: '30 * * * *' },
+  reminders: { type: 'reminders.scan', cron: '0 3 * * *' },
+  overdue: { type: 'invoices.mark_overdue', cron: '15 0 * * *' },
+  'reports-nightly': { type: 'reports.nightly', cron: '30 20 * * *' },
+};
+
+/** The part of the QStash client the schedule sync uses. */
+export interface QStashScheduleClient {
+  schedules: {
+    create(request: {
+      destination: string;
+      cron: string;
+      body: string;
+      scheduleId?: string;
+      retries?: number;
+      headers?: Record<string, string>;
+    }): Promise<{ scheduleId: string }>;
+    list(): Promise<{ scheduleId: string }[]>;
+    delete(scheduleId: string): Promise<unknown>;
+  };
+}
+
+/**
+ * Creates or updates every schedule under `<prefix>-<name>` and deletes
+ * schedules with that prefix that are no longer defined. Others are left alone.
+ */
+export async function syncQStashSchedules(
+  client: QStashScheduleClient,
+  apiUrl: string,
+  prefix: string
+): Promise<string[]> {
+  const base = apiUrl.replace(/\/$/, '');
+  const ids: string[] = [];
+  for (const [name, { type, cron }] of Object.entries(QSTASH_SCHEDULES)) {
+    const scheduleId = `${prefix}-${name}`;
+    const job: Job = { type, payload: {}, jobId: `scheduled:${name}` };
+    await client.schedules.create({
+      destination: `${base}/jobs/run/${type}`,
+      cron,
+      body: JSON.stringify(job),
+      headers: { 'content-type': 'application/json' },
+      scheduleId,
+      retries: QSTASH_RETRIES,
+    });
+    ids.push(scheduleId);
+  }
+  for (const { scheduleId } of await client.schedules.list()) {
+    if (scheduleId.startsWith(`${prefix}-`) && !ids.includes(scheduleId)) {
+      await client.schedules.delete(scheduleId);
+    }
+  }
+  return ids;
 }
