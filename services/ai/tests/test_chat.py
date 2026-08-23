@@ -66,6 +66,18 @@ async def indexed(migrated: AsyncEngine, ws_a: Seeded, ws_b: Seeded) -> None:
                 )
 
 
+def test_finalize_reads_full_width_citation_brackets() -> None:
+    """Nemotron (NIM) cites as 【1】 instead of [1]; both count, written as [n]."""
+    ev = Evidence(
+        documents=[{"n": 1, "source_type": "invoice", "source_id": "i", "label": "INV-1"}],
+        searched=True,
+        tools_used=["search_documents"],
+    )
+    text, cited = finalize_answer("Barton owes INR 63,408.56【1】 and more【2】.", ev)
+    assert text == "Barton owes INR 63,408.56[1] and more."
+    assert [c["n"] for c in cited] == [1]
+
+
 def test_finalize_drops_unknown_citations_and_applies_not_found() -> None:
     ev = Evidence(
         documents=[{"n": 1, "source_type": "contract", "source_id": "c", "label": ""}],
