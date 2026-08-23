@@ -87,8 +87,11 @@ export interface PdfRenderer {
 /** The AI service's indexing endpoints (job `ai.index`). */
 export interface AiIndexer {
   index(input: { workspaceId: string; sourceType: string; sourceId: string }): Promise<void>;
-  /** Re-index what changed in one workspace since it was last indexed. */
-  sweep(workspaceId: string): Promise<void>;
+  /**
+   * Re-index one bounded batch of what changed in a workspace since it was
+   * last indexed; `more` is true while a backlog is left.
+   */
+  sweep(workspaceId: string): Promise<{ more: boolean }>;
   /** Build and store one workspace's nightly report. */
   nightlyReport(workspaceId: string): Promise<void>;
 }

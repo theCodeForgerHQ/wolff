@@ -35,7 +35,7 @@ export function createAiIndexer(options: {
     workspaceId: string,
     scopes: string[],
     body?: unknown
-  ): Promise<void> {
+  ): Promise<Response> {
     const response = await send(`${base}${path}`, {
       method: 'POST',
       headers: {
@@ -46,12 +46,22 @@ export function createAiIndexer(options: {
       signal: AbortSignal.timeout(60_000),
     });
     if (!response.ok) throw new Error(`AI service ${path} answered ${response.status}`);
+    return response;
   }
 
   return {
-    index: ({ workspaceId, sourceType, sourceId }) =>
-      post('/ingest', workspaceId, ['ai:index'], { sourceType, sourceId }),
-    sweep: (workspaceId) => post('/ingest/sweep', workspaceId, ['ai:index']),
-    nightlyReport: (workspaceId) => post('/internal/reports/nightly', workspaceId, ['reports:run']),
+    index: async ({ workspaceId, sourceType, sourceId }) => {
+      await post('/ingest', workspaceId, ['ai:index'], { sourceType, sourceId });
+    },
+    sweep: async (workspaceId) => {
+      const response = await post('/ingest/sweep', workspaceId, ['ai:index']);
+      const body = (await response.json().catch(() => null)) as {
+        data?: { more?: unknown };
+      } | null;
+      return { more: body?.data?.more === true };
+    },
+    nightlyReport: async (workspaceId) => {
+      await post('/internal/reports/nightly', workspaceId, ['reports:run']);
+    },
   };
 }
