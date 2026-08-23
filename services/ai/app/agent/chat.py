@@ -39,6 +39,8 @@ MAX_TOOL_ITERATIONS = 8
 WALL_CLOCK_SECONDS = 60
 HISTORY_TURNS = 10
 _CITATION = re.compile(r"\[(\d+)\]")
+#: Some models (NIM's Nemotron) cite with full-width lenticular brackets.
+_WIDE_CITATION = re.compile(r"【\s*(\d+)\s*】")
 
 
 @dataclass(frozen=True)
@@ -64,7 +66,7 @@ def finalize_answer(answer: str, evidence: Evidence) -> tuple[str, list[dict[str
             cited.append({k: doc[k] for k in ("n", "source_type", "source_id", "label")})
         return match.group(0)
 
-    cleaned = _CITATION.sub(keep, answer).strip()
+    cleaned = _CITATION.sub(keep, _WIDE_CITATION.sub(r"[\1]", answer)).strip()
     return cleaned or NOT_FOUND, cited
 
 

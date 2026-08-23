@@ -4,8 +4,9 @@
 
 Runs the dataset in evals/dataset against a demo-seeded database as
 Kaveri Studio, with whatever LLM_PROVIDER is set (``fake`` for the
-recorded run; ``gemini`` or ``openai`` for a live run). It indexes both
-demo workspaces, then measures:
+recorded run; ``nvidia`` or ``openai`` for a live run; leave
+LLM_FALLBACK unset so every answer comes from the model under test). It
+indexes both demo workspaces, then measures:
 
 - retrieval recall@6: the expected document is among the retriever's 6;
 - citation precision: cited documents that are expected ones;

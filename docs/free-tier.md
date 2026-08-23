@@ -7,15 +7,17 @@ confirmed when an account is created because vendors change them often.
 
 ## Accounts
 
-| Service     | Plan                     | Why                                                     | Limits (verify at signup)                                                                               |
-| ----------- | ------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Vercel      | Hobby                    | Hosts `web`, `api` (Express) and `ai` (Python) projects | Non-commercial use; functions 300 s max, 2 GB / 1 vCPU, 4.5 MB request/response body, 250 MB bundle     |
-| Neon        | Free                     | Postgres 17 + pgvector                                  | Compute suspends between requests; storage, connection and compute limits vary by region                |
-| Redis Cloud | Free 30 MB               | BullMQ queue store                                      | 30 MB, connection cap, TLS required; `noeviction`                                                       |
-| Upstash     | QStash free + Redis free | Immediate job push for `api`; web rate limits           | QStash: 1,000 messages/day, 1 MB max message, 7-day max delay, 10 schedules, 15-min response, 3-day DLQ |
-| Supabase    | Storage free             | S3-compatible object store for PDFs/reports             | Project pauses after inactivity; per-file and total quota limits vary                                   |
-| Sentry      | Developer tier           | Error tracking                                          | 10% trace sampling, event quota limits                                                                  |
-| Gemini API  | Free tier                | LLM + embeddings via OpenAI-compatible endpoint         | RPM/RPD/TPM per model; free-tier prompts may be used by Google to improve products                      |
+| Service                       | Plan                     | Why                                                                                              | Limits (verify at signup)                                                                                                                                        |
+| ----------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel                        | Hobby                    | Hosts `web`, `api` (Express) and `ai` (Python) projects                                          | Non-commercial use; functions 300 s max, 2 GB / 1 vCPU, 4.5 MB request/response body, 250 MB bundle                                                              |
+| Neon                          | Free                     | Postgres 17 + pgvector                                                                           | Compute suspends between requests; storage, connection and compute limits vary by region                                                                         |
+| Redis Cloud                   | Free 30 MB               | BullMQ queue store                                                                               | 30 MB, connection cap, TLS required; `noeviction`                                                                                                                |
+| Upstash                       | QStash free + Redis free | Immediate job push for `api`; web rate limits                                                    | QStash: 1,000 messages/day, 1 MB max message, 7-day max delay, 10 schedules, 15-min response, 3-day DLQ                                                          |
+| Supabase                      | Storage free             | S3-compatible object store for PDFs/reports                                                      | Project pauses after inactivity; per-file and total quota limits vary                                                                                            |
+| Sentry                        | Developer tier           | Error tracking                                                                                   | 10% trace sampling, event quota limits                                                                                                                           |
+| NVIDIA NIM (build.nvidia.com) | Free API key             | Chat (`nvidia/nemotron-3-super-120b-a12b`) and embeddings (`nvidia/nemotron-3-embed-1b`, 2048-d) | No published number (no docs page, no rate-limit headers, checked 2026-08-23); 40 RPM is the commonly reported per-account limit and is what the client enforces |
+| Groq                          | Free plan                | Chat fallback (`openai/gpt-oss-120b`), no embeddings                                             | gpt-oss-120b: 30 RPM, 1,000 RPD, 8,000 TPM, 200,000 TPD (console.groq.com/docs/rate-limits, 2026-08-23; response headers agree)                                  |
+| Gemini API                    | Free tier                | Optional; no longer the default (see below)                                                      | Gemini 3 Flash for a new key: 20 requests/day/model (observed 2026-08-20)                                                                                        |
 
 ## Vercel projects
 
@@ -99,19 +101,38 @@ DEMO_EMAIL_REDIRECT=owner@...
 SENTRY_DSN=...
 OTEL_EXPORTER_OTLP_ENDPOINT=...
 
-# LLM
-LLM_PROVIDER=gemini
-LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-LLM_API_KEY=...
-AI_CHAT_MODEL=...                 # see the Gemini note below
+# LLM (services/ai, the wolff-ai project)
+LLM_PROVIDER=nvidia               # chat + embeddings
+LLM_FALLBACK=groq                 # chat only, tried when NIM fails as a provider
+NVIDIA_API_KEY=...
+GROQ_API_KEY=...
+AI_MAX_TOKENS=4096                # reasoning models spend tokens before answering
+AI_DAILY_BUDGET_USD=1.00          # per workspace per day, nominal prices
 ```
 
-Gemini model note (2026-08-20): `gemini-2.5-flash` returns 404 for new API
-users, so the default chat model cannot be used on a new key. Set the chat
-model with `AI_CHAT_MODEL` to a model the key can use (the demo was
-provisioned with a newer Flash model); if `AI_MODEL_ALLOWLIST` is set, it
-must include that model or the service refuses to start.
-Embeddings (`gemini-embedding-001`) work on a new key.
+One key per provider, no pooling. The client's limits per provider are in
+`services/ai/app/llm/providers.py` (NIM 40 RPM / our 5,000 RPD ceiling /
+2 concurrent; Groq 30 RPM / 1,000 RPD / 8,000 TPM). Each provider has its
+own rate-limited transport, and both are charged to the same per-workspace
+daily budget. Embeddings never fall back: vectors from two models are not
+comparable.
+
+Models probed on 2026-08-23 with a one-tool request: NIM
+`nemotron-3-super-120b-a12b` and `nemotron-3-nano-omni-30b-a3b-reasoning`,
+Groq `openai/gpt-oss-120b` and `qwen/qwen3.8-27b` called the tool. NIM lists
+`llama-3.1-nemotron-70b-instruct`, `llama-3.1-nemotron-ultra-253b-v1` and the
+embedding models `nv-embedqa-mistral-7b-v2`, `llama-3.2-nv-embedqa-1b-v1`,
+`embed-qa-4`, `snowflake/arctic-embed-l`, but they answer 404 "Function not
+found for account". `nemotron-3-embed-1b` serves 2048 dimensions only
+(`dimensions` 1536 or 1024 is refused) and is asymmetric: documents are
+embedded with `input_type=passage`, searches with `query`. The column is
+`halfvec(2048)` (Alembic 0002), because pgvector's HNSW index takes `vector`
+only up to 2000 dimensions.
+
+Gemini (2026-08-20): every model a new key can use is a Gemini 3 thinking
+model; its tool calls need thought signatures that langchain-openai drops,
+and the free quota is 20 requests a day. It stays selectable
+(`LLM_PROVIDER=gemini`) for embeddings and plain chat.
 
 ## Jobs
 
@@ -149,8 +170,8 @@ cd services/ai && uv run alembic upgrade head
 - QStash 1,000 messages/day limits how many webhooks/emails/PDFs can be
   triggered; the outbox keeps every event and the drain reconciles missed
   ones.
-- Gemini free tier rate limits may require eval runs and embedding backfills
-  to resume from checkpoints across multiple days.
+- Free LLM limits: a full re-embed and the 84-item eval are spread over
+  several sweep runs / eval runs that resume.
 
 ## Local parity
 
