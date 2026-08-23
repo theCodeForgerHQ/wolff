@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { Account } from '@wolff/database';
-import { toAccountData, toAdapterAccount, toAdapterUser } from '@/lib/auth/prisma-adapter';
+import type { Account, PrismaClient } from '@wolff/database';
+import { DEMO_USER_EMAIL } from '@/lib/demo/constants';
+import {
+  WolffPrismaAdapter,
+  toAccountData,
+  toAdapterAccount,
+  toAdapterUser,
+} from '@/lib/auth/prisma-adapter';
 
 describe('WolffPrismaAdapter mapping', () => {
   it('maps a database user to the Auth.js shape', () => {
@@ -95,5 +101,42 @@ describe('WolffPrismaAdapter mapping', () => {
       idToken: null,
       sessionState: null,
     });
+  });
+});
+
+describe('WolffPrismaAdapter.linkAccount', () => {
+  function fakePrisma(ownerEmail: string | null) {
+    const created: unknown[] = [];
+    const prisma = {
+      user: {
+        findUnique: async () => (ownerEmail === null ? null : { email: ownerEmail }),
+      },
+      account: {
+        create: async ({ data }: { data: unknown }) => {
+          created.push(data);
+          return data;
+        },
+      },
+    };
+    return { prisma: prisma as unknown as PrismaClient, created };
+  }
+
+  const account = {
+    userId: 'u1',
+    type: 'oidc' as const,
+    provider: 'google',
+    providerAccountId: 'g-1',
+  };
+
+  it('links an OAuth account to an ordinary user', async () => {
+    const { prisma, created } = fakePrisma('someone@example.com');
+    await WolffPrismaAdapter(prisma).linkAccount!(account);
+    expect(created).toHaveLength(1);
+  });
+
+  it('refuses to link any OAuth account to the shared demo user', async () => {
+    const { prisma, created } = fakePrisma(DEMO_USER_EMAIL.toUpperCase());
+    await expect(WolffPrismaAdapter(prisma).linkAccount!(account)).rejects.toThrow(/demo user/);
+    expect(created).toHaveLength(0);
   });
 });
