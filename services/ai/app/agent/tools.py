@@ -32,6 +32,18 @@ class Evidence:
     tools_used: list[str] = field(default_factory=list)
 
 
+# Models send a placeholder instead of leaving an optional filter out:
+# Nemotron called list_leads(status="None") and answered "no leads".
+_NO_FILTER = frozenset({"", "none", "null", "all", "any", "*"})
+
+
+def optional_filter(value: str | None) -> str | None:
+    """A filter argument as given, or None when it means "no filter"."""
+    if value is None or value.strip().lower() in _NO_FILTER:
+        return None
+    return value.strip()
+
+
 def _dump(value: object) -> str:
     return json.dumps(value, default=str)
 
@@ -111,11 +123,11 @@ def chat_tools(
 
     @tool("list_leads", "Recent leads, optionally by status.")
     async def list_leads(status: str | None = None) -> str:
-        return await read(queries.list_leads, status)
+        return await read(queries.list_leads, optional_filter(status))
 
     @tool("list_deals", "Deals in the pipeline, optionally by stage name.")
     async def list_deals(stage: str | None = None) -> str:
-        return await read(queries.list_deals, stage)
+        return await read(queries.list_deals, optional_filter(stage))
 
     @tool("get_invoice", "One invoice with its lines, by id.")
     async def get_invoice(invoice_id: str) -> str:
