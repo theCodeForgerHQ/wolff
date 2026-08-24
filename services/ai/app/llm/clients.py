@@ -68,6 +68,11 @@ class LlmClients:
             chain.append(self.fallback.chat_model(**kwargs))
         return chain
 
+    def chat_attempts(self, **kwargs: object) -> list[tuple[ProviderProfile, ChatOpenAI]]:
+        """Like ``chat_models``, each with the profile it runs on."""
+        profiles = [self.profile] + ([self.fallback.profile] if self.fallback else [])
+        return list(zip(profiles, self.chat_models(**kwargs), strict=True))
+
     async def run_chat(self, run: Callable[[ChatOpenAI], Awaitable[T]], **kwargs: object) -> T:
         """``run`` with the chat model, again with the fallback's if the
         provider failed (is_fallback_error). Other errors propagate."""

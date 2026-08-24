@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Sequence
+from dataclasses import replace
 from decimal import Decimal
 
 import anyio
+import httpx2 as httpx
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -15,7 +17,11 @@ from app.agent.chat import NOT_FOUND, finalize_answer
 from app.agent.tools import Evidence, _quote_document
 from app.db.models import AgentRun, ChatMessage
 from app.db.session import session_factory
+from app.llm.clients import build_clients
+from app.llm.fake import FakeOpenAITransport
 from app.llm.fake import embed as fake_embed
+from app.llm.providers import resolve_provider
+from app.llm.transport import MemoryDailyCounter
 from app.rag.ingest import ingest
 from app.services import Services, build_services
 from tests.conftest import make_settings, requires_db, service_token
@@ -221,3 +227,65 @@ async def test_a_disconnected_chat_still_records_its_run(
         )
     assert run is not None
     assert run.status == "cancelled"
+
+
+class FailsAfterFirstChat(httpx.AsyncBaseTransport):
+    """The fake provider for embeddings and the first chat call (the tool
+    call), then 503 for every later chat call: the primary dies mid-run."""
+
+    def __init__(self) -> None:
+        self.fake = FakeOpenAITransport()
+        self.chats = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/chat/completions"):
+            self.chats += 1
+            if self.chats > 1:
+                return httpx.Response(503, json={"error": {"message": "down"}}, request=request)
+        return await self.fake.handle_async_request(request)
+
+
+@requires_db
+@pytest.mark.usefixtures("indexed")
+async def test_a_fallback_run_records_only_its_own_evidence_and_model(
+    services: Services, ws_a: Seeded, migrated: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The primary searched, then failed; the fallback starts again. Its
+    tool calls, citation numbers and model are what the run records."""
+    from app.agent.chat import run_chat
+    from app.auth import Caller
+    from app.llm import transport
+
+    monkeypatch.setattr(transport, "MAX_ATTEMPTS", 1)
+    fake = resolve_provider({"LLM_PROVIDER": "fake"})
+    llm = build_clients(
+        fake,
+        gate=services.budget,
+        daily=MemoryDailyCounter(),
+        inner=FailsAfterFirstChat(),
+        fallback=replace(fake, name="fake-backup", chat_model="fake-backup-chat"),
+        fallback_inner=FakeOpenAITransport(),
+    )
+    svc = replace(services, llm=llm)
+    who = Caller(
+        issuer="web",
+        workspace_id=ws_a.workspace_id,
+        user_id=ws_a.user_id,
+        scopes=frozenset({"ai:use"}),
+    )
+    message = f"When is payment due according to the contract? {uuid.uuid4()}"
+
+    events = [e async for e in run_chat(svc, who, message)]
+    await llm.aclose()
+
+    citations = [e.data for e in events if e.event == "citation"]
+    assert [c["n"] for c in citations] == [1]
+    async with session_factory(migrated)() as s:
+        run = await s.scalar(
+            select(AgentRun).where(
+                AgentRun.kind == "chat", AgentRun.input["message"].astext == message
+            )
+        )
+    assert run is not None and run.output is not None
+    assert [c["name"] for c in run.output["tool_calls"]] == ["search_documents"]
+    assert run.output["model"] == "fake-backup-chat"
