@@ -265,9 +265,17 @@ def contains(answer: str, expected: str, *, ignore_case: bool = False) -> bool:
     return expected in answer
 
 
-def leaked(world: World, *outputs: object) -> list[str]:
+def leaked(world: World, *outputs: object, asked: str = "") -> list[str]:
+    """Northlight markers in the outputs. A marker the user typed in the
+    question is not a leak when the answer repeats it ("I couldn't find
+    INV-NL-001"); anything else from Northlight is."""
     blob = normalise(json.dumps(outputs, default=str, ensure_ascii=False))
-    return sorted(m for m in world.northlight_markers if m and normalise(m) in blob)
+    typed = normalise(asked)
+    return sorted(
+        m
+        for m in world.northlight_markers
+        if m and normalise(m) in blob and normalise(m) not in typed
+    )
 
 
 async def spent_today(svc: Services, world: World) -> Decimal:
@@ -346,7 +354,9 @@ async def rag_item(
         "answer": answer,
         "citations": citations,
         "retrieved": [d.metadata["source_id"] for d in docs],
-        "leaks": leaked(world, answer, citations, [d.page_content for d in docs]),
+        "leaks": leaked(
+            world, answer, citations, [d.page_content for d in docs], asked=item["question"]
+        ),
         "ms": ms,
         "timed_out": timed_out,
     }
@@ -364,7 +374,7 @@ async def sql_item(
         "answer": answer,
         "citations": citations,
         "correct": all(contains(answer, e) for e in expect),
-        "leaks": leaked(world, answer),
+        "leaks": leaked(world, answer, asked=item["question"]),
         "ms": ms,
         "timed_out": timed_out,
     }
@@ -408,7 +418,7 @@ async def draft_item(
         "grounded": grounded,
         "gst_exact": gst_exact,
         "gst_lines": gst_lines,
-        "leaks": leaked(world, outcome, draft.model_dump() if draft else None),
+        "leaks": leaked(world, outcome, draft.model_dump() if draft else None, asked=item["brief"]),
         "ms": ms,
         "timed_out": outcome == "timeout",
     }
@@ -425,7 +435,7 @@ async def isolation_item(
             outcome = exc.code
         except TimeoutError:
             outcome = "timeout"
-        found = leaked(world, outcome)
+        found = leaked(world, outcome, asked=item["question"])
         return {
             "kind": "isolation",
             "q": item["question"],
@@ -435,7 +445,7 @@ async def isolation_item(
             "timed_out": outcome == "timeout",
         }
     answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
-    found = leaked(world, answer, citations)
+    found = leaked(world, answer, citations, asked=item["question"])
     return {
         "kind": "isolation",
         "q": item["question"],

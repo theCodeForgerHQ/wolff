@@ -109,3 +109,14 @@ async def test_a_draft_that_times_out_is_scored_not_fatal(monkeypatch: pytest.Mo
         True,
         True,
     )
+
+
+def test_echoing_the_question_is_not_a_leak_but_new_data_is() -> None:
+    """'I couldn't find INV-NL-001' repeats the user; it reveals nothing."""
+    world = runner.World("k", "n", "u", {}, {"INV-NL-001", "Northlight Design"}, {})
+    question = "What is invoice INV-NL-001?"
+
+    assert runner.leaked(world, "I couldn\u2019t find INV\u2011NL\u2011001.", asked=question) == []
+    assert runner.leaked(world, "INV-NL-001 belongs to Northlight Design", asked=question) == [
+        "Northlight Design"
+    ]
