@@ -190,8 +190,46 @@ async def index_everything(svc: Services, world: World) -> int:
     return count
 
 
-async def oracle(svc: Services, world: World, name: str) -> list[str]:
-    """Expected strings for a SQL question, from the views with pandas."""
+# A SQL expectation is a list of checks; a check is a list of alternatives;
+# an alternative is a list of atoms that must all appear in the answer. An
+# atom is {"entity": name} or {"number": decimal string}. The answer is
+# right when every check has one alternative fully present.
+Atom = dict[str, str]
+Check = list[list[Atom]]
+
+
+def _entity(value: str) -> str:
+    return re.sub(r"[^0-9a-z]", "", normalise(value).casefold())
+
+
+def numbers(answer: str) -> list[Decimal]:
+    """Every number in ``answer`` as a value: grouping commas (Western or
+    Indian) and currency symbols or codes do not matter."""
+    found = re.findall(r"\d[\d,]*(?:\.\d+)?", normalise(answer))
+    return [Decimal(n.rstrip(",").replace(",", "")) for n in found if n.rstrip(",")]
+
+
+def _present(atom: Atom, entity_key: str, values: list[Decimal]) -> bool:
+    if "entity" in atom:
+        return _entity(atom["entity"]) in entity_key
+    wanted = Decimal(atom["number"])
+    return any(abs(v - wanted) < Decimal("0.005") for v in values)
+
+
+def sql_correct(answer: str, checks: list[Check]) -> bool:
+    entity_key, values = _entity(answer), numbers(answer)
+    return all(
+        any(all(_present(atom, entity_key, values) for atom in alt) for alt in check)
+        for check in checks
+    )
+
+
+def _money(value: object) -> Atom:
+    return {"number": f"{Decimal(str(value)):.2f}"}
+
+
+async def oracle(svc: Services, world: World, name: str) -> list[Check]:
+    """Expected values for a SQL question, from the views with pandas."""
     async with svc.sessions() as s:
 
         async def frame(sql: str) -> pd.DataFrame:
@@ -199,35 +237,43 @@ async def oracle(svc: Services, world: World, name: str) -> list[str]:
             return pd.DataFrame(result.mappings().all())
 
         ageing = await frame(
-            "SELECT v.invoice_number, v.days_overdue, v.amount_due, v.bucket, c.name AS client "
-            "FROM v_receivables_ageing v JOIN clients c ON c.id = v.client_id "
+            "SELECT v.invoice_number, v.days_overdue, v.amount_due, v.currency, v.bucket, "
+            "c.name AS client FROM v_receivables_ageing v JOIN clients c ON c.id = v.client_id "
             "WHERE v.workspace_id = :w"
         )
         if name == "overdue":
             overdue = ageing[ageing["days_overdue"] > 0].sort_values(
                 "days_overdue", ascending=False
             )
-            return list(overdue["invoice_number"].head(3))
+            return [[[{"entity": str(n)}]] for n in overdue["invoice_number"].head(3)]
         if name == "top_debtor":
             owed = ageing.groupby("client")["amount_due"].sum().sort_values(ascending=False)
-            return [str(owed.index[0])]
+            return [[[{"entity": str(owed.index[0])}]]]
         if name == "ageing":
-            return sorted(set(ageing["bucket"])) if "bucket" in ageing else []
+            # Per currency and bucket, or per-currency totals.
+            per_bucket = ageing.groupby(["currency", "bucket"])["amount_due"].sum()
+            per_currency = ageing.groupby("currency")["amount_due"].sum()
+            return [[[_money(v) for v in per_bucket], [_money(v) for v in per_currency]]]
         if name == "gst":
-            gst = await frame("SELECT gst_rate FROM v_gst_outward_supplies WHERE workspace_id = :w")
-            return [f'"gst_rate": {float(r)}' for r in sorted(set(gst["gst_rate"]))][:1]
+            gst = await frame(
+                "SELECT gst_rate, taxable_value, cgst_amount + sgst_amount + igst_amount "
+                "+ cess_amount AS tax FROM v_gst_outward_supplies WHERE workspace_id = :w"
+            )
+            by_rate = gst.groupby("gst_rate")["taxable_value"].sum()
+            # Taxable value per rate, or the total GST charged.
+            return [[[_money(v) for v in by_rate], [_money(gst["tax"].sum())]]]
         if name == "leads":
             leads = await frame(
                 "SELECT name FROM leads WHERE workspace_id = :w AND deleted_at IS NULL "
                 "ORDER BY created_at DESC LIMIT 1"
             )
-            return [str(leads["name"].iloc[0])]
+            return [[[{"entity": str(leads["name"].iloc[0])}]]]
         if name == "deals":
             deals = await frame(
                 "SELECT title FROM deals WHERE workspace_id = :w AND deleted_at IS NULL "
                 "ORDER BY updated_at DESC LIMIT 1"
             )
-            return [str(deals["title"].iloc[0])]
+            return [[[{"entity": str(deals["title"].iloc[0])}]]]
     raise ValueError(name)
 
 
@@ -401,7 +447,7 @@ async def sql_item(
         "expect": expect,
         "answer": answer,
         "citations": citations,
-        "correct": all(contains(answer, e) for e in expect),
+        "correct": sql_correct(answer, expect),
         "leaks": leaked(world, answer, context=citations, asked=item["question"]),
         "ms": ms,
         "timed_out": timed_out,

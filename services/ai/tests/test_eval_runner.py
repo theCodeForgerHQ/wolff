@@ -61,8 +61,8 @@ async def test_a_record_keeps_the_answer_and_citations(monkeypatch: pytest.Monke
     again, so they keep what the model said, not only the verdict."""
     cite = {"n": 1, "source_type": "invoice", "source_id": "i1", "label": "INV-1"}
 
-    async def oracle(*_: object) -> list[str]:
-        return ["INV-1"]
+    async def oracle(*_: object) -> list[runner.Check]:
+        return [[[{"entity": "INV-1"}]]]
 
     async def ask(*_: object) -> tuple[str, list[dict[str, object]], float, bool]:
         return "INV-1 is overdue [1]", [cite], 12.0, False
@@ -75,7 +75,7 @@ async def test_a_record_keeps_the_answer_and_citations(monkeypatch: pytest.Monke
 
     assert record["answer"] == "INV-1 is overdue [1]"
     assert record["citations"] == [cite]
-    assert record["expect"] == ["INV-1"]
+    assert record["expect"] == [[[{"entity": "INV-1"}]]]
     assert record["correct"] is True
 
 
@@ -216,3 +216,51 @@ def test_a_checkpoint_is_only_resumed_by_the_same_code_and_models() -> None:
     assert runner.checkpoint_path(other_model, "abc1234") != path
     with_fallback = load_settings({**base, "LLM_FALLBACK": "groq", "GROQ_API_KEY": "g"})
     assert runner.checkpoint_path(with_fallback, "abc1234") != path
+
+
+def test_amounts_match_by_value_whatever_the_currency_format() -> None:
+    """The model writes INR 2,18,093.82, \u20b9218,093.82 or 218093.82; the
+    view says 218093.82. All are the same value."""
+    money = [{"number": "218093.82"}]
+
+    for answer in ("INR 2,18,093.82", "\u20b9218,093.82 due", "total: 218093.82", "218,093.820"):
+        assert runner.sql_correct(answer, [[money]]), answer
+    assert not runner.sql_correct("INR 218,093.81", [[money]])
+    assert not runner.sql_correct("INR 1,218,093.82", [[money]])
+    assert runner.sql_correct("| 5 %  | 296,215.00 |", [[[{"number": "5"}, {"number": "296215"}]]])
+
+
+def test_entities_match_ignoring_case_spacing_and_punctuation() -> None:
+    check = [[{"entity": "Moore - Bauch"}]]
+
+    assert runner.sql_correct("**Moore\u2011Bauch** owes most", [check])
+    assert runner.sql_correct("moore bauch", [check])
+    assert not runner.sql_correct("Moore Group", [check])
+
+
+def test_any_alternative_of_a_check_is_enough_and_every_check_is_needed() -> None:
+    """'How much is outstanding?' may be answered per bucket or as totals."""
+    by_bucket = [{"number": "100"}, {"number": "200"}]
+    totals = [{"number": "300"}]
+    checks = [[by_bucket, totals], [[{"entity": "INV-KS-001"}]]]
+
+    assert runner.sql_correct("Total INR 300.00; oldest INV-KS-001", checks)
+    assert runner.sql_correct("0-30: 100, 31-60: 200 (INV-KS-001)", checks)
+    assert not runner.sql_correct("0-30: 100 (INV-KS-001)", checks)
+    assert not runner.sql_correct("Total INR 300.00", checks)
+
+
+def test_a_stored_ageing_answer_rescores_by_value() -> None:
+    """The NIM run's ageing answers were right but scored wrong because
+    the oracle wanted the view's raw 'bucket_0_30' tokens."""
+    answer = (
+        "**INR**\n- Current: \u20b9218,093.82 (5 invoices)\n- 0\u201130 days: \u20b9455,260.66\n"
+        "- 31\u201160 days: \u20b9156,552.16\n- 61\u201190 days: \u20b973,928.26\n"
+        "**USD**\n- 61\u201190 days: $8,175.50"
+    )
+    buckets = [
+        {"number": v} for v in ("218093.82", "455260.66", "156552.16", "73928.26", "8175.50")
+    ]
+    totals = [{"number": "903834.90"}, {"number": "8175.50"}]
+
+    assert runner.sql_correct(answer, [[buckets, totals]])
