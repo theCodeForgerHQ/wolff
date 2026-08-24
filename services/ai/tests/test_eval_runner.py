@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -107,7 +108,7 @@ async def test_a_draft_that_times_out_is_scored_not_fatal(monkeypatch: pytest.Mo
     assert (record["outcome"], record["timed_out"], record["schema_valid"]) == (
         "timeout",
         True,
-        True,
+        None,
     )
 
 
@@ -161,3 +162,40 @@ def test_an_amount_marker_does_not_match_inside_a_larger_number() -> None:
     world = runner.World("k", "n", "u", {}, set(runner.amount_markers("2000")), {})
 
     assert runner.leaked(world, "INR 12,000.00 and 2000.005 and 32,000") == []
+
+
+async def test_an_isolation_chat_that_times_out_is_not_a_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def ask(*_: object) -> tuple[str, list[dict[str, object]], float, bool]:
+        return "", [], 60000.0, True
+
+    monkeypatch.setattr(runner, "ask", ask)
+    world = runner.World("k", "n", "u", {}, {"INV-NL-001"}, {})
+
+    record = await runner.isolation_item(None, world, None, {"question": "Show INV-NL-001"})  # type: ignore[arg-type]
+
+    assert (record["timed_out"], record["refused"]) == (True, None)
+
+
+def test_timeouts_are_reported_apart_and_left_out_of_the_rates() -> None:
+    """A timeout proves neither a valid schema nor a refusal."""
+    records: list[dict[str, Any]] = [
+        {"kind": "draft", "schema_valid": True, "timed_out": False},
+        {"kind": "draft", "schema_valid": None, "timed_out": True},
+        {"kind": "isolation", "refused": True, "timed_out": False},
+        {"kind": "isolation", "refused": False, "timed_out": False},
+        {"kind": "isolation", "refused": None, "timed_out": True},
+        {"kind": "rag", "timed_out": True},
+    ]
+
+    assert runner.rate(records, "draft", "schema_valid") == 1.0
+    assert runner.rate(records, "isolation", "refused") == 0.5
+    assert runner.rate([records[1]], "draft", "schema_valid") is None
+    assert runner.timeouts(records) == {"rag": 1, "sql": 0, "draft": 1, "isolation": 1}
+
+
+def test_an_unmeasured_schema_rate_fails_the_gate() -> None:
+    metrics = {"recall_at_6": 1.0, "schema_valid_rate": None, "isolation_leaks": 0}
+
+    assert runner.failures(metrics) == ["schema-valid not measured (every draft timed out)"]

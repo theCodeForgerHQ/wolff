@@ -442,7 +442,8 @@ async def draft_item(
         "brief": item["brief"],
         "outcome": outcome,
         "draft": draft.model_dump() if draft else None,
-        "schema_valid": outcome != "invalid_output",
+        # A timeout says nothing about the schema: None, left out of the rate.
+        "schema_valid": None if outcome == "timeout" else outcome != "invalid_output",
         "grounded": grounded,
         "gst_exact": gst_exact,
         "gst_lines": gst_lines,
@@ -470,7 +471,7 @@ async def isolation_item(
             "kind": "isolation",
             "q": item["question"],
             "leaks": found,
-            "refused": outcome == "unknown_client",
+            "refused": None if outcome == "timeout" else outcome == "unknown_client",
             "ms": None,
             "timed_out": outcome == "timeout",
         }
@@ -482,10 +483,25 @@ async def isolation_item(
         "answer": answer,
         "citations": citations,
         "leaks": found,
-        "refused": not found,
+        # An empty answer after a timeout is not a refusal.
+        "refused": None if timed_out else not found,
         "ms": ms,
         "timed_out": timed_out,
     }
+
+
+KINDS = ("rag", "sql", "draft", "isolation")
+
+
+def rate(records: list[dict[str, Any]], kind: str, field_: str) -> float | None:
+    """Share of ``kind`` records where ``field_`` holds, over the records
+    that measured it (``None`` marks a timeout); None if none did."""
+    measured = [r[field_] for r in records if r["kind"] == kind and r.get(field_) is not None]
+    return round(sum(map(bool, measured)) / len(measured), 4) if measured else None
+
+
+def timeouts(records: list[dict[str, Any]]) -> dict[str, int]:
+    return {k: sum(bool(r["timed_out"]) for r in records if r["kind"] == k) for k in KINDS}
 
 
 async def evaluate(
@@ -550,14 +566,15 @@ async def evaluate(
         "citation_precision": round(total("rag", "cited_good") / cited, 4) if cited else None,
         "answer_correctness_rag": round(total("rag", "correct") / len(rag), 4),
         "answer_correctness_sql": round(total("sql", "correct") / len(sql), 4),
-        "schema_valid_rate": round(total("draft", "schema_valid") / len(drafts), 4),
+        "schema_valid_rate": rate(records, "draft", "schema_valid"),
         "gst_inputs_exact": round(total("draft", "gst_exact") / gst_lines, 4)
         if gst_lines
         else None,
         "client_grounding": round(total("draft", "grounded") / len(drafts), 4),
         "isolation_leaks": len(leaks),
-        "isolation_refusal_rate": round(total("isolation", "refused") / len(isolation), 4),
+        "isolation_refusal_rate": rate(records, "isolation", "refused"),
         "chat_timeouts": sum(int(r["timed_out"]) for r in records),
+        "timeouts": timeouts(records),
         "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
         # The budget gate prices the offline model like gpt-4o-mini.
         "cost_usd_run": str(cost),
@@ -572,7 +589,9 @@ def failures(metrics: dict[str, Any]) -> list[str]:
     out = []
     if metrics["recall_at_6"] < THRESHOLDS["recall_at_6"]:
         out.append(f"recall@6 {metrics['recall_at_6']} < {THRESHOLDS['recall_at_6']}")
-    if metrics["schema_valid_rate"] < THRESHOLDS["schema_valid_rate"]:
+    if metrics["schema_valid_rate"] is None:
+        out.append("schema-valid not measured (every draft timed out)")
+    elif metrics["schema_valid_rate"] < THRESHOLDS["schema_valid_rate"]:
         out.append(f"schema-valid {metrics['schema_valid_rate']} < 1.0")
     if metrics["isolation_leaks"] > THRESHOLDS["isolation_leaks"]:
         out.append(f"isolation leaks {metrics['isolation_leaks']} > 0")
