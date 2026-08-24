@@ -60,14 +60,14 @@ How the parts connect:
 
 ## Phase 5 DoD
 
-| Criterion                                                 | State                                 | Evidence (ran it)                                                                                                                                                                                                                                                                                                           |
-| --------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Isolation suite 0 leaks                                   | Met                                   | `uv run pytest -m isolation`: `12 passed`. That is 11 cases (every HTTP endpoint, all 10 MCP tools and both resources, MCP writes, shared queries) with 0 leaks, plus a control that sees B's data when asking as B. Removing the workspace clause from the retriever, `scoped()` or the view filter fails 3, 7 and 1 cases |
-| Eval thresholds met on the recorded run                   | Met, offline model only               | `evals/results/fake-2026-08-09.json` (run at `23ea69b`, also in `ai.eval_runs`): recall@6 1.0 (≥0.85), schema-valid 1.0, isolation leaks 0. Final run `pytest -m eval` on a fresh demo DB: `1 passed`                                                                                                                       |
-| …plus one live run logged                                 | **Not done**: needs a key (owner)     | `LLM_PROVIDER=gemini GEMINI_API_KEY=… AI_EVAL_DATABASE_URL=… uv run python -m evals.runner`                                                                                                                                                                                                                                 |
-| In-memory MCP client test of every tool in CI             | Met (locally; CI never run on GitHub) | `tests/test_mcp.py`, 9 tests through `mcp.Client(server)` in-process: the tool list equals the design's ten, every tool and both resources as A, cross-tenant denials, per-tool scope refusals, key checks, and `/mcp` over HTTP (401 without or with a bad key). Runs in the `ai` CI job's pytest step                           |
-| A drafted quote opens in the builder and saves (E2E)      | Met                                   | `playwright.assistant.config.ts` (web + apps/api + AI service, offline model): `2 passed` (sign-in setup + the spec), CI=1, no retries                                                                                                                                                                                      |
-| With ai stopped, reports and the core flow still pass E2E | Met                                   | `playwright.flows.config.ts` now runs with `AI_URL` on a closed port: `20 passed`. That covers lead to paid, quote to paid, Kanban, automations, CSP, axe, the widget and the new `assistant-down` spec (assistant hidden, analytics renders, chat route 502)                                                               |
+| Criterion                                                 | State                                     | Evidence (ran it)                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Isolation suite 0 leaks                                   | Met                                       | `uv run pytest -m isolation`: `12 passed`. That is 11 cases (every HTTP endpoint, all 10 MCP tools and both resources, MCP writes, shared queries) with 0 leaks, plus a control that sees B's data when asking as B. Removing the workspace clause from the retriever, `scoped()` or the view filter fails 3, 7 and 1 cases |
+| Eval thresholds met on the recorded run                   | Met, offline model only                   | `evals/results/fake-2026-08-09.json` (run at `23ea69b`, also in `ai.eval_runs`): recall@6 1.0 (≥0.85), schema-valid 1.0, isolation leaks 0. Final run `pytest -m eval` on a fresh demo DB: `1 passed`                                                                                                                       |
+| …plus one live run logged                                 | Done; live thresholds not met (see below) | `evals/results/nvidia-2026-08-23.json` and an `ai.eval_runs` row, NIM, run at `2201562`: recall@6 1.0, schema-valid 1.0, isolation leaks 1 (a false positive, fixed in the scorer by `d59913f`; 0 on re-scoring the stored answers)                                                                                         |
+| In-memory MCP client test of every tool in CI             | Met (locally; CI never run on GitHub)     | `tests/test_mcp.py`, 9 tests through `mcp.Client(server)` in-process: the tool list equals the design's ten, every tool and both resources as A, cross-tenant denials, per-tool scope refusals, key checks, and `/mcp` over HTTP (401 without or with a bad key). Runs in the `ai` CI job's pytest step                           |
+| A drafted quote opens in the builder and saves (E2E)      | Met                                       | `playwright.assistant.config.ts` (web + apps/api + AI service, offline model): `2 passed` (sign-in setup + the spec), CI=1, no retries                                                                                                                                                                                      |
+| With ai stopped, reports and the core flow still pass E2E | Met                                       | `playwright.flows.config.ts` now runs with `AI_URL` on a closed port: `20 passed`. That covers lead to paid, quote to paid, Kanban, automations, CSP, axe, the widget and the new `assistant-down` spec (assistant hidden, analytics renders, chat route 502)                                                               |
 
 ### Recorded eval run (offline model)
 
@@ -110,6 +110,69 @@ What the offline evals prove, and what they do not:
   steered model returns (see the review fixes for item 6).
 - **RAG answer correctness (0.125)** says nothing about a real model: the
   fake answers with one extracted sentence.
+
+### Live eval run (NVIDIA NIM, 2026-08-23)
+
+`evals/results/nvidia-2026-08-23.json`, chat `nvidia/nemotron-3-super-120b-a12b`,
+embeddings `nvidia/nemotron-3-embed-1b`, no fallback, against the demo
+database on Neon, run from a laptop in India. It took five sessions
+(two network outages, two runner crashes), resumed from per-item
+checkpoints (`b3d8705`); 29 RAG items were recorded before `470f58e`
+and keep no answer text.
+
+| Metric                  | Value                           | Threshold |
+| ----------------------- | ------------------------------- | --------- |
+| recall@6                | 1.0                             | ≥ 0.85    |
+| citation precision      | 1.0                             | none      |
+| answer correctness, RAG | 0.9                             | none      |
+| answer correctness, SQL | 0.4                             | none      |
+| schema-valid rate       | 1.0                             | = 1.0     |
+| GST inputs exact        | 1.0 (3 drafts priced)           | none      |
+| client grounding        | 0.3571                          | none      |
+| isolation leaks         | 1 (false positive; 0 re-scored) | = 0       |
+| isolation refusal rate  | 0.8                             | none      |
+| chat/draft timeouts     | 11                              | none      |
+| p95 latency             | 64.5 s                          | none      |
+| cost of the run         | $0.052 nominal (NIM is free)    | none      |
+
+What these numbers show, and what they do not:
+
+- **Retrieval and citations work with a real embedding model**: the
+  expected document was in the top 6 for all 40 RAG questions, and every
+  citation pointed at an expected document. 36 of 40 answers contained
+  the expected string.
+- **SQL 0.4 understates the model.** 7 of the 12 misses are right answers
+  the oracle cannot match: it expects raw view tokens (`bucket_0_30`,
+  `"gst_rate": 5.0`) that only the offline model echoes. 5 were a real
+  defect: Nemotron sent `status="None"` to `list_leads` (and the same for
+  deals), which filtered everything out; fixed in `16529a3`
+  (`optional_filter`). Re-asked live after the fix, 4 of those 5 pass;
+  the fifth ("Any new leads?") filtered by status `new`, which is a
+  reasonable reading the oracle does not accept. The oracle needs
+  rewriting to compare values, not tokens (deferred).
+- **Client grounding 0.36 and the 11 timeouts are mostly latency.** 8 of
+  the 11 non-refusal briefs, and 1 of the 3 refusal briefs, hit the
+  agent's 60 s wall clock: each LLM
+  call, tool call and budget-gate write crossed from India to Neon in
+  us-east-1. The same kind of draft took 26 s on the deployed service.
+  The run says nothing about draft quality under production latency;
+  the 3 drafts that finished were grounded and priced with the rate
+  card's SAC code and GST rate.
+- **Schema-valid 1.0 is no longer tautological**, but it rests on the 3
+  drafts that produced output; timeouts are not counted as invalid.
+- **Isolation:** no Northlight data in any answer, citation or draft. The
+  one counted leak repeated the id the user asked about ("I couldn't find
+  INV-NL-001"). 2 of the 10 adversarial prompts timed out, so the 0.8
+  refusal rate is 8 refusals and 2 non-answers, not 2 failures.
+- **Scorer bugs the live run exposed**, all fixed test-first: typographic
+  hyphens and spaces (`058036a`), the echo counted as a leak (`d59913f`),
+  timeouts that aborted the run (`b68d3ae`, `2201562`).
+
+**Rule: run a smoke eval before every full live run.** One item of each
+kind (RAG, SQL, draft, refusal, leak probe) through the runner's item
+functions, with every field of each record read by hand. The smoke run
+here found the typographic scoring bug and the draft crash before they
+cost a full run.
 
 ## Review findings and fixes
 
@@ -239,14 +302,26 @@ Notes:
 
 ## Known issues and deferred
 
+- **The Groq fallback cannot finish a retrieval chat within 60 s.** The
+  client charges Groq's 8,000 TPM by request size (body bytes / 4), so
+  after a tool round each further call waits for the bucket to refill. A
+  one-question chat with NIM forced down took 115 s (68 s of it waiting),
+  so in production it hits the chat wall clock. Options: count real
+  tokens, a shorter fallback prompt, or a longer wall clock on the
+  fallback path. Not fixed.
+- **Nothing emits `pdf.render`.** The job and the renderer work on the
+  demo (an invoice PDF with its number lands in Supabase), but only when
+  the job is published by hand.
+
 - **Write paths that emit `ai.index`.** Creates and updates of quotes and
   invoices, `createDraftQuote`, and every soft delete of a quote, invoice,
   contract or client (web actions and the `/api/v1` DELETE handlers), plus
   client updates that touch notes, emit it in the change's transaction.
   Status changes, portal acceptance, duplicates, recurring copies, contract
-  creation and client creation emit nothing. The nightly `ai.sweep` (01:30
-  UTC) re-indexes changed rows and deletes the chunks and state of sources
-  that are gone, so for those paths the index can lag up to a day.
+  creation and client creation emit nothing. The hourly `ai.sweep` (QStash, at
+  :30) re-indexes changed rows and deletes the chunks and state of sources
+  that are gone, so for those paths the index can lag up to an hour or a few, in
+  bounded batches.
 - **A cancelled chat leaves a SQLAlchemy warning.** When a disconnect
   cancels a chat while it holds a database connection, the run is recorded
   but SQLAlchemy warns that the garbage collector cleaned up the
@@ -287,12 +362,12 @@ Notes:
 
 ## Mock only / not verified live
 
-- **LLM.** Every chat, embedding, tool call and structured output ran
-  against the offline model, and no Gemini or OpenAI request was made.
-  Whether Gemini's OpenAI-compatible endpoint honours `dimensions=1536` is
-  unverified (`fit_dimensions` truncates and normalises if not). The
-  free-tier RPM/RPD/TPM and the model names in `app/llm/providers.py` are
-  placeholders to verify at signup.
+- **LLM.** The build ran against the offline model. Since 2026-08-23 the
+  demo runs on NVIDIA NIM with Groq as the chat fallback, and the live
+  eval above ran on NIM. The Groq fallback was exercised once live (NIM
+  forced to 503 in a one-off local run): it answered correctly with a
+  citation, but see the known issue on its speed. The NIM limits in
+  `app/llm/providers.py` are the commonly reported ones, not published.
 - **Sentry and OTLP.** Initialisation, scrubbing and FastAPI
   instrumentation are unit-tested; no event was sent.
 - **Redis paths.** The Redis-backed jti cache and RPD counter are wired but
@@ -303,12 +378,9 @@ Notes:
 
 ## Needs the owner
 
-- **A Gemini API key.** It is needed for the live eval run and for using
-  the assistant with a real model:
-  `LLM_PROVIDER=gemini GEMINI_API_KEY=… AI_EVAL_DATABASE_URL=postgresql://ai_service:…@…/<demo-seeded db> uv run python -m evals.runner`,
-  which writes `evals/results/gemini-<date>.json` and an `ai.eval_runs`
-  row. The signup also verifies the free-tier limits and model names in
-  `app/llm/providers.py`.
+- **The eval oracle for ageing and GST** compares view tokens and fails
+  right answers from a real model; rewriting it to compare values is a
+  decision about how strict the SQL score should be.
 - **Optional: an OpenAI key.** It would allow the production-provider row
   that R30 asks to gate on.
 - **Secrets per environment.** Choose `SVC_JWT_SECRET_WEB`,
@@ -368,3 +440,23 @@ timestamps) is kept outside the repo.
   decision (carry the signature through, or a Gemini-native client).
 - The live eval run is therefore still not done; the free tier also caps
   the chat model at 20 requests a day.
+
+## Verified on the deployed demo (2026-08-23, NIM)
+
+Deployed from `0b835fa` (web, api) and `1fc3f6d` (ai). Account-specific
+evidence is kept outside the repo.
+
+- The documents on Neon are re-embedded with `nemotron-3-embed-1b`
+  (Alembic `0002`, `halfvec(2048)`); no rows of the old model remain, and
+  every live source is indexed.
+- Chat through the web app answers with a citation on NIM (about 15 s).
+- A drafted quote opens in the builder, and an edited line saves.
+- The QStash schedules fire on their own and the jobs complete: reminder
+  emails created by the scheduled scan were relayed by the scheduled
+  outbox sweep and arrived, with nothing run from a developer machine.
+- An invoice PDF rendered by the deployed api through the web's
+  protection bypass lands in Supabase Storage and contains its invoice
+  number.
+- Signing in with Google from a browser that holds a demo session does
+  not add a Google account to the demo user (checked as far as the
+  provider callback allows without a real Google login).
