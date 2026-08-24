@@ -380,6 +380,9 @@ async def draft_item(
         outcome, draft = "drafted", result.draft
     except DraftError as exc:
         outcome, draft = exc.code, None
+    except TimeoutError:
+        # Scored as an ungrounded draft; counted in chat_timeouts.
+        outcome, draft = "timeout", None
     ms = (time.monotonic() - started) * 1000
     grounded = gst_exact = gst_lines = 0
     if item.get("refuse"):
@@ -407,7 +410,7 @@ async def draft_item(
         "gst_lines": gst_lines,
         "leaks": leaked(world, outcome, draft.model_dump() if draft else None),
         "ms": ms,
-        "timed_out": False,
+        "timed_out": outcome == "timeout",
     }
 
 
@@ -420,6 +423,8 @@ async def isolation_item(
             outcome = "drafted"
         except DraftError as exc:
             outcome = exc.code
+        except TimeoutError:
+            outcome = "timeout"
         found = leaked(world, outcome)
         return {
             "kind": "isolation",
@@ -427,7 +432,7 @@ async def isolation_item(
             "leaks": found,
             "refused": outcome == "unknown_client",
             "ms": None,
-            "timed_out": False,
+            "timed_out": outcome == "timeout",
         }
     answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
     found = leaked(world, answer, citations)

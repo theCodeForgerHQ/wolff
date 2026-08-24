@@ -92,3 +92,20 @@ def test_a_leak_written_with_typographic_hyphens_is_still_caught() -> None:
     world = runner.World("k", "n", "u", {}, {"INV-NL-001"}, {})
 
     assert runner.leaked(world, "see INV\u2011NL\u2011001") == ["INV-NL-001"]
+
+
+async def test_a_draft_that_times_out_is_scored_not_fatal(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def too_slow(*_: object, **__: object) -> object:
+        raise TimeoutError
+
+    monkeypatch.setattr(runner, "draft_quote", too_slow)
+    api = runner.RecordingApi()
+    world = runner.World("k", "n", "u", {}, set(), {})
+
+    record = await runner.draft_item(None, api, world, None, {"brief": "b", "client": "c"})  # type: ignore[arg-type]
+
+    assert (record["outcome"], record["timed_out"], record["schema_valid"]) == (
+        "timeout",
+        True,
+        True,
+    )
