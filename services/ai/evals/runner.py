@@ -57,7 +57,7 @@ from app.db.models import EvalRun
 from app.rag.ingest import ingest
 from app.rag.retriever import WorkspaceRetriever
 from app.services import Services, build_services
-from app.settings import load_settings
+from app.settings import Settings, load_settings
 
 DATASET = Path(__file__).parent / "dataset"
 RESULTS = Path(__file__).parent / "results"
@@ -610,6 +610,23 @@ def git_sha() -> str | None:
         return None
 
 
+def checkpoint_path(settings: Settings, sha: str | None) -> Path:
+    """Where a run's checkpoint lives. The name fingerprints everything the
+    records depend on (dataset, commit, provider, models, fallback), so a
+    run only ever resumes records made by the same code and models."""
+    provider, fallback = settings.provider, settings.fallback
+    parts = [
+        dataset_version(),
+        sha or "no-git",
+        provider.name,
+        provider.chat_model,
+        provider.embed_model,
+        f"{fallback.name}:{fallback.chat_model}" if fallback else "no-fallback",
+    ]
+    digest = hashlib.sha256("\0".join(parts).encode()).hexdigest()[:12]
+    return RESULTS / f".checkpoint-{provider.name}-{digest}.jsonl"
+
+
 async def run(url: str, write_file: bool = True) -> dict[str, Any]:
     env = dict(os.environ)
     settings = load_settings(
@@ -622,14 +639,11 @@ async def run(url: str, write_file: bool = True) -> dict[str, Any]:
         httpx2.AsyncClient(transport=httpx2.MockTransport(api.handler)),
     )
     svc = build_services(settings, api=client)
-    checkpoint = Checkpoint(
-        RESULTS / f".checkpoint-{settings.provider.name}-{dataset_version()}.jsonl"
-        if write_file
-        else None
-    )
+    sha = git_sha()
+    checkpoint = Checkpoint(checkpoint_path(settings, sha) if write_file else None)
     try:
         report = await evaluate(svc, api, checkpoint)
-        report["git_sha"] = git_sha()
+        report["git_sha"] = sha
         report["dataset_version"] = dataset_version()
         report["created_at"] = datetime.now(UTC).isoformat(timespec="seconds")
         report["failures"] = failures(report["metrics"])

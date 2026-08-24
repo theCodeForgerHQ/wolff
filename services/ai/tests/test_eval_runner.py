@@ -199,3 +199,20 @@ def test_an_unmeasured_schema_rate_fails_the_gate() -> None:
     metrics = {"recall_at_6": 1.0, "schema_valid_rate": None, "isolation_leaks": 0}
 
     assert runner.failures(metrics) == ["schema-valid not measured (every draft timed out)"]
+
+
+def test_a_checkpoint_is_only_resumed_by_the_same_code_and_models() -> None:
+    """Records made by another commit, chat model or fallback must not be
+    mixed into a run that reports this one's sha and models."""
+    from app.settings import load_settings
+
+    base = {"LLM_PROVIDER": "nvidia", "NVIDIA_API_KEY": "k", "AI_DATABASE_URL": "postgresql://x"}
+    one = load_settings(base)
+    path = runner.checkpoint_path(one, "abc1234")
+
+    assert runner.checkpoint_path(load_settings(base), "abc1234") == path
+    assert runner.checkpoint_path(one, "def5678") != path
+    other_model = load_settings({**base, "AI_CHAT_MODEL": "other"})
+    assert runner.checkpoint_path(other_model, "abc1234") != path
+    with_fallback = load_settings({**base, "LLM_FALLBACK": "groq", "GROQ_API_KEY": "g"})
+    assert runner.checkpoint_path(with_fallback, "abc1234") != path
