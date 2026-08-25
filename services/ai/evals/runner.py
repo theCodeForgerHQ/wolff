@@ -32,6 +32,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -56,7 +57,7 @@ from app.db.models import EvalRun
 from app.rag.ingest import ingest
 from app.rag.retriever import WorkspaceRetriever
 from app.services import Services, build_services
-from app.settings import load_settings
+from app.settings import Settings, load_settings
 
 DATASET = Path(__file__).parent / "dataset"
 RESULTS = Path(__file__).parent / "results"
@@ -139,10 +140,15 @@ async def discover(svc: Services) -> World:
         for (value,) in await pairs(
             "SELECT id FROM clients WHERE workspace_id = :w UNION ALL SELECT name FROM clients "
             "WHERE workspace_id = :w UNION ALL SELECT id FROM invoices WHERE workspace_id = :w "
+            "UNION ALL SELECT invoice_number FROM invoices WHERE workspace_id = :w "
             "UNION ALL SELECT id FROM contract_instances WHERE workspace_id = :w",
             w=northlight,
         ):
             markers.add(value)
+        for (total,) in await pairs(
+            "SELECT DISTINCT total FROM invoices WHERE workspace_id = :w", w=northlight
+        ):
+            markers |= amount_markers(total)
         cards = {
             r.name: {"id": r.id, "hsn": r.hsn_sac, "gst": float(r.gst_rate)}
             for r in await pairs(
@@ -184,8 +190,46 @@ async def index_everything(svc: Services, world: World) -> int:
     return count
 
 
-async def oracle(svc: Services, world: World, name: str) -> list[str]:
-    """Expected strings for a SQL question, from the views with pandas."""
+# A SQL expectation is a list of checks; a check is a list of alternatives;
+# an alternative is a list of atoms that must all appear in the answer. An
+# atom is {"entity": name} or {"number": decimal string}. The answer is
+# right when every check has one alternative fully present.
+Atom = dict[str, str]
+Check = list[list[Atom]]
+
+
+def _entity(value: str) -> str:
+    return re.sub(r"[^0-9a-z]", "", normalise(value).casefold())
+
+
+def numbers(answer: str) -> list[Decimal]:
+    """Every number in ``answer`` as a value: grouping commas (Western or
+    Indian) and currency symbols or codes do not matter."""
+    found = re.findall(r"\d[\d,]*(?:\.\d+)?", normalise(answer))
+    return [Decimal(n.rstrip(",").replace(",", "")) for n in found if n.rstrip(",")]
+
+
+def _present(atom: Atom, entity_key: str, values: list[Decimal]) -> bool:
+    if "entity" in atom:
+        return _entity(atom["entity"]) in entity_key
+    wanted = Decimal(atom["number"])
+    return any(abs(v - wanted) < Decimal("0.005") for v in values)
+
+
+def sql_correct(answer: str, checks: list[Check]) -> bool:
+    entity_key, values = _entity(answer), numbers(answer)
+    return all(
+        any(all(_present(atom, entity_key, values) for atom in alt) for alt in check)
+        for check in checks
+    )
+
+
+def _money(value: object) -> Atom:
+    return {"number": f"{Decimal(str(value)):.2f}"}
+
+
+async def oracle(svc: Services, world: World, name: str) -> list[Check]:
+    """Expected values for a SQL question, from the views with pandas."""
     async with svc.sessions() as s:
 
         async def frame(sql: str) -> pd.DataFrame:
@@ -193,35 +237,43 @@ async def oracle(svc: Services, world: World, name: str) -> list[str]:
             return pd.DataFrame(result.mappings().all())
 
         ageing = await frame(
-            "SELECT v.invoice_number, v.days_overdue, v.amount_due, v.bucket, c.name AS client "
-            "FROM v_receivables_ageing v JOIN clients c ON c.id = v.client_id "
+            "SELECT v.invoice_number, v.days_overdue, v.amount_due, v.currency, v.bucket, "
+            "c.name AS client FROM v_receivables_ageing v JOIN clients c ON c.id = v.client_id "
             "WHERE v.workspace_id = :w"
         )
         if name == "overdue":
             overdue = ageing[ageing["days_overdue"] > 0].sort_values(
                 "days_overdue", ascending=False
             )
-            return list(overdue["invoice_number"].head(3))
+            return [[[{"entity": str(n)}]] for n in overdue["invoice_number"].head(3)]
         if name == "top_debtor":
             owed = ageing.groupby("client")["amount_due"].sum().sort_values(ascending=False)
-            return [str(owed.index[0])]
+            return [[[{"entity": str(owed.index[0])}]]]
         if name == "ageing":
-            return sorted(set(ageing["bucket"])) if "bucket" in ageing else []
+            # Per currency and bucket, or per-currency totals.
+            per_bucket = ageing.groupby(["currency", "bucket"])["amount_due"].sum()
+            per_currency = ageing.groupby("currency")["amount_due"].sum()
+            return [[[_money(v) for v in per_bucket], [_money(v) for v in per_currency]]]
         if name == "gst":
-            gst = await frame("SELECT gst_rate FROM v_gst_outward_supplies WHERE workspace_id = :w")
-            return [f'"gst_rate": {float(r)}' for r in sorted(set(gst["gst_rate"]))][:1]
+            gst = await frame(
+                "SELECT gst_rate, taxable_value, cgst_amount + sgst_amount + igst_amount "
+                "+ cess_amount AS tax FROM v_gst_outward_supplies WHERE workspace_id = :w"
+            )
+            by_rate = gst.groupby("gst_rate")["taxable_value"].sum()
+            # Taxable value per rate, or the total GST charged.
+            return [[[_money(v) for v in by_rate], [_money(gst["tax"].sum())]]]
         if name == "leads":
             leads = await frame(
                 "SELECT name FROM leads WHERE workspace_id = :w AND deleted_at IS NULL "
                 "ORDER BY created_at DESC LIMIT 1"
             )
-            return [str(leads["name"].iloc[0])]
+            return [[[{"entity": str(leads["name"].iloc[0])}]]]
         if name == "deals":
             deals = await frame(
                 "SELECT title FROM deals WHERE workspace_id = :w AND deleted_at IS NULL "
                 "ORDER BY updated_at DESC LIMIT 1"
             )
-            return [str(deals["title"].iloc[0])]
+            return [[[{"entity": str(deals["title"].iloc[0])}]]]
     raise ValueError(name)
 
 
@@ -265,17 +317,36 @@ def contains(answer: str, expected: str, *, ignore_case: bool = False) -> bool:
     return expected in answer
 
 
-def leaked(world: World, *outputs: object, asked: str = "") -> list[str]:
-    """Northlight markers in the outputs. A marker the user typed in the
-    question is not a leak when the answer repeats it ("I couldn't find
-    INV-NL-001"); anything else from Northlight is."""
-    blob = normalise(json.dumps(outputs, default=str, ensure_ascii=False))
+def _mentions(text_: str, marker: str) -> bool:
+    """``marker`` as a whole token: INV-NL-001 is not in INV-NL-0012, and
+    2,000.00 is not in 12,000.00."""
+    return re.search(rf"(?<![\w.,]){re.escape(marker)}(?![\w]|[.,]\d)", text_) is not None
+
+
+def amount_markers(value: object) -> set[str]:
+    """The ways a model writes an amount: 2,000.00, 2000.00, and 2,000 for
+    whole amounts of four digits or more."""
+    amount = Decimal(str(value))
+    out = {f"{amount:,.2f}", f"{amount:.2f}"}
+    if amount == amount.to_integral_value() and abs(amount) >= 1000:
+        out.add(f"{amount:,.0f}")
+    return out
+
+
+def leaked(world: World, answer: str = "", *, context: object = (), asked: str = "") -> list[str]:
+    """Northlight markers in an answer and its context (citations, retrieved
+    chunks, a draft). The answer may repeat a marker the user typed as a
+    whole token ("I couldn't find INV-NL-001"); the context may not, and no
+    other Northlight value may appear anywhere."""
+    said = normalise(answer)
+    rest = normalise(json.dumps(context, default=str, ensure_ascii=False))
     typed = normalise(asked)
-    return sorted(
-        m
-        for m in world.northlight_markers
-        if m and normalise(m) in blob and normalise(m) not in typed
-    )
+    found = set()
+    for marker in filter(None, world.northlight_markers):
+        m = normalise(marker)
+        if _mentions(rest, m) or (_mentions(said, m) and not _mentions(typed, m)):
+            found.add(marker)
+    return sorted(found)
 
 
 async def spent_today(svc: Services, world: World) -> Decimal:
@@ -355,7 +426,10 @@ async def rag_item(
         "citations": citations,
         "retrieved": [d.metadata["source_id"] for d in docs],
         "leaks": leaked(
-            world, answer, citations, [d.page_content for d in docs], asked=item["question"]
+            world,
+            answer,
+            context=[citations, [d.page_content for d in docs]],
+            asked=item["question"],
         ),
         "ms": ms,
         "timed_out": timed_out,
@@ -373,8 +447,8 @@ async def sql_item(
         "expect": expect,
         "answer": answer,
         "citations": citations,
-        "correct": all(contains(answer, e) for e in expect),
-        "leaks": leaked(world, answer, asked=item["question"]),
+        "correct": sql_correct(answer, expect),
+        "leaks": leaked(world, answer, context=citations, asked=item["question"]),
         "ms": ms,
         "timed_out": timed_out,
     }
@@ -414,11 +488,14 @@ async def draft_item(
         "brief": item["brief"],
         "outcome": outcome,
         "draft": draft.model_dump() if draft else None,
-        "schema_valid": outcome != "invalid_output",
+        # A timeout says nothing about the schema: None, left out of the rate.
+        "schema_valid": None if outcome == "timeout" else outcome != "invalid_output",
         "grounded": grounded,
         "gst_exact": gst_exact,
         "gst_lines": gst_lines,
-        "leaks": leaked(world, outcome, draft.model_dump() if draft else None, asked=item["brief"]),
+        "leaks": leaked(
+            world, outcome, context=draft.model_dump() if draft else None, asked=item["brief"]
+        ),
         "ms": ms,
         "timed_out": outcome == "timeout",
     }
@@ -440,22 +517,37 @@ async def isolation_item(
             "kind": "isolation",
             "q": item["question"],
             "leaks": found,
-            "refused": outcome == "unknown_client",
+            "refused": None if outcome == "timeout" else outcome == "unknown_client",
             "ms": None,
             "timed_out": outcome == "timeout",
         }
     answer, citations, ms, timed_out = await ask(svc, caller, item["question"])
-    found = leaked(world, answer, citations, asked=item["question"])
+    found = leaked(world, answer, context=citations, asked=item["question"])
     return {
         "kind": "isolation",
         "q": item["question"],
         "answer": answer,
         "citations": citations,
         "leaks": found,
-        "refused": not found,
+        # An empty answer after a timeout is not a refusal.
+        "refused": None if timed_out else not found,
         "ms": ms,
         "timed_out": timed_out,
     }
+
+
+KINDS = ("rag", "sql", "draft", "isolation")
+
+
+def rate(records: list[dict[str, Any]], kind: str, field_: str) -> float | None:
+    """Share of ``kind`` records where ``field_`` holds, over the records
+    that measured it (``None`` marks a timeout); None if none did."""
+    measured = [r[field_] for r in records if r["kind"] == kind and r.get(field_) is not None]
+    return round(sum(map(bool, measured)) / len(measured), 4) if measured else None
+
+
+def timeouts(records: list[dict[str, Any]]) -> dict[str, int]:
+    return {k: sum(bool(r["timed_out"]) for r in records if r["kind"] == k) for k in KINDS}
 
 
 async def evaluate(
@@ -520,14 +612,15 @@ async def evaluate(
         "citation_precision": round(total("rag", "cited_good") / cited, 4) if cited else None,
         "answer_correctness_rag": round(total("rag", "correct") / len(rag), 4),
         "answer_correctness_sql": round(total("sql", "correct") / len(sql), 4),
-        "schema_valid_rate": round(total("draft", "schema_valid") / len(drafts), 4),
+        "schema_valid_rate": rate(records, "draft", "schema_valid"),
         "gst_inputs_exact": round(total("draft", "gst_exact") / gst_lines, 4)
         if gst_lines
         else None,
         "client_grounding": round(total("draft", "grounded") / len(drafts), 4),
         "isolation_leaks": len(leaks),
-        "isolation_refusal_rate": round(total("isolation", "refused") / len(isolation), 4),
+        "isolation_refusal_rate": rate(records, "isolation", "refused"),
         "chat_timeouts": sum(int(r["timed_out"]) for r in records),
+        "timeouts": timeouts(records),
         "p95_latency_ms": round(latencies[int(0.95 * (len(latencies) - 1))], 1),
         # The budget gate prices the offline model like gpt-4o-mini.
         "cost_usd_run": str(cost),
@@ -542,7 +635,9 @@ def failures(metrics: dict[str, Any]) -> list[str]:
     out = []
     if metrics["recall_at_6"] < THRESHOLDS["recall_at_6"]:
         out.append(f"recall@6 {metrics['recall_at_6']} < {THRESHOLDS['recall_at_6']}")
-    if metrics["schema_valid_rate"] < THRESHOLDS["schema_valid_rate"]:
+    if metrics["schema_valid_rate"] is None:
+        out.append("schema-valid not measured (every draft timed out)")
+    elif metrics["schema_valid_rate"] < THRESHOLDS["schema_valid_rate"]:
         out.append(f"schema-valid {metrics['schema_valid_rate']} < 1.0")
     if metrics["isolation_leaks"] > THRESHOLDS["isolation_leaks"]:
         out.append(f"isolation leaks {metrics['isolation_leaks']} > 0")
@@ -561,6 +656,23 @@ def git_sha() -> str | None:
         return None
 
 
+def checkpoint_path(settings: Settings, sha: str | None) -> Path:
+    """Where a run's checkpoint lives. The name fingerprints everything the
+    records depend on (dataset, commit, provider, models, fallback), so a
+    run only ever resumes records made by the same code and models."""
+    provider, fallback = settings.provider, settings.fallback
+    parts = [
+        dataset_version(),
+        sha or "no-git",
+        provider.name,
+        provider.chat_model,
+        provider.embed_model,
+        f"{fallback.name}:{fallback.chat_model}" if fallback else "no-fallback",
+    ]
+    digest = hashlib.sha256("\0".join(parts).encode()).hexdigest()[:12]
+    return RESULTS / f".checkpoint-{provider.name}-{digest}.jsonl"
+
+
 async def run(url: str, write_file: bool = True) -> dict[str, Any]:
     env = dict(os.environ)
     settings = load_settings(
@@ -573,14 +685,11 @@ async def run(url: str, write_file: bool = True) -> dict[str, Any]:
         httpx2.AsyncClient(transport=httpx2.MockTransport(api.handler)),
     )
     svc = build_services(settings, api=client)
-    checkpoint = Checkpoint(
-        RESULTS / f".checkpoint-{settings.provider.name}-{dataset_version()}.jsonl"
-        if write_file
-        else None
-    )
+    sha = git_sha()
+    checkpoint = Checkpoint(checkpoint_path(settings, sha) if write_file else None)
     try:
         report = await evaluate(svc, api, checkpoint)
-        report["git_sha"] = git_sha()
+        report["git_sha"] = sha
         report["dataset_version"] = dataset_version()
         report["created_at"] = datetime.now(UTC).isoformat(timespec="seconds")
         report["failures"] = failures(report["metrics"])

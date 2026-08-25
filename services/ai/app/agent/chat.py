@@ -30,6 +30,7 @@ from app.auth import Caller
 from app.budget import cost, metered
 from app.db.models import AgentRun, ChatMessage, ChatSession
 from app.llm.clients import is_fallback_error
+from app.llm.providers import ProviderProfile
 from app.llm.transport import Usage
 from app.prompts import load_prompt
 from app.services import Services
@@ -38,6 +39,13 @@ NOT_FOUND = "I couldn't find that in your documents."
 MAX_TOOL_ITERATIONS = 8
 WALL_CLOCK_SECONDS = 60
 HISTORY_TURNS = 10
+# The fallback (Groq's free tier: 8,000 tokens a minute) starts over inside
+# the same wall clock, so it gets a smaller prompt and reply budget: fewer
+# and shorter documents, less history, a lower max_tokens.
+FALLBACK_DOCUMENTS = 3
+FALLBACK_CHUNK_CHARS = 600
+FALLBACK_HISTORY_TURNS = 2
+FALLBACK_MAX_TOKENS = 1024
 _CITATION = re.compile(r"\[(\d+)\]")
 #: Some models (NIM's Nemotron) cite with full-width lenticular brackets.
 _WIDE_CITATION = re.compile(r"【\s*(\d+)\s*】")
@@ -117,19 +125,10 @@ async def run_chat(
     sid = await _session_for(svc, caller, session_id, message)
     yield ChatEvent("session", {"sessionId": sid})
 
+    attempts = svc.llm.chat_attempts(fallback_max_tokens=FALLBACK_MAX_TOKENS)
+    profile = attempts[0][0]
     evidence = Evidence()
-    tools = chat_tools(
-        workspace_id=caller.workspace_id,
-        sessions=svc.sessions,
-        embed=svc.llm.embed_queries,
-        embedding_model=svc.settings.provider.embed_model,
-        evidence=evidence,
-    )
-    agents = [
-        create_agent(model, tools=tools, system_prompt=prompt.text)
-        for model in svc.llm.chat_models()
-    ]
-    usage = Usage(model=svc.settings.provider.chat_model, tokens_in=0, tokens_out=0)
+    usage = Usage(model=profile.chat_model, tokens_in=0, tokens_out=0)
     final = ""
     tool_calls: list[dict[str, Any]] = []
     status, error = "ok", None
@@ -140,10 +139,26 @@ async def run_chat(
             async with asyncio.timeout(WALL_CLOCK_SECONDS):
                 # The fallback provider (LLM_FALLBACK) gets the question again
                 # from the start if the first one fails as a provider.
-                for attempt, agent in enumerate(agents):
+                for attempt, (profile, model) in enumerate(attempts):
+                    trimmed = attempt > 0
+                    # A fallback starts over: nothing the failed attempt
+                    # found, called or spent belongs to its answer.
+                    evidence, tool_calls, final = Evidence(), [], ""
+                    usage = Usage(model=profile.chat_model, tokens_in=0, tokens_out=0)
+                    tools = chat_tools(
+                        workspace_id=caller.workspace_id,
+                        sessions=svc.sessions,
+                        embed=svc.llm.embed_queries,
+                        embedding_model=svc.settings.provider.embed_model,
+                        evidence=evidence,
+                        max_documents=FALLBACK_DOCUMENTS if trimmed else None,
+                        max_chars=FALLBACK_CHUNK_CHARS if trimmed else None,
+                    )
+                    turns = history[-FALLBACK_HISTORY_TURNS * 2 :] if trimmed else history
+                    agent = create_agent(model, tools=tools, system_prompt=prompt.text)
                     try:
                         stream = agent.astream(
-                            {"messages": [*history, HumanMessage(message)]},
+                            {"messages": [*turns, HumanMessage(message)]},
                             config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
                             stream_mode="updates",
                         )
@@ -167,7 +182,7 @@ async def run_chat(
                                         final = _text(msg.content)
                         break
                     except Exception as exc:
-                        if attempt == len(agents) - 1 or not is_fallback_error(exc):
+                        if attempt == len(attempts) - 1 or not is_fallback_error(exc):
                             raise
     except Exception as exc:
         status, error = "error", type(exc).__name__
@@ -190,6 +205,7 @@ async def run_chat(
                 citations,
                 tool_calls,
                 usage,
+                profile,
                 prompt.version,
                 status,
                 error,
@@ -226,12 +242,13 @@ async def _record(
     citations: list[dict[str, Any]],
     tool_calls: list[dict[str, Any]],
     usage: Usage,
+    profile: ProviderProfile,
     prompt_version: str,
     status: str,
     error: str | None,
     started: float,
 ) -> None:
-    spent = cost(svc.settings.provider, usage)
+    spent = cost(profile, usage)
     async with svc.sessions() as db, db.begin():
         db.add(ChatMessage(session_id=session_id, role="user", content=question))
         if status == "ok":
@@ -253,7 +270,12 @@ async def _record(
                 kind="chat",
                 prompt_version=prompt_version,
                 input={"message": question, "session_id": session_id},
-                output={"answer": answer, "citations": citations, "tool_calls": tool_calls},
+                output={
+                    "answer": answer,
+                    "citations": citations,
+                    "tool_calls": tool_calls,
+                    "model": usage.model,
+                },
                 status=status,
                 latency_ms=int((time.monotonic() - started) * 1000),
                 tokens=usage.tokens_in + usage.tokens_out,

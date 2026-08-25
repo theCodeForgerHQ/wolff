@@ -62,7 +62,12 @@ def chat_tools(
     embed: Embed,
     embedding_model: str,
     evidence: Evidence,
+    max_documents: int | None = None,
+    max_chars: int | None = None,
 ) -> list[BaseTool]:
+    """The chat tools for one workspace. ``max_documents`` and ``max_chars``
+    trim what a search returns (the fallback's smaller prompt)."""
+
     def tool(name: str, description: str) -> Callable[[Callable[..., Awaitable[str]]], BaseTool]:
         def wrap(fn: Callable[..., Awaitable[str]]) -> BaseTool:
             @functools.wraps(fn)
@@ -92,14 +97,14 @@ def chat_tools(
             source_types=wanted,
         ).search(query)
         out = []
-        for doc in docs:
+        for doc in docs[:max_documents]:
             n = len(evidence.documents) + 1
             entry = {
                 "n": n,
                 "source_type": doc.metadata["source_type"],
                 "source_id": doc.metadata["source_id"],
                 "label": doc.metadata.get("number") or doc.metadata.get("client_name") or "",
-                "content": _quote_document(n, doc.page_content),
+                "content": _quote_document(n, doc.page_content[:max_chars]),
             }
             evidence.documents.append(entry)
             out.append(entry)

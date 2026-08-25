@@ -59,9 +59,10 @@ async def sweep(
     caller: Annotated[Caller, Depends(worker)],
     svc: Annotated[Services, Depends(services)],
 ) -> dict[str, Any]:
-    """Re-index the workspace's sources changed since they were indexed, and
-    drop the chunks and state of sources that are gone: deleted, soft-deleted,
-    or a client whose notes were cleared."""
+    """Re-index the workspace's sources changed since they were indexed or
+    embedded with another model than the configured one, and drop the chunks
+    and state of sources that are gone: deleted, soft-deleted, or a client
+    whose notes were cleared."""
     ws = caller.workspace_id
     sources = _live_sources(ws)
     state = IngestState
@@ -75,7 +76,20 @@ async def sweep(
                 state.workspace_id == ws,
             ),
         )
-        .where(or_(state.indexed_at.is_(None), state.source_updated_at < sources.c.updated))
+        .where(
+            or_(
+                state.indexed_at.is_(None),
+                state.source_updated_at < sources.c.updated,
+                # Embedded with another model (AI_EMBED_MODEL changed): search
+                # reads only the configured model's chunks, so re-embed.
+                exists().where(
+                    DocumentChunk.workspace_id == ws,
+                    DocumentChunk.source_type == sources.c.kind,
+                    DocumentChunk.source_id == sources.c.id,
+                    DocumentChunk.embedding_model != svc.settings.provider.embed_model,
+                ),
+            )
+        )
         .limit(SWEEP_BATCH + 1)
     )
     outcomes: dict[str, int] = {}
