@@ -14,6 +14,7 @@ import {
 } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
 import { idempotency } from './middleware/idempotency';
+import { cachedOriginCheck } from './middleware/origin-cache';
 import { requestLogger } from './middleware/request-log';
 import { MemoryReplayCache, type ReplayCache } from './middleware/service-jwt';
 import { generateOpenAPIDocument } from './openapi/document';
@@ -106,12 +107,13 @@ export function createApp(deps: AppDeps): Express {
   // that some live publishable key allows; the request itself is then held
   // to its own key's origins (requirePublishableKey). No credentials.
   app.use('/v1/public', express.json({ limit: JSON_LIMIT }));
+  const publicOrigin = cachedOriginCheck((origin) => isPublishableKeyOrigin(db, origin));
   app.use(
     '/v1/public',
     cors({
       origin: (origin, allow) => {
         if (!origin) return allow(null, false);
-        isPublishableKeyOrigin(db, origin).then(
+        publicOrigin(origin).then(
           (ok) => allow(null, ok ? origin : false),
           (error: unknown) => allow(error as Error)
         );

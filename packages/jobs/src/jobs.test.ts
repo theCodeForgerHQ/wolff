@@ -388,7 +388,7 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(emails).toHaveLength(0);
   });
 
-  it('renders the public invoice page to a PDF stored under a key derived from the document', async () => {
+  it('renders the public invoice page to a PDF stored under a key derived from the document, once per version', async () => {
     const created = await invoice();
     const job: Job = {
       type: 'pdf.render',
@@ -405,8 +405,10 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
       documentId: created.id,
       updatedAt: created.updatedAt,
     });
-    expect(rendered).toEqual(Array(2).fill(`https://app.example.test/i/${created.accessToken}`));
-    expect(stored).toEqual(Array(2).fill({ key, bytes: 4, contentType: 'application/pdf' }));
+    // The second run finds this version stored and renders nothing (a
+    // repeated request for the same document version costs no Chrome run).
+    expect(rendered).toEqual([`https://app.example.test/i/${created.accessToken}`]);
+    expect(stored).toEqual([{ key, bytes: 4, contentType: 'application/pdf' }]);
     const after = await base.invoice.findUniqueOrThrow({ where: { id: created.id } });
     expect(after.pdfUrl).toBe(key);
   });
