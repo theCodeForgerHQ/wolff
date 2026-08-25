@@ -39,6 +39,13 @@ NOT_FOUND = "I couldn't find that in your documents."
 MAX_TOOL_ITERATIONS = 8
 WALL_CLOCK_SECONDS = 60
 HISTORY_TURNS = 10
+# The fallback (Groq's free tier: 8,000 tokens a minute) starts over inside
+# the same wall clock, so it gets a smaller prompt and reply budget: fewer
+# and shorter documents, less history, a lower max_tokens.
+FALLBACK_DOCUMENTS = 3
+FALLBACK_CHUNK_CHARS = 600
+FALLBACK_HISTORY_TURNS = 2
+FALLBACK_MAX_TOKENS = 1024
 _CITATION = re.compile(r"\[(\d+)\]")
 #: Some models (NIM's Nemotron) cite with full-width lenticular brackets.
 _WIDE_CITATION = re.compile(r"【\s*(\d+)\s*】")
@@ -118,7 +125,7 @@ async def run_chat(
     sid = await _session_for(svc, caller, session_id, message)
     yield ChatEvent("session", {"sessionId": sid})
 
-    attempts = svc.llm.chat_attempts()
+    attempts = svc.llm.chat_attempts(fallback_max_tokens=FALLBACK_MAX_TOKENS)
     profile = attempts[0][0]
     evidence = Evidence()
     usage = Usage(model=profile.chat_model, tokens_in=0, tokens_out=0)
@@ -133,6 +140,7 @@ async def run_chat(
                 # The fallback provider (LLM_FALLBACK) gets the question again
                 # from the start if the first one fails as a provider.
                 for attempt, (profile, model) in enumerate(attempts):
+                    trimmed = attempt > 0
                     # A fallback starts over: nothing the failed attempt
                     # found, called or spent belongs to its answer.
                     evidence, tool_calls, final = Evidence(), [], ""
@@ -143,11 +151,14 @@ async def run_chat(
                         embed=svc.llm.embed_queries,
                         embedding_model=svc.settings.provider.embed_model,
                         evidence=evidence,
+                        max_documents=FALLBACK_DOCUMENTS if trimmed else None,
+                        max_chars=FALLBACK_CHUNK_CHARS if trimmed else None,
                     )
+                    turns = history[-FALLBACK_HISTORY_TURNS * 2 :] if trimmed else history
                     agent = create_agent(model, tools=tools, system_prompt=prompt.text)
                     try:
                         stream = agent.astream(
-                            {"messages": [*history, HumanMessage(message)]},
+                            {"messages": [*turns, HumanMessage(message)]},
                             config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
                             stream_mode="updates",
                         )

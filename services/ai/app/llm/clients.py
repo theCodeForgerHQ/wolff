@@ -6,7 +6,7 @@ import math
 import os
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import httpx2 as httpx
 from langchain_openai import ChatOpenAI
@@ -61,17 +61,24 @@ class LlmClients:
     #: Chat-only fallback (LLM_FALLBACK), on its own gated transport.
     fallback: LlmClients | None = None
 
-    def chat_models(self, **kwargs: object) -> list[ChatOpenAI]:
+    def chat_models(self, **kwargs: Any) -> list[ChatOpenAI]:
         """The chat model, then the fallback's, in the order to try them."""
         chain = [self.chat_model(**kwargs)]
         if self.fallback is not None:
             chain.append(self.fallback.chat_model(**kwargs))
         return chain
 
-    def chat_attempts(self, **kwargs: object) -> list[tuple[ProviderProfile, ChatOpenAI]]:
-        """Like ``chat_models``, each with the profile it runs on."""
-        profiles = [self.profile] + ([self.fallback.profile] if self.fallback else [])
-        return list(zip(profiles, self.chat_models(**kwargs), strict=True))
+    def chat_attempts(
+        self, *, fallback_max_tokens: int | None = None
+    ) -> list[tuple[ProviderProfile, ChatOpenAI]]:
+        """The chat model, then the fallback's, each with the profile it runs
+        on. ``fallback_max_tokens`` lowers the fallback's reply budget (never
+        raises it above AI_MAX_TOKENS)."""
+        attempts = [(self.profile, self.chat_model())]
+        if self.fallback is not None:
+            limit = min(fallback_max_tokens or self.max_tokens, self.max_tokens)
+            attempts.append((self.fallback.profile, self.fallback.chat_model(max_tokens=limit)))
+        return attempts
 
     async def run_chat(self, run: Callable[[ChatOpenAI], Awaitable[T]], **kwargs: object) -> T:
         """``run`` with the chat model, again with the fallback's if the
@@ -85,7 +92,7 @@ class LlmClients:
                     raise
         raise AssertionError("unreachable")
 
-    def chat_model(self, **kwargs: object) -> ChatOpenAI:
+    def chat_model(self, *, max_tokens: int | None = None, **kwargs: Any) -> ChatOpenAI:
         """A LangChain chat model on the shared transport, SDK retries off."""
         return ChatOpenAI(
             model=self.profile.chat_model,
@@ -93,7 +100,7 @@ class LlmClients:
             api_key=SecretStr(self._key()),
             http_async_client=self.http,
             max_retries=0,
-            max_tokens=self.max_tokens,
+            max_tokens=max_tokens or self.max_tokens,
             temperature=0,
             **kwargs,
         )

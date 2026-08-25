@@ -5,6 +5,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import replace
 from decimal import Decimal
+from typing import Any
 
 import anyio
 import httpx2 as httpx
@@ -289,3 +290,71 @@ async def test_a_fallback_run_records_only_its_own_evidence_and_model(
     assert run is not None and run.output is not None
     assert [c["name"] for c in run.output["tool_calls"]] == ["search_documents"]
     assert run.output["model"] == "fake-backup-chat"
+
+
+class Recording(FakeOpenAITransport):
+    def __init__(self) -> None:
+        super().__init__()
+        self.bodies: list[dict[str, Any]] = []
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/chat/completions"):
+            self.bodies.append(json.loads(request.content))
+        return await super().handle_async_request(request)
+
+
+@requires_db
+@pytest.mark.usefixtures("indexed")
+async def test_the_fallback_gets_a_trimmed_context_and_a_lower_max_tokens(
+    services: Services, ws_a: Seeded, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Groq's free tier allows 8,000 tokens a minute: the fallback gets
+    fewer, shorter documents and a smaller reply budget so a tool round
+    fits the 60 s wall clock."""
+    from app.agent import chat
+    from app.auth import Caller
+    from app.llm import transport
+
+    monkeypatch.setattr(transport, "MAX_ATTEMPTS", 1)
+    monkeypatch.setattr(chat, "FALLBACK_DOCUMENTS", 1)
+    monkeypatch.setattr(chat, "FALLBACK_CHUNK_CHARS", 40)
+    fake = resolve_provider({"LLM_PROVIDER": "fake"})
+    backup = Recording()
+    llm = build_clients(
+        fake,
+        gate=services.budget,
+        daily=MemoryDailyCounter(),
+        max_tokens=4096,
+        inner=FailsAfterFirstChat(),
+        fallback=replace(fake, name="fake-backup", chat_model="fake-backup-chat"),
+        fallback_inner=backup,
+    )
+    who = Caller(
+        issuer="web",
+        workspace_id=ws_a.workspace_id,
+        user_id=ws_a.user_id,
+        scopes=frozenset({"ai:use"}),
+    )
+
+    events = [
+        e
+        async for e in chat.run_chat(
+            replace(services, llm=llm), who, "When is payment due according to the contract?"
+        )
+    ]
+    await llm.aclose()
+
+    assert events[-1].event == "done"
+    sent = {b.get("max_completion_tokens", b.get("max_tokens")) for b in backup.bodies}
+    assert sent == {chat.FALLBACK_MAX_TOKENS}
+    tool_results = [
+        json.loads(m["content"])
+        for b in backup.bodies
+        for m in b["messages"]
+        if m["role"] == "tool"
+    ]
+    assert tool_results, "the fallback ran a search"
+    for result in tool_results:
+        assert len(result["documents"]) == 1
+        # The wrapper adds ~30 characters around the trimmed text.
+        assert len(result["documents"][0]["content"]) <= 40 + 40
