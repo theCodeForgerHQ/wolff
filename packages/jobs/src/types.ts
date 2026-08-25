@@ -36,7 +36,8 @@ export const jobPayloads = {
     sourceId: id,
   }),
   'ai.sweep': z.object({}),
-  'reports.nightly': z.object({}),
+  // `after`: resume cursor, the last workspace id a cut-off run reported.
+  'reports.nightly': z.object({ after: id.optional() }),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;
