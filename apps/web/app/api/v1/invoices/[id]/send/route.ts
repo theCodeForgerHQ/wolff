@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         invoiceNumber: invoice.invoiceNumber,
         invoiceUrl,
         businessName: workspace?.name || 'Wolff',
-        amount: formatCurrency(toNumber(invoice.total)),
+        amount: formatCurrency(toNumber(invoice.total), invoice.currency),
         dueDate: invoice.dueDate,
         message: message || undefined,
         rateLimitKey: workspaceId,
