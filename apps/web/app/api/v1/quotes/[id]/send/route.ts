@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { randomBytes } from 'crypto';
 import { prisma } from '@wolff/database';
+import { requestPdfRender } from '@wolff/core/outbox';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { toNumber, getBaseUrl } from '@/lib/utils';
 import { sendQuoteSentEmail } from '@/lib/services/email';
@@ -96,12 +97,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Only update status to sent if email was actually delivered
     if (emailSent) {
-      await prisma.quote.update({
-        where: { id: id },
-        data: {
-          status: 'sent',
-          sentAt: new Date(),
-        },
+      await prisma.$transaction(async (tx) => {
+        await tx.quote.update({
+          where: { id: id },
+          data: {
+            status: 'sent',
+            sentAt: new Date(),
+          },
+        });
+        // Issued now: render its PDF (a resend changes nothing the client sees).
+        if (quote.status === 'draft') {
+          await requestPdfRender(tx, { workspaceId, documentType: 'quote', documentId: id });
+        }
       });
     }
 

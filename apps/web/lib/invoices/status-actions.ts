@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma, type Prisma } from '@wolff/database';
+import { requestPdfRender } from '@wolff/core/outbox';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type { InvoiceStatus } from './types';
 import { sendTemplatedEmail } from '@/lib/email/actions';
@@ -102,12 +103,12 @@ export async function updateInvoiceStatus(invoiceId: string, status: InvoiceStat
     updateData.amountDue = 0;
   }
 
-  await prisma.$transaction([
-    prisma.invoice.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
       where: { id: invoiceId },
       data: updateData,
-    }),
-    prisma.invoiceEvent.create({
+    });
+    await tx.invoiceEvent.create({
       data: {
         invoiceId,
         eventType: `status_changed_to_${status}`,
@@ -115,8 +116,16 @@ export async function updateInvoiceStatus(invoiceId: string, status: InvoiceStat
         actorType: 'user',
         metadata: { previousStatus: invoice.status },
       },
-    }),
-  ]);
+    });
+    // Issued: render the PDF of what the client now sees.
+    if (status === 'sent') {
+      await requestPdfRender(tx, {
+        workspaceId: workspace.id,
+        documentType: 'invoice',
+        documentId: invoiceId,
+      });
+    }
+  });
 
   revalidatePath(ROUTES.invoices);
   revalidatePath(ROUTES.invoiceDetail(invoiceId));

@@ -3,7 +3,7 @@ import type { Prisma } from '@wolff/database';
 import type { CoreContext, Db, DbTx } from '../context';
 import { CoreError } from '../errors';
 import { allocateSerialNumber } from '../gst/numbering';
-import { writeOutboxEvent } from '../outbox';
+import { requestPdfRender, writeOutboxEvent } from '../outbox';
 import { assertReadyToIssue, gstInvoiceColumns, gstLinesFrom, priceForWorkspace } from './gst';
 import {
   addDays,
@@ -282,6 +282,12 @@ export async function generateRecurringInvoice(
 
       if (gst && parent.recurringAutoSend) {
         await sendIfIssuable(guarded, workspaceId, created.id, now);
+      } else if (autoSend) {
+        await requestPdfRender(tx, {
+          workspaceId,
+          documentType: 'invoice',
+          documentId: created.id,
+        });
       }
 
       // The next occurrence counts from today, so a series that fell behind
@@ -391,6 +397,7 @@ async function sendIfIssuable(
     where: { id: invoiceId, workspaceId },
     data: { status: 'sent', sentAt: now },
   });
+  await requestPdfRender(tx, { workspaceId, documentType: 'invoice', documentId: invoiceId });
   await tx.invoiceEvent.create({
     data: {
       invoiceId,

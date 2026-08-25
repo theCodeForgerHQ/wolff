@@ -188,6 +188,22 @@ describe.skipIf(!url)('scheduled invoice work (Postgres)', () => {
       expect(child!.sentAt).not.toBeNull();
     });
 
+    it('requests the PDF of an auto-sent copy only', async () => {
+      const sent = await parent({ recurringAutoSend: true });
+      const kept = await parent();
+
+      await generateRecurringInvoice(ctx, sent.id, '2026-10', NOW);
+      await generateRecurringInvoice(ctx, kept.id, '2026-10', NOW);
+
+      const pdfFor = async (parentId: string) => {
+        const [child] = await children(parentId);
+        return base.outboxEvent.findMany({ where: { type: 'pdf.render', aggregateId: child!.id } });
+      };
+      const [request] = await pdfFor(sent.id);
+      expect(request?.payload).toMatchObject({ documentType: 'invoice' });
+      expect(await pdfFor(kept.id)).toHaveLength(0);
+    });
+
     it('stops a series whose end date has passed, without generating', async () => {
       const p = await parent({ recurringEndDate: day('2026-09-30') });
 
