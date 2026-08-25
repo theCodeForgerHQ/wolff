@@ -305,8 +305,13 @@ class Recording(FakeOpenAITransport):
 
 @requires_db
 @pytest.mark.usefixtures("indexed")
+@pytest.mark.parametrize(("documents", "chars"), [(0, 600), (1, 40)])
 async def test_the_fallback_gets_a_trimmed_context_and_a_lower_max_tokens(
-    services: Services, ws_a: Seeded, monkeypatch: pytest.MonkeyPatch
+    services: Services,
+    ws_a: Seeded,
+    monkeypatch: pytest.MonkeyPatch,
+    documents: int,
+    chars: int,
 ) -> None:
     """Groq's free tier allows 8,000 tokens a minute: the fallback gets
     fewer, shorter documents and a smaller reply budget so a tool round
@@ -316,8 +321,8 @@ async def test_the_fallback_gets_a_trimmed_context_and_a_lower_max_tokens(
     from app.llm import transport
 
     monkeypatch.setattr(transport, "MAX_ATTEMPTS", 1)
-    monkeypatch.setattr(chat, "FALLBACK_DOCUMENTS", 1)
-    monkeypatch.setattr(chat, "FALLBACK_CHUNK_CHARS", 40)
+    monkeypatch.setattr(chat, "FALLBACK_DOCUMENTS", documents)
+    monkeypatch.setattr(chat, "FALLBACK_CHUNK_CHARS", chars)
     fake = resolve_provider({"LLM_PROVIDER": "fake"})
     backup = Recording()
     llm = build_clients(
@@ -355,6 +360,8 @@ async def test_the_fallback_gets_a_trimmed_context_and_a_lower_max_tokens(
     ]
     assert tool_results, "the fallback ran a search"
     for result in tool_results:
-        assert len(result["documents"]) == 1
-        # The wrapper adds ~30 characters around the trimmed text.
-        assert len(result["documents"][0]["content"]) <= 40 + 40
+        # The search finds one document here; the limit must cut it.
+        assert len(result["documents"]) == documents
+        for doc in result["documents"]:
+            # The wrapper adds ~30 characters around the trimmed text.
+            assert len(doc["content"]) <= chars + 40
