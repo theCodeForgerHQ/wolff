@@ -499,7 +499,7 @@ export async function processPaymentWebhook(
         clientName: payment.invoice.client.name,
         invoiceNumber: payment.invoice.invoiceNumber,
         businessName: payment.invoice.workspace.name,
-        amount: formatCurrency(paymentAmount),
+        amount: formatCurrency(paymentAmount, payment.invoice.currency),
         receiptUrl: receiptUrl || undefined,
         rateLimitKey: `workspace:${payment.invoice.workspaceId}`,
       }).catch((err) => logger.error({ err }, 'Failed to send payment confirmation email'));
