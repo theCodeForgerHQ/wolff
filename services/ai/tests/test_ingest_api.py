@@ -208,3 +208,49 @@ async def test_sweep_stops_at_its_time_budget(
     data = await _sweep(client, ws)
     assert data["processed"] == 1
     assert data["more"] is True
+
+
+@requires_db
+async def test_a_new_embedding_model_makes_every_source_stale(
+    client: AsyncClient, admin_engine: AsyncEngine, migrated: AsyncEngine, fake_api: Any
+) -> None:
+    """Search only reads chunks of the configured model. After AI_EMBED_MODEL
+    changes, the sweep must re-embed what was indexed with the old one, or
+    search silently returns nothing."""
+    from dataclasses import replace
+
+    from httpx import ASGITransport
+
+    from app.llm.providers import resolve_provider
+    from app.main import create_app
+    from app.services import build_services
+    from tests.conftest import make_settings
+    from tests.seed import seed_workspace
+
+    ws = await seed_workspace(admin_engine, "a")
+    while (await _sweep(client, ws))["more"]:
+        pass
+
+    renamed = replace(resolve_provider({"LLM_PROVIDER": "fake"}), embed_model="fake-embed-2")
+    svc = build_services(make_settings(provider=renamed), engine=migrated, api=fake_api.client())
+    app = create_app(services=svc)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://ai") as other:
+        first = await _sweep(other, ws)
+        while (await _sweep(other, ws))["more"]:
+            pass
+    await svc.llm.aclose()
+
+    assert first["processed"] > 0
+    async with migrated.connect() as conn:
+        models: set[str] = set(
+            (
+                await conn.execute(
+                    text(
+                        "SELECT DISTINCT embedding_model FROM ai.document_chunks "
+                        "WHERE workspace_id = :w"
+                    ),
+                    {"w": ws.workspace_id},
+                )
+            ).scalars()
+        )
+    assert models == {"fake-embed-2"}
