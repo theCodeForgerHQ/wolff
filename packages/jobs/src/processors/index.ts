@@ -168,17 +168,19 @@ export function pdfKey(input: {
 const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
   const { documentType, documentId, workspaceId } = job;
   const where = { id: documentId, workspaceId };
-  const select = { accessToken: true, updatedAt: true } as const;
+  const select = { accessToken: true, updatedAt: true, pdfUrl: true } as const;
   const document =
     documentType === 'invoice'
       ? await ctx.db.invoice.findFirst({ where, select })
       : await ctx.db.quote.findFirst({ where, select });
   if (!document) return;
 
+  const key = pdfKey({ workspaceId, documentType, documentId, updatedAt: document.updatedAt });
+  // This version is already stored: a repeated request renders nothing.
+  if (document.pdfUrl === key) return;
   const base = ctx.appUrl.replace(/\/$/, '');
   const path = documentType === 'invoice' ? 'i' : 'q';
   const pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
-  const key = pdfKey({ workspaceId, documentType, documentId, updatedAt: document.updatedAt });
   await ctx.storage.put(key, pdf, 'application/pdf');
 
   if (documentType === 'invoice') {
