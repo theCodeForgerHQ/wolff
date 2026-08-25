@@ -3,6 +3,7 @@ import { prisma } from '@wolff/database';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { DEMO_CONFIG } from '@/lib/demo/constants';
+import { unlinkDemoIdentities } from '@/lib/demo/unlink-identities';
 import { logger } from '@/lib/logger';
 
 /**
@@ -75,6 +76,13 @@ export async function GET(request: Request) {
             .catch(() => {});
         });
       }
+    }
+
+    // OAuth identities linked to the shared demo user (possible before
+    // 3aeba03) are standing logins to it: remove them.
+    const unlinked = await unlinkDemoIdentities(prisma);
+    if (unlinked > 0) {
+      logger.info({ count: unlinked }, '[Demo Reset] Removed identities linked to the demo user');
     }
 
     // Find demo workspace
