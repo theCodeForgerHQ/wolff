@@ -14,6 +14,7 @@ import {
   priceForWorkspace,
 } from '@wolff/core/invoices';
 import { CoreError } from '@wolff/core/errors';
+import { requestPdfRender } from '@wolff/core/outbox';
 
 /** Generate a cryptographically secure access token */
 function generateAccessToken(): string {
@@ -168,6 +169,13 @@ export async function createInvoiceFromQuoteInternal(
         metadata: { fromQuoteId: quote.id, trigger: 'auto_convert' },
       },
     });
+    if (!gst) {
+      await requestPdfRender(tx, {
+        workspaceId,
+        documentType: 'invoice',
+        documentId: newInvoice.id,
+      });
+    }
 
     return newInvoice;
   });
@@ -203,9 +211,12 @@ async function issueIfReady(
     });
     return false;
   }
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { status: 'sent', sentAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'sent', sentAt: new Date() },
+    });
+    await requestPdfRender(tx, { workspaceId, documentType: 'invoice', documentId: invoiceId });
   });
   return true;
 }

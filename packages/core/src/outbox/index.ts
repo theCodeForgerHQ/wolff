@@ -237,3 +237,22 @@ export async function requestAiIndexing(
     payload: { sourceType: input.sourceType, sourceId: input.sourceId },
   });
 }
+
+/**
+ * Asks for a document's PDF after it was sent or issued. Written in the
+ * status change's transaction; the `pdf.render` job renders the public page
+ * and stores it under a key derived from the document's version, and skips
+ * a version it already stored, so a repeated request renders once.
+ */
+export async function requestPdfRender(
+  tx: OutboxWriter,
+  input: { workspaceId: string; documentType: 'invoice' | 'quote'; documentId: string }
+): Promise<{ id: string }> {
+  return writeOutboxEvent(tx, {
+    workspaceId: input.workspaceId,
+    type: 'pdf.render',
+    aggregateType: input.documentType,
+    aggregateId: input.documentId,
+    payload: { documentType: input.documentType, documentId: input.documentId },
+  });
+}

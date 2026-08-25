@@ -209,6 +209,63 @@ Notes:
   in a scratch copy; it was restored at once and every later check used
   the scratch worktree.
 
+## Second review findings and fixes (2026-08-23)
+
+A second review of the branch up to `5a16bd5` (tagged
+`phase5-pre-review-fixes-2`) ranked 9 findings, and the owner added 3
+open items from live verification. Each was checked against the code
+first; all held. Test first; "bites" means the new test fails with the
+fix reverted (in a scratch copy, except where noted).
+
+| #   | Sev    | Finding (verified)                                                                   | Fix                                                                                                                                                                           | Commit(s)                       |
+| --- | ------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 1   | HIGH   | The eval's echo exemption covered citations and chunks, by substring of the question | Only the answer may repeat a marker, and only one typed as a whole token; Northlight invoice numbers and totals are markers, matched on token boundaries                      | `8bb656d`                       |
+| 2   | MEDIUM | A timed-out draft counted as schema-valid, a timed-out isolation chat as refused     | Timeouts carry `None` and stay out of both rates; reported per kind; an all-timeout run fails the schema gate                                                                 | `f5bf528`                       |
+| 3   | MEDIUM | Checkpoint keyed on provider + dataset only                                          | File name hashes dataset, git sha, provider, chat/embed models and fallback                                                                                                   | `10edb28`                       |
+| 4   | MEDIUM | `reports.nightly`: unbounded loop, first error stopped the rest                      | 200 s budget, id-ordered resume cursor (`after`) via a follow-up job; failures collected, job fails at the end                                                                | `d28be23`                       |
+| 5   | MEDIUM | Google identities linked to the demo user before `3aeba03` survived                  | Daily reset deletes the demo user's `accounts` rows. Neon checked: 0 such rows (only the owner's google row); one-off delete ran, 0 deleted                                   | `8a19628`                       |
+| 6   | LOW    | Fallback attempt reused evidence and tool calls; usage booked to the primary         | Fresh evidence, tools, tool calls and usage per attempt; `agent_runs.output.model` records the answering model, priced with its profile                                       | `45ce6d9`                       |
+| 7   | LOW    | No route-level test of the auth wrapper                                              | Route test with Auth.js handlers recorded (bite checked by editing the route in the repo and restoring it)                                                                    | `b36a37c`                       |
+| 8   | LOW    | Every widget preflight queried `api_keys`                                            | 30 s per-origin in-memory cache, positive and negative, 1,000 entries, errors not cached                                                                                      | `7e1c60c`                       |
+| 9   | LOW    | Changing `AI_EMBED_MODEL` left search empty                                          | A source with chunks of another model is stale for the sweep                                                                                                                  | `e75d529`                       |
+| 10  | owner  | SQL oracle compared raw view tokens                                                  | Value-based: entities ignore case/punctuation, numbers ignore currency and grouping; alternatives where two honest answers exist. No oracle compares dates, so no date parser | `4d69fa9`, `f83bd4b`, `e99fcbe` |
+| 11  | owner  | Groq fallback took 115 s                                                             | Fallback only: 3 documents of 600 chars, 2 history turns, `max_tokens` 1024                                                                                                   | `6bab79b`, `dfe76b5`            |
+| 12  | owner  | Nothing emitted `pdf.render`                                                         | `requestPdfRender` in the status change's transaction on every send/issue path; the job renders once per document version                                                     | `471c783`, `e740297`            |
+
+Re-scored NIM run (`evals/results/nvidia-2026-08-23.rescored.json`, same
+answers, same UTC day, no model calls): SQL correctness 0.4 -> 0.75 (the
+5 misses are the leads/deals answers from before `16529a3`), isolation
+leaks 1 -> 0, refusal rate 1.0 over 8 answered chats, schema-valid 1.0
+over 5 finished drafts, timeouts 9 drafts + 2 isolation. Other metrics
+unchanged.
+
+Smoke run after the fixes (NIM, Neon, one item per kind, every record
+read): RAG correct with its contract cited (40 s); SQL ageing answer
+scored correct by value (24 s); a draft timed out at 64 s and is now
+scored `schema_valid: null`; "What is invoice INV-NL-001?" answered "I
+couldn't find" and is not a leak; the Treutel draft was refused.
+
+Groq fallback, live (NIM chat forced to 503 in a local run, real Groq,
+Neon/Kaveri, from India): 50.0 s end to end, down from 115 s; 3 Groq
+calls of 2.8-5.1 KB, no token-bucket wait. The deployed path was not
+forced to fail (that needs a production env change).
+
+Live after redeploying web, api and ai from `e740297`: a Kaveri draft
+created and sent through `/api/v1` (INV/26-27/0002, 15:25Z) wrote a
+`pdf.render` event; the scheduled outbox sweep relayed it and the api
+stored the PDF in Supabase at 15:30Z (138,954 bytes; pdftotext shows
+"Kaveri Studio", the invoice number and 5,900.00). The send email
+reached ajayaditya.dev@gmail.com (Gmail Spam, from the web app's
+`/api/v1` send route).
+
+Checks at `e740297` (clean worktree, no `.env`, Node 24.21.0, one fresh
+database per suite): type-check 14/14; lint 0 errors (56 web, 2 widget
+warnings); tests with services core 282, jobs 77 (+1 skipped), database
+39, contracts 18, api 221, widget 12, web 1240; build 4/4; `migrate
+diff` "No difference detected."; `alembic check` no new operations;
+ruff, format, mypy (77 files) clean; pytest 233 passed 1 skipped,
+isolation 12, eval (offline) 1. Later commits change docs only.
+
 ## Deviations and why
 
 1. **Ids in `ai` tables are `text`, not `uuid`.** The design says `uuid`.
@@ -302,16 +359,14 @@ Notes:
 
 ## Known issues and deferred
 
-- **The Groq fallback cannot finish a retrieval chat within 60 s.** The
-  client charges Groq's 8,000 TPM by request size (body bytes / 4), so
-  after a tool round each further call waits for the bucket to refill. A
-  one-question chat with NIM forced down took 115 s (68 s of it waiting),
-  so in production it hits the chat wall clock. Options: count real
-  tokens, a shorter fallback prompt, or a longer wall clock on the
-  fallback path. Not fixed.
-- **Nothing emits `pdf.render`.** The job and the renderer work on the
-  demo (an invoice PDF with its number lands in Supabase), but only when
-  the job is published by hand.
+- **The Groq fallback has ~10 s of headroom.** 50 s locally after
+  `6bab79b`, most of it Neon and NIM round trips from India; not measured
+  on Vercel.
+- **The send email cannot attach the PDF.** It is sent before the status
+  change and the render; it links the portal page, which offers the PDF.
+  A PDF appears after the next outbox sweep (up to 15 min on QStash).
+- **The invoice-sent email shows `$` for an INR invoice** ("$ 5,900.00"
+  for INV/26-27/0002, seen live). Not fixed here.
 
 - **Write paths that emit `ai.index`.** Creates and updates of quotes and
   invoices, `createDraftQuote`, and every soft delete of a quote, invoice,
@@ -378,9 +433,6 @@ Notes:
 
 ## Needs the owner
 
-- **The eval oracle for ageing and GST** compares view tokens and fails
-  right answers from a real model; rewriting it to compare values is a
-  decision about how strict the SQL score should be.
 - **Optional: an OpenAI key.** It would allow the production-provider row
   that R30 asks to gate on.
 - **Secrets per environment.** Choose `SVC_JWT_SECRET_WEB`,

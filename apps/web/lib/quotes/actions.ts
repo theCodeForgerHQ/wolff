@@ -17,7 +17,7 @@ import { ROUTES } from '@/lib/routes';
 import { domainEvents } from '@/lib/events/emitter';
 import { toNumber, getBaseUrl, formatCurrency } from '@/lib/utils';
 import { logger } from '@/lib/logger';
-import { requestAiIndexing } from '@wolff/core/outbox';
+import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 
 /**
  * Bug #134: Safely parse quote settings from JSON with runtime validation.
@@ -1077,16 +1077,26 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
     return { success: false, error: 'Email could not be sent. Please check your email settings.' };
   }
 
-  // Update quote status to sent (only after email succeeds)
-  await prisma.quote.update({
-    where: {
-      id: quoteId,
-      workspaceId: workspace.id,
-    },
-    data: {
-      status: 'sent',
-      sentAt: new Date(),
-    },
+  // Update quote status to sent (only after email succeeds); a draft going
+  // out for the first time also gets its PDF rendered.
+  await prisma.$transaction(async (tx) => {
+    await tx.quote.update({
+      where: {
+        id: quoteId,
+        workspaceId: workspace.id,
+      },
+      data: {
+        status: 'sent',
+        sentAt: new Date(),
+      },
+    });
+    if (quote.status === 'draft') {
+      await requestPdfRender(tx, {
+        workspaceId: workspace.id,
+        documentType: 'quote',
+        documentId: quoteId,
+      });
+    }
   });
 
   // Log event

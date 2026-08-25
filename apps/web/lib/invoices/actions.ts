@@ -21,7 +21,7 @@ import { toNumber } from '@/lib/utils';
 import { ROUTES } from '@/lib/routes';
 import { generateInvoiceNumber } from './internal';
 import { domainEvents } from '@/lib/events/emitter';
-import { requestAiIndexing } from '@wolff/core/outbox';
+import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import {
   calculateTotals,
   describeCoreError,
@@ -227,6 +227,13 @@ export async function createInvoice(data: CreateInvoiceData) {
       sourceType: 'invoice',
       sourceId: created.id,
     });
+    if (created.status === 'sent') {
+      await requestPdfRender(tx, {
+        workspaceId: workspace.id,
+        documentType: 'invoice',
+        documentId: created.id,
+      });
+    }
     return created;
   });
 
@@ -247,9 +254,16 @@ export async function createInvoice(data: CreateInvoiceData) {
       revalidatePath(ROUTES.invoices);
       return { success: false, error: `Saved as a draft. ${blocker}`, invoiceId: invoice.id };
     }
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { status: 'sent', sentAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: { status: 'sent', sentAt: new Date() },
+      });
+      await requestPdfRender(tx, {
+        workspaceId: workspace.id,
+        documentType: 'invoice',
+        documentId: invoice.id,
+      });
     });
     invoice.status = 'sent';
   }
