@@ -147,9 +147,70 @@ describe('reports.nightly', () => {
       nightlyReport: async (ws: string) => void calls.push(ws),
     };
     const findMany = vi.fn().mockResolvedValue([{ id: 'w1' }, { id: 'w2' }]);
-    const ctx = { ai: port, db: { $unscoped: { workspace: { findMany } } } };
+    const ctx = {
+      ai: port,
+      db: { $unscoped: { workspace: { findMany } } },
+      now: () => new Date(0),
+    };
     await processors['reports.nightly'](ctx as unknown as JobContext, {});
     expect(calls).toEqual(['w1', 'w2']);
+  });
+
+  function nightly(ids: string[], msPerCall: number, failing: string[] = []) {
+    let clock = 0;
+    const calls: string[] = [];
+    const dispatched: unknown[] = [];
+    const port = {
+      index: async () => undefined,
+      sweep: async () => ({ more: false }),
+      nightlyReport: async (ws: string) => {
+        calls.push(ws);
+        clock += msPerCall;
+        if (failing.includes(ws)) throw new Error(`AI service answered 500 for ${ws}`);
+      },
+    };
+    // Honours the cursor the way Postgres would: ids after `gt`, in order.
+    const findMany = vi.fn(async (args: { where: { id?: { gt: string } } }) =>
+      ids
+        .filter((id) => !args.where.id || id > args.where.id.gt)
+        .sort()
+        .map((id) => ({ id }))
+    );
+    const ctx = {
+      ai: port,
+      db: { $unscoped: { workspace: { findMany } } },
+      now: () => new Date(Date.UTC(2026, 9, 6, 20, 30) + clock),
+      dispatch: async (job: unknown) => void dispatched.push(job),
+    };
+    return { ctx: ctx as unknown as JobContext, calls, dispatched };
+  }
+
+  it('stops starting reports at its time budget and resumes after the last one', async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `w${i}`);
+    const { ctx, calls, dispatched } = nightly(ids, 60_000);
+    await processors['reports.nightly'](ctx, {});
+    // 60 s per report: 4 start inside the 200 s budget, the last ends at 240 s.
+    expect(calls).toEqual(['w0', 'w1', 'w2', 'w3']);
+    expect(dispatched).toEqual([
+      {
+        type: 'reports.nightly',
+        payload: { after: 'w3' },
+        jobId: 'reports.nightly:2026-10-06:w3',
+      },
+    ]);
+
+    const next = nightly(ids, 60_000);
+    await processors['reports.nightly'](next.ctx, { after: 'w3' });
+    expect(next.calls).toEqual(['w4', 'w5', 'w6', 'w7']);
+  });
+
+  it('reports every other workspace when one fails, then fails the job', async () => {
+    const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3'], 1_000, ['w2']);
+    await expect(processors['reports.nightly'](ctx, {})).rejects.toThrow(
+      'nightly report failed for 1 workspace(s): w2'
+    );
+    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(dispatched).toEqual([]);
   });
 
   it('posts with scope reports:run only', async () => {

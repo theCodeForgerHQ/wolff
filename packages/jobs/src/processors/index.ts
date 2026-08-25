@@ -308,9 +308,53 @@ const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
   }
 };
 
-const nightlyReports: Processor<'reports.nightly'> = async (ctx) => {
-  if (!ctx.ai) return;
-  for (const id of await liveWorkspaceIds(ctx)) await ctx.ai.nightlyReport(id);
+/**
+ * Time the nightly run may start new reports for. One report takes up to the
+ * AI call's 60 s, so the run ends by ~260 s, inside Vercel's 300 s limit.
+ */
+export const REPORTS_BUDGET_MS = 200_000;
+
+const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
+  const ai = ctx.ai;
+  if (!ai) return;
+  const started = ctx.now();
+  const deadline = started.getTime() + REPORTS_BUDGET_MS;
+  // In id order so a run cut off at the budget resumes after its last report.
+  const rows = await ctx.db.$unscoped.workspace.findMany({
+    where: { deletedAt: null, ...(after ? { id: { gt: after } } : {}) },
+    select: { id: true },
+    orderBy: { id: 'asc' },
+  });
+  const failed: string[] = [];
+  const errors: unknown[] = [];
+  let last: string | undefined;
+  for (const { id } of rows) {
+    if (last !== undefined && ctx.now().getTime() >= deadline) {
+      const day = started.toISOString().slice(0, 10);
+      await ctx.dispatch({
+        type: 'reports.nightly',
+        payload: { after: last },
+        jobId: `reports.nightly:${day}:${last}`,
+      });
+      break;
+    }
+    try {
+      await ai.nightlyReport(id);
+    } catch (error) {
+      // One workspace's failure must not cost the others their report.
+      failed.push(id);
+      errors.push(error);
+    }
+    last = id;
+  }
+  if (failed.length > 0) {
+    // Fails the job so it is retried and reported; reports are upserts, so a
+    // retry rewrites the ones that succeeded without harm.
+    throw new Error(
+      `nightly report failed for ${failed.length} workspace(s): ${failed.join(', ')}`,
+      { cause: errors }
+    );
+  }
 };
 
 export const processors: { [T in JobType]: Processor<T> } = {
