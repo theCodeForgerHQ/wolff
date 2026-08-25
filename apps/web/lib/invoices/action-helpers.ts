@@ -4,17 +4,14 @@
  */
 import { randomBytes } from 'crypto';
 import { prisma, withTenantGuard } from '@wolff/database';
-import { assertReadyToIssue } from '@wolff/core/invoices';
+import { assertReadyToIssue, describeCoreError } from '@wolff/core/invoices';
 import { CoreError } from '@wolff/core/errors';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 
 export const gstDb = withTenantGuard(prisma);
 
 /** A Rule 46 / GST refusal as the message the dashboard shows. */
-export function describeCoreError(error: CoreError): string {
-  const reasons = error.details ? Object.values(error.details).flat() : [];
-  return reasons.length > 0 ? `${error.message}: ${reasons.join('; ')}` : error.message;
-}
+export { describeCoreError };
 
 /** Throws nothing; returns the reason a draft may not be issued, if any. */
 export async function issueBlocker(workspaceId: string, invoiceId: string): Promise<string | null> {
