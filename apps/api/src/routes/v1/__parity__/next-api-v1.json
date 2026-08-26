@@ -1,0 +1,902 @@
+[
+  {
+    "name": "clients list without a key",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients",
+    "status": 401,
+    "body": "{\"error\":\"Missing or invalid Authorization header. Use: Bearer <api_key>\"}",
+    "authFailure": true
+  },
+  {
+    "name": "clients list with an unknown key",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients",
+    "status": 401,
+    "body": "{\"error\":\"Invalid or revoked API key\"}",
+    "authFailure": true
+  },
+  {
+    "name": "quotes list without a key",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes",
+    "status": 401,
+    "body": "{\"error\":\"Missing or invalid Authorization header. Use: Bearer <api_key>\"}",
+    "authFailure": true
+  },
+  {
+    "name": "invoices list without a key",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices",
+    "status": 401,
+    "body": "{\"error\":\"Missing or invalid Authorization header. Use: Bearer <api_key>\"}",
+    "authFailure": true
+  },
+  {
+    "name": "clients list",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000014\",\"name\":\"Quiet Co\",\"email\":\"\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-04T10:00:00.000Z\",\"updatedAt\":\"2025-01-04T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000012\",\"name\":\"Bharat Prints\",\"email\":\"bharat@parity.test\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-02T10:00:00.000Z\",\"updatedAt\":\"2025-01-02T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"phone\":\"+91 80 1234 5678\",\"company\":\"Acme Works LLP\",\"address\":{\"city\":\"Bengaluru\",\"country\":\"IN\"},\"billingAddress\":null,\"metadata\":{\"tier\":\"gold\"},\"createdAt\":\"2025-01-01T10:00:00.000Z\",\"updatedAt\":\"2025-01-01T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":3,\"totalPages\":1}}"
+  },
+  {
+    "name": "clients list page 2 of 1",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients?page=2&limit=1",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000012\",\"name\":\"Bharat Prints\",\"email\":\"bharat@parity.test\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-02T10:00:00.000Z\",\"updatedAt\":\"2025-01-02T10:00:00.000Z\"}],\"pagination\":{\"page\":2,\"limit\":1,\"total\":3,\"totalPages\":3}}"
+  },
+  {
+    "name": "clients list clamps page and limit",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients?page=-4&limit=500",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000014\",\"name\":\"Quiet Co\",\"email\":\"\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-04T10:00:00.000Z\",\"updatedAt\":\"2025-01-04T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000012\",\"name\":\"Bharat Prints\",\"email\":\"bharat@parity.test\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-02T10:00:00.000Z\",\"updatedAt\":\"2025-01-02T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"phone\":\"+91 80 1234 5678\",\"company\":\"Acme Works LLP\",\"address\":{\"city\":\"Bengaluru\",\"country\":\"IN\"},\"billingAddress\":null,\"metadata\":{\"tier\":\"gold\"},\"createdAt\":\"2025-01-01T10:00:00.000Z\",\"updatedAt\":\"2025-01-01T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":100,\"total\":3,\"totalPages\":1}}"
+  },
+  {
+    "name": "clients list search",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients?search=ACME",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"phone\":\"+91 80 1234 5678\",\"company\":\"Acme Works LLP\",\"address\":{\"city\":\"Bengaluru\",\"country\":\"IN\"},\"billingAddress\":null,\"metadata\":{\"tier\":\"gold\"},\"createdAt\":\"2025-01-01T10:00:00.000Z\",\"updatedAt\":\"2025-01-01T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":1,\"totalPages\":1}}"
+  },
+  {
+    "name": "clients create",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 201,
+    "body": "{\"id\":\"<id:1>\",\"name\":\"Chola Foods\",\"email\":\"chola@parity.test\",\"phone\":\"+91 44 0000\",\"company\":\"Chola\",\"address\":{\"city\":\"Chennai\"},\"billingAddress\":null,\"metadata\":{\"source\":\"api\"},\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "clients create without name",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 400,
+    "body": "{\"error\":\"name is required\"}"
+  },
+  {
+    "name": "clients create without email",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 400,
+    "body": "{\"error\":\"email is required\"}"
+  },
+  {
+    "name": "clients create with a bad email",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 400,
+    "body": "{\"error\":\"Invalid email format\"}"
+  },
+  {
+    "name": "clients create with a duplicate email",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 409,
+    "body": "{\"error\":\"A client with this email already exists\"}"
+  },
+  {
+    "name": "clients create with metadata over 10 KB",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 400,
+    "body": "{\"error\":\"Metadata too large (max 10KB)\"}"
+  },
+  {
+    "name": "clients create with malformed JSON",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "clients get",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients/00000000-0000-4000-8000-000000000011",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"phone\":\"+91 80 1234 5678\",\"company\":\"Acme Works LLP\",\"address\":{\"city\":\"Bengaluru\",\"country\":\"IN\"},\"billingAddress\":null,\"metadata\":{\"tier\":\"gold\"},\"createdAt\":\"2025-01-01T10:00:00.000Z\",\"updatedAt\":\"2025-01-01T10:00:00.000Z\"}"
+  },
+  {
+    "name": "clients get a deleted client",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients/00000000-0000-4000-8000-000000000013",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "clients get another workspace’s client",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients/00000000-0000-4000-8000-000000000015",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "clients update",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/<id:1>",
+    "status": 200,
+    "body": "{\"id\":\"<id:1>\",\"name\":\"Chola Foods Pvt\",\"email\":\"chola@parity.test\",\"phone\":null,\"company\":\"Chola\",\"address\":{\"city\":\"Chennai\"},\"billingAddress\":null,\"metadata\":{\"tier\":\"silver\"},\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "clients update with an empty name",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/00000000-0000-4000-8000-000000000012",
+    "status": 400,
+    "body": "{\"error\":\"Client name cannot be empty\"}"
+  },
+  {
+    "name": "clients update to a taken email",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/00000000-0000-4000-8000-000000000012",
+    "status": 409,
+    "body": "{\"error\":\"A client with this email already exists\"}"
+  },
+  {
+    "name": "clients update with a bad email",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/00000000-0000-4000-8000-000000000012",
+    "status": 400,
+    "body": "{\"error\":\"Invalid email format\"}"
+  },
+  {
+    "name": "clients update another workspace’s client",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/00000000-0000-4000-8000-000000000015",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "clients update with malformed JSON",
+    "group": "clients",
+    "method": "PATCH",
+    "path": "/clients/00000000-0000-4000-8000-000000000012",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "clients delete",
+    "group": "clients",
+    "method": "DELETE",
+    "path": "/clients/<id:1>",
+    "status": 200,
+    "body": "{\"message\":\"Client deleted\"}"
+  },
+  {
+    "name": "clients delete again",
+    "group": "clients",
+    "method": "DELETE",
+    "path": "/clients/<id:1>",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "clients delete another workspace’s client",
+    "group": "clients",
+    "method": "DELETE",
+    "path": "/clients/00000000-0000-4000-8000-000000000015",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "clients import",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients/import",
+    "status": 201,
+    "body": "{\"message\":\"Import complete: 2 created, 2 skipped, 2 failed\",\"success\":2,\"failed\":2,\"skipped\":2,\"errors\":[{\"row\":2,\"message\":\"name is required\"},{\"row\":3,\"message\":\"Invalid email format\"}],\"created\":[{\"id\":\"<id:2>\",\"name\":\"Deccan Tea\",\"email\":\"deccan@parity.test\"},{\"id\":\"<id:3>\",\"name\":\"Malabar\",\"email\":\"malabar@parity.test\"}]}"
+  },
+  {
+    "name": "clients import without skipping duplicates",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients/import",
+    "status": 201,
+    "body": "{\"message\":\"Import complete: 0 created, 0 skipped, 1 failed\",\"success\":0,\"failed\":1,\"skipped\":0,\"errors\":[{\"row\":1,\"message\":\"Duplicate email\"}],\"created\":[]}"
+  },
+  {
+    "name": "clients import with no array",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients/import",
+    "status": 400,
+    "body": "{\"error\":\"clients array is required\"}"
+  },
+  {
+    "name": "clients import with an empty array",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients/import",
+    "status": 400,
+    "body": "{\"error\":\"clients array cannot be empty\"}"
+  },
+  {
+    "name": "clients import with malformed JSON",
+    "group": "clients",
+    "method": "POST",
+    "path": "/clients/import",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "clients list after changes",
+    "group": "clients",
+    "method": "GET",
+    "path": "/clients?limit=3",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"<id:3>\",\"name\":\"Malabar\",\"email\":\"malabar@parity.test\",\"phone\":\"123\",\"company\":\"Malabar Co\",\"address\":null,\"billingAddress\":null,\"metadata\":{\"tags\":[],\"type\":\"company\",\"contacts\":[]},\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"},{\"id\":\"<id:2>\",\"name\":\"Deccan Tea\",\"email\":\"deccan@parity.test\",\"phone\":null,\"company\":null,\"address\":{\"city\":\"Hyderabad\",\"country\":\"IN\"},\"billingAddress\":null,\"metadata\":{\"tags\":[],\"type\":\"individual\",\"contacts\":[]},\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"},{\"id\":\"00000000-0000-4000-8000-000000000014\",\"name\":\"Quiet Co\",\"email\":\"\",\"phone\":null,\"company\":null,\"address\":null,\"billingAddress\":null,\"metadata\":{},\"createdAt\":\"2025-01-04T10:00:00.000Z\",\"updatedAt\":\"2025-01-04T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":3,\"total\":5,\"totalPages\":2}}"
+  },
+  {
+    "name": "quotes list",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000024\",\"quoteNumber\":\"PQ-4\",\"title\":\"Parity quote 4\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":0,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":0,\"total\":0,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-14T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[],\"createdAt\":\"2025-01-14T10:00:00.000Z\",\"updatedAt\":\"2025-01-14T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000023\",\"quoteNumber\":\"PQ-3\",\"title\":\"Parity quote 3\",\"status\":\"accepted\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":3000,\"discountType\":\"fixed\",\"discountValue\":100,\"discountAmount\":100,\"taxTotal\":540,\"total\":3540,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-13T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":\"2025-01-14T10:00:00.000Z\",\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:4>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":3,\"rate\":1000,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"2025-01-13T10:00:00.000Z\",\"updatedAt\":\"2025-01-13T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000022\",\"quoteNumber\":\"PQ-2\",\"title\":\"Parity quote 2\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-12T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":\"2025-01-13T10:00:00.000Z\",\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:5>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-12T10:00:00.000Z\",\"updatedAt\":\"2025-01-12T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000021\",\"quoteNumber\":\"PQ-1\",\"title\":\"Parity quote 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":5900,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":1062,\"total\":6962,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-11T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:6>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900},{\"id\":\"<id:7>\",\"name\":\"Build\",\"description\":\"Build work\",\"quantity\":1,\"rate\":900,\"amount\":900,\"taxRate\":18,\"taxAmount\":162}],\"createdAt\":\"2025-01-11T10:00:00.000Z\",\"updatedAt\":\"2025-01-11T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":4,\"totalPages\":1}}"
+  },
+  {
+    "name": "quotes list by status",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes?status=draft&limit=1&page=2",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000021\",\"quoteNumber\":\"PQ-1\",\"title\":\"Parity quote 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":5900,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":1062,\"total\":6962,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-11T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:6>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900},{\"id\":\"<id:7>\",\"name\":\"Build\",\"description\":\"Build work\",\"quantity\":1,\"rate\":900,\"amount\":900,\"taxRate\":18,\"taxAmount\":162}],\"createdAt\":\"2025-01-11T10:00:00.000Z\",\"updatedAt\":\"2025-01-11T10:00:00.000Z\"}],\"pagination\":{\"page\":2,\"limit\":1,\"total\":2,\"totalPages\":2}}"
+  },
+  {
+    "name": "quotes list with an unknown status",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes?status=lost",
+    "status": 400,
+    "body": "{\"error\":\"Invalid status: lost\"}"
+  },
+  {
+    "name": "quotes list search",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes?search=quote%202",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000022\",\"quoteNumber\":\"PQ-2\",\"title\":\"Parity quote 2\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-12T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":\"2025-01-13T10:00:00.000Z\",\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:5>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-12T10:00:00.000Z\",\"updatedAt\":\"2025-01-12T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":1,\"totalPages\":1}}"
+  },
+  {
+    "name": "quotes create",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 201,
+    "body": "{\"id\":\"<id:8>\",\"quoteNumber\":\"Q-0001\",\"title\":\"API quote\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":3799.99,\"taxTotal\":540,\"total\":4339.99,\"lineItems\":[{\"id\":\"<id:9>\",\"name\":\"Workshop\",\"description\":\"One day\",\"quantity\":2,\"rate\":1500,\"amount\":3000},{\"id\":\"<id:10>\",\"name\":\"Travel\",\"description\":null,\"quantity\":1,\"rate\":799.99,\"amount\":799.99}],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "quotes create in USD with no lines",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 201,
+    "body": "{\"id\":\"<id:11>\",\"quoteNumber\":\"Q-0002\",\"title\":\"Empty\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000012\",\"name\":\"Bharat Prints\",\"email\":\"bharat@parity.test\",\"company\":null},\"currency\":\"USD\",\"subtotal\":0,\"taxTotal\":0,\"total\":0,\"lineItems\":[],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "quotes create without clientId",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"clientId is required\"}"
+  },
+  {
+    "name": "quotes create without title",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"title is required\"}"
+  },
+  {
+    "name": "quotes create with a bad currency",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Currency must be a valid 3-letter ISO code (e.g., USD, EUR)\"}"
+  },
+  {
+    "name": "quotes create for another workspace’s client",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "quotes create for an unknown project",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 404,
+    "body": "{\"error\":\"Project not found\"}"
+  },
+  {
+    "name": "quotes create with a negative rate",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Line item quantity and rate cannot be negative\"}"
+  },
+  {
+    "name": "quotes create with a nameless line",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Line item name is required\"}"
+  },
+  {
+    "name": "quotes create with a huge quantity",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Line item quantity must be at most 1,000,000\"}"
+  },
+  {
+    "name": "quotes create with a tax rate over 100",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Tax rate must be between 0 and 100\"}"
+  },
+  {
+    "name": "quotes create with malformed JSON",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "quotes get",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000021\",\"quoteNumber\":\"PQ-1\",\"title\":\"Parity quote 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":5900,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":1062,\"total\":6962,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-11T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:6>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900},{\"id\":\"<id:7>\",\"name\":\"Build\",\"description\":\"Build work\",\"quantity\":1,\"rate\":900,\"amount\":900,\"taxRate\":18,\"taxAmount\":162}],\"createdAt\":\"2025-01-11T10:00:00.000Z\",\"updatedAt\":\"2025-01-11T10:00:00.000Z\"}"
+  },
+  {
+    "name": "quotes get another workspace’s quote",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes/00000000-0000-4000-8000-000000000025",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "quotes update title and lines",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/<id:8>",
+    "status": 200,
+    "body": "{\"id\":\"<id:8>\",\"quoteNumber\":\"Q-0001\",\"title\":\"API quote v2\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":300,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":15,\"total\":315,\"notes\":\"n\",\"terms\":\"t\",\"issueDate\":\"<today+0>\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:12>\",\"name\":\"Only\",\"description\":null,\"quantity\":3,\"rate\":100,\"amount\":300,\"taxRate\":5,\"taxAmount\":15}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "quotes update with an invalid transition",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021",
+    "status": 400,
+    "body": "{\"error\":\"Cannot transition from 'draft' to 'accepted'\"}"
+  },
+  {
+    "name": "quotes update the lines of an accepted quote",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000023",
+    "status": 400,
+    "body": "{\"error\":\"Cannot modify line items on an accepted quote\"}"
+  },
+  {
+    "name": "quotes update with a non-finite quantity",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021",
+    "status": 400,
+    "body": "{\"error\":\"Line item quantity and rate must be valid numbers\"}"
+  },
+  {
+    "name": "quotes update another workspace’s quote",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000025",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "quotes update status sent to declined",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000022",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000022\",\"quoteNumber\":\"PQ-2\",\"title\":\"Parity quote 2\",\"status\":\"declined\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"notes\":null,\"terms\":null,\"issueDate\":\"2025-01-12T00:00:00.000Z\",\"expirationDate\":null,\"sentAt\":\"2025-01-13T10:00:00.000Z\",\"acceptedAt\":null,\"declinedAt\":\"<now>\",\"lineItems\":[{\"id\":\"<id:5>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-12T10:00:00.000Z\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "quotes update with malformed JSON",
+    "group": "quotes",
+    "method": "PATCH",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "quotes duplicate",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000023/duplicate",
+    "status": 201,
+    "body": "{\"id\":\"<id:13>\",\"quoteNumber\":\"Q-0007\",\"title\":\"Parity quote 3 (Copy)\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":3000,\"discountType\":\"fixed\",\"discountValue\":100,\"discountAmount\":100,\"taxTotal\":540,\"total\":3540,\"lineItems\":[{\"id\":\"<id:14>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":3,\"rate\":1000,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "quotes duplicate another workspace’s quote",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000025/duplicate",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "quotes send",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021/send",
+    "status": 200,
+    "body": "{\"message\":\"Quote sent successfully\",\"emailSent\":true,\"quoteUrl\":\"https://app.example.test/q/00000000-0000-4000-8000-000000000101\"}"
+  },
+  {
+    "name": "quotes send to explicit recipients",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/<id:8>/send",
+    "status": 200,
+    "body": "{\"message\":\"Quote sent successfully\",\"emailSent\":true,\"quoteUrl\":\"https://app.example.test/q/<id:15>\"}"
+  },
+  {
+    "name": "quotes send with no body",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/<id:13>/send",
+    "status": 200,
+    "body": "{\"message\":\"Quote sent successfully\",\"emailSent\":true,\"quoteUrl\":\"https://app.example.test/q/<token:16>\"}"
+  },
+  {
+    "name": "quotes send with malformed JSON",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/<id:13>/send",
+    "status": 200,
+    "body": "{\"message\":\"Quote sent successfully\",\"emailSent\":true,\"quoteUrl\":\"https://app.example.test/q/<token:16>\"}"
+  },
+  {
+    "name": "quotes send an accepted quote",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000023/send",
+    "status": 400,
+    "body": "{\"error\":\"Cannot send a quote with status: accepted\"}"
+  },
+  {
+    "name": "quotes send with an invalid recipient",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021/send",
+    "status": 400,
+    "body": "{\"error\":\"Invalid email addresses: nope\"}"
+  },
+  {
+    "name": "quotes send with eleven recipients",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000021/send",
+    "status": 400,
+    "body": "{\"error\":\"Maximum 10 recipients allowed\"}"
+  },
+  {
+    "name": "quotes send a zero-total quote",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000024/send",
+    "status": 400,
+    "body": "{\"error\":\"Cannot send a quote with zero total. Add line items first.\"}"
+  },
+  {
+    "name": "quotes send another workspace’s quote",
+    "group": "quotes",
+    "method": "POST",
+    "path": "/quotes/00000000-0000-4000-8000-000000000025/send",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "quotes delete",
+    "group": "quotes",
+    "method": "DELETE",
+    "path": "/quotes/<id:8>",
+    "status": 200,
+    "body": "{\"message\":\"Quote deleted\"}"
+  },
+  {
+    "name": "quotes delete again",
+    "group": "quotes",
+    "method": "DELETE",
+    "path": "/quotes/<id:8>",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "quotes list after changes",
+    "group": "quotes",
+    "method": "GET",
+    "path": "/quotes?limit=2",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"<id:13>\",\"quoteNumber\":\"Q-0007\",\"title\":\"Parity quote 3 (Copy)\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"subtotal\":3000,\"discountType\":\"fixed\",\"discountValue\":100,\"discountAmount\":100,\"taxTotal\":540,\"total\":3540,\"notes\":null,\"terms\":null,\"issueDate\":\"<today+0>\",\"expirationDate\":null,\"sentAt\":\"<now>\",\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[{\"id\":\"<id:14>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":3,\"rate\":1000,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"},{\"id\":\"<id:11>\",\"quoteNumber\":\"Q-0002\",\"title\":\"Empty\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000012\",\"name\":\"Bharat Prints\",\"email\":\"bharat@parity.test\",\"company\":null},\"currency\":\"USD\",\"subtotal\":0,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":0,\"total\":0,\"notes\":null,\"terms\":null,\"issueDate\":\"<today+0>\",\"expirationDate\":null,\"sentAt\":null,\"acceptedAt\":null,\"declinedAt\":null,\"lineItems\":[],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}],\"pagination\":{\"page\":1,\"limit\":2,\"total\":6,\"totalPages\":3}}"
+  },
+  {
+    "name": "invoices list",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000034\",\"invoiceNumber\":\"PINV-4\",\"title\":\"Parity invoice 4\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-24T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":0,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":0,\"total\":0,\"amountPaid\":0,\"amountDue\":0,\"notes\":null,\"terms\":null,\"sentAt\":null,\"paidAt\":null,\"lineItems\":[],\"createdAt\":\"2025-01-24T10:00:00.000Z\",\"updatedAt\":\"2025-01-24T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000033\",\"invoiceNumber\":\"PINV-3\",\"title\":\"Parity invoice 3\",\"status\":\"paid\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-23T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":180,\"total\":1180,\"amountPaid\":1180,\"amountDue\":0,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-24T10:00:00.000Z\",\"paidAt\":\"2025-01-24T10:00:00.000Z\",\"lineItems\":[{\"id\":\"<id:17>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":1,\"rate\":1000,\"amount\":1000,\"taxRate\":18,\"taxAmount\":180}],\"createdAt\":\"2025-01-23T10:00:00.000Z\",\"updatedAt\":\"2025-01-23T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000032\",\"invoiceNumber\":\"PINV-2\",\"title\":\"Parity invoice 2\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-22T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"amountPaid\":0,\"amountDue\":4720,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-23T10:00:00.000Z\",\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:18>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-22T10:00:00.000Z\",\"updatedAt\":\"2025-01-22T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000031\",\"invoiceNumber\":\"PINV-1\",\"title\":\"Parity invoice 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-21T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":5000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":900,\"total\":5900,\"amountPaid\":0,\"amountDue\":5900,\"notes\":\"Thanks\",\"terms\":null,\"sentAt\":null,\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:19>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900}],\"createdAt\":\"2025-01-21T10:00:00.000Z\",\"updatedAt\":\"2025-01-21T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":4,\"totalPages\":1}}"
+  },
+  {
+    "name": "invoices list by status and client",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices?status=paid&clientId=00000000-0000-4000-8000-000000000011",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000033\",\"invoiceNumber\":\"PINV-3\",\"title\":\"Parity invoice 3\",\"status\":\"paid\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-23T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":180,\"total\":1180,\"amountPaid\":1180,\"amountDue\":0,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-24T10:00:00.000Z\",\"paidAt\":\"2025-01-24T10:00:00.000Z\",\"lineItems\":[{\"id\":\"<id:17>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":1,\"rate\":1000,\"amount\":1000,\"taxRate\":18,\"taxAmount\":180}],\"createdAt\":\"2025-01-23T10:00:00.000Z\",\"updatedAt\":\"2025-01-23T10:00:00.000Z\"}],\"pagination\":{\"page\":1,\"limit\":25,\"total\":1,\"totalPages\":1}}"
+  },
+  {
+    "name": "invoices list with an unknown status",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices?status=lost",
+    "status": 400,
+    "body": "{\"error\":\"Invalid status value\"}"
+  },
+  {
+    "name": "invoices list page 2",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices?limit=2&page=2&search=parity",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"00000000-0000-4000-8000-000000000032\",\"invoiceNumber\":\"PINV-2\",\"title\":\"Parity invoice 2\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-22T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"amountPaid\":0,\"amountDue\":4720,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-23T10:00:00.000Z\",\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:18>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-22T10:00:00.000Z\",\"updatedAt\":\"2025-01-22T10:00:00.000Z\"},{\"id\":\"00000000-0000-4000-8000-000000000031\",\"invoiceNumber\":\"PINV-1\",\"title\":\"Parity invoice 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-21T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":5000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":900,\"total\":5900,\"amountPaid\":0,\"amountDue\":5900,\"notes\":\"Thanks\",\"terms\":null,\"sentAt\":null,\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:19>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900}],\"createdAt\":\"2025-01-21T10:00:00.000Z\",\"updatedAt\":\"2025-01-21T10:00:00.000Z\"}],\"pagination\":{\"page\":2,\"limit\":2,\"total\":4,\"totalPages\":2}}"
+  },
+  {
+    "name": "invoices create",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 201,
+    "body": "{\"id\":\"<id:20>\",\"invoiceNumber\":\"INV-0001\",\"title\":\"API invoice\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"dueDate\":\"2025-06-30T00:00:00.000Z\",\"subtotal\":3000,\"taxTotal\":540,\"total\":3540,\"amountPaid\":0,\"amountDue\":3540,\"lineItems\":[{\"id\":\"<id:21>\",\"name\":\"Workshop\",\"description\":\"One day\",\"quantity\":2,\"rate\":1500,\"amount\":3000}],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices create without dueDate",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 400,
+    "body": "{\"error\":\"dueDate is required\"}"
+  },
+  {
+    "name": "invoices create with a bad dueDate",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 400,
+    "body": "{\"error\":\"dueDate must be a valid date\"}"
+  },
+  {
+    "name": "invoices create without title",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 400,
+    "body": "{\"error\":\"title is required\"}"
+  },
+  {
+    "name": "invoices create for another workspace’s client",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 404,
+    "body": "{\"error\":\"Client not found\"}"
+  },
+  {
+    "name": "invoices create with a negative quantity",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 400,
+    "body": "{\"error\":\"Line item quantity cannot be negative\"}"
+  },
+  {
+    "name": "invoices create with malformed JSON",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "invoices create in a GST workspace",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 201,
+    "body": "{\"id\":\"<id:22>\",\"invoiceNumber\":\"INV/<fy>/0001\",\"title\":\"GST invoice\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000016\",\"name\":\"Kaveri Traders\",\"email\":\"kaveri@parity.test\",\"company\":null},\"currency\":\"INR\",\"dueDate\":\"2025-06-30T00:00:00.000Z\",\"subtotal\":2000,\"taxTotal\":360,\"total\":2360,\"amountPaid\":0,\"amountDue\":2360,\"lineItems\":[{\"id\":\"<id:23>\",\"name\":\"Consulting\",\"description\":null,\"quantity\":2,\"rate\":1000,\"amount\":2000}],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices create in a GST workspace with an unsupported rate",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices",
+    "status": 201,
+    "body": "{\"id\":\"<id:24>\",\"invoiceNumber\":\"INV/<fy>/0002\",\"title\":\"GST bad\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000016\",\"name\":\"Kaveri Traders\",\"email\":\"kaveri@parity.test\",\"company\":null},\"currency\":\"INR\",\"dueDate\":\"2025-06-30T00:00:00.000Z\",\"subtotal\":1,\"taxTotal\":0.07,\"total\":1.07,\"amountPaid\":0,\"amountDue\":1.07,\"lineItems\":[{\"id\":\"<id:25>\",\"name\":\"Odd\",\"description\":null,\"quantity\":1,\"rate\":1,\"amount\":1}],\"createdAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices get",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000031\",\"invoiceNumber\":\"PINV-1\",\"title\":\"Parity invoice 1\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-21T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":5000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":900,\"total\":5900,\"amountPaid\":0,\"amountDue\":5900,\"notes\":\"Thanks\",\"terms\":null,\"sentAt\":null,\"paidAt\":null,\"voidedAt\":null,\"lineItems\":[{\"id\":\"<id:19>\",\"name\":\"Design\",\"description\":\"Design work\",\"quantity\":2,\"rate\":2500,\"amount\":5000,\"taxRate\":18,\"taxAmount\":900}],\"createdAt\":\"2025-01-21T10:00:00.000Z\",\"updatedAt\":\"2025-01-21T10:00:00.000Z\"}"
+  },
+  {
+    "name": "invoices get another workspace’s invoice",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices/00000000-0000-4000-8000-000000000035",
+    "status": 404,
+    "body": "{\"error\":\"Invoice not found\"}"
+  },
+  {
+    "name": "invoices update title and due date",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/<id:20>",
+    "status": 200,
+    "body": "{\"id\":\"<id:20>\",\"invoiceNumber\":\"INV-0001\",\"title\":\"API invoice v2\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"<today+0>\",\"dueDate\":\"2025-07-31T00:00:00.000Z\",\"subtotal\":3000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":540,\"total\":3540,\"amountPaid\":0,\"amountDue\":3540,\"notes\":\"n\",\"terms\":\"t\",\"sentAt\":null,\"paidAt\":null,\"voidedAt\":null,\"lineItems\":[{\"id\":\"<id:21>\",\"name\":\"Workshop\",\"description\":\"One day\",\"quantity\":2,\"rate\":1500,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices update lines",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/<id:20>",
+    "status": 200,
+    "body": "{\"id\":\"<id:20>\",\"invoiceNumber\":\"INV-0001\",\"title\":\"API invoice v2\",\"status\":\"draft\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"<today+0>\",\"dueDate\":\"2025-07-31T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":120,\"total\":1120,\"amountPaid\":0,\"amountDue\":1120,\"notes\":\"n\",\"terms\":\"t\",\"sentAt\":null,\"paidAt\":null,\"voidedAt\":null,\"lineItems\":[{\"id\":\"<id:26>\",\"name\":\"Only\",\"description\":null,\"quantity\":4,\"rate\":250,\"amount\":1000,\"taxRate\":12,\"taxAmount\":120}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices update a paid invoice",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000033",
+    "status": 400,
+    "body": "{\"error\":\"Cannot modify a paid or voided invoice\"}"
+  },
+  {
+    "name": "invoices update with an invalid transition",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031",
+    "status": 400,
+    "body": "{\"error\":\"Invalid status transition\"}"
+  },
+  {
+    "name": "invoices update lines and status together",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031",
+    "status": 400,
+    "body": "{\"error\":\"Change the lines and the status in separate requests\"}"
+  },
+  {
+    "name": "invoices update with a bad due date",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031",
+    "status": 400,
+    "body": "{\"error\":\"Invalid due date\"}"
+  },
+  {
+    "name": "invoices update sent to overdue",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000032",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000032\",\"invoiceNumber\":\"PINV-2\",\"title\":\"Parity invoice 2\",\"status\":\"overdue\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-22T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":4000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":720,\"total\":4720,\"amountPaid\":0,\"amountDue\":4720,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-23T10:00:00.000Z\",\"paidAt\":null,\"voidedAt\":null,\"lineItems\":[{\"id\":\"<id:18>\",\"name\":\"Audit\",\"description\":\"Audit work\",\"quantity\":1,\"rate\":4000,\"amount\":4000,\"taxRate\":18,\"taxAmount\":720}],\"createdAt\":\"2025-01-22T10:00:00.000Z\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices delete a paid invoice",
+    "group": "invoices",
+    "method": "DELETE",
+    "path": "/invoices/00000000-0000-4000-8000-000000000033",
+    "status": 400,
+    "body": "{\"error\":\"Cannot delete a paid invoice. Void it instead.\"}"
+  },
+  {
+    "name": "invoices update paid to voided",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000033",
+    "status": 200,
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000033\",\"invoiceNumber\":\"PINV-3\",\"title\":\"Parity invoice 3\",\"status\":\"voided\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-23T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":180,\"total\":1180,\"amountPaid\":1180,\"amountDue\":0,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-24T10:00:00.000Z\",\"paidAt\":\"2025-01-24T10:00:00.000Z\",\"voidedAt\":\"<now>\",\"lineItems\":[{\"id\":\"<id:17>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":1,\"rate\":1000,\"amount\":1000,\"taxRate\":18,\"taxAmount\":180}],\"createdAt\":\"2025-01-23T10:00:00.000Z\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices update a GST draft to sent",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000036",
+    "status": 422,
+    "body": "{\"error\":\"This GST invoice is missing details Rule 46 requires: Supplier address is required; Place of supply is required for inter-state / export / SEZ or unregistered B2C > ₹50,000; HSN/SAC is required; Line must have CGST/SGST or IGST\"}"
+  },
+  {
+    "name": "invoices update another workspace’s invoice",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000035",
+    "status": 404,
+    "body": "{\"error\":\"Invoice not found\"}"
+  },
+  {
+    "name": "invoices update with malformed JSON",
+    "group": "invoices",
+    "method": "PATCH",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031",
+    "status": 400,
+    "body": "{\"error\":\"Invalid JSON body\"}"
+  },
+  {
+    "name": "invoices send",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/<id:20>/send",
+    "status": 200,
+    "body": "{\"message\":\"Invoice sent successfully\",\"emailSent\":true,\"invoiceUrl\":\"https://app.example.test/i/<id:27>\"}"
+  },
+  {
+    "name": "invoices send with an invalid recipient",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/00000000-0000-4000-8000-000000000031/send",
+    "status": 400,
+    "body": "{\"error\":\"One or more email addresses are invalid\"}"
+  },
+  {
+    "name": "invoices send a voided invoice",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/00000000-0000-4000-8000-000000000033/send",
+    "status": 400,
+    "body": "{\"error\":\"Cannot send an invoice with status: voided\"}"
+  },
+  {
+    "name": "invoices send a zero-total invoice",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/00000000-0000-4000-8000-000000000034/send",
+    "status": 400,
+    "body": "{\"error\":\"Cannot send an invoice with zero total. Add line items first.\"}"
+  },
+  {
+    "name": "invoices send a GST draft missing Rule 46 details",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/<id:22>/send",
+    "status": 422,
+    "body": "{\"error\":\"This GST invoice is missing details Rule 46 requires: Supplier address is required\"}"
+  },
+  {
+    "name": "invoices send another workspace’s invoice",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/00000000-0000-4000-8000-000000000035/send",
+    "status": 404,
+    "body": "{\"error\":\"Invoice not found\"}"
+  },
+  {
+    "name": "invoices from an accepted quote",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/from-quote/00000000-0000-4000-8000-000000000023",
+    "status": 201,
+    "body": "{\"id\":\"<id:28>\",\"invoiceNumber\":\"INV-0002\",\"title\":\"Parity quote 3\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"USD\",\"issueDate\":\"<today+0>\",\"dueDate\":\"<today+15>\",\"subtotal\":3000,\"discountType\":\"fixed\",\"discountValue\":100,\"discountAmount\":100,\"taxTotal\":540,\"total\":3540,\"amountPaid\":0,\"amountDue\":3540,\"notes\":null,\"terms\":null,\"sentAt\":\"<now>\",\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:29>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":3,\"rate\":1000,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"}"
+  },
+  {
+    "name": "invoices from the same quote again",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/from-quote/00000000-0000-4000-8000-000000000023",
+    "status": 400,
+    "body": "{\"error\":\"Invoice already exists for this quote\"}"
+  },
+  {
+    "name": "invoices from a quote with a bad dueDays",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/from-quote/00000000-0000-4000-8000-000000000022",
+    "status": 400,
+    "body": "{\"error\":\"dueDays must be a number between 0 and 365\"}"
+  },
+  {
+    "name": "invoices from another workspace’s quote",
+    "group": "invoices",
+    "method": "POST",
+    "path": "/invoices/from-quote/00000000-0000-4000-8000-000000000025",
+    "status": 404,
+    "body": "{\"error\":\"Quote not found\"}"
+  },
+  {
+    "name": "invoices delete",
+    "group": "invoices",
+    "method": "DELETE",
+    "path": "/invoices/00000000-0000-4000-8000-000000000034",
+    "status": 200,
+    "body": "{\"message\":\"Invoice deleted\"}"
+  },
+  {
+    "name": "invoices delete again",
+    "group": "invoices",
+    "method": "DELETE",
+    "path": "/invoices/00000000-0000-4000-8000-000000000034",
+    "status": 404,
+    "body": "{\"error\":\"Invoice not found\"}"
+  },
+  {
+    "name": "invoices list after changes",
+    "group": "invoices",
+    "method": "GET",
+    "path": "/invoices?limit=3",
+    "status": 200,
+    "body": "{\"data\":[{\"id\":\"<id:28>\",\"invoiceNumber\":\"INV-0002\",\"title\":\"Parity quote 3\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"USD\",\"issueDate\":\"<today+0>\",\"dueDate\":\"<today+15>\",\"subtotal\":3000,\"discountType\":\"fixed\",\"discountValue\":100,\"discountAmount\":100,\"taxTotal\":540,\"total\":3540,\"amountPaid\":0,\"amountDue\":3540,\"notes\":null,\"terms\":null,\"sentAt\":\"<now>\",\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:29>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":3,\"rate\":1000,\"amount\":3000,\"taxRate\":18,\"taxAmount\":540}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"},{\"id\":\"<id:20>\",\"invoiceNumber\":\"INV-0001\",\"title\":\"API invoice v2\",\"status\":\"sent\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"<today+0>\",\"dueDate\":\"2025-07-31T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":120,\"total\":1120,\"amountPaid\":0,\"amountDue\":1120,\"notes\":\"n\",\"terms\":\"t\",\"sentAt\":\"<now>\",\"paidAt\":null,\"lineItems\":[{\"id\":\"<id:26>\",\"name\":\"Only\",\"description\":null,\"quantity\":4,\"rate\":250,\"amount\":1000,\"taxRate\":12,\"taxAmount\":120}],\"createdAt\":\"<now>\",\"updatedAt\":\"<now>\"},{\"id\":\"00000000-0000-4000-8000-000000000033\",\"invoiceNumber\":\"PINV-3\",\"title\":\"Parity invoice 3\",\"status\":\"voided\",\"client\":{\"id\":\"00000000-0000-4000-8000-000000000011\",\"name\":\"Acme Works\",\"email\":\"acme@parity.test\",\"company\":\"Acme Works LLP\"},\"currency\":\"INR\",\"issueDate\":\"2025-01-23T00:00:00.000Z\",\"dueDate\":\"2025-03-01T00:00:00.000Z\",\"subtotal\":1000,\"discountType\":null,\"discountValue\":null,\"discountAmount\":0,\"taxTotal\":180,\"total\":1180,\"amountPaid\":1180,\"amountDue\":0,\"notes\":null,\"terms\":null,\"sentAt\":\"2025-01-24T10:00:00.000Z\",\"paidAt\":\"2025-01-24T10:00:00.000Z\",\"lineItems\":[{\"id\":\"<id:17>\",\"name\":\"Retainer\",\"description\":\"Retainer work\",\"quantity\":1,\"rate\":1000,\"amount\":1000,\"taxRate\":18,\"taxAmount\":180}],\"createdAt\":\"2025-01-23T10:00:00.000Z\",\"updatedAt\":\"<now>\"}],\"pagination\":{\"page\":1,\"limit\":3,\"total\":5,\"totalPages\":2}}"
+  }
+]
