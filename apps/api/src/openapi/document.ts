@@ -1,5 +1,7 @@
 import { OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import { registry } from './registry';
+// Registers the routes ported from Next on the same registry.
+import './legacy-v1';
 
 export interface DocumentOptions {
   title?: string;

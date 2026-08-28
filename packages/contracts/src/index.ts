@@ -8,3 +8,4 @@ export * from './payments';
 export * from './quotes';
 export * from './reports';
 export * from './automations';
+export * from './legacy-v1';
