@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { sendError } from '../http';
+import { isLegacyPath, legacyError } from '../routes/v1/legacy/http';
 
 function hasNul(value: unknown): boolean {
   if (typeof value === 'string') return value.includes('\u0000');
@@ -27,7 +28,10 @@ export const rejectNulCharacters: RequestHandler = (req, res, next) => {
   // The routes ported from Next receive their body as JSON text.
   const body = typeof req.body === 'string' ? parsedOrRaw(req.body) : req.body;
   if (hasNul(body) || hasNul(req.query)) {
-    sendError(res, 'validation_error', 'Text may not contain the NUL character (U+0000)');
+    const message = 'Text may not contain the NUL character (U+0000)';
+    // The routes ported from Next answer in their own `{ error }` shape.
+    if (isLegacyPath(req.path)) legacyError(res, message, 400);
+    else sendError(res, 'validation_error', message);
     return;
   }
   next();

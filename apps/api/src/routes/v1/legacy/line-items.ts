@@ -10,6 +10,8 @@ export interface LineItemInput {
 }
 
 export const MAX_LINE_ITEMS = 100;
+/** `lineItems` that is not a list made the Next routes throw (500). */
+export const LINE_ITEMS_NOT_A_LIST = 'lineItems must be a list';
 const MAX_VALUE = 1_000_000;
 
 /**

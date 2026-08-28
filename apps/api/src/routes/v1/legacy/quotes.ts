@@ -29,6 +29,7 @@ import {
   priceLines,
   recomputeDiscount,
   type LineItemInput,
+  LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
 
 const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'converted'];
@@ -107,6 +108,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       currency?: string;
       lineItems?: LineItemInput[];
     };
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
     if (!clientId) return legacyError(res, 'clientId is required', 400);
     if (!title) return legacyError(res, 'title is required', 400);
@@ -203,6 +205,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       status?: string;
       lineItems?: LineItemInput[];
     };
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
     if (lineItems) {
       const invalid = lineItemProblem(lineItems, 'quote-update');

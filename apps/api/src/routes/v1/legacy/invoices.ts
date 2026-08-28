@@ -38,6 +38,7 @@ import {
   priceLines,
   recomputeDiscount,
   type LineItemInput,
+  LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'viewed', 'partial', 'paid', 'overdue', 'voided'];
@@ -143,6 +144,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
         terms?: string;
       };
 
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
     if (!clientId) return legacyError(res, 'clientId is required', 400);
     if (!title) return legacyError(res, 'title is required', 400);
     if (!dueDate) return legacyError(res, 'dueDate is required', 400);
@@ -416,6 +418,7 @@ async function updateInvoice(
     status?: string;
     lineItems?: LineItemInput[];
   };
+  if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
   const data: Prisma.InvoiceUpdateInput = {};
   if (title !== undefined) data.title = title;

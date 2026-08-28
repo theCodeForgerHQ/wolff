@@ -95,6 +95,20 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
       email: 'n@robust.test',
     });
     expect(res.status).toBe(400);
+    // The ported routes keep their own error shape.
+    expect(res.body).toEqual({ error: 'Text may not contain the NUL character (U+0000)' });
+  });
+
+  it.each([
+    ['patch', '/v1/quotes/QUOTE'],
+    ['patch', '/v1/invoices/INVOICE'],
+  ] as const)('%s %s refuses lineItems that are not a list', async (method, path) => {
+    const res = await call(
+      method,
+      path.replace('QUOTE', quoteId).replace('INVOICE', invoiceId)
+    ).send({ lineItems: { name: 'x' } });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'lineItems must be a list' });
   });
 
   it('POST /v1/clients answers 409 for the email of a deleted client', async () => {
