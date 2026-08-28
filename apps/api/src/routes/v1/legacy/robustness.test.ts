@@ -89,6 +89,14 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     expect(typeof res.body.error).toBe('string');
   });
 
+  it('POST /v1/clients refuses a NUL character (raw JSON text body)', async () => {
+    const res = await call('post', '/v1/clients').send({
+      name: 'a\u0000b',
+      email: 'n@robust.test',
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('POST /v1/clients answers 409 for the email of a deleted client', async () => {
     const res = await call('post', '/v1/clients').send({ name: 'Back', email: 'gone@robust.test' });
     expect(res.status).toBe(409);

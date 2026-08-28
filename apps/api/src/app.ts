@@ -13,6 +13,7 @@ import {
   type RateLimitStoreFactory,
 } from './middleware/auth';
 import { errorHandler, notFound } from './middleware/error';
+import { rejectNulCharacters } from './middleware/nul';
 import { idempotency } from './middleware/idempotency';
 import { cachedOriginCheck } from './middleware/origin-cache';
 import { requestLogger } from './middleware/request-log';
@@ -162,6 +163,7 @@ export function createApp(deps: AppDeps): Express {
     })
   );
   app.use(express.text({ limit: JSON_LIMIT, type: (req) => isLegacyPath(pathOf(req)) }));
+  app.use(rejectNulCharacters);
 
   app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache(), db));
 
