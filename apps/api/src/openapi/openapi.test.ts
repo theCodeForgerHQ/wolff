@@ -21,6 +21,27 @@ describe('/openapi.json and /docs', () => {
     expect(res.body.paths).toHaveProperty('/v1/webhook-endpoints');
   });
 
+  it('documents every route ported from the Next /api/v1', async () => {
+    const res = await request(app).get('/openapi.json');
+    const paths = res.body.paths as Record<string, Record<string, unknown>>;
+    const ported = {
+      '/v1/clients': ['get', 'post'],
+      '/v1/clients/import': ['post'],
+      '/v1/clients/{id}': ['get', 'patch', 'delete'],
+      '/v1/quotes': ['get', 'post'],
+      '/v1/quotes/{id}': ['get', 'patch', 'delete'],
+      '/v1/quotes/{id}/send': ['post'],
+      '/v1/quotes/{id}/duplicate': ['post'],
+      '/v1/invoices': ['get', 'post'],
+      '/v1/invoices/{id}': ['get', 'patch', 'delete'],
+      '/v1/invoices/{id}/send': ['post'],
+      '/v1/invoices/from-quote/{quoteId}': ['post'],
+    };
+    for (const [path, methods] of Object.entries(ported)) {
+      expect(Object.keys(paths[path] ?? {}).sort(), path).toEqual([...methods].sort());
+    }
+  });
+
   it('serves the Scalar docs UI without authentication', async () => {
     const res = await request(app).get('/docs');
 

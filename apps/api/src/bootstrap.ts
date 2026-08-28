@@ -171,6 +171,9 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     rateLimitStore,
     jobs: createJobRunDeps(config, jobContext, redis),
     onOutboxEvents: createOutboxPush(db, dispatcher),
+    // The ported send routes need a real provider: without one they answer
+    // 502, as the Next routes did, instead of "sending" to the log.
+    email: config.RESEND_API_KEY && config.EMAIL_FROM ? jobContext.email : undefined,
   };
 
   const app = createApp({ ...appDeps, report });

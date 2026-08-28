@@ -27,9 +27,13 @@ import { pipelineRoutes } from './routes/v1/pipelines';
 import { publicRoutes } from './routes/v1/public';
 import { reportRoutes } from './routes/v1/reports';
 import { automationRoutes } from './routes/v1/automations';
+import { isLegacyPath } from './routes/v1/legacy/http';
+import { legacyV1Routes } from './routes/v1/legacy';
 import { webhookEndpointRoutes } from './routes/v1/webhook-endpoints';
 import { webhookRoutes } from './webhooks';
 import type { PaymentProviderClients } from './payments/provider';
+import type { EmailTransport } from '@wolff/jobs';
+import type { RequestListener } from 'node:http';
 
 export interface AppDeps {
   db: Db;
@@ -49,6 +53,12 @@ export interface AppDeps {
   paymentClients?: PaymentProviderClients;
   /** Public app URL used to build checkout success/cancel URLs. */
   appUrl?: string;
+  /**
+   * Sends the emails of `POST /v1/quotes/:id/send` and `/v1/invoices/:id/send`
+   * while the request waits, as the Next routes did. Absent: those routes
+   * answer 502 and change nothing, as the Next routes did without Resend.
+   */
+  email?: EmailTransport;
   /** Adds routes before the 404 handler. Used by tests. */
   extend?: (router: Router) => void;
 }
@@ -138,7 +148,20 @@ export function createApp(deps: AppDeps): Express {
       credentials: true,
     })
   );
-  app.use(express.json({ limit: JSON_LIMIT }));
+  // The routes ported from Next read their body as text and parse it
+  // themselves, after authentication, with the Next routes' rules (JSON
+  // whatever the Content-Type; a missing or broken body is the route's
+  // decision). Every other route gets the JSON parser.
+  const pathOf = (req: Parameters<RequestListener>[0]) => (req.url ?? '').split('?')[0]!;
+  app.use(
+    express.json({
+      limit: JSON_LIMIT,
+      type: (req) =>
+        !isLegacyPath(pathOf(req)) &&
+        /^application\/json\b/i.test(req.headers['content-type'] ?? ''),
+    })
+  );
+  app.use(express.text({ limit: JSON_LIMIT, type: (req) => isLegacyPath(pathOf(req)) }));
 
   app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache(), db));
 
@@ -155,6 +178,14 @@ export function createApp(deps: AppDeps): Express {
     webhookEndpointRoutes(db, {
       // http is tolerated outside production so a local receiver can be used.
       requireHttps: config.NODE_ENV !== 'development',
+    })
+  );
+  v1.use(
+    legacyV1Routes(db, {
+      appUrl: config.APP_URL,
+      email: deps.email,
+      rateLimitStore: deps.rateLimitStore,
+      onOutboxEvents: deps.onOutboxEvents,
     })
   );
   v1.use(leadRoutes(db));
