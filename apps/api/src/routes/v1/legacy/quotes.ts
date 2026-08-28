@@ -6,8 +6,7 @@ import { renderQuoteSent } from '@wolff/core/email';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
-import type { LegacyRouteDeps } from '.';
-import { documentEmailSender } from './email';
+import type { LegacyRouteContext } from '.';
 import { DOCUMENT_INCLUDE, formatLineItem, formatQuote, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -21,6 +20,8 @@ import {
   stripProtectedFields,
   toNumber,
   param,
+  BAD_RECIPIENTS,
+  badRecipients,
 } from './http';
 import {
   MAX_LINE_ITEMS,
@@ -28,6 +29,7 @@ import {
   priceLines,
   recomputeDiscount,
   type LineItemInput,
+  LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
 
 const QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'converted'];
@@ -59,9 +61,9 @@ async function nextQuoteNumber(db: Db, workspaceId: string): Promise<string> {
  * `/v1/quotes/:id/duplicate`, ported from apps/web/app/api/v1/quotes/**. The
  * workspace is always the API key's (`req.ctx.workspaceId`).
  */
-export function quoteRoutes(db: Db, deps: LegacyRouteDeps): Router {
+export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
   const router = Router();
-  const sendEmail = documentEmailSender(deps.email, deps.rateLimitStore);
+  const { sendEmail } = deps;
 
   router.get('/quotes', requireScopes('quotes:read'), async (req, res) => {
     const workspaceId = req.ctx!.workspaceId;
@@ -106,6 +108,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteDeps): Router {
       currency?: string;
       lineItems?: LineItemInput[];
     };
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
     if (!clientId) return legacyError(res, 'clientId is required', 400);
     if (!title) return legacyError(res, 'title is required', 400);
@@ -202,6 +205,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteDeps): Router {
       status?: string;
       lineItems?: LineItemInput[];
     };
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
     if (lineItems) {
       const invalid = lineItemProblem(lineItems, 'quote-update');
@@ -366,6 +370,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteDeps): Router {
       recipients?: string[];
     };
 
+    if (badRecipients(recipients)) return legacyError(res, BAD_RECIPIENTS, 400);
     if (recipients) {
       if (recipients.length > 10) return legacyError(res, 'Maximum 10 recipients allowed', 400);
       const invalid = recipients.filter((e) => !EMAIL_PATTERN.test(e));

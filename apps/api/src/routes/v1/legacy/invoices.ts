@@ -15,8 +15,7 @@ import {
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
-import type { LegacyRouteDeps } from '.';
-import { documentEmailSender } from './email';
+import type { LegacyRouteContext } from '.';
 import { DOCUMENT_INCLUDE, formatInvoice, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -30,6 +29,8 @@ import {
   stripProtectedFields,
   toNumber,
   param,
+  BAD_RECIPIENTS,
+  badRecipients,
 } from './http';
 import {
   MAX_LINE_ITEMS,
@@ -37,6 +38,7 @@ import {
   priceLines,
   recomputeDiscount,
   type LineItemInput,
+  LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
 
 const INVOICE_STATUSES = ['draft', 'sent', 'viewed', 'partial', 'paid', 'overdue', 'voided'];
@@ -90,9 +92,9 @@ const recordUpdate = (db: Db, invoiceId: string) =>
  * apps/web/app/api/v1/invoices/**. The workspace is always the API key's
  * (`req.ctx.workspaceId`).
  */
-export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteDeps): Router {
+export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
   const router = Router();
-  const sendEmail = documentEmailSender(deps.email, deps.rateLimitStore);
+  const { sendEmail } = deps;
 
   router.get('/invoices', requireScopes('invoices:read'), async (req, res) => {
     const workspaceId = req.ctx!.workspaceId;
@@ -142,6 +144,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteDeps): Router {
         terms?: string;
       };
 
+    if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
     if (!clientId) return legacyError(res, 'clientId is required', 400);
     if (!title) return legacyError(res, 'title is required', 400);
     if (!dueDate) return legacyError(res, 'dueDate is required', 400);
@@ -306,6 +309,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteDeps): Router {
       recipients?: string[];
     };
 
+    if (badRecipients(recipients)) return legacyError(res, BAD_RECIPIENTS, 400);
     if (recipients) {
       if (recipients.length > 10) return legacyError(res, 'Maximum 10 recipients allowed', 400);
       if (recipients.some((e) => !EMAIL_PATTERN.test(e))) {
@@ -414,6 +418,7 @@ async function updateInvoice(
     status?: string;
     lineItems?: LineItemInput[];
   };
+  if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
 
   const data: Prisma.InvoiceUpdateInput = {};
   if (title !== undefined) data.title = title;
