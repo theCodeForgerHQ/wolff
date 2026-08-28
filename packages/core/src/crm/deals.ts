@@ -1,6 +1,7 @@
 import { CoreError } from '../errors';
 import type { CoreContext, DbOrTx, DbTx } from '../context';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
+import { assertWorkspaceMember } from './members';
 
 export interface MoveDealInput {
   dealId: string;
@@ -43,12 +44,12 @@ export async function moveDealInTx(
     SELECT id, stage_id, pipeline_id FROM deals
     WHERE id = ${input.dealId} AND workspace_id = ${workspaceId} AND deleted_at IS NULL
     FOR UPDATE`;
-  if (!locked) throw new Error('Deal not found');
+  if (!locked) throw new CoreError('not_found', 'Deal not found');
 
   const targetStage = await tx.stage.findFirst({
     where: { id: input.stageId, pipelineId: locked.pipeline_id, workspaceId },
   });
-  if (!targetStage) throw new Error('Target stage not found in deal pipeline');
+  if (!targetStage) throw new CoreError('not_found', 'Target stage not found in deal pipeline');
 
   const previousStageId = locked.stage_id;
   const now = new Date();
@@ -126,13 +127,30 @@ export async function createDeal(
   const { db, workspaceId, actorId } = ctx;
 
   if (!input.clientId && !input.leadId) {
-    throw new Error('Either clientId or leadId is required');
+    throw new CoreError('validation_error', 'Either clientId or leadId is required');
   }
 
   const stage = await db.stage.findFirst({
     where: { id: input.stageId, pipelineId: input.pipelineId, workspaceId },
   });
-  if (!stage) throw new Error('Stage not found in pipeline');
+  if (!stage) throw new CoreError('not_found', 'Stage not found in pipeline');
+  // Named rows must exist in this workspace; a stray id used to reach the
+  // foreign key and end in a 500.
+  if (input.clientId) {
+    const client = await db.client.findFirst({
+      where: { id: input.clientId, workspaceId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!client) throw new CoreError('not_found', 'Client not found');
+  }
+  if (input.leadId) {
+    const lead = await db.lead.findFirst({
+      where: { id: input.leadId, workspaceId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!lead) throw new CoreError('not_found', 'Lead not found');
+  }
+  await assertWorkspaceMember(db, workspaceId, input.ownerId);
 
   const deal = await db.deal.create({
     data: {

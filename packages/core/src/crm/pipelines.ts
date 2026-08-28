@@ -100,6 +100,10 @@ export async function replacePipelineStages(
 
     // Delete stages not in the new list, then recreate/update.
     const keepIds = stages.map((s) => s.id).filter(Boolean) as string[];
+    const known = await tx.stage.count({ where: { pipelineId, workspaceId, id: { in: keepIds } } });
+    if (known !== new Set(keepIds).size) {
+      throw new CoreError('not_found', 'Stage not found in pipeline');
+    }
     await tx.stage.deleteMany({
       where: { pipelineId, workspaceId, id: { notIn: keepIds } },
     });

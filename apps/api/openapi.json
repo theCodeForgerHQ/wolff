@@ -958,7 +958,9 @@
                   "maxLength": 100
                 },
                 "position": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
                 },
                 "probability": {
                   "type": "integer",
@@ -1010,7 +1012,9 @@
                   "maxLength": 100
                 },
                 "position": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
                 },
                 "probability": {
                   "type": "integer",
@@ -1151,7 +1155,8 @@
           },
           "value": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9999999999.99
           },
           "currency": {
             "type": "string",
@@ -1184,7 +1189,8 @@
           },
           "value": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9999999999.99
           },
           "currency": {
             "type": "string",
@@ -1255,7 +1261,8 @@
           },
           "value": {
             "type": "number",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9999999999.99
           },
           "currency": {
             "type": "string",

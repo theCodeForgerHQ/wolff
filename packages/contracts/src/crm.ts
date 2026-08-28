@@ -9,6 +9,11 @@ export const LEAD_STATUSES = [
   'disqualified',
   'converted',
 ] as const;
+/** `stages.position` is a Postgres integer. */
+export const MAX_STAGE_POSITION = 1_000_000;
+/** `deals.value` is numeric(12, 2). */
+export const MAX_DEAL_VALUE = 9_999_999_999.99;
+
 export const STAGE_KINDS = ['open', 'won', 'lost'] as const;
 
 export const leadSourceSchema = z.enum(LEAD_SOURCES).openapi('LeadSource');
@@ -124,7 +129,7 @@ export type BulkLeadActionInput = z.infer<typeof bulkLeadActionSchema>;
 export const convertLeadSchema = z
   .object({
     title: z.string().trim().max(200).optional(),
-    value: z.number().nonnegative().optional(),
+    value: z.number().nonnegative().max(MAX_DEAL_VALUE).optional(),
     currency: z.string().trim().length(3).optional(),
     stageId: z.string().uuid().optional(),
   })
@@ -199,7 +204,7 @@ export const createPipelineSchema = z
       .array(
         z.object({
           name: z.string().trim().min(1).max(100),
-          position: z.number().int(),
+          position: z.number().int().min(0).max(MAX_STAGE_POSITION),
           probability: z.number().int().min(0).max(100),
           kind: stageKindSchema,
         })
@@ -229,7 +234,7 @@ export const replaceStagesSchema = z
         z.object({
           id: z.string().uuid().optional(),
           name: z.string().trim().min(1).max(100),
-          position: z.number().int(),
+          position: z.number().int().min(0).max(MAX_STAGE_POSITION),
           probability: z.number().int().min(0).max(100),
           kind: stageKindSchema,
         })
@@ -260,7 +265,7 @@ export const createDealSchema = z
     clientId: z.string().uuid().optional(),
     leadId: z.string().uuid().optional(),
     title: z.string().trim().min(1).max(200),
-    value: z.number().nonnegative().optional(),
+    value: z.number().nonnegative().max(MAX_DEAL_VALUE).optional(),
     currency: z.string().trim().length(3).optional(),
     expectedCloseDate: z.string().date().optional(),
     ownerId: z.string().uuid().optional(),
@@ -274,7 +279,7 @@ export const updateDealSchema = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
     stageId: z.string().uuid().optional(),
-    value: z.number().nonnegative().optional(),
+    value: z.number().nonnegative().max(MAX_DEAL_VALUE).optional(),
     currency: z.string().trim().length(3).optional(),
     expectedCloseDate: z.string().date().optional().nullable(),
     ownerId: z.string().uuid().optional().nullable(),

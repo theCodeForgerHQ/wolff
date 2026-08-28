@@ -2,7 +2,9 @@ import type { Prisma } from '@wolff/database';
 import { CoreError } from '../errors';
 import type { CoreContext, DbOrTx } from '../context';
 import { afterCursor, toCursorPage, type CursorPosition } from '../pagination';
+import { LEAD_STATUSES } from '@wolff/contracts';
 import { ensureDefaultPipeline } from './pipelines';
+import { assertWorkspaceMember } from './members';
 
 export interface CreateLeadInput {
   name: string;
@@ -75,7 +77,7 @@ export async function convertLead(
     where: { id: input.leadId, workspaceId, deletedAt: null },
     include: { deal: true, client: true },
   });
-  if (!existing) throw new Error('Lead not found');
+  if (!existing) throw new CoreError('not_found', 'Lead not found');
   if (existing.status === 'converted' && existing.deal && existing.client) {
     return {
       clientId: existing.client.id,
@@ -95,7 +97,11 @@ export async function convertLead(
   const targetStage = input.stageId
     ? stages.find((s) => s.id === input.stageId)
     : (stages.find((s) => s.kind === 'open') ?? stages[0]);
-  if (!targetStage) throw new Error('Pipeline has no stages');
+  if (!targetStage) {
+    throw input.stageId
+      ? new CoreError('not_found', 'Stage not found in pipeline')
+      : new CoreError('business_rule', 'Pipeline has no stages');
+  }
 
   return db.$transaction(async (tx) => {
     // Lock the lead so concurrent conversions do not create duplicates.
@@ -103,7 +109,7 @@ export async function convertLead(
       SELECT id, status::text FROM leads
       WHERE id = ${input.leadId} AND workspace_id = ${workspaceId} AND deleted_at IS NULL
       FOR UPDATE`;
-    if (!locked) throw new Error('Lead not found');
+    if (!locked) throw new CoreError('not_found', 'Lead not found');
     if (locked.status === 'converted') {
       const converted = await tx.lead.findUniqueOrThrow({
         where: { id: input.leadId, workspaceId },
@@ -241,6 +247,7 @@ function normalizeLeadInput<T extends CreateLeadInput | UpdateLeadInput>(input: 
 export async function createLead(ctx: CoreContext, input: CreateLeadInput) {
   const { db, workspaceId, actorId } = ctx;
   const data = normalizeLeadInput(input);
+  await assertWorkspaceMember(db, workspaceId, data.ownerId);
 
   try {
     const lead = await db.lead.create({
@@ -272,6 +279,7 @@ export async function updateLead(ctx: CoreContext, id: string, input: UpdateLead
 
   const existing = await db.lead.findFirst({ where: { id, workspaceId, deletedAt: null } });
   if (!existing) return null;
+  await assertWorkspaceMember(db, workspaceId, data.ownerId);
 
   try {
     return await db.lead.update({
@@ -469,6 +477,7 @@ export async function bulkLeads(
 
   if (input.action === 'assign') {
     if (!input.value) throw new CoreError('validation_error', 'value is required for assign');
+    await assertWorkspaceMember(db, workspaceId, input.value);
     const result = await db.lead.updateMany({
       where,
       data: { ownerId: input.value },
@@ -478,7 +487,10 @@ export async function bulkLeads(
 
   if (input.action === 'status') {
     if (!input.value) throw new CoreError('validation_error', 'value is required for status');
-    const status = input.value as 'new' | 'contacted' | 'qualified' | 'disqualified' | 'converted';
+    if (!(LEAD_STATUSES as readonly string[]).includes(input.value)) {
+      throw new CoreError('validation_error', `Unknown lead status: ${input.value}`);
+    }
+    const status = input.value as (typeof LEAD_STATUSES)[number];
     const result = await db.lead.updateMany({ where, data: { status } });
     return { updated: result.count };
   }
