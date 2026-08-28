@@ -173,7 +173,12 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     onOutboxEvents: createOutboxPush(db, dispatcher),
     // The ported send routes need a real provider: without one they answer
     // 502, as the Next routes did, instead of "sending" to the log.
-    email: config.RESEND_API_KEY && config.EMAIL_FROM ? jobContext.email : undefined,
+    // Tests and the Schemathesis job run without a provider and get the log
+    // transport, so the send routes can succeed there.
+    email:
+      (config.RESEND_API_KEY && config.EMAIL_FROM) || config.NODE_ENV === 'test'
+        ? jobContext.email
+        : undefined,
   };
 
   const app = createApp({ ...appDeps, report });

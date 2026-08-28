@@ -111,6 +111,16 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     expect(res.body).toEqual({ error: 'lineItems must be a list' });
   });
 
+  it.each([
+    ['/v1/quotes', { title: 'T', clientId: {} }],
+    ['/v1/invoices', { title: 'T', clientId: {}, dueDate: '2026-12-31' }],
+    ['/v1/clients', { name: 'N', email: 'typed@robust.test', phone: 5 }],
+  ])('POST %s refuses a field of the wrong JSON type', async (path, body) => {
+    const res = await call('post', path).send(body);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request: a field has the wrong type' });
+  });
+
   it('POST /v1/clients answers 409 for the email of a deleted client', async () => {
     const res = await call('post', '/v1/clients').send({ name: 'Back', email: 'gone@robust.test' });
     expect(res.status).toBe(409);
