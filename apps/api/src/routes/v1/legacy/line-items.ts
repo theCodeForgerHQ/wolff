@@ -28,6 +28,12 @@ export function lineItemProblem(
   variant: 'quote-create' | 'quote-update' | 'invoice'
 ): string | null {
   for (const item of items) {
+    // Not an object (null, a number): the Next routes threw on it (500).
+    if (typeof item !== 'object' || item === null) {
+      return variant === 'quote-update'
+        ? 'Line item quantity and rate must be valid numbers'
+        : 'Line item name is required';
+    }
     if (variant !== 'quote-update') {
       if (!item.name || typeof item.name !== 'string' || !item.name.trim()) {
         return 'Line item name is required';

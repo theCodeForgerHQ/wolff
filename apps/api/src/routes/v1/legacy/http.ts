@@ -73,8 +73,14 @@ export function toNumber(value: unknown): number {
 /** `?page=&limit=` exactly as the Next list routes parse them. */
 export function pageParams(req: Request): { page: number; limit: number } {
   const query = (name: string) => queryParam(req, name) ?? null;
-  const page = Math.max(1, parseInt(query('page') || '1', 10));
-  const limit = Math.min(100, Math.max(1, parseInt(query('limit') || '25', 10)));
+  // A value that is not a number falls back to the default. The Next routes
+  // passed NaN on to Prisma and answered 500 (found by Schemathesis).
+  const int = (name: string, fallback: number) => {
+    const value = parseInt(query(name) || String(fallback), 10);
+    return Number.isNaN(value) ? fallback : value;
+  };
+  const page = Math.max(1, int('page', 1));
+  const limit = Math.min(100, Math.max(1, int('limit', 25)));
   return { page, limit };
 }
 
@@ -97,4 +103,19 @@ export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** A route parameter (`:id`) as a string. */
 export function param(req: Request, name: string): string {
   return String(req.params[name] ?? '');
+}
+
+/** `recipients` when given: a list of strings, else the route answers 400. */
+export function badRecipients(recipients: unknown): boolean {
+  return (
+    Boolean(recipients) &&
+    (!Array.isArray(recipients) || recipients.some((value) => typeof value !== 'string'))
+  );
+}
+
+export const BAD_RECIPIENTS = 'recipients must be a list of email addresses';
+
+/** Postgres refused a duplicate (Prisma P2002). */
+export function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === 'P2002';
 }

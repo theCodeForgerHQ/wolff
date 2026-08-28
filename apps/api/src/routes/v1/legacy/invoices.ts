@@ -29,6 +29,8 @@ import {
   stripProtectedFields,
   toNumber,
   param,
+  BAD_RECIPIENTS,
+  badRecipients,
 } from './http';
 import {
   MAX_LINE_ITEMS,
@@ -305,6 +307,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       recipients?: string[];
     };
 
+    if (badRecipients(recipients)) return legacyError(res, BAD_RECIPIENTS, 400);
     if (recipients) {
       if (recipients.length > 10) return legacyError(res, 'Maximum 10 recipients allowed', 400);
       if (recipients.some((e) => !EMAIL_PATTERN.test(e))) {

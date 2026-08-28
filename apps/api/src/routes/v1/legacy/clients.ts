@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import type { Prisma } from '@wolff/database';
 import type { Db } from '@wolff/core/context';
 import { requestAiIndexing } from '@wolff/core/outbox';
@@ -16,6 +16,7 @@ import {
   readJsonBody,
   stripProtectedFields,
   param,
+  isUniqueViolation,
 } from './http';
 
 const METADATA_LIMIT = 10_000;
@@ -69,6 +70,21 @@ interface ImportRow {
   state?: string;
   postalCode?: string;
   country?: string;
+}
+
+/**
+ * Writes a client, or answers 409 when the email is taken. The check before
+ * the write skips deleted clients, but the unique index on (workspace,
+ * email) does not, so the email of a deleted client used to end in a 500.
+ */
+async function createOrConflict<T>(res: Response, write: () => Promise<T>): Promise<T | null> {
+  try {
+    return await write();
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    legacyError(res, 'A client with this email already exists', 409);
+    return null;
+  }
 }
 
 /**
@@ -126,18 +142,21 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
     const existing = await db.client.findFirst({ where: { workspaceId, email, deletedAt: null } });
     if (existing) return legacyError(res, 'A client with this email already exists', 409);
 
-    const client = await db.client.create({
-      data: {
-        workspaceId,
-        name,
-        email,
-        phone: phone || null,
-        company: company || null,
-        address: json(address || undefined),
-        billingAddress: json(billingAddress || undefined),
-        metadata: json(metadata || {}),
-      },
-    });
+    const client = await createOrConflict(res, () =>
+      db.client.create({
+        data: {
+          workspaceId,
+          name,
+          email,
+          phone: phone || null,
+          company: company || null,
+          address: json(address || undefined),
+          billingAddress: json(billingAddress || undefined),
+          metadata: json(metadata || {}),
+        },
+      })
+    );
+    if (!client) return;
 
     const { updatedAt: _updatedAt, ...created } = formatClient(client);
     legacyJson(res, created, 201);
@@ -309,7 +328,10 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
       data.metadata = json(metadata);
     }
 
-    const updated = await db.client.update({ where: { id, workspaceId }, data });
+    const updated = await createOrConflict(res, () =>
+      db.client.update({ where: { id, workspaceId }, data })
+    );
+    if (!updated) return;
     legacyJson(res, formatClient(updated));
   });
 
