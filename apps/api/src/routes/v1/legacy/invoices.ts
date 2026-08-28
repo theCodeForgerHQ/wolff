@@ -15,8 +15,7 @@ import {
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
-import type { LegacyRouteDeps } from '.';
-import { documentEmailSender } from './email';
+import type { LegacyRouteContext } from '.';
 import { DOCUMENT_INCLUDE, formatInvoice, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -90,9 +89,9 @@ const recordUpdate = (db: Db, invoiceId: string) =>
  * apps/web/app/api/v1/invoices/**. The workspace is always the API key's
  * (`req.ctx.workspaceId`).
  */
-export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteDeps): Router {
+export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
   const router = Router();
-  const sendEmail = documentEmailSender(deps.email, deps.rateLimitStore);
+  const { sendEmail } = deps;
 
   router.get('/invoices', requireScopes('invoices:read'), async (req, res) => {
     const workspaceId = req.ctx!.workspaceId;

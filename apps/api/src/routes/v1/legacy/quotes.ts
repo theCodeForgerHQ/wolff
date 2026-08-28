@@ -6,8 +6,7 @@ import { renderQuoteSent } from '@wolff/core/email';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
-import type { LegacyRouteDeps } from '.';
-import { documentEmailSender } from './email';
+import type { LegacyRouteContext } from '.';
 import { DOCUMENT_INCLUDE, formatLineItem, formatQuote, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -59,9 +58,9 @@ async function nextQuoteNumber(db: Db, workspaceId: string): Promise<string> {
  * `/v1/quotes/:id/duplicate`, ported from apps/web/app/api/v1/quotes/**. The
  * workspace is always the API key's (`req.ctx.workspaceId`).
  */
-export function quoteRoutes(db: Db, deps: LegacyRouteDeps): Router {
+export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
   const router = Router();
-  const sendEmail = documentEmailSender(deps.email, deps.rateLimitStore);
+  const { sendEmail } = deps;
 
   router.get('/quotes', requireScopes('quotes:read'), async (req, res) => {
     const workspaceId = req.ctx!.workspaceId;
