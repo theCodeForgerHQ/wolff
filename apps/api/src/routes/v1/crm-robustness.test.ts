@@ -132,4 +132,23 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes on hostile input (Postgres)'
       });
     expectClientError(res, 404);
   });
+
+  it('refuses two stages at the same position', async () => {
+    const stage = { probability: 0, kind: 'open' };
+    expectClientError(
+      await post('/v1/pipelines', {
+        name: 'Twins',
+        stages: [
+          { ...stage, name: 'A', position: 1 },
+          { ...stage, name: 'B', position: 1 },
+        ],
+      }),
+      400
+    );
+  });
+
+  it('answers 409 for a lead email that differs only in case', async () => {
+    expect((await post('/v1/leads', { name: 'One', email: 'Case@crm.test' })).status).toBe(201);
+    expectClientError(await post('/v1/leads', { name: 'Two', email: 'case@crm.test' }), 409);
+  });
 });

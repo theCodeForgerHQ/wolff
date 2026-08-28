@@ -210,7 +210,10 @@ export const createPipelineSchema = z
         })
       )
       .min(1)
-      .max(20),
+      .max(20)
+      .refine((stages) => new Set(stages.map((s) => s.position)).size === stages.length, {
+        message: 'Each stage needs its own position',
+      }),
   })
   .strict()
   .openapi('CreatePipeline');
@@ -240,7 +243,10 @@ export const replaceStagesSchema = z
         })
       )
       .min(1)
-      .max(20),
+      .max(20)
+      .refine((stages) => new Set(stages.map((s) => s.position)).size === stages.length, {
+        message: 'Each stage needs its own position',
+      }),
   })
   .strict()
   .openapi('ReplaceStages');
