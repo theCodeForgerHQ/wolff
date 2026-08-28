@@ -206,6 +206,10 @@ const listWebhookDeliveries = registry.registerPath({
     query: cursorQuerySchema,
   },
   responses: {
+    400: {
+      description: 'Invalid query (limit over 100, malformed cursor)',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     200: {
       description: 'List of deliveries',
       content: {
@@ -286,6 +290,10 @@ const listLeads = registry.registerPath({
   summary: 'List leads',
   request: { query: leadListQuerySchema },
   responses: {
+    400: {
+      description: 'Invalid query (limit over 100, malformed cursor)',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     200: {
       description: 'Cursor-paginated leads',
       content: {
@@ -671,6 +679,10 @@ const replaceStages = registry.registerPath({
     body: { required: true, content: { 'application/json': { schema: replaceStagesSchema } } },
   },
   responses: {
+    409: {
+      description: 'A stage that would be removed still holds deals',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     200: {
       description: 'Stages replaced',
       content: {
@@ -705,6 +717,10 @@ const listDeals = registry.registerPath({
   summary: 'List deals',
   request: { query: dealListQuerySchema },
   responses: {
+    400: {
+      description: 'Invalid query (limit over 100, malformed cursor)',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     200: {
       description: 'Cursor-paginated deals',
       content: {
@@ -731,6 +747,14 @@ const createDeal = registry.registerPath({
     body: { required: true, content: { 'application/json': { schema: createDealSchema } } },
   },
   responses: {
+    404: {
+      description: 'Stage, client or lead not found in this workspace',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    409: {
+      description: 'The lead already has a deal',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     201: {
       description: 'Deal created',
       content: {

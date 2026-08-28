@@ -1071,7 +1071,8 @@
           "expectedCloseDate": {
             "type": "string",
             "nullable": true,
-            "format": "date"
+            "format": "date-time",
+            "description": "Midnight UTC of the expected date"
           },
           "position": {
             "type": "number"
@@ -3356,6 +3357,16 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Invalid or missing API key",
             "content": {
@@ -3519,6 +3530,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListLeadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4315,6 +4336,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "A stage that would be removed still holds deals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -4353,6 +4384,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListDealsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4425,6 +4466,26 @@
           },
           "403": {
             "description": "API key lacks the `deals:write` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage, client or lead not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The lead already has a deal",
             "content": {
               "application/json": {
                 "schema": {
