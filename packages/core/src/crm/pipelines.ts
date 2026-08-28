@@ -104,6 +104,13 @@ export async function replacePipelineStages(
     if (known !== new Set(keepIds).size) {
       throw new CoreError('not_found', 'Stage not found in pipeline');
     }
+    // A stage that still holds deals cannot go (deals.stage_id).
+    const stranded = await tx.deal.count({
+      where: { pipelineId, workspaceId, stageId: { notIn: keepIds } },
+    });
+    if (stranded > 0) {
+      throw new CoreError('conflict', 'Move the deals out of a stage before removing it');
+    }
     await tx.stage.deleteMany({
       where: { pipelineId, workspaceId, id: { notIn: keepIds } },
     });

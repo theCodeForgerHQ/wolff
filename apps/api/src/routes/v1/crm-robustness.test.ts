@@ -151,4 +151,19 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes on hostile input (Postgres)'
     expect((await post('/v1/leads', { name: 'One', email: 'Case@crm.test' })).status).toBe(201);
     expectClientError(await post('/v1/leads', { name: 'Two', email: 'case@crm.test' }), 409);
   });
+
+  it('answers 409 for a second deal on the same lead', async () => {
+    const lead = await post('/v1/leads', { name: 'Twice' });
+    const deal = { pipelineId, stageId, leadId: lead.body.data.id, title: 'D' };
+    expect((await post('/v1/deals', deal)).status).toBe(201);
+    expectClientError(await post('/v1/deals', deal), 409);
+  });
+
+  it('answers 409 when replacing stages would remove one that holds deals', async () => {
+    const res = await request(app)
+      .put(`/v1/pipelines/${pipelineId}/stages`)
+      .set('Authorization', `Bearer ${ws.key}`)
+      .send({ stages: [{ name: 'Only new', position: 5, probability: 0, kind: 'open' }] });
+    expectClientError(res, 409);
+  });
 });

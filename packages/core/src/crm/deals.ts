@@ -149,6 +149,12 @@ export async function createDeal(
       select: { id: true },
     });
     if (!lead) throw new CoreError('not_found', 'Lead not found');
+    // deals.lead_id is unique: one deal per lead.
+    const taken = await db.deal.findFirst({
+      where: { leadId: input.leadId, workspaceId },
+      select: { id: true },
+    });
+    if (taken) throw new CoreError('conflict', 'This lead already has a deal');
   }
   await assertWorkspaceMember(db, workspaceId, input.ownerId);
 
