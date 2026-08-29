@@ -86,6 +86,17 @@ export async function convertLead(
     };
   }
 
+  // A conversion creates the client and the deal; both are unique (one deal
+  // per lead, one client per email), so a clash is the caller's to resolve.
+  if (existing.deal) throw new CoreError('conflict', 'This lead already has a deal');
+  if (existing.email) {
+    const client = await db.client.findFirst({
+      where: { workspaceId, email: existing.email },
+      select: { id: true },
+    });
+    if (client) throw new CoreError('conflict', 'A client with this email already exists');
+  }
+
   const { pipelineId, stageIds } = await ensureDefaultPipeline(db, workspaceId);
 
   // Pick the target stage: explicit, or the first open stage, or the first

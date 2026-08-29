@@ -228,6 +228,7 @@ export async function updateDeal(ctx: CoreContext, id: string, input: UpdateDeal
   const { db, workspaceId } = ctx;
   const existing = await db.deal.findFirst({ where: { id, workspaceId, deletedAt: null } });
   if (!existing) return null;
+  await assertWorkspaceMember(db, workspaceId, input.ownerId);
 
   if (input.stageId) {
     const stage = await db.stage.findFirst({
