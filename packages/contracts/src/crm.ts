@@ -316,7 +316,11 @@ export const dealSchema = z
     title: z.string(),
     value: z.string(),
     currency: z.string(),
-    expectedCloseDate: z.string().date().nullable(),
+    expectedCloseDate: z
+      .string()
+      .datetime()
+      .nullable()
+      .openapi({ description: 'Midnight UTC of the expected date' }),
     position: z.number(),
     ownerId: z.string().uuid().nullable(),
     wonAt: z.string().datetime().nullable(),

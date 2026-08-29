@@ -1071,7 +1071,8 @@
           "expectedCloseDate": {
             "type": "string",
             "nullable": true,
-            "format": "date"
+            "format": "date-time",
+            "description": "Midnight UTC of the expected date"
           },
           "position": {
             "type": "number"
@@ -2079,6 +2080,16 @@
         },
         "required": ["page", "limit", "total", "totalPages"]
       },
+      "LegacyError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Client not found"
+          }
+        },
+        "required": ["error"]
+      },
       "LegacyCreatedClient": {
         "type": "object",
         "properties": {
@@ -2117,16 +2128,6 @@
           }
         },
         "required": ["id", "name", "email", "phone", "company", "createdAt"]
-      },
-      "LegacyError": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "example": "Client not found"
-          }
-        },
-        "required": ["error"]
       },
       "LegacyClientInput": {
         "type": "object",
@@ -3356,6 +3357,16 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Invalid or missing API key",
             "content": {
@@ -3519,6 +3530,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListLeadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4006,6 +4027,26 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The lead already has a deal, or a client has its email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The default pipeline has no stages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -4315,6 +4356,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "A stage that would be removed still holds deals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -4353,6 +4404,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListDealsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query (limit over 100, malformed cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4425,6 +4486,26 @@
           },
           "403": {
             "description": "API key lacks the `deals:write` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage, client or lead not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The lead already has a deal",
             "content": {
               "application/json": {
                 "schema": {
@@ -5100,6 +5181,16 @@
               }
             }
           },
+          "400": {
+            "description": "A NUL character in the query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing, invalid, revoked or expired API key",
             "content": {
@@ -5584,7 +5675,7 @@
             }
           },
           "400": {
-            "description": "Unknown status",
+            "description": "Unknown status, or a NUL character in the query",
             "content": {
               "application/json": {
                 "schema": {
@@ -6099,11 +6190,18 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded; see Retry-After",
+            "description": "Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LegacyError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
                 }
               }
             }
@@ -6187,7 +6285,7 @@
             }
           },
           "400": {
-            "description": "Unknown status",
+            "description": "Unknown status, or a NUL character in the query",
             "content": {
               "application/json": {
                 "schema": {
@@ -6763,11 +6861,18 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded; see Retry-After",
+            "description": "Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LegacyError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
                 }
               }
             }

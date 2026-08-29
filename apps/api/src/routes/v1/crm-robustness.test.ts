@@ -40,6 +40,7 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes on hostile input (Postgres)'
     await base.dealActivity.deleteMany({ where });
     await base.deal.deleteMany({ where });
     await base.lead.deleteMany({ where });
+    await base.client.deleteMany({ where });
     await base.stage.deleteMany({ where });
     await base.pipeline.deleteMany({ where });
     await base.workspace.deleteMany({ where: { id: ws.id } });
@@ -165,5 +166,32 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 CRM routes on hostile input (Postgres)'
       .set('Authorization', `Bearer ${ws.key}`)
       .send({ stages: [{ name: 'Only new', position: 5, probability: 0, kind: 'open' }] });
     expectClientError(res, 409);
+  });
+
+  it('refuses a deal owner from outside the workspace on update', async () => {
+    const lead = await post('/v1/leads', { name: 'Owned' });
+    const deal = await post('/v1/deals', {
+      pipelineId,
+      stageId,
+      leadId: lead.body.data.id,
+      title: 'D',
+    });
+    const res = await request(app)
+      .patch(`/v1/deals/${deal.body.data.dealId}`)
+      .set('Authorization', `Bearer ${ws.key}`)
+      .send({ ownerId: randomUUID() });
+    expectClientError(res, 400);
+  });
+
+  it('answers 409 converting a lead whose email a client already has', async () => {
+    await base.client.create({ data: { workspaceId: ws.id, name: 'C', email: 'taken@crm.test' } });
+    const lead = await post('/v1/leads', { name: 'Taken', email: 'taken@crm.test' });
+    expectClientError(await post(`/v1/leads/${lead.body.data.id}/convert`, {}), 409);
+  });
+
+  it('answers 409 converting a lead that already has a deal', async () => {
+    const lead = await post('/v1/leads', { name: 'Dealt' });
+    await post('/v1/deals', { pipelineId, stageId, leadId: lead.body.data.id, title: 'D' });
+    expectClientError(await post(`/v1/leads/${lead.body.data.id}/convert`, {}), 409);
   });
 });

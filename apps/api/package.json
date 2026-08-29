@@ -15,7 +15,8 @@
     "schedules:sync": "tsx scripts/sync-qstash-schedules.ts",
     "openapi:gen": "tsx scripts/generate-openapi.ts && prettier --write openapi.json",
     "openapi:postman": "tsx scripts/generate-postman.ts",
-    "check:vercel-output": "tsx scripts/check-vercel-output.ts output ../../.vercel/output"
+    "check:vercel-output": "tsx scripts/check-vercel-output.ts output ../../.vercel/output",
+    "schemathesis": "bash scripts/schemathesis.sh"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",

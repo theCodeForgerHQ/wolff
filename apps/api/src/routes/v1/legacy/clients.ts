@@ -192,7 +192,7 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
       const existing = await db.client.findMany({
         where: {
           workspaceId,
-          email: { in: clients.map((row) => row.email).filter(Boolean) },
+          email: { in: clients.map((row) => row?.email).filter(Boolean) },
           deletedAt: null,
         },
         select: { email: true },
@@ -202,7 +202,14 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
 
     const valid: Array<{ index: number; row: ImportRow }> = [];
     clients.forEach((row, i) => {
-      if (!row.name || typeof row.name !== 'string' || row.name.trim().length === 0) {
+      // A row that is not an object (null) has no name; the Next route threw on it.
+      if (
+        !row ||
+        typeof row !== 'object' ||
+        !row.name ||
+        typeof row.name !== 'string' ||
+        row.name.trim().length === 0
+      ) {
         result.failed++;
         result.errors.push({ row: i + 1, message: 'name is required' });
         return;

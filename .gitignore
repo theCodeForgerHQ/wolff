@@ -92,3 +92,6 @@ PM_QUESTIONS.md
 STUBBED_FEATURES.md
 API_SPECIFICATION.md
 docs/api/postman_collection.json
+
+# Schemathesis run cache (apps/api/scripts/schemathesis.sh)
+.schemathesis/
