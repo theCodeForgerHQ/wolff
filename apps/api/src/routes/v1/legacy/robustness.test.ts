@@ -121,6 +121,15 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     expect(res.body).toEqual({ error: 'Invalid request: a field has the wrong type' });
   });
 
+  it('POST /v1/clients/import fails a row that is not an object', async () => {
+    const res = await call('post', '/v1/clients/import').send({ clients: [null] });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      failed: 1,
+      errors: [{ row: 1, message: 'name is required' }],
+    });
+  });
+
   it('POST /v1/clients answers 409 for the email of a deleted client', async () => {
     const res = await call('post', '/v1/clients').send({ name: 'Back', email: 'gone@robust.test' });
     expect(res.status).toBe(409);

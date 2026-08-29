@@ -9,7 +9,8 @@ import { LEGACY_KEY_SCOPES } from '@wolff/contracts';
  * Next routes allowed 20 emails an hour per workspace, whatever the
  * document or the recipients. Here: two keys of one workspace, alternating
  * quotes and invoices and changing the recipients, still stop at 20; the
- * 21st request sends nothing and changes nothing (502, as before). The
+ * 21st request sends nothing, changes nothing and answers 429 (the Next
+ * routes answered 502; see docs/phase-6b.md). The
  * per-key limiter also applies to these routes (429).
  */
 describe.skipIf(!TEST_DATABASE_URL)('email limit on the ported send routes (Postgres)', () => {
@@ -73,13 +74,20 @@ describe.skipIf(!TEST_DATABASE_URL)('email limit on the ported send routes (Post
       statuses.push(res.status);
     }
     expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
-    expect(statuses.slice(20)).toEqual([502, 502]);
+    expect(statuses.slice(20)).toEqual([429, 429]);
     // Two recipients per accepted send; nothing for the refused ones.
     expect(sent).toHaveLength(40);
     const refused = await base.invoice.findFirstOrThrow({
       where: { id: invoices[10], workspaceId },
     });
     expect(refused.status).toBe('draft');
+    const over = await request(app)
+      .post(`/v1/quotes/${quotes[11]}/send`)
+      .set('Authorization', `Bearer ${keys[0]}`);
+    expect(over.body).toEqual({
+      error: 'Email limit reached for this workspace. Try again later.',
+    });
+    expect(over.get('Retry-After')).toBe('3600');
   });
 
   it('is behind the per-key rate limit too', async () => {

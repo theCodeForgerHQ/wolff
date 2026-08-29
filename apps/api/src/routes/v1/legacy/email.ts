@@ -15,13 +15,16 @@ export type DocumentEmailSender = (input: {
   email: RenderedEmail;
   /** For the provider's idempotency key and the logs: `quote:<id>`. */
   reference: string;
-}) => Promise<boolean>;
+}) => Promise<EmailOutcome>;
+
+/** `sent`; `limited` (workspace over its hourly limit); `failed` (not configured, provider error). */
+export type EmailOutcome = 'sent' | 'limited' | 'failed';
 
 /**
  * Sends a quote or invoice email while the request waits, and says whether
  * it went out. The send routes change the document's status only when it
- * did, as the Next routes did. Nothing configured, the workspace over its
- * hourly limit, or a provider failure: `false`, and the route answers 502.
+ * did, as the Next routes did. Over the hourly limit the route answers 429;
+ * nothing configured or a provider failure, 502.
  * Logs carry the reference and counts, never an address or a subject.
  */
 export function documentEmailSender(
@@ -34,12 +37,12 @@ export function documentEmailSender(
   return async ({ workspaceId, recipients, email, reference }) => {
     if (!transport) {
       logger.warn({ reference }, 'Email transport not configured; document email not sent');
-      return false;
+      return 'failed';
     }
     const { totalHits } = await store.increment(workspaceId);
     if (totalHits > EMAILS_PER_HOUR) {
       logger.warn({ reference }, 'Email rate limit reached for the workspace');
-      return false;
+      return 'limited';
     }
     const attempt = randomUUID();
     try {
@@ -51,13 +54,16 @@ export function documentEmailSender(
           idempotencyKey: `${reference}:${attempt}:${index}`,
         });
       }
-      return true;
+      return 'sent';
     } catch (error) {
       logger.error(
         { reference, recipientCount: recipients.length, errorName: (error as Error)?.name },
         'Document email failed'
       );
-      return false;
+      return 'failed';
     }
   };
 }
+
+export const EMAIL_LIMIT_MESSAGE = 'Email limit reached for this workspace. Try again later.';
+export const EMAIL_LIMIT_RETRY_AFTER_S = HOUR_MS / 1000;

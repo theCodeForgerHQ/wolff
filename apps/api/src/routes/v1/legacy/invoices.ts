@@ -16,6 +16,7 @@ import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
 import type { LegacyRouteContext } from '.';
+import { EMAIL_LIMIT_MESSAGE, EMAIL_LIMIT_RETRY_AFTER_S } from './email';
 import { DOCUMENT_INCLUDE, formatInvoice, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -344,7 +345,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       select: { name: true },
     });
     const invoiceUrl = `${deps.appUrl}/i/${invoice.accessToken}`;
-    const emailSent = await sendEmail({
+    const outcome = await sendEmail({
       workspaceId,
       recipients: recipients?.length ? recipients : [invoice.client!.email],
       email: renderInvoiceSent({
@@ -358,6 +359,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       }),
       reference: `invoice:${id}`,
     });
+    const emailSent = outcome === 'sent';
 
     // The status changes only when the email went out.
     if (emailSent) {
@@ -385,6 +387,10 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       })
       .catch(() => {});
 
+    if (outcome === 'limited') {
+      res.set('Retry-After', String(EMAIL_LIMIT_RETRY_AFTER_S));
+      return legacyError(res, EMAIL_LIMIT_MESSAGE, 429);
+    }
     if (!emailSent) {
       return legacyError(res, 'Invoice email could not be sent. Status unchanged.', 502);
     }

@@ -281,11 +281,15 @@ register({
     'Emails the portal link to the client (or to `recipients`) and marks the quote sent. The body is optional.',
   request: { params: idParam(), ...body(legacySendInputSchema, false) },
   responses: {
+    ...writeShared('`quotes:write`'),
     200: json(legacyQuoteSentSchema, 'Email sent'),
     400: legacy('Status does not allow sending, no recipient, invalid recipients, or zero total'),
     404: legacy('No such quote in this workspace'),
     502: legacy('The email could not be sent; the quote is unchanged'),
-    ...writeShared('`quotes:write`'),
+    429: json(
+      z.union([legacyErrorSchema, errorEnvelopeSchema]),
+      'Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)'
+    ),
   },
 });
 
@@ -398,11 +402,15 @@ register({
     'Emails the payment link to the client (or to `recipients`) and marks the invoice sent. The body is optional.',
   request: { params: idParam(), ...body(legacySendInputSchema, false) },
   responses: {
+    ...writeShared('`invoices:write`'),
     200: json(legacyInvoiceSentSchema, 'Email sent'),
     400: legacy('Status does not allow sending, no recipient, invalid recipients, or zero total'),
     404: legacy('No such invoice in this workspace'),
     422: legacy('GST: Rule 46 details missing'),
     502: legacy('The email could not be sent; the invoice is unchanged'),
-    ...writeShared('`invoices:write`'),
+    429: json(
+      z.union([legacyErrorSchema, errorEnvelopeSchema]),
+      'Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)'
+    ),
   },
 });

@@ -6160,11 +6160,18 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded; see Retry-After",
+            "description": "Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LegacyError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
                 }
               }
             }
@@ -6824,11 +6831,18 @@
             }
           },
           "429": {
-            "description": "Rate limit exceeded; see Retry-After",
+            "description": "Per-key rate limit (envelope), or the workspace sent 20 emails this hour (`{ error }`, Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LegacyError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  ]
                 }
               }
             }
