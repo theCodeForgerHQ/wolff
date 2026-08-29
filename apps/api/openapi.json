@@ -2080,6 +2080,16 @@
         },
         "required": ["page", "limit", "total", "totalPages"]
       },
+      "LegacyError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Client not found"
+          }
+        },
+        "required": ["error"]
+      },
       "LegacyCreatedClient": {
         "type": "object",
         "properties": {
@@ -2118,16 +2128,6 @@
           }
         },
         "required": ["id", "name", "email", "phone", "company", "createdAt"]
-      },
-      "LegacyError": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "example": "Client not found"
-          }
-        },
-        "required": ["error"]
       },
       "LegacyClientInput": {
         "type": "object",
@@ -5161,6 +5161,16 @@
               }
             }
           },
+          "400": {
+            "description": "A NUL character in the query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing, invalid, revoked or expired API key",
             "content": {
@@ -5645,7 +5655,7 @@
             }
           },
           "400": {
-            "description": "Unknown status",
+            "description": "Unknown status, or a NUL character in the query",
             "content": {
               "application/json": {
                 "schema": {
@@ -6255,7 +6265,7 @@
             }
           },
           "400": {
-            "description": "Unknown status",
+            "description": "Unknown status, or a NUL character in the query",
             "content": {
               "application/json": {
                 "schema": {

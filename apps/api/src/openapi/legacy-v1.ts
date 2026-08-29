@@ -101,6 +101,7 @@ register({
   request: { query: legacyPageQuerySchema },
   responses: {
     200: json(legacyClientListSchema, 'A page of clients'),
+    400: legacy('A NUL character in the query'),
     ...shared('`clients:read`'),
   },
 });
@@ -196,7 +197,7 @@ register({
   },
   responses: {
     200: json(legacyQuoteListSchema, 'A page of quotes'),
-    400: legacy('Unknown status'),
+    400: legacy('Unknown status, or a NUL character in the query'),
     ...shared('`quotes:read`'),
   },
 });
@@ -311,7 +312,7 @@ register({
   },
   responses: {
     200: json(legacyInvoiceListSchema, 'A page of invoices'),
-    400: legacy('Unknown status'),
+    400: legacy('Unknown status, or a NUL character in the query'),
     ...shared('`invoices:read`'),
   },
 });
