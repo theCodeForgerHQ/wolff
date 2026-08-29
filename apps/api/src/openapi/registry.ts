@@ -518,6 +518,14 @@ const convertLead = registry.registerPath({
     body: { required: true, content: { 'application/json': { schema: convertLeadSchema } } },
   },
   responses: {
+    409: {
+      description: 'The lead already has a deal, or a client has its email',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
+    422: {
+      description: 'The default pipeline has no stages',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     201: {
       description: 'Lead converted',
       content: {
