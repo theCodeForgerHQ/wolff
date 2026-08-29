@@ -4,7 +4,6 @@ import { CoreError } from '@wolff/core/errors';
 import { InvalidCursorError } from '@wolff/core/pagination';
 import type { Logger } from '@wolff/core/logger';
 import { sendError } from '../http';
-import { isLegacyPath, legacyError } from '../routes/v1/legacy/http';
 
 export const notFound: RequestHandler = (_req, res) => {
   sendError(res, 'not_found', 'Not found');
@@ -40,15 +39,6 @@ export function errorHandler(
     }
     if (error instanceof z.ZodError) {
       sendError(res, 'validation_error', 'Validation failed', zodDetails(error));
-      return;
-    }
-    // A value of the wrong JSON type (an object where an id goes) that a
-    // route passed on unchecked: the request's fault, not the server's.
-    if ((error as { name?: string } | null)?.name === 'PrismaClientValidationError') {
-      logger.warn({ method: req.method, path: req.path }, 'Request value rejected by Prisma');
-      const message = 'Invalid request: a field has the wrong type';
-      if (isLegacyPath(req.path)) legacyError(res, message, 400);
-      else sendError(res, 'validation_error', message);
       return;
     }
     if (error instanceof InvalidCursorError) {
