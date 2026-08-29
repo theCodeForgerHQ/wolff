@@ -203,6 +203,46 @@ jobs:
       - name: AI service image builds
         run: docker build -t ai:ci .
 
+  schemathesis:
+    name: Schemathesis (OpenAPI fuzzing)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.2-pg17
+        env:
+          POSTGRES_USER: wolff
+          POSTGRES_PASSWORD: wolff
+          POSTGRES_DB: wolff
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.5'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm db:migrate:deploy
+      # Starts the API from this checkout on a seeded database and runs
+      # Schemathesis (pinned, fixed seed) against its /openapi.json.
+      - name: Schemathesis against the API's OpenAPI document
+        env:
+          SCHEMATHESIS_SERVER_LOG: ${{ runner.temp }}/schemathesis-api.log
+        run: pnpm --filter @wolff/api schemathesis
+      - name: API log on failure
+        if: failure()
+        run: tail -n 200 "${{ runner.temp }}/schemathesis-api.log"
+
   build:
     name: Build
     runs-on: ubuntu-latest
