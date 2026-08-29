@@ -4,6 +4,7 @@ import { CoreError } from '@wolff/core/errors';
 import { InvalidCursorError } from '@wolff/core/pagination';
 import type { Logger } from '@wolff/core/logger';
 import { sendError } from '../http';
+import { redactError } from '../redact-error';
 
 export const notFound: RequestHandler = (_req, res) => {
   sendError(res, 'not_found', 'Not found');
@@ -56,7 +57,11 @@ export function errorHandler(
       return;
     }
 
-    logger.error({ err: error, method: req.method, path: req.path }, 'Unhandled error');
+    // Prisma messages carry the query's values; the log gets the redacted form.
+    logger.error(
+      { err: redactError(error).error, method: req.method, path: req.path },
+      'Unhandled error'
+    );
     // Awaited before answering: a serverless function is frozen once it
     // responds, which would strand the report. A failed report must not
     // cost the client its response.
