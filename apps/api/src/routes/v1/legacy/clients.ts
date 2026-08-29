@@ -17,6 +17,7 @@ import {
   stripProtectedFields,
   param,
   isUniqueViolation,
+  fieldTypeProblem,
 } from './http';
 
 const METADATA_LIMIT = 10_000;
@@ -128,12 +129,19 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
     const workspaceId = req.ctx!.workspaceId;
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { name, email, phone, company, address, billingAddress, metadata } = stripProtectedFields(
-      parsed
-    ) as ClientFields;
+    const fields = stripProtectedFields(parsed);
+    const { name, email, phone, company, address, billingAddress, metadata } =
+      fields as ClientFields;
 
     if (!name) return legacyError(res, 'name is required', 400);
     if (!email) return legacyError(res, 'email is required', 400);
+    const wrongType = fieldTypeProblem(fields, {
+      name: 'string',
+      email: 'string',
+      phone: 'string-or-null',
+      company: 'string-or-null',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
     if (!EMAIL_PATTERN.test(email)) return legacyError(res, 'Invalid email format', 400);
     if (metadata && JSON.stringify(metadata).length > METADATA_LIMIT) {
       return legacyError(res, 'Metadata too large (max 10KB)', 400);
@@ -304,9 +312,19 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
 
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { name, email, phone, company, address, billingAddress, metadata } = stripProtectedFields(
-      parsed
-    ) as ClientFields;
+    const fields = stripProtectedFields(parsed);
+    const { name, email, phone, company, address, billingAddress, metadata } =
+      fields as ClientFields;
+    const wrongType = fieldTypeProblem(fields, {
+      name: 'string',
+      email: 'string',
+      phone: 'string-or-null',
+      company: 'string-or-null',
+      address: 'json',
+      billingAddress: 'json',
+      metadata: 'json',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
 
     if (email !== undefined && !EMAIL_PATTERN.test(email)) {
       return legacyError(res, 'Invalid email format', 400);

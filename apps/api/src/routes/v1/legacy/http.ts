@@ -119,3 +119,32 @@ export const BAD_RECIPIENTS = 'recipients must be a list of email addresses';
 export function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === 'P2002';
 }
+
+/**
+ * `string`: a string when present. `string-or-null`: also null (a nullable
+ * column). `json`: any JSON value but null (a JSON column that Prisma only
+ * clears with a sentinel).
+ */
+export type FieldKind = 'string' | 'string-or-null' | 'json';
+
+/**
+ * The 400 message for the first field that is present with a JSON type its
+ * column cannot take, or null. The Next routes passed such values on to
+ * Prisma (or to `.trim()`, or to the email template) and answered 500.
+ */
+export function fieldTypeProblem(
+  body: Record<string, unknown>,
+  fields: Record<string, FieldKind>
+): string | null {
+  for (const [field, kind] of Object.entries(fields)) {
+    const value = body[field];
+    if (value === undefined) continue;
+    if (kind === 'json') {
+      if (value === null) return `${field} cannot be null`;
+      continue;
+    }
+    if (value === null && kind === 'string-or-null') continue;
+    if (typeof value !== 'string') return `${field} must be a string`;
+  }
+  return null;
+}

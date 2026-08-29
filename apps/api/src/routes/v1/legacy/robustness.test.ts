@@ -111,15 +111,97 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     expect(res.body).toEqual({ error: 'lineItems must be a list' });
   });
 
+  // Values of the wrong JSON type used to reach Prisma (or `.trim()`, or the
+  // email template) and end in a 500. Each is refused by name.
   it.each([
-    ['/v1/quotes', { title: 'T', clientId: {} }],
-    ['/v1/invoices', { title: 'T', clientId: {}, dueDate: '2026-12-31' }],
-    ['/v1/clients', { name: 'N', email: 'typed@robust.test', phone: 5 }],
-  ])('POST %s refuses a field of the wrong JSON type', async (path, body) => {
-    const res = await call('post', path).send(body);
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'Invalid request: a field has the wrong type' });
-  });
+    ['post', '/v1/clients', { name: 5, email: 'typed@robust.test' }, 'name must be a string'],
+    ['post', '/v1/clients', { name: 'N', email: ['typed@robust.test'] }, 'email must be a string'],
+    [
+      'post',
+      '/v1/clients',
+      { name: 'N', email: 'typed@robust.test', phone: 5 },
+      'phone must be a string',
+    ],
+    [
+      'post',
+      '/v1/clients',
+      { name: 'N', email: 'typed@robust.test', company: {} },
+      'company must be a string',
+    ],
+    ['patch', '/v1/clients/CLIENT', { name: null }, 'name must be a string'],
+    ['patch', '/v1/clients/CLIENT', { phone: 5 }, 'phone must be a string'],
+    ['patch', '/v1/clients/CLIENT', { address: null }, 'address cannot be null'],
+    ['patch', '/v1/clients/CLIENT', { metadata: null }, 'metadata cannot be null'],
+    ['post', '/v1/quotes', { title: 'T', clientId: {} }, 'clientId must be a string'],
+    ['post', '/v1/quotes', { title: 5, clientId: 'CLIENT' }, 'title must be a string'],
+    [
+      'post',
+      '/v1/quotes',
+      { title: 'T', clientId: 'CLIENT', projectId: 5 },
+      'projectId must be a string',
+    ],
+    [
+      'post',
+      '/v1/quotes',
+      { title: 'T', clientId: 'CLIENT', currency: ['U', 'S', 'D'] },
+      'currency must be a string',
+    ],
+    [
+      'post',
+      '/v1/quotes',
+      {
+        title: 'T',
+        clientId: 'CLIENT',
+        lineItems: [{ name: 'A', quantity: 1, rate: 1, description: 5 }],
+      },
+      'Line item description must be a string',
+    ],
+    ['patch', '/v1/quotes/QUOTE', { notes: {} }, 'notes must be a string'],
+    [
+      'patch',
+      '/v1/quotes/QUOTE',
+      { lineItems: [{ quantity: 1, rate: 1 }] },
+      'Line item name is required',
+    ],
+    ['post', '/v1/quotes/QUOTE/send', { message: 5 }, 'message must be a string'],
+    [
+      'post',
+      '/v1/invoices',
+      { title: 'T', clientId: {}, dueDate: '2026-12-31' },
+      'clientId must be a string',
+    ],
+    [
+      'post',
+      '/v1/invoices',
+      { title: 'T', clientId: 'CLIENT', dueDate: '2026-12-31', terms: 5 },
+      'terms must be a string',
+    ],
+    ['patch', '/v1/invoices/INVOICE', { title: [] }, 'title must be a string'],
+    [
+      'patch',
+      '/v1/invoices/INVOICE',
+      { lineItems: [{ name: 'A', quantity: 1, rate: 1, hsnSac: 5 }] },
+      'Line item hsnSac must be a string',
+    ],
+    [
+      'patch',
+      '/v1/invoices/INVOICE',
+      { lineItems: [{ name: 'A', quantity: 1, rate: 1, itemType: 'other' }] },
+      "Line item itemType must be 'goods' or 'services'",
+    ],
+    ['post', '/v1/invoices/INVOICE/send', { message: 5 }, 'message must be a string'],
+  ] as const)(
+    '%s %s refuses a field of the wrong JSON type: %j',
+    async (method, path, body, message) => {
+      const payload = JSON.parse(JSON.stringify(body).replace('CLIENT', liveClientId));
+      const res = await call(
+        method,
+        path.replace('CLIENT', liveClientId).replace('QUOTE', quoteId).replace('INVOICE', invoiceId)
+      ).send(payload);
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: message });
+    }
+  );
 
   it('POST /v1/clients/import fails a row that is not an object', async () => {
     const res = await call('post', '/v1/clients/import').send({ clients: [null] });
