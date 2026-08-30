@@ -196,6 +196,25 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
     expect(statuses[30]).toBe(429);
   });
 
+  // On Vercel the edge replaces X-Forwarded-For with the caller's address,
+  // directly and through the web app's /api/v1 rewrite alike (checked live
+  // on 2026-10-06), and the app trusts that one hop. One caller's bad keys
+  // must not lock out another caller.
+  it('counts failed keys per client address, not per proxy', async () => {
+    const app = testApp(db);
+    const from = (ip: string) =>
+      request(app)
+        .get('/v1/clients')
+        .set('X-Forwarded-For', ip)
+        .set('Authorization', 'Bearer qc_sk_wrong');
+    for (let i = 0; i < 30; i++) expect((await from('203.0.113.7')).status).toBe(401);
+
+    expect((await from('203.0.113.7')).status).toBe(429);
+    // A forged entry in front of the proxy's own does not give a new count.
+    expect((await from('9.9.9.9, 203.0.113.7')).status).toBe(429);
+    expect((await from('198.51.100.9')).status).toBe(401);
+  });
+
   it('shares the count between instances through Redis, under the rl: prefix', async () => {
     const container = await TestRedis.start();
     const redis = createRedis(container.url);

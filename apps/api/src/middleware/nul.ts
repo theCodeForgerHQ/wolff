@@ -30,7 +30,7 @@ export const rejectNulCharacters: RequestHandler = (req, res, next) => {
   if (hasNul(body) || hasNul(req.query)) {
     const message = 'Text may not contain the NUL character (U+0000)';
     // The routes ported from Next answer in their own `{ error }` shape.
-    if (isLegacyPath(req.path)) legacyError(res, message, 400);
+    if (isLegacyPath(req.baseUrl + req.path)) legacyError(res, message, 400);
     else sendError(res, 'validation_error', message);
     return;
   }

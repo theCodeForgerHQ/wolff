@@ -11,6 +11,7 @@ import {
 } from '@prometheus-io/client';
 import express, { type Express, type RequestHandler } from 'express';
 import type { ApiConfig } from './config';
+import { redactError } from './redact-error';
 
 let otelSdk: NodeSDK | undefined;
 
@@ -26,14 +27,25 @@ export interface ObservabilityOptions {
   transport?: Sentry.NodeOptions['transport'];
 }
 
+/**
+ * Keeps request bodies, cookies, query strings and headers out of every
+ * event: they carry API keys, sessions and client data. Method and path stay.
+ */
+export function stripRequestData<E extends Sentry.ErrorEvent>(event: E): E {
+  if (!event.request) return event;
+  const { method, url } = event.request;
+  return { ...event, request: { method, url: url?.split('?')[0] } };
+}
+
 export function initObservability(
   config: ApiConfig,
   options: ObservabilityOptions = {}
 ): { report: (error: unknown) => Promise<void> } {
   const report = async (error: unknown) => {
     if (!error) return;
-    Sentry.captureException(error);
-    console.error(error);
+    const { error: safe, fingerprint } = redactError(error);
+    Sentry.captureException(safe, fingerprint ? { fingerprint } : undefined);
+    console.error(safe);
     if (config.SENTRY_DSN) await Sentry.flush(SENTRY_FLUSH_MS);
   };
 
@@ -43,6 +55,7 @@ export function initObservability(
       environment: config.NODE_ENV,
       release: config.GIT_SHA,
       tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+      beforeSend: stripRequestData,
       ...(options.transport ? { transport: options.transport } : {}),
     });
   }

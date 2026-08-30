@@ -17,6 +17,7 @@ import {
   stripProtectedFields,
   param,
   isUniqueViolation,
+  fieldTypeProblem,
 } from './http';
 
 const METADATA_LIMIT = 10_000;
@@ -128,12 +129,19 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
     const workspaceId = req.ctx!.workspaceId;
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { name, email, phone, company, address, billingAddress, metadata } = stripProtectedFields(
-      parsed
-    ) as ClientFields;
+    const fields = stripProtectedFields(parsed);
+    const { name, email, phone, company, address, billingAddress, metadata } =
+      fields as ClientFields;
 
     if (!name) return legacyError(res, 'name is required', 400);
     if (!email) return legacyError(res, 'email is required', 400);
+    const wrongType = fieldTypeProblem(fields, {
+      name: 'string',
+      email: 'string',
+      phone: 'string-or-null',
+      company: 'string-or-null',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
     if (!EMAIL_PATTERN.test(email)) return legacyError(res, 'Invalid email format', 400);
     if (metadata && JSON.stringify(metadata).length > METADATA_LIMIT) {
       return legacyError(res, 'Metadata too large (max 10KB)', 400);
@@ -192,7 +200,12 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
       const existing = await db.client.findMany({
         where: {
           workspaceId,
-          email: { in: clients.map((row) => row?.email).filter(Boolean) },
+          // Only text emails: an array here made Prisma throw (500).
+          email: {
+            in: clients
+              .map((row) => row?.email)
+              .filter((email): email is string => typeof email === 'string' && email !== ''),
+          },
           deletedAt: null,
         },
         select: { email: true },
@@ -214,9 +227,20 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
         result.errors.push({ row: i + 1, message: 'name is required' });
         return;
       }
-      if (!row.email || !EMAIL_PATTERN.test(row.email)) {
+      // A list of one address passes the pattern test (it is stringified).
+      if (!row.email || typeof row.email !== 'string' || !EMAIL_PATTERN.test(row.email)) {
         result.failed++;
         result.errors.push({ row: i + 1, message: 'Invalid email format' });
+        return;
+      }
+      // Text columns; a number here failed the whole batch's transaction.
+      const wrongType = fieldTypeProblem(row as unknown as Record<string, unknown>, {
+        phone: 'string-or-null',
+        company: 'string-or-null',
+      });
+      if (wrongType) {
+        result.failed++;
+        result.errors.push({ row: i + 1, message: wrongType });
         return;
       }
       // An existing email (when skipping duplicates) or one repeated in the batch.
@@ -304,9 +328,19 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
 
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { name, email, phone, company, address, billingAddress, metadata } = stripProtectedFields(
-      parsed
-    ) as ClientFields;
+    const fields = stripProtectedFields(parsed);
+    const { name, email, phone, company, address, billingAddress, metadata } =
+      fields as ClientFields;
+    const wrongType = fieldTypeProblem(fields, {
+      name: 'string',
+      email: 'string',
+      phone: 'string-or-null',
+      company: 'string-or-null',
+      address: 'json',
+      billingAddress: 'json',
+      metadata: 'json',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
 
     if (email !== undefined && !EMAIL_PATTERN.test(email)) {
       return legacyError(res, 'Invalid email format', 400);

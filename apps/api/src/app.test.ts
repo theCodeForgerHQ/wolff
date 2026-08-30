@@ -2,6 +2,7 @@ import { request } from './testing/request';
 import { describe, expect, it } from 'vitest';
 import type { Db } from '@wolff/core/context';
 import { CoreError } from '@wolff/core/errors';
+import { pino } from 'pino';
 import { createApp } from './app';
 import { testConfig } from './testing/harness';
 
@@ -132,6 +133,42 @@ describe('API shell', () => {
 
     expect((await request(failing).get('/boom')).status).toBe(500);
   });
+
+  // A Prisma validation error that reaches the handler is a value the route
+  // failed to check: a server bug, reported like any other, not a 400.
+  it.each(['/v1/clients', '/elsewhere'])(
+    'reports a Prisma validation error on %s as a 500',
+    async (path) => {
+      const reported: unknown[] = [];
+      const prismaError = Object.assign(
+        new Error('Invalid `prisma.client.findFirst()` invocation: email "priya@kaveri.test"'),
+        { name: 'PrismaClientValidationError' }
+      );
+      const logged: string[] = [];
+      const failing = createApp({
+        db: db(true),
+        config: testConfig(),
+        logger: pino({}, { write: (line: string) => void logged.push(line) }),
+        report: (error) => {
+          reported.push(error);
+        },
+        extend: (router) => {
+          router.get(path, () => {
+            throw prismaError;
+          });
+        },
+      });
+
+      const res = await request(failing).get(path);
+
+      expect(res.status).toBe(500);
+      expect(res.body).toMatchObject({ error: { code: 'internal_error' } });
+      expect(reported).toEqual([prismaError]);
+      // The log gets the redacted form: Prisma messages carry the query's values.
+      expect(logged.join('')).toContain('client.findFirst');
+      expect(logged.join('')).not.toContain('priya@kaveri.test');
+    }
+  );
 
   it('maps a core error to its documented status', async () => {
     const res = await request(app()).get('/rule');

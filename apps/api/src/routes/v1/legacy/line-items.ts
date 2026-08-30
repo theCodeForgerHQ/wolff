@@ -40,7 +40,12 @@ export function lineItemProblem(
       if (!item.name || typeof item.name !== 'string' || !item.name.trim()) {
         return 'Line item name is required';
       }
+    } else if (typeof item.name !== 'string') {
+      // The Next route did not check the name here; Prisma refused (500).
+      return 'Line item name is required';
     }
+    const wrongType = lineItemTypeProblem(item as unknown as Record<string, unknown>, variant);
+    if (wrongType) return wrongType;
     if (!Number.isFinite(item.quantity) || !Number.isFinite(item.rate)) {
       return 'Line item quantity and rate must be valid numbers';
     }
@@ -67,6 +72,26 @@ export function lineItemProblem(
       !Number.isFinite(item.taxRate)
     ) {
       return 'Line item taxRate must be a valid number';
+    }
+  }
+  return null;
+}
+
+/** A line's optional text fields with a JSON type their columns cannot take. */
+function lineItemTypeProblem(
+  item: Record<string, unknown>,
+  variant: 'quote-create' | 'quote-update' | 'invoice'
+): string | null {
+  const text = (field: string) => {
+    const value = item[field];
+    return value === undefined || value === null || typeof value === 'string';
+  };
+  if (!text('description')) return 'Line item description must be a string';
+  // Only invoices keep the GST fields.
+  if (variant === 'invoice') {
+    if (!text('hsnSac')) return 'Line item hsnSac must be a string';
+    if (item.itemType !== undefined && item.itemType !== 'goods' && item.itemType !== 'services') {
+      return "Line item itemType must be 'goods' or 'services'";
     }
   }
   return null;

@@ -7,7 +7,7 @@ import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
 import type { LegacyRouteContext } from '.';
-import { EMAIL_LIMIT_MESSAGE, EMAIL_LIMIT_RETRY_AFTER_S } from './email';
+import { EMAIL_LIMIT_MESSAGE } from './email';
 import { DOCUMENT_INCLUDE, formatLineItem, formatQuote, formatShortLineItem } from './format';
 import {
   EMAIL_PATTERN,
@@ -23,6 +23,7 @@ import {
   param,
   BAD_RECIPIENTS,
   badRecipients,
+  fieldTypeProblem,
 } from './http';
 import {
   MAX_LINE_ITEMS,
@@ -102,7 +103,8 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
     const workspaceId = req.ctx!.workspaceId;
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { title, clientId, projectId, currency, lineItems } = stripProtectedFields(parsed) as {
+    const fields = stripProtectedFields(parsed);
+    const { title, clientId, projectId, currency, lineItems } = fields as {
       title?: string;
       clientId?: string;
       projectId?: string;
@@ -113,6 +115,13 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
 
     if (!clientId) return legacyError(res, 'clientId is required', 400);
     if (!title) return legacyError(res, 'title is required', 400);
+    const wrongType = fieldTypeProblem(fields, {
+      clientId: 'string',
+      title: 'string',
+      projectId: 'string-or-null',
+      currency: 'string-or-null',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
     if (currency && (currency.length !== 3 || !CURRENCY.test(currency.toUpperCase()))) {
       return legacyError(res, 'Currency must be a valid 3-letter ISO code (e.g., USD, EUR)', 400);
     }
@@ -199,7 +208,8 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
     const id = param(req, 'id');
     const parsed = readJsonBody(req);
     if (parsed === INVALID_JSON) return legacyError(res, 'Invalid JSON body', 400);
-    const { title, notes, terms, status, lineItems } = stripProtectedFields(parsed) as {
+    const fields = stripProtectedFields(parsed);
+    const { title, notes, terms, status, lineItems } = fields as {
       title?: string;
       notes?: string;
       terms?: string;
@@ -207,6 +217,12 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       lineItems?: LineItemInput[];
     };
     if (lineItems && !Array.isArray(lineItems)) return legacyError(res, LINE_ITEMS_NOT_A_LIST, 400);
+    const wrongType = fieldTypeProblem(fields, {
+      title: 'string-or-null',
+      notes: 'string-or-null',
+      terms: 'string-or-null',
+    });
+    if (wrongType) return legacyError(res, wrongType, 400);
 
     if (lineItems) {
       const invalid = lineItemProblem(lineItems, 'quote-update');
@@ -366,12 +382,12 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
   router.post('/quotes/:id/send', requireScopes('quotes:write'), async (req, res) => {
     const workspaceId = req.ctx!.workspaceId;
     const id = param(req, 'id');
-    const { message, recipients } = readOptionalJsonBody(req) as {
-      message?: string;
-      recipients?: string[];
-    };
+    const body = readOptionalJsonBody(req);
+    const { message, recipients } = body as { message?: string; recipients?: string[] };
 
     if (badRecipients(recipients)) return legacyError(res, BAD_RECIPIENTS, 400);
+    const wrongType = fieldTypeProblem(body, { message: 'string-or-null' });
+    if (wrongType) return legacyError(res, wrongType, 400);
     if (recipients) {
       if (recipients.length > 10) return legacyError(res, 'Maximum 10 recipients allowed', 400);
       const invalid = recipients.filter((e) => !EMAIL_PATTERN.test(e));
@@ -400,7 +416,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       select: { name: true },
     });
     const quoteUrl = `${deps.appUrl}/q/${quote.accessToken}`;
-    const outcome = await sendEmail({
+    const result = await sendEmail({
       workspaceId,
       recipients: recipients?.length ? recipients : [quote.client!.email],
       email: renderQuoteSent({
@@ -412,8 +428,9 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
         message: message || undefined,
       }),
       reference: `quote:${id}`,
+      version: quote.updatedAt.toISOString(),
     });
-    const emailSent = outcome === 'sent';
+    const emailSent = result.outcome === 'sent';
 
     // The status changes only when the email went out.
     if (emailSent) {
@@ -441,8 +458,8 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       })
       .catch(() => {});
 
-    if (outcome === 'limited') {
-      res.set('Retry-After', String(EMAIL_LIMIT_RETRY_AFTER_S));
+    if (result.outcome === 'limited') {
+      res.set('Retry-After', String(result.retryAfterS));
       return legacyError(res, EMAIL_LIMIT_MESSAGE, 429);
     }
     if (!emailSent) {

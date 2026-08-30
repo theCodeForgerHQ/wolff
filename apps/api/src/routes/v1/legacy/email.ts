@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { MemoryStore, type Store } from 'express-rate-limit';
 import type { RenderedEmail } from '@wolff/core/email';
 import { logger } from '@wolff/core/logger';
@@ -15,10 +15,30 @@ export type DocumentEmailSender = (input: {
   email: RenderedEmail;
   /** For the provider's idempotency key and the logs: `quote:<id>`. */
   reference: string;
-}) => Promise<EmailOutcome>;
+  /** The document's version (its `updatedAt`); a new version is a new send. */
+  version: string;
+}) => Promise<EmailResult>;
 
-/** `sent`; `limited` (workspace over its hourly limit); `failed` (not configured, provider error). */
-export type EmailOutcome = 'sent' | 'limited' | 'failed';
+/**
+ * One key per recipient of one email of one document version, so a retry
+ * after a partial failure does not email the recipients who already got
+ * it: the provider (Resend keeps keys 24 hours) answers those from its
+ * record. A changed document or message is a new key. Hashed, so no
+ * address or content reaches the key.
+ */
+function recipientKey(reference: string, version: string, to: string, email: RenderedEmail) {
+  const digest = createHash('sha256')
+    .update(JSON.stringify([version, to, email.subject, email.html]))
+    .digest('hex');
+  return `${reference}:${digest.slice(0, 32)}`;
+}
+
+/**
+ * `sent`; `limited` (workspace over its hourly limit, with the seconds until
+ * the hour's window resets); `failed` (not configured, provider error).
+ */
+export type EmailResult =
+  { outcome: 'sent' } | { outcome: 'failed' } | { outcome: 'limited'; retryAfterS: number };
 
 /**
  * Sends a quote or invoice email while the request waits, and says whether
@@ -34,36 +54,36 @@ export function documentEmailSender(
   const store: Store = createStore?.('rl:email:') ?? new MemoryStore();
   store.init?.({ windowMs: HOUR_MS } as never);
 
-  return async ({ workspaceId, recipients, email, reference }) => {
+  return async ({ workspaceId, recipients, email, reference, version }) => {
     if (!transport) {
       logger.warn({ reference }, 'Email transport not configured; document email not sent');
-      return 'failed';
+      return { outcome: 'failed' };
     }
-    const { totalHits } = await store.increment(workspaceId);
+    const { totalHits, resetTime } = await store.increment(workspaceId);
     if (totalHits > EMAILS_PER_HOUR) {
       logger.warn({ reference }, 'Email rate limit reached for the workspace');
-      return 'limited';
+      // The store's own reset time; a store without one means a full window.
+      const left = resetTime ? resetTime.getTime() - Date.now() : HOUR_MS;
+      return { outcome: 'limited', retryAfterS: Math.max(1, Math.ceil(left / 1000)) };
     }
-    const attempt = randomUUID();
     try {
-      for (const [index, to] of recipients.entries()) {
+      for (const to of recipients) {
         await transport.send({
           to,
           subject: email.subject,
           html: email.html,
-          idempotencyKey: `${reference}:${attempt}:${index}`,
+          idempotencyKey: recipientKey(reference, version, to, email),
         });
       }
-      return 'sent';
+      return { outcome: 'sent' };
     } catch (error) {
       logger.error(
         { reference, recipientCount: recipients.length, errorName: (error as Error)?.name },
         'Document email failed'
       );
-      return 'failed';
+      return { outcome: 'failed' };
     }
   };
 }
 
 export const EMAIL_LIMIT_MESSAGE = 'Email limit reached for this workspace. Try again later.';
-export const EMAIL_LIMIT_RETRY_AFTER_S = HOUR_MS / 1000;

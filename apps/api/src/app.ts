@@ -163,7 +163,11 @@ export function createApp(deps: AppDeps): Express {
     })
   );
   app.use(express.text({ limit: JSON_LIMIT, type: (req) => isLegacyPath(pathOf(req)) }));
-  app.use(rejectNulCharacters);
+  // Before the routes' own checks; on /v1 after the key check (below), so a
+  // caller without a key gets 401 whatever its body holds.
+  app.use((req, res, next) =>
+    req.path.startsWith('/v1/') ? next() : rejectNulCharacters(req, res, next)
+  );
 
   app.use('/internal', internalRoutes(config, deps.replayCache ?? new MemoryReplayCache(), db));
 
@@ -173,6 +177,7 @@ export function createApp(deps: AppDeps): Express {
   v1.use(
     authFailureRateLimit(deps.rateLimitStore),
     requireApiKey(db),
+    rejectNulCharacters,
     apiKeyRateLimit(deps.rateLimitStore),
     idempotency(db)
   );
