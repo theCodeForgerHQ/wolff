@@ -1023,6 +1023,10 @@ const createInvoicePaymentLink = registry.registerPath({
       description: 'Invoice not found',
       content: { 'application/json': { schema: errorEnvelopeSchema } },
     },
+    409: {
+      description: 'The Idempotency-Key was already used with a different request',
+      content: { 'application/json': { schema: errorEnvelopeSchema } },
+    },
     501: {
       description: 'Requested payment provider is not configured',
       content: { 'application/json': { schema: errorEnvelopeSchema } },

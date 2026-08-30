@@ -55,6 +55,8 @@ describe('/openapi.json and /docs', () => {
         schema: expect.objectContaining({ minLength: 1, maxLength: 255 }),
       })
     );
+    // The same key with a different body is refused (idempotency middleware).
+    expect(op.responses).toHaveProperty('409');
   });
 
   it('serves the Scalar docs UI without authentication', async () => {

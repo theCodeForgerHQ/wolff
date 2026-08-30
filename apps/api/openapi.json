@@ -4980,6 +4980,16 @@
               }
             }
           },
+          "409": {
+            "description": "The Idempotency-Key was already used with a different request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "501": {
             "description": "Requested payment provider is not configured",
             "content": {
