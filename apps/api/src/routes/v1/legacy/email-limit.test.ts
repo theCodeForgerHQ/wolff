@@ -87,7 +87,9 @@ describe.skipIf(!TEST_DATABASE_URL)('email limit on the ported send routes (Post
     expect(over.body).toEqual({
       error: 'Email limit reached for this workspace. Try again later.',
     });
-    expect(over.get('Retry-After')).toBe('3600');
+    // What is left of the hour's window, which opened with the first send.
+    expect(Number(over.get('Retry-After'))).toBeGreaterThan(3500);
+    expect(Number(over.get('Retry-After'))).toBeLessThanOrEqual(3600);
   });
 
   it('is behind the per-key rate limit too', async () => {
