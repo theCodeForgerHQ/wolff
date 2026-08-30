@@ -428,6 +428,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
         message: message || undefined,
       }),
       reference: `quote:${id}`,
+      version: quote.updatedAt.toISOString(),
     });
     const emailSent = result.outcome === 'sent';
 

@@ -368,6 +368,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
         message: message || undefined,
       }),
       reference: `invoice:${id}`,
+      version: invoice.updatedAt.toISOString(),
     });
     const emailSent = result.outcome === 'sent';
 

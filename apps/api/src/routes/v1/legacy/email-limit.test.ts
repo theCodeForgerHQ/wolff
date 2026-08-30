@@ -92,6 +92,50 @@ describe.skipIf(!TEST_DATABASE_URL)('email limit on the ported send routes (Post
     expect(Number(over.get('Retry-After'))).toBeLessThanOrEqual(3600);
   });
 
+  it('does not email a recipient twice when a partial send is retried', async () => {
+    // Like Resend: a key it has seen is answered from its record.
+    const delivered: string[] = [];
+    const seen = new Set<string>();
+    let failOnce = true;
+    const flaky = testApp(db, {
+      email: {
+        send: async (m) => {
+          if (seen.has(m.idempotencyKey)) return;
+          if (m.to === 'two@limit.test' && failOnce) {
+            failOnce = false;
+            throw new Error('provider unavailable');
+          }
+          seen.add(m.idempotencyKey);
+          delivered.push(m.to);
+        },
+      },
+    });
+    const key = (
+      await issueKey(base, workspaceId, { scopes: [...LEGACY_KEY_SCOPES], rateLimitPerMin: 100 })
+    ).key;
+    const invoice = await base.invoice.create({
+      data: {
+        workspaceId,
+        clientId: (await base.client.findFirstOrThrow({ where: { workspaceId } })).id,
+        invoiceNumber: 'L-RETRY',
+        total: 100,
+        subtotal: 100,
+        amountDue: 100,
+        dueDate: new Date('2026-12-01'),
+      },
+    });
+    // A new app has its own email counter, so the test above does not limit it.
+    const send = () =>
+      request(flaky)
+        .post(`/v1/invoices/${invoice.id}/send`)
+        .set('Authorization', `Bearer ${key}`)
+        .send({ recipients: ['one@limit.test', 'two@limit.test'] });
+
+    expect((await send()).status).toBe(502);
+    expect((await send()).status).toBe(200);
+    expect(delivered).toEqual(['one@limit.test', 'two@limit.test']);
+  });
+
   it('is behind the per-key rate limit too', async () => {
     const slow = await issueKey(base, workspaceId, {
       scopes: [...LEGACY_KEY_SCOPES],
