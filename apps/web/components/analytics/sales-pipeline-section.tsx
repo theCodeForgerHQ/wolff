@@ -9,13 +9,18 @@ import type { QuoteStatusCounts, ConversionFunnelData } from '@/lib/dashboard/ty
 
 interface SalesPipelineSectionProps {
   dateRange?: DateRange;
+  /**
+   * The workspace's base currency. The dashboard's figures are converted to
+   * it (lib/dashboard/actions.ts), so there is no default.
+   */
+  currency: string;
   conversionRate: number;
   avgDealValue: number;
   quoteStatusCounts: QuoteStatusCounts;
   conversionFunnel: ConversionFunnelData;
 }
 
-function formatCurrency(amount: number, currency: string = 'USD'): string {
+function formatCurrency(amount: number, currency: string): string {
   const parts = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -44,6 +49,7 @@ export function SalesPipelineSection({
   avgDealValue,
   quoteStatusCounts,
   conversionFunnel,
+  currency,
 }: SalesPipelineSectionProps) {
   const totalQuotes = conversionFunnel.quotesCreated;
   const wonQuotes = conversionFunnel.quotesAccepted;
@@ -86,8 +92,10 @@ export function SalesPipelineSection({
           </div>
           <div className="bg-border h-8 w-px" />
           <div>
-            <p className="text-2xl font-semibold tracking-tight">{formatCurrency(avgDealValue)}</p>
-            <p className="text-muted-foreground text-xs">Avg deal</p>
+            <p className="text-2xl font-semibold tracking-tight">
+              {formatCurrency(avgDealValue, currency)}
+            </p>
+            <p className="text-muted-foreground text-xs">Avg deal in {currency}</p>
           </div>
         </div>
 
