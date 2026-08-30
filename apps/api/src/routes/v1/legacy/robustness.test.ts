@@ -99,6 +99,16 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     expect(res.body).toEqual({ error: 'Text may not contain the NUL character (U+0000)' });
   });
 
+  // Authentication comes first: a caller without a key learns nothing
+  // about how its body would be judged.
+  it.each(['/v1/clients', '/v1/leads'])(
+    'answers 401, not 400, to %s without a key',
+    async (path) => {
+      const res = await request(app).post(path).send({ name: 'a\u0000b' });
+      expect(res.status).toBe(401);
+    }
+  );
+
   it.each([
     ['patch', '/v1/quotes/QUOTE'],
     ['patch', '/v1/invoices/INVOICE'],
