@@ -47,7 +47,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     install_error_handlers(app)
     app.state.observability = init_observability(app, resolved)
 
-    @app.get("/healthz")
+    # HEAD too: UptimeRobot's free monitor checks with HEAD (405 read as down).
+    @app.api_route("/healthz", methods=["GET", "HEAD"])
     async def healthz() -> dict[str, str]:
         return {"status": "ok", "service": "ai", "version": resolved.git_sha or "dev"}
 

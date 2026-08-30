@@ -13,6 +13,16 @@ async def test_healthz_reports_ok_and_version() -> None:
     assert response.json() == {"status": "ok", "service": "ai", "version": "abc123"}
 
 
+async def test_healthz_answers_head() -> None:
+    # UptimeRobot's free HTTP monitor checks with HEAD; a GET-only route
+    # answers 405 and the monitor reports the service down.
+    app = create_app(Settings(git_sha="abc123"))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
+        response = await client.head("/healthz")
+    assert response.status_code == 200
+    assert response.content == b""
+
+
 def test_settings_read_from_environment() -> None:
     settings = load_settings({"GIT_SHA": "deadbeef", "ENVIRONMENT": "production"})
     assert settings.git_sha == "deadbeef"
