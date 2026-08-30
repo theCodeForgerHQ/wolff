@@ -200,7 +200,12 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
       const existing = await db.client.findMany({
         where: {
           workspaceId,
-          email: { in: clients.map((row) => row?.email).filter(Boolean) },
+          // Only text emails: an array here made Prisma throw (500).
+          email: {
+            in: clients
+              .map((row) => row?.email)
+              .filter((email): email is string => typeof email === 'string' && email !== ''),
+          },
           deletedAt: null,
         },
         select: { email: true },
@@ -222,9 +227,20 @@ export function clientRoutes(db: Db, deps: LegacyRouteDeps): Router {
         result.errors.push({ row: i + 1, message: 'name is required' });
         return;
       }
-      if (!row.email || !EMAIL_PATTERN.test(row.email)) {
+      // A list of one address passes the pattern test (it is stringified).
+      if (!row.email || typeof row.email !== 'string' || !EMAIL_PATTERN.test(row.email)) {
         result.failed++;
         result.errors.push({ row: i + 1, message: 'Invalid email format' });
+        return;
+      }
+      // Text columns; a number here failed the whole batch's transaction.
+      const wrongType = fieldTypeProblem(row as unknown as Record<string, unknown>, {
+        phone: 'string-or-null',
+        company: 'string-or-null',
+      });
+      if (wrongType) {
+        result.failed++;
+        result.errors.push({ row: i + 1, message: wrongType });
         return;
       }
       // An existing email (when skipping duplicates) or one repeated in the batch.

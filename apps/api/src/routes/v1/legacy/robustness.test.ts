@@ -222,6 +222,25 @@ describe.skipIf(!TEST_DATABASE_URL)('ported /v1 routes on malformed input (Postg
     });
   });
 
+  it('POST /v1/clients/import fails a row whose fields are not strings', async () => {
+    const res = await call('post', '/v1/clients/import').send({
+      clients: [
+        { name: 'List', email: ['list@robust.test'] },
+        { name: 'Phone', email: 'phone@robust.test', phone: 5 },
+        { name: 'Fine', email: 'fine@robust.test' },
+      ],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      success: 1,
+      failed: 2,
+      errors: [
+        { row: 1, message: 'Invalid email format' },
+        { row: 2, message: 'phone must be a string' },
+      ],
+    });
+  });
+
   it('POST /v1/clients answers 409 for the email of a deleted client', async () => {
     const res = await call('post', '/v1/clients').send({ name: 'Back', email: 'gone@robust.test' });
     expect(res.status).toBe(409);
