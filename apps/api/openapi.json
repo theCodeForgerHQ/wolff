@@ -4904,6 +4904,18 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "A key unique to this payment attempt; a retry reuses it."
+            },
+            "required": true,
+            "description": "A key unique to this payment attempt; a retry reuses it.",
+            "name": "Idempotency-Key",
+            "in": "header"
           }
         ],
         "requestBody": {
@@ -4960,6 +4972,16 @@
           },
           "404": {
             "description": "Invoice not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Idempotency-Key was already used with a different request",
             "content": {
               "application/json": {
                 "schema": {
