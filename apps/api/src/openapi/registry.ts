@@ -985,6 +985,13 @@ const createInvoicePaymentLink = registry.registerPath({
     'Returns a Stripe Checkout URL or Razorpay order for the invoice. Idempotency-Key required.',
   request: {
     params: z.object({ id: z.string().uuid() }),
+    headers: z.object({
+      'Idempotency-Key': z
+        .string()
+        .min(1)
+        .max(255)
+        .openapi({ description: 'A key unique to this payment attempt; a retry reuses it.' }),
+    }),
     body: {
       description: 'Optional provider override',
       required: false,

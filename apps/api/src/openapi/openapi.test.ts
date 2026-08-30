@@ -42,6 +42,21 @@ describe('/openapi.json and /docs', () => {
     }
   });
 
+  // The route answers 400 without it; a client (or a fuzzer) reading the
+  // document must be told, not only in prose.
+  it('declares the Idempotency-Key header that payment links require', async () => {
+    const res = await request(app).get('/openapi.json');
+    const op = res.body.paths['/v1/invoices/{id}/payment-links'].post;
+    expect(op.parameters).toContainEqual(
+      expect.objectContaining({
+        in: 'header',
+        name: 'Idempotency-Key',
+        required: true,
+        schema: expect.objectContaining({ minLength: 1, maxLength: 255 }),
+      })
+    );
+  });
+
   it('serves the Scalar docs UI without authentication', async () => {
     const res = await request(app).get('/docs');
 

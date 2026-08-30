@@ -4904,6 +4904,18 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "A key unique to this payment attempt; a retry reuses it."
+            },
+            "required": true,
+            "description": "A key unique to this payment attempt; a retry reuses it.",
+            "name": "Idempotency-Key",
+            "in": "header"
           }
         ],
         "requestBody": {
