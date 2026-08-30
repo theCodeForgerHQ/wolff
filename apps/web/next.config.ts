@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import createNextIntlPlugin from 'next-intl/plugin';
-import { apiV1Rewrites } from './lib/config/api-v1-rewrite';
+import { apiV1Upstream } from './lib/config/api-v1-rewrite';
+
+// Fails the build on a malformed API_V1_UPSTREAM; the proxy does the rewrite.
+apiV1Upstream(process.env);
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -48,11 +51,6 @@ const nextConfig: NextConfig = {
         headers: [...securityHeaders, { key: 'Referrer-Policy', value: 'no-referrer' }],
       },
     ];
-  },
-  // `beforeFiles`: checked before the app's own routes, so the rewrite wins
-  // over app/api/v1 while both exist.
-  async rewrites() {
-    return { beforeFiles: apiV1Rewrites(process.env), afterFiles: [], fallback: [] };
   },
   images: {
     remotePatterns: [

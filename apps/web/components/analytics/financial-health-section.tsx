@@ -10,13 +10,18 @@ import type { PaymentAgingData } from '@/lib/dashboard/types';
 
 interface FinancialHealthSectionProps {
   dateRange?: DateRange;
+  /**
+   * The workspace's base currency. The dashboard's figures are converted to
+   * it (lib/dashboard/actions.ts), so there is no default.
+   */
+  currency: string;
   outstandingAmount: number;
   overdueAmount: number;
   revenueThisMonth: number;
   paymentAging: PaymentAgingData;
 }
 
-function formatCurrency(amount: number, currency: string = 'USD'): string {
+function formatCurrency(amount: number, currency: string): string {
   const parts = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -43,6 +48,7 @@ export function FinancialHealthSection({
   overdueAmount,
   revenueThisMonth,
   paymentAging,
+  currency,
 }: FinancialHealthSectionProps) {
   const collectionRate =
     outstandingAmount > 0
@@ -88,7 +94,10 @@ export function FinancialHealthSection({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-baseline justify-between">
-          <CardTitle className="text-sm font-medium">Financial Health</CardTitle>
+          <div>
+            <CardTitle className="text-sm font-medium">Financial Health</CardTitle>
+            <p className="text-muted-foreground text-xs">Amounts in {currency}</p>
+          </div>
           <div className={cn('flex items-center gap-1.5 text-xs font-medium', healthStatus.color)}>
             <healthStatus.icon className="h-3 w-3" />
             <span>{healthStatus.label}</span>
@@ -100,14 +109,14 @@ export function FinancialHealthSection({
         <div className="mb-5 flex items-center gap-6">
           <div>
             <p className="text-2xl font-semibold tracking-tight">
-              {formatCurrency(outstandingAmount)}
+              {formatCurrency(outstandingAmount, currency)}
             </p>
             <p className="text-muted-foreground text-xs">Outstanding</p>
           </div>
           <div className="bg-border h-8 w-px" />
           <div>
             <p className="text-2xl font-semibold tracking-tight text-red-500 dark:text-red-400">
-              {formatCurrency(overdueAmount)}
+              {formatCurrency(overdueAmount, currency)}
             </p>
             <p className="text-muted-foreground text-xs">Overdue</p>
           </div>
@@ -135,7 +144,7 @@ export function FinancialHealthSection({
                   />
                 </div>
                 <span className="w-14 text-right text-xs font-medium tabular-nums">
-                  {formatCurrency(bucket.amount)}
+                  {formatCurrency(bucket.amount, currency)}
                 </span>
               </div>
             );

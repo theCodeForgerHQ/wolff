@@ -11,7 +11,8 @@ import { defineConfig, devices } from '@playwright/test';
  * - setup + product: Phase 3/4 flows that need a signed-in dashboard (lead
  *   to paid, Kanban keyboard moves, the automation builder and approvals)
  *   and the axe checks of those pages. `setup` signs the demo user in once.
- * - widget: the built embeddable widget on its preview server (axe, perf).
+ * - widget: the built embeddable widget on its preview server (axe, perf),
+ *   on :5173 or WIDGET_PORT.
  *
  * Everything outside the app is mocked at the network boundary; see
  * docs/phase-1.md for what that does and doesn't prove.
@@ -38,7 +39,8 @@ export const E2E_ENV = {
 } as const;
 
 const PRODUCT_AUTH_FILE = path.join(__dirname, 'e2e/.auth/product-user.json');
-const WIDGET_URL = 'http://localhost:5173';
+const widgetPort = Number(process.env.WIDGET_PORT ?? 5173);
+const WIDGET_URL = `http://localhost:${widgetPort}`;
 
 export default defineConfig({
   fullyParallel: false,
@@ -87,6 +89,7 @@ export default defineConfig({
       url: WIDGET_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
+      env: { WIDGET_PORT: String(widgetPort) },
     },
   ],
 });

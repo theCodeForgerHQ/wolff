@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { prisma } from '@wolff/database';
+import { untilKeyboardSensorListens } from './dnd-keyboard';
 
 /**
  * Deals can be moved between stages with the
@@ -42,6 +43,7 @@ test.describe('Pipeline Kanban keyboard moves', () => {
     await handle.focus();
     await page.keyboard.press('Space');
     await expect(announced).toContainText(`${title} is over ${first!.name}`);
+    await untilKeyboardSensorListens(page);
     await page.keyboard.press('ArrowRight');
     await expect(announced).toContainText(`${title} is over ${second!.name}`);
     await page.keyboard.press('Space');

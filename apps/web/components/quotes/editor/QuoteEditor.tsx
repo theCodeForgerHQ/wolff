@@ -277,7 +277,9 @@ export function QuoteEditor() {
                       <span>
                         {item.content.name || 'Untitled'} × {item.content.quantity}
                       </span>
-                      <span>{formatCurrency(item.content.quantity * item.content.rate)}</span>
+                      <span>
+                        {formatCurrency(item.content.quantity * item.content.rate, editorCurrency)}
+                      </span>
                     </div>
                   ))}
 

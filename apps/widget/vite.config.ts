@@ -12,7 +12,8 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 5173,
+    // WIDGET_PORT lets the E2E run use another port when 5173 is taken.
+    port: Number(process.env.WIDGET_PORT ?? 5173),
     strictPort: true,
   },
   build: {

@@ -1,7 +1,11 @@
 import NextAuth from 'next-auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth/config';
 import { buildContentSecurityPolicy, createNonce } from '@/lib/security/csp';
+import { apiV1Proxy, apiV1Upstream } from '@/lib/config/api-v1-rewrite';
+
+// Phase 6b: where set, /api/v1/* is served by apps/api (lib/config/api-v1-rewrite.ts).
+const apiUpstream = apiV1Upstream(process.env);
 
 // The browser SDK posts events to the DSN's host; allow it only when Sentry is on.
 const sentryOrigin = process.env.NEXT_PUBLIC_SENTRY_DSN
@@ -58,7 +62,7 @@ const { auth } = NextAuth({
  * false (it only short-circuits on a returned Response), so the redirect to
  * the sign-in page is made here.
  */
-export default auth(async (request) => {
+const pages = auth(async (request) => {
   const allowed = await authConfig.callbacks?.authorized?.({ request, auth: request.auth });
   if (allowed === false) {
     const signIn = request.nextUrl.clone();
@@ -82,6 +86,23 @@ export default auth(async (request) => {
   return response;
 });
 
+/**
+ * `/api/v1/*` goes to the API (when an upstream is set) without the session
+ * cookie, or to the Next routes untouched; never through the page session
+ * check. Everything else is a page.
+ */
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  const api = apiV1Proxy(apiUpstream ?? request.nextUrl.origin, request.nextUrl, request.headers);
+  if (api) {
+    // No upstream: the Next routes answer, with their own key checks.
+    if (!apiUpstream) return NextResponse.next();
+    return NextResponse.rewrite(api.url, { request: { headers: api.headers } });
+  }
+  // NextAuth's wrapper is typed for route handlers; as a proxy Next calls it
+  // with the fetch event, which it passes through.
+  return pages(request, event as unknown as Parameters<typeof pages>[1]);
+}
+
 export const config = {
   matcher: [
     /*
@@ -94,5 +115,7 @@ export const config = {
      * - public files (images, etc.)
      */
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)',
+    // The public API, rewritten to apps/api when API_V1_UPSTREAM is set.
+    '/api/v1/:path*',
   ],
 };
