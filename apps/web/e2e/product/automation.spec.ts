@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { prisma } from '@wolff/database';
+import { untilKeyboardSensorListens } from './dnd-keyboard';
 
 test.afterAll(async () => {
   await prisma.automation.deleteMany({ where: { name: { startsWith: 'E2E ' } } });
@@ -55,6 +56,7 @@ test.describe('Automation builder', () => {
     await dialog.getByRole('button', { name: 'Reorder step 2' }).focus();
     await page.keyboard.press('Space');
     await expect(announced).toContainText('at position 2');
+    await untilKeyboardSensorListens(page);
     await page.keyboard.press('ArrowUp');
     await expect(announced).toContainText('at position 1');
     await page.keyboard.press('Space');
