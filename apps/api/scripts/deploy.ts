@@ -113,6 +113,8 @@ const deps: ReleaseDeps = {
           .filter((line) => line.startsWith('https://'))
           .pop() ?? out
     ),
+  promote: (t, url) =>
+    run(['promote', url, '--yes', '--scope', scope], t.dir, project(t)).then(() => undefined),
   rollback: (t, to) =>
     run(['rollback', to, '--yes', '--scope', scope], t.dir, project(t)).then(() => undefined),
   async request(url, init) {

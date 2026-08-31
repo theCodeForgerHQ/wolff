@@ -10,7 +10,9 @@ const target = (name: string): ReleaseTarget => ({
 });
 
 /** Fake Vercel: production per project, deploys that can be broken. */
-function fakeVercel(options: { broken?: string[]; deployFails?: string[] } = {}) {
+function fakeVercel(
+  options: { broken?: string[]; deployFails?: string[]; autoAssignOff?: boolean } = {}
+) {
   const prod = new Map<string, string>([
     ['api', 'https://api-old.example.test'],
     ['ai', 'https://ai-old.example.test'],
@@ -24,8 +26,13 @@ function fakeVercel(options: { broken?: string[]; deployFails?: string[] } = {})
       calls.push(`deploy ${t.name}`);
       if (options.deployFails?.includes(t.name)) throw new Error('build failed');
       const url = `https://${t.name}-new.example.test`;
-      prod.set(t.name, url);
+      // After a rollback Vercel stops assigning the production domain on deploy.
+      if (!options.autoAssignOff) prod.set(t.name, url);
       return url;
+    },
+    promote: async (t, url) => {
+      calls.push(`promote ${t.name}`);
+      prod.set(t.name, url);
     },
     rollback: async (t, to) => {
       calls.push(`rollback ${t.name} ${to}`);
@@ -76,6 +83,15 @@ describe('release', () => {
     ]);
     expect(prod.get('api')).toBe('https://api-old.example.test');
     expect(result.recovered).toBe(true);
+  });
+
+  it('promotes the new deployment when Vercel did not (auto-assign off after a rollback)', async () => {
+    const { deps, calls, prod } = fakeVercel({ autoAssignOff: true });
+    const result = await release([target('api')], deps);
+
+    expect(result.ok).toBe(true);
+    expect(calls).toEqual(['deploy api', 'promote api']);
+    expect(prod.get('api')).toBe('https://api-new.example.test');
   });
 
   it('retries a smoke check before giving up (cold starts)', async () => {

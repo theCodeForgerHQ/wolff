@@ -32,6 +32,8 @@ export interface ReleaseDeps {
   /** Deploys to production and returns the new deployment URL. */
   deploy(target: ReleaseTarget): Promise<string>;
   rollback(target: ReleaseTarget, toDeploymentUrl: string): Promise<void>;
+  /** Points the production domain at a deployment (`vercel promote`). */
+  promote(target: ReleaseTarget, deploymentUrl: string): Promise<void>;
   request(
     url: string,
     init: { method: string; headers: Record<string, string> }
@@ -106,6 +108,12 @@ export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Prom
         reason: `deploy failed: ${error instanceof Error ? error.message : String(error)}`,
       };
       break;
+    }
+    // After a rollback Vercel stops assigning the production domain to new
+    // deployments until one is promoted; without this the smoke test would
+    // pass against the old deployment.
+    if ((await deps.currentProduction(target)) !== url) {
+      await timed(`${target.name}.promote`, () => deps.promote(target, url));
     }
     result.deployed.push({ name: target.name, url, previous });
     deps.log(`${target.name}: deployed ${url}`);
