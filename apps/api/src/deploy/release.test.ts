@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { release, SMOKE_ATTEMPTS, type ReleaseDeps, type ReleaseTarget } from './release';
+import {
+  parseDeploymentUrl,
+  release,
+  SMOKE_ATTEMPTS,
+  type ReleaseDeps,
+  type ReleaseTarget,
+} from './release';
 
 const target = (name: string): ReleaseTarget => ({
   name,
@@ -223,5 +229,19 @@ describe('release', () => {
       'rollback api https://api-old.example.test',
     ]);
     expect(prod.get('api')).toBe('https://api-old.example.test');
+  });
+});
+
+describe('parseDeploymentUrl', () => {
+  it('returns the last https line of the CLI output', () => {
+    const out = 'Vercel CLI 48.0.0\nhttps://wolff-api-abc123.vercel.app\n';
+    expect(parseDeploymentUrl(out)).toBe('https://wolff-api-abc123.vercel.app');
+  });
+
+  it('throws when the output has no deployment URL', () => {
+    expect(() => parseDeploymentUrl('Error: something odd happened')).toThrow(
+      /no deployment URL in the vercel deploy output/
+    );
+    expect(() => parseDeploymentUrl('https://not a url')).toThrow(/no deployment URL/);
   });
 });

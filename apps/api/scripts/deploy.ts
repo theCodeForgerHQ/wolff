@@ -13,7 +13,12 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { release, type ReleaseDeps, type ReleaseTarget } from '../src/deploy/release';
+import {
+  parseDeploymentUrl,
+  release,
+  type ReleaseDeps,
+  type ReleaseTarget,
+} from '../src/deploy/release';
 
 function env(name: string): string {
   const value = process.env[name];
@@ -107,11 +112,7 @@ const deps: ReleaseDeps = {
   },
   deploy: (t) =>
     run(['deploy', '--prod', '--yes', '--scope', scope], t.dir, project(t)).then(
-      (out) =>
-        out
-          .split('\n')
-          .filter((line) => line.startsWith('https://'))
-          .pop() ?? out
+      parseDeploymentUrl
     ),
   promote: (t, url) =>
     run(['promote', url, '--yes', '--scope', scope], t.dir, project(t)).then(() => undefined),

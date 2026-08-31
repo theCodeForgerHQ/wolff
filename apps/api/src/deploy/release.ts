@@ -59,6 +59,28 @@ export interface ReleaseResult {
 export const SMOKE_ATTEMPTS = 4;
 export const SMOKE_DELAY_MS = 5_000;
 
+/**
+ * The deployment URL from `vercel deploy` stdout: its last line that parses
+ * as an https URL. Throws rather than guess, so a changed CLI output format
+ * fails the release instead of promoting or smoke-testing a garbage string.
+ */
+export function parseDeploymentUrl(output: string): string {
+  const urls = output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line.startsWith('https://') || /\s/.test(line)) return false;
+      try {
+        return new URL(line).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    });
+  const url = urls.pop();
+  if (!url) throw new Error('no deployment URL in the vercel deploy output');
+  return url;
+}
+
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** A release step that threw, labelled with the step for the report. */
