@@ -231,9 +231,12 @@ export interface BackupStore {
 
 export const BACKUP_PREFIX = 'db/';
 
-/** `db/2026-08-30T02-00-00-000Z.ndjson.gz`: sortable, one file per run. */
+/**
+ * `db/2026-08-30.ndjson.gz`: one file per UTC day, so a retried or repeated
+ * run on the same day finds its file and does nothing.
+ */
 export function backupKey(at: Date): string {
-  return `${BACKUP_PREFIX}${at.toISOString().replace(/[:.]/g, '-')}.ndjson.gz`;
+  return `${BACKUP_PREFIX}${at.toISOString().slice(0, 10)}.ndjson.gz`;
 }
 
 /**

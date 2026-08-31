@@ -45,6 +45,7 @@ export const RETRY_POLICIES: Record<JobType, RetryPolicy> = {
   'ai.index': { attempts: 3, delayMs: exponential(30_000) },
   'ai.sweep': { attempts: 1, delayMs: () => 0 },
   'reports.nightly': { attempts: 3, delayMs: exponential(MINUTE) },
+  'db.backup': { attempts: 3, delayMs: exponential(MINUTE) },
 };
 
 export class InvalidJobError extends Error {

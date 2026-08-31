@@ -15,3 +15,14 @@ describe('demo mode configuration', () => {
     expect(loadConfig({}).demoEmailRedirect).toBeUndefined();
   });
 });
+
+describe('backup configuration', () => {
+  it('keeps 14 days of backups unless told otherwise', () => {
+    expect(loadConfig({}).BACKUP_RETENTION_DAYS).toBe(14);
+    expect(loadConfig({ BACKUP_RETENTION_DAYS: '7' }).BACKUP_RETENTION_DAYS).toBe(7);
+  });
+
+  it.each(['0', '-3', '1.5', 'abc'])('refuses a retention of %s days', (days) => {
+    expect(() => loadConfig({ BACKUP_RETENTION_DAYS: days })).toThrow(/BACKUP_RETENTION_DAYS/);
+  });
+});

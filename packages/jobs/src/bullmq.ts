@@ -170,6 +170,7 @@ export const SCHEDULES: Record<string, { type: JobType; pattern?: string; everyM
   'ai-sweep': { type: 'ai.sweep', pattern: '30 1 * * *' },
   // 02:00 IST. The design's optional Lambda replica is not built.
   'reports-nightly': { type: 'reports.nightly', pattern: '30 20 * * *' },
+  backup: { type: 'db.backup', pattern: '0 21 * * *' },
 };
 
 /** Registers (or updates) the repeating jobs. Safe to call on every start. */

@@ -1,5 +1,6 @@
 import type { Db } from '@wolff/core/context';
 import type { WebhookTransport } from '@wolff/core/webhooks';
+import type { BackupStore } from './backup';
 import { z } from 'zod';
 
 /**
@@ -38,6 +39,7 @@ export const jobPayloads = {
   'ai.sweep': z.object({}),
   // `after`: resume cursor, the last workspace id a cut-off run reported.
   'reports.nightly': z.object({ after: id.optional() }),
+  'db.backup': z.object({}),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;
@@ -112,6 +114,8 @@ export interface JobContext {
   storage: ObjectStorage;
   /** Absent when no AI service is configured; AI jobs then do nothing. */
   ai?: AiIndexer;
+  /** Where `db.backup` writes. Absent: the job fails, so a missing bucket is noticed. */
+  backups?: { store: BackupStore; keepDays: number; schemas: string[] };
   /** Public origin of the web app, for links in emails and PDF rendering. */
   appUrl: string;
   requireHttpsWebhooks: boolean;

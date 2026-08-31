@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPrisma } from '@wolff/database';
+import { createPrisma, withTenantGuard } from '@wolff/database';
+import { runJob, type JobContext } from './index';
 import {
   BackupBudgetError,
   backupKey,
@@ -28,10 +29,8 @@ function memoryStore(files: { key: string; lastModified: Date }[]): BackupStore 
 }
 
 describe('backupKey', () => {
-  it('names one sortable file per run under db/', () => {
-    expect(backupKey(new Date('2026-10-08T02:00:00.123Z'))).toBe(
-      'db/2026-10-08T02-00-00-123Z.ndjson.gz'
-    );
+  it('names one sortable file per UTC day under db/', () => {
+    expect(backupKey(new Date('2026-10-08T23:59:59.999Z'))).toBe('db/2026-10-08.ndjson.gz');
   });
 });
 
@@ -172,5 +171,61 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     await expect(
       exportDatabase(db, { schemas: [schema], batchSize: 2, deadline: 3, now: () => t++ })
     ).rejects.toBeInstanceOf(BackupBudgetError);
+  });
+
+  it('db.backup stores one file for the run and prunes past the retention', async () => {
+    const NOW = new Date('2026-10-08T21:00:00Z');
+    const put: { key: string; body: Uint8Array; contentType: string }[] = [];
+    const deleted: string[] = [];
+    const files = [
+      { key: 'db/2026-10-07.ndjson.gz', lastModified: new Date('2026-10-07T21:00:00Z') },
+      { key: 'db/2026-09-01.ndjson.gz', lastModified: new Date('2026-09-01T21:00:00Z') },
+    ];
+    const ctx = {
+      db: withTenantGuard(db, { mode: 'throw' }),
+      now: () => NOW,
+      backups: {
+        schemas: [schema],
+        keepDays: 14,
+        store: {
+          put: async (key: string, body: Uint8Array, contentType: string) => {
+            put.push({ key, body, contentType });
+            files.push({ key, lastModified: NOW });
+          },
+          get: async () => new Uint8Array(),
+          list: async (prefix: string) => files.filter((file) => file.key.startsWith(prefix)),
+          delete: async (key: string) => {
+            deleted.push(key);
+          },
+        },
+      },
+    } as unknown as JobContext;
+
+    await runJob(ctx, { type: 'db.backup', payload: {}, jobId: 'scheduled:backup' });
+
+    expect(put).toHaveLength(1);
+    expect(put[0]!.key).toBe('db/2026-10-08.ndjson.gz');
+    expect(put[0]!.contentType).toBe('application/gzip');
+    expect(readBackup(put[0]!.body).header.tables).toEqual([
+      { name: `${schema}.child`, rows: 3 },
+      { name: `${schema}.parent`, rows: 7 },
+    ]);
+    expect(deleted).toEqual(['db/2026-09-01.ndjson.gz']);
+
+    // A second delivery the same day (QStash retry, a drain run) does nothing.
+    await runJob(ctx, { type: 'db.backup', payload: {}, jobId: 'scheduled:backup' });
+    expect(put).toHaveLength(1);
+  });
+
+  it('db.backup fails loudly when no backup store is configured', async () => {
+    const ctx = { db: withTenantGuard(db, { mode: 'throw' }), now: () => new Date() };
+
+    await expect(
+      runJob(ctx as unknown as JobContext, {
+        type: 'db.backup',
+        payload: {},
+        jobId: 'scheduled:backup',
+      })
+    ).rejects.toThrow(/backup store/);
   });
 });

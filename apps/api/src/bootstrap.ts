@@ -15,6 +15,7 @@ import {
   createLocalStorage,
   createLogEmailTransport,
   createResendTransport,
+  createS3BackupStore,
   createS3Storage,
   withDemoRedirect,
 } from '@wolff/jobs/ports';
@@ -114,6 +115,24 @@ function createStorage(config: ApiConfig): JobContext['storage'] {
   return createLocalStorage(process.env.STORAGE_LOCAL_PATH ?? './uploads');
 }
 
+/** The schemas a backup covers: Prisma's `public` and the AI service's `ai`. */
+export const BACKUP_SCHEMAS = ['public', 'ai'];
+
+function createBackups(config: ApiConfig): JobContext['backups'] {
+  if (!config.BACKUP_BUCKET) return undefined;
+  return {
+    store: createS3BackupStore({
+      bucket: config.BACKUP_BUCKET,
+      region: process.env.STORAGE_REGION ?? 'us-east-1',
+      endpoint: process.env.STORAGE_ENDPOINT,
+      accessKeyId: process.env.STORAGE_ACCESS_KEY,
+      secretAccessKey: process.env.STORAGE_SECRET_KEY,
+    }),
+    keepDays: config.BACKUP_RETENTION_DAYS,
+    schemas: BACKUP_SCHEMAS,
+  };
+}
+
 /**
  * Pushes the outbox events a request just committed to the dispatcher, so
  * they don't wait for the relay's next pass. Never rejects: the outbox row
@@ -152,6 +171,7 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
         : undefined,
     }),
     storage: createStorage(config),
+    backups: createBackups(config),
     ai:
       config.AI_URL && config.SVC_JWT_SECRET_WORKER
         ? createAiIndexer({ baseUrl: config.AI_URL, secret: config.SVC_JWT_SECRET_WORKER })

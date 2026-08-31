@@ -25,6 +25,10 @@ describe('QStash schedules', () => {
     for (const type of types) expect(isJobType(type)).toBe(true);
   });
 
+  it('backs up the database once a night, after the nightly reports', () => {
+    expect(QSTASH_SCHEDULES.backup).toEqual({ type: 'db.backup', cron: '0 21 * * *' });
+  });
+
   it('fires at most every 15 minutes, and leaves most of 1,000 messages a day for jobs', () => {
     let perDay = 0;
     for (const { cron } of Object.values(QSTASH_SCHEDULES)) {
