@@ -4,7 +4,8 @@ Operations for the demo on Vercel, Neon, Supabase, Upstash, Redis Cloud,
 Sentry and UptimeRobot. Free plans only: never add a payment method or
 upgrade a plan. No secret value belongs in this file or in git; secrets live
 in Vercel project env vars and in the operator's own secrets file (called
-`secrets.env` below, `chmod 600`, outside the repo).
+`secrets.env` below, `chmod 600`, outside the repo; on the owner's machine it is
+`../secrets.env` from the repo root).
 
 Conventions: commands run from the repo root on Node 24 with
 `npx -y pnpm@9.15.0`. `psql` can be `docker run --rm postgres:17 psql`.
@@ -57,10 +58,11 @@ schedules and monitors. Every step uses a free plan that needs no card.
    `python3 scripts/sentry-alerts.py` (section 6).
 6. **Vercel.** Three Hobby projects (table above: root directory and preset).
    Set env vars per project; the names each one needs are in its
-   `.env.example` and in docs/free-tier.md. In short:
-   - api: `DATABASE_URL APP_URL PUBLIC_API_URL WEB_ORIGIN JOB_DISPATCHER=qstash QSTASH_* REDIS_URL STORAGE_* BACKUP_BUCKET=backups STRIPE_* SVC_JWT_SECRET_{WEB,AI,WORKER,LAMBDA} AI_URL ENCRYPTION_KEY RESEND_API_KEY EMAIL_FROM DEMO_MODE DEMO_EMAIL_REDIRECT SENTRY_DSN WEB_PROTECTION_BYPASS`. Do not set `NODE_ENV`.
-   - web: `DATABASE_URL AUTH_SECRET NEXTAUTH_SECRET NEXTAUTH_URL AUTH_TRUST_HOST API_V1_UPSTREAM AI_URL SVC_JWT_SECRET_WEB ENCRYPTION_KEY CRON_SECRET STRIPE_SECRET_KEY NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY STORAGE_* UPSTASH_REDIS_REST_* RESEND_API_KEY EMAIL_FROM DEMO_* GOOGLE_CLIENT_* SENTRY_DSN NEXT_PUBLIC_SENTRY_DSN NEXT_PUBLIC_APP_*`.
-   - ai: `AI_DATABASE_URL` (psycopg URL with `sslmode=require`), `LLM_PROVIDER=nvidia LLM_FALLBACK=groq NVIDIA_API_KEY GROQ_API_KEY AI_MAX_TOKENS AI_DAILY_BUDGET_USD API_INTERNAL_URL AI_PUBLIC_URL AI_REPORTS_DIR=/tmp/reports SVC_JWT_SECRET_{AI,WEB,WORKER} SENTRY_DSN ENVIRONMENT=production PRODUCT_SLUG=wolff`.
+   the lists below (only web has an `.env.example`; docs/free-tier.md
+   explains the shared ones):
+   - api: `DATABASE_URL APP_URL PUBLIC_API_URL WEB_ORIGIN JOB_DISPATCHER=qstash QSTASH_* REDIS_URL STORAGE_PROVIDER=s3 STORAGE_ENDPOINT STORAGE_REGION STORAGE_BUCKET=pdfs STORAGE_ACCESS_KEY STORAGE_SECRET_KEY BACKUP_BUCKET=backups STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET SVC_JWT_SECRET_{WEB,AI,WORKER,LAMBDA} AI_URL ENCRYPTION_KEY RESEND_API_KEY EMAIL_FROM DEMO_MODE DEMO_EMAIL_REDIRECT SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE LOG_LEVEL WEB_PROTECTION_BYPASS`. Do not set `NODE_ENV`.
+   - web: `DATABASE_URL AUTH_SECRET NEXTAUTH_SECRET NEXTAUTH_URL AUTH_TRUST_HOST API_V1_UPSTREAM AI_URL SVC_JWT_SECRET_WEB ENCRYPTION_KEY CRON_SECRET STRIPE_SECRET_KEY NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY STORAGE_PROVIDER STORAGE_ENDPOINT STORAGE_REGION STORAGE_BUCKET STORAGE_ACCESS_KEY STORAGE_SECRET_KEY UPSTASH_REDIS_REST_* RESEND_API_KEY EMAIL_FROM DEMO_* GOOGLE_CLIENT_* SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE NEXT_PUBLIC_SENTRY_DSN NEXT_PUBLIC_APP_*`.
+   - ai: `AI_DATABASE_URL` (psycopg URL with `sslmode=require`), `LLM_PROVIDER=nvidia LLM_FALLBACK=groq NVIDIA_API_KEY GROQ_API_KEY GEMINI_API_KEY (optional) AI_MAX_TOKENS AI_DAILY_BUDGET_USD API_INTERNAL_URL AI_PUBLIC_URL AI_REPORTS_DIR=/tmp/reports SVC_JWT_SECRET_{AI,WEB,WORKER} SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE ENVIRONMENT=production PRODUCT_SLUG=wolff`.
      Turn Vercel Authentication on for web only; create its Protection Bypass for
      Automation secret (`VERCEL_BYPASS_WEB`, also the api's `WEB_PROTECTION_BYPASS`).
 7. **Deploy** with section 2.
@@ -77,12 +79,13 @@ schedules and monitors. Every step uses a free plan that needs no card.
 ## 2. Deploy
 
 ```bash
-set -a; source secrets.env; set +a
+set -a; source ../secrets.env; set +a   # adjust to where your file is
 export VERCEL_TEAM_ID=team_l9AdIJOw3H9DJEt9eMVOJBL8 VERCEL_SCOPE=ajayaditya-codes-projects \
   VERCEL_PROJECT_API=prj_7WXTAZVnggX00vg6rHSVwZ8hSxET \
   VERCEL_PROJECT_AI=prj_WvGsU7Ft4waFLdHCr09Eze3xnmHL \
   VERCEL_PROJECT_WEB=prj_LxlAp8yvPjqqnwQ2383so0Kondn4
 scripts/deploy.sh            # HEAD, all three: api, then ai, then web
+scripts/deploy.sh HEAD api   # one project
 scripts/deploy.sh v1.2 api   # a ref, one project
 ```
 
@@ -122,7 +125,7 @@ next good deployment.
 
 Drill (2026-08-30): a commit whose `/readyz` answered 500 went live at
 01:09:18Z; the smoke test failed after 18.5 s of retries; `vercel rollback`
-took 5.8 s; `/readyz` was 200 again at 01:09:42Z. Details: docs/phase-6.md.
+took 5.8 s; `/readyz` was 200 again at 01:09:42Z. Details: docs/phase-6.md (Phase 6 record).
 
 ## 4. Backups and restore
 
@@ -160,14 +163,16 @@ branches are refused for this project ("legacy web access role"), so:
 
 ```bash
 P=patient-rice-66047365
-neonctl branches create --project-id $P --name restore-$(date +%m%d)          # copy of main
-URL=$(neonctl connection-string <branch id> --project-id $P --database-name neondb --role-name neondb_owner)
+psql() { docker run --rm postgres:17 psql "$@"; }   # if psql is not installed
+B=$(neonctl branches create --project-id $P --name restore-$(date +%m%d) --output json | jq -r .branch.id)  # copy of main
+URL=$(neonctl connection-string $B --project-id $P --database-name neondb --role-name neondb_owner)
 # Empty it. public: TRUNCATE as neondb_owner. ai: tables belong to ai_owner, and
 # neondb_owner cannot SET ROLE to it, but may DELETE.
 psql "$URL" -c "DO \$\$ DECLARE l text; BEGIN SELECT string_agg(format('%I.%I',schemaname,tablename),', ') INTO l FROM pg_tables WHERE schemaname='public'; EXECUTE 'TRUNCATE '||l; END \$\$;"
 psql "$URL" -c "DO \$\$ DECLARE r record; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='ai' LOOP EXECUTE format('DELETE FROM ai.%I', r.tablename); END LOOP; END \$\$;"
-cd apps/api && RESTORE_TARGET_URL="$URL" BACKUP_BUCKET=backups \
-  node --import tsx scripts/restore-backup.ts [db/2026-08-30.ndjson.gz]   # newest if omitted
+( cd apps/api && RESTORE_TARGET_URL="$URL" BACKUP_BUCKET=backups \
+  node --import tsx scripts/restore-backup.ts )   # newest; or pass a key, e.g. db/2026-08-30.ndjson.gz
+neonctl branches delete $B --project-id $P       # when done
 ```
 
 `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`
@@ -178,7 +183,7 @@ run the migrations (section 1 step 1) and the restore; nothing to empty.
 To make a restored branch the live database: point `DATABASE_URL` (web, api)
 and `AI_DATABASE_URL` (ai) at it, or use Neon's "restore branch" on `main`,
 and redeploy. Delete scratch branches afterwards
-(`neonctl branches delete <id> --project-id $P`).
+(`neonctl branches delete $B --project-id $P`).
 
 Drill (2026-08-30): 65 tables, 1,632 rows, 0 mismatches; branch 4.3 s,
 emptying 6.0 s, restore 62.1 s (download 2.0 s, load 58.2 s), delete 4.0 s.
@@ -188,10 +193,14 @@ emptying 6.0 s, restore 62.1 s (download 2.0 s, load 58.2 s), delete 4.0 s.
 Free plan history: 6 hours. Inside it:
 
 ```bash
-neonctl branches create --project-id $P --name pitr-$(date +%m%d) --parent 2026-08-30T00:20:00Z
+T=$(date -u -v-1H +%FT%TZ)   # GNU date: date -u -d '1 hour ago' +%FT%TZ
+B=$(neonctl branches create --project-id $P --name pitr-$(date +%m%d) --parent $T --output json | jq -r .branch.id)
+URL=$(neonctl connection-string $B --project-id $P --database-name neondb --role-name neondb_owner)
+psql "$URL" -Atc "select max(created_at) from public.quote_events"   # must be earlier than $T
+neonctl branches delete $B --project-id $P
 ```
 
-Verify with a query against the branch, then either use it (as above) or
+Compare the query with the same one on `main` (a later value there shows the branch is the past). Then either use it (as above) or
 delete it. Before a migration, a branch of `main` _now_ is the snapshot.
 Drill: create 3.9 s, first query 2.9 s, delete 3.5 s.
 
@@ -199,9 +208,10 @@ Drill: create 3.9 s, first query 2.9 s, delete 3.5 s.
 
 General order: create the new value, set it where it is read, redeploy the
 readers (`scripts/deploy.sh HEAD <projects>`), check, then revoke the old one
-and update `secrets.env`. `vercel env rm NAME production` then
-`vercel env add NAME production` per project (with `VERCEL_ORG_ID` and
-`VERCEL_PROJECT_ID` set).
+and update `secrets.env`. Per project, export `VERCEL_ORG_ID` (team id) and `VERCEL_PROJECT_ID` (section 0)
+in an empty directory (or run `vercel link` there), then `vercel env ls`,
+`vercel env rm NAME production` and `vercel env add NAME production`. Without
+them `vercel env ls` prints nothing.
 
 | Secret                                             | Where it is read                                                       | How to rotate                                                                                                                                                                                                   | Notes                                                 |
 | -------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -235,9 +245,15 @@ After rotating, run section 7's checks.
 - **Sentry:** `SENTRY_AUTH_TOKEN=... python3 scripts/sentry-alerts.py` creates
   or updates two workflows on the three issue streams: "new or regressed
   issue" and "error spike (>10 events of an issue in 1h)", both emailing the
-  org owner's Sentry login address. Test: `SENTRY_DSN=<api dsn> sentry-cli send-event -m "alert test $(date)" --level error`
+  org owner's Sentry login address. Test: `SENTRY_DSN=$SENTRY_DSN_API sentry-cli send-event -m "alert test $(date)" --level error`
   creates a new issue; the workflow's `lastTriggered` (GET
-  `organizations/ajayaditya/workflows/`) updates within a minute.
+  `organizations/ajayaditya/workflows/`) updates within a minute:
+  `curl -s -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" https://de.sentry.io/api/0/organizations/ajayaditya/workflows/`.
+  The org is in the EU region (`de.sentry.io`); sentry-cli may warn that its
+  config points at `sentry.io`, harmless for `send-event` with a DSN. Sentry's
+  own default "high priority issues" workflows also fire, so a test can send
+  more than one email. The script prints the owner's email address; redact it
+  before sharing logs.
 - **UptimeRobot:** emails on down and up. A false "down" usually means the
   monitor's HEAD request is not answered (405) or the URL is behind Vercel
   Authentication; check with `curl -I <url>`.
