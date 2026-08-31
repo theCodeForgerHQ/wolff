@@ -16,6 +16,8 @@ import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
 import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
 import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
 import type { JobContext, JobType, Processor } from '../types';
+import { backupKey, exportDatabase, pruneBackups } from '../backup';
+import { logger } from '@wolff/core/logger';
 
 /**
  * One processor per job type. Each is idempotent: it may run again after a
@@ -359,6 +361,46 @@ const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
   }
 };
 
+/**
+ * Time the export may read for; the upload and pruning follow, so the job
+ * ends well inside Vercel's 300 s limit. A database that outgrows it fails
+ * the job (BackupBudgetError) instead of writing a partial file.
+ */
+export const BACKUP_BUDGET_MS = 200_000;
+
+const backupDatabase: Processor<'db.backup'> = async (ctx) => {
+  const backups = ctx.backups;
+  if (!backups) throw new Error('db.backup ran but no backup store is configured (BACKUP_BUCKET)');
+  const started = ctx.now();
+  const key = backupKey(started);
+  if ((await backups.store.list(key)).some((file) => file.key === key)) return;
+
+  const t0 = Date.now();
+  // Every table exists, the backup reads across tenants (an exemption like
+  // the sweeps'), and one REPEATABLE READ snapshot keeps the batches consistent.
+  const { body, header } = await ctx.db.$unscoped.$transaction(
+    (tx) =>
+      exportDatabase(tx, {
+        schemas: backups.schemas,
+        deadline: t0 + BACKUP_BUDGET_MS,
+      }),
+    { isolationLevel: 'RepeatableRead', maxWait: 10_000, timeout: BACKUP_BUDGET_MS + 30_000 }
+  );
+  await backups.store.put(key, body, 'application/gzip');
+  const pruned = await pruneBackups(backups.store, started, backups.keepDays);
+  logger.info(
+    {
+      key,
+      bytes: body.length,
+      tables: header.tables.length,
+      rows: header.tables.reduce((sum, table) => sum + table.rows, 0),
+      pruned,
+      ms: Date.now() - t0,
+    },
+    'database backup stored'
+  );
+};
+
 export const processors: { [T in JobType]: Processor<T> } = {
   'payments.reconcile': reconcilePayment,
   'webhooks.fanout': fanOutWebhooks,
@@ -375,6 +417,7 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'ai.index': indexForAi,
   'ai.sweep': sweepAiIndex,
   'reports.nightly': nightlyReports,
+  'db.backup': backupDatabase,
 };
 
 export type { JobContext };

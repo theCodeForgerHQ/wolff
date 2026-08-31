@@ -225,9 +225,10 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
         ['reminders', 'reminders.scan', '0 3 * * *', 'UTC'],
         ['ai-sweep', 'ai.sweep', '30 1 * * *', 'UTC'],
         ['reports-nightly', 'reports.nightly', '30 20 * * *', 'UTC'],
+        ['backup', 'db.backup', '0 21 * * *', 'UTC'],
       ].sort()
     );
-    expect(Object.keys(SCHEDULES)).toHaveLength(7);
+    expect(Object.keys(SCHEDULES)).toHaveLength(8);
   });
 
   describe('when Redis is lost', () => {

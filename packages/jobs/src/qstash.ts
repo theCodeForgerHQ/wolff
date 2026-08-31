@@ -81,7 +81,7 @@ export function createQStashVerifier(keys: {
  * deviation from the design's GitHub Actions cron; see docs/phase-2.md).
  * QStash calls `POST /jobs/run/:type` itself, signed, so nothing has to run
  * outside Vercel. Free tier: at most 10 schedules and 1,000 messages a day;
- * these fire about 245 times a day, the rest is left for the jobs they fan
+ * these fire about 246 times a day, the rest is left for the jobs they fan
  * out to. Every job has to end inside Vercel's 300 s function limit; the
  * sweeps are bounded per run and pick up where they stopped. UTC.
  */
@@ -96,6 +96,8 @@ export const QSTASH_SCHEDULES: Record<string, { type: JobType; cron: string }> =
   reminders: { type: 'reminders.scan', cron: '0 3 * * *' },
   overdue: { type: 'invoices.mark_overdue', cron: '15 0 * * *' },
   'reports-nightly': { type: 'reports.nightly', cron: '30 20 * * *' },
+  // 02:30 IST, after the nightly reports. One file per day; see db.backup.
+  backup: { type: 'db.backup', cron: '0 21 * * *' },
 };
 
 /** The part of the QStash client the schedule sync uses. */

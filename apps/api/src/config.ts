@@ -52,6 +52,10 @@ const schema = z.object({
   DEMO_MODE: optional,
   DEMO_EMAIL_REDIRECT: optional,
 
+  /** Bucket for the nightly database backup (same S3 endpoint and keys as STORAGE_*). */
+  BACKUP_BUCKET: optional,
+  BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(14),
+
   SENTRY_DSN: optional,
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
   OTEL_EXPORTER_OTLP_ENDPOINT: optional,

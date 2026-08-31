@@ -13,6 +13,7 @@
     "worker": "tsx src/worker.ts",
     "worker:drain": "tsx src/worker-drain.ts",
     "schedules:sync": "tsx scripts/sync-qstash-schedules.ts",
+    "backup:restore": "tsx scripts/restore-backup.ts",
     "openapi:gen": "tsx scripts/generate-openapi.ts && prettier --write openapi.json",
     "openapi:postman": "tsx scripts/generate-postman.ts",
     "check:vercel-output": "tsx scripts/check-vercel-output.ts output ../../.vercel/output",

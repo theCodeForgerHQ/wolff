@@ -160,8 +160,9 @@ QSTASH_TOKEN=... PUBLIC_API_URL=https://<api> pnpm --filter @wolff/api schedules
 | reminders            | `reminders.scan`                                                        | `0 3 * * *`          |
 | overdue              | `invoices.mark_overdue`                                                 | `15 0 * * *`         |
 | reports-nightly      | `reports.nightly`                                                       | `30 20 * * *`        |
+| backup               | `db.backup`: logical export to the `backups` bucket, 14-day retention   | `0 21 * * *`         |
 
-7 of the free tier's 10 schedules, about 245 messages a day of 1,000. Every
+8 of the free tier's 10 schedules, about 246 messages a day of 1,000. Every
 job must end inside Vercel's 300 s limit: the outbox sweep relays at most
 200 events per run, and the AI sweep stops starting calls after 200 s, each
 call embedding at most 25 sources in at most about 40 s; the rest is picked

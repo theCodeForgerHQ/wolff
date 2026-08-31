@@ -7,7 +7,7 @@ import { CreateBucketCommand, GetObjectCommand, S3Client } from '@aws-sdk/client
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createLogEmailTransport, createResendTransport } from './email';
-import { createLocalStorage, createS3Storage } from './storage';
+import { createLocalStorage, createS3BackupStore, createS3Storage } from './storage';
 
 describe('Resend email transport', () => {
   let server: Server;
@@ -148,6 +148,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('S3 storage (S3Mock container)',
       forcePathStyle: true,
     });
     await admin.send(new CreateBucketCommand({ Bucket: 'pdfs' }));
+    await admin.send(new CreateBucketCommand({ Bucket: 'backups' }));
   }, 180_000);
 
   afterAll(async () => {
@@ -179,5 +180,26 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('S3 storage (S3Mock container)',
     );
     expect(object.ContentType).toBe('application/pdf');
     expect([...(await object.Body!.transformToByteArray())]).toEqual([37, 80, 68, 70]);
+  });
+
+  it('puts, lists by prefix, reads back and deletes backup files', async () => {
+    const store = createS3BackupStore({
+      endpoint,
+      region: 'us-east-1',
+      bucket: 'backups',
+      ...credentials,
+    });
+
+    await store.put('db/a.ndjson.gz', new Uint8Array([1, 2, 3]), 'application/gzip');
+    await store.put('db/b.ndjson.gz', new Uint8Array([4]), 'application/gzip');
+    await store.put('other/c', new Uint8Array([5]), 'application/octet-stream');
+
+    const listed = await store.list('db/');
+    expect(listed.map((file) => file.key).sort()).toEqual(['db/a.ndjson.gz', 'db/b.ndjson.gz']);
+    expect(listed.every((file) => file.lastModified instanceof Date)).toBe(true);
+    expect([...(await store.get('db/a.ndjson.gz'))]).toEqual([1, 2, 3]);
+
+    await store.delete('db/a.ndjson.gz');
+    expect((await store.list('db/')).map((file) => file.key)).toEqual(['db/b.ndjson.gz']);
   });
 });
