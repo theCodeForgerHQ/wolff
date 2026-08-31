@@ -143,6 +143,12 @@ export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Prom
     // pass against the old deployment.
     if ((await step('alias lookup', () => deps.currentProduction(target))) !== url) {
       await timed(`${target.name}.promote`, () => step('promote', () => deps.promote(target, url)));
+      // `vercel promote` can exit 0 without moving the domain; trust only a
+      // fresh read of the alias.
+      const live = await step('alias lookup', () => deps.currentProduction(target));
+      if (live !== url) {
+        throw new StepError(`production alias points at ${live ?? 'nothing'}, expected ${url}`);
+      }
     }
     deps.log(`${target.name}: deployed ${url}`);
 

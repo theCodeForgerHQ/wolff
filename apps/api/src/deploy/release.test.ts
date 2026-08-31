@@ -203,4 +203,25 @@ describe('release', () => {
     expect(result.rollbackFailed).toEqual([{ name: 'ai', reason: 'rollback refused' }]);
     expect(result.recovered).toBe(false);
   });
+
+  it('fails and rolls back when promote returns but production still points elsewhere', async () => {
+    const { deps, calls, prod } = fakeVercel({ autoAssignOff: true });
+    deps.promote = async (t) => {
+      calls.push(`promote ${t.name}`); // reports success, alias unchanged
+    };
+    const result = await release([target('api')], deps);
+
+    expect(result.ok).toBe(false);
+    expect(result.failed).toEqual({
+      name: 'api',
+      reason:
+        'production alias points at https://api-old.example.test, expected https://api-new.example.test',
+    });
+    expect(calls).toEqual([
+      'deploy api',
+      'promote api',
+      'rollback api https://api-old.example.test',
+    ]);
+    expect(prod.get('api')).toBe('https://api-old.example.test');
+  });
 });
