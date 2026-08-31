@@ -1,0 +1,77 @@
+/**
+ * Restores a nightly database backup (db.backup) into an empty database
+ * that already has the schema, and compares row counts per table with the
+ * counts recorded in the backup. See docs/runbook.md "Restore".
+ *
+ *   RESTORE_TARGET_URL=postgresql://...  BACKUP_BUCKET=backups  STORAGE_ENDPOINT=...
+ *   STORAGE_REGION=...  STORAGE_ACCESS_KEY=...  STORAGE_SECRET_KEY=...
+ *   pnpm --filter @wolff/api backup:restore [db/2026-08-30.ndjson.gz]
+ *
+ * Without a key it takes the newest backup. Exits 1 when any count differs.
+ */
+import { createPrisma } from '@wolff/database';
+import { BACKUP_PREFIX, restoreDatabase } from '@wolff/jobs/backup';
+import { createS3BackupStore } from '@wolff/jobs/ports';
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+async function main(): Promise<number> {
+  const store = createS3BackupStore({
+    bucket: required('BACKUP_BUCKET'),
+    region: process.env.STORAGE_REGION ?? 'us-east-1',
+    endpoint: required('STORAGE_ENDPOINT'),
+    accessKeyId: required('STORAGE_ACCESS_KEY'),
+    secretAccessKey: required('STORAGE_SECRET_KEY'),
+  });
+  const target = required('RESTORE_TARGET_URL');
+
+  let key = process.argv[2];
+  if (!key) {
+    const files = await store.list(BACKUP_PREFIX);
+    files.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+    key = files[0]?.key;
+    if (!key) throw new Error(`No backups under ${BACKUP_PREFIX}`);
+  }
+
+  const t0 = performance.now();
+  const body = await store.get(key);
+  const t1 = performance.now();
+  const db = createPrisma(target);
+  try {
+    const { header, restored } = await db.$transaction((tx) => restoreDatabase(tx, body), {
+      maxWait: 30_000,
+      timeout: 15 * 60_000,
+    });
+    const t2 = performance.now();
+
+    const expected = new Map(header.tables.map((table) => [table.name, table.rows]));
+    let mismatches = 0;
+    console.log(`backup ${key} (${body.length} bytes, taken ${header.createdAt})`);
+    console.log('table\tbackup\trestored');
+    for (const { name, rows } of restored) {
+      const flag = rows === expected.get(name) ? '' : '\tMISMATCH';
+      if (flag) mismatches++;
+      console.log(`${name}\t${expected.get(name)}\t${rows}${flag}`);
+    }
+    const total = restored.reduce((sum, table) => sum + table.rows, 0);
+    console.log(
+      `tables ${restored.length}, rows ${total}, mismatches ${mismatches}; ` +
+        `download ${((t1 - t0) / 1000).toFixed(1)} s, load ${((t2 - t1) / 1000).toFixed(1)} s`
+    );
+    return mismatches === 0 ? 0 : 1;
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+main().then(
+  (code) => process.exit(code),
+  (error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+);
