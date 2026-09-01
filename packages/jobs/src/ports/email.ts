@@ -9,38 +9,69 @@ function headerSafe(value: string): string {
     .trim();
 }
 
+/** Waits before asking again while another request sends with the same key. */
+const IN_FLIGHT_RETRY_DELAYS_MS = [250, 500, 1000, 2000];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Resend's 409 for "a request with this key is still being processed". */
+async function isKeyInFlight(response: Response): Promise<boolean> {
+  if (response.status !== 409) return false;
+  const body = (await response.json().catch(() => null)) as { name?: unknown } | null;
+  return body?.name === 'concurrent_idempotent_requests';
+}
+
 /**
  * Sends through Resend's HTTP API. The job's idempotency key goes in the
  * `Idempotency-Key` header, so a job that is retried after the email was
  * already accepted does not send it twice.
+ *
+ * Two requests with the same key at the same time (two clicks on Send):
+ * Resend answers the second 409 `concurrent_idempotent_requests` while the
+ * first is still running, and replays the first one's result after. So
+ * the second waits and asks again with the same key, and ends as the first
+ * did, without a second email. Any other 409 (the key reused with a
+ * different message) fails at once.
  */
 export function createResendTransport(options: {
   apiKey: string;
   from: string;
   /** Overridden in tests. */
   baseUrl?: string;
+  /** Overridden in tests. */
+  inFlightRetryDelaysMs?: readonly number[];
 }): EmailTransport {
   const url = `${(options.baseUrl ?? 'https://api.resend.com').replace(/\/$/, '')}/emails`;
+  const delays = options.inFlightRetryDelaysMs ?? IN_FLIGHT_RETRY_DELAYS_MS;
 
   return {
     async send(message) {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          'Content-Type': 'application/json',
-          'Idempotency-Key': message.idempotencyKey,
-        },
-        body: JSON.stringify({
-          from: options.from,
-          to: [message.to],
-          subject: headerSafe(message.subject),
-          html: message.html,
-        }),
-        signal: AbortSignal.timeout(15_000),
+      const body = JSON.stringify({
+        from: options.from,
+        to: [message.to],
+        subject: headerSafe(message.subject),
+        html: message.html,
       });
-      // The response body can echo the recipient; only the status is reported.
-      if (!response.ok) throw new Error(`Resend answered ${response.status}`);
+      for (let attempt = 0; ; attempt += 1) {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${options.apiKey}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': message.idempotencyKey,
+          },
+          body,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (response.ok) return;
+        const delay = delays[attempt];
+        if (delay !== undefined && (await isKeyInFlight(response))) {
+          await sleep(delay);
+          continue;
+        }
+        // The response body can echo the recipient; only the status is reported.
+        throw new Error(`Resend answered ${response.status}`);
+      }
     },
   };
 }
