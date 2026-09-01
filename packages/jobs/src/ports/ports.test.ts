@@ -126,6 +126,79 @@ describe('Resend email transport', () => {
   });
 });
 
+describe('Resend email transport, same key in flight', () => {
+  let server: Server;
+  let baseUrl = '';
+  // Answers per request, in order; the last one repeats.
+  let answers: { status: number; body: Record<string, unknown> }[] = [];
+  let requests = 0;
+  const keys: unknown[] = [];
+
+  const inFlight = {
+    status: 409,
+    body: { statusCode: 409, name: 'concurrent_idempotent_requests', message: 'in progress' },
+  };
+  const accepted = { status: 200, body: { id: 'email_1' } };
+
+  beforeAll(async () => {
+    server = createServer((req, res) => {
+      req.resume();
+      req.on('end', () => {
+        keys.push(req.headers['idempotency-key']);
+        const answer = answers[Math.min(requests, answers.length - 1)]!;
+        requests += 1;
+        res.writeHead(answer.status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(answer.body));
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  beforeEach(() => {
+    requests = 0;
+    keys.length = 0;
+  });
+
+  afterAll(async () => {
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  const message = { to: 'a@example.test', subject: 'S', html: '<p>x</p>', idempotencyKey: 'k:1' };
+  const transport = () =>
+    createResendTransport({
+      apiKey: 're_test',
+      from: 'a@example.test',
+      baseUrl,
+      inFlightRetryDelaysMs: [5, 5, 5],
+    });
+
+  it('waits for the request already sending with the key, then succeeds without a second email', async () => {
+    // Resend answers 409 while the first request with this key runs, and
+    // replays the first one's result once it has finished.
+    answers = [inFlight, inFlight, accepted];
+
+    await expect(transport().send(message)).resolves.toBeUndefined();
+
+    expect(requests).toBe(3);
+    expect(keys).toEqual(['k:1', 'k:1', 'k:1']);
+  });
+
+  it('fails when the other request is still running after the retries', async () => {
+    answers = [inFlight];
+
+    await expect(transport().send(message)).rejects.toThrow('Resend answered 409');
+    expect(requests).toBe(4);
+  });
+
+  it('does not retry a key reused with a different message', async () => {
+    answers = [{ status: 409, body: { statusCode: 409, name: 'invalid_idempotent_request' } }];
+
+    await expect(transport().send(message)).rejects.toThrow('Resend answered 409');
+    expect(requests).toBe(1);
+  });
+});
+
 describe('local file storage', () => {
   let dir = '';
 
