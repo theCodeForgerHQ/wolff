@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { demoEmailRedirect } from '@wolff/core/email';
+import { parseBackupKey } from '@wolff/jobs/backup-cipher';
 
 /**
  * Everything the API and the worker read from the environment, parsed once.
@@ -55,6 +56,11 @@ const schema = z.object({
   /** Bucket for the nightly database backup (same S3 endpoint and keys as STORAGE_*). */
   BACKUP_BUCKET: optional,
   BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(14),
+  /**
+   * 32 bytes, base64: backups are encrypted with it before upload. Required
+   * with BACKUP_BUCKET. Losing it makes every backup unreadable.
+   */
+  BACKUP_ENCRYPTION_KEY: optional,
 
   SENTRY_DSN: optional,
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
@@ -65,6 +71,8 @@ const schema = z.object({
 
 export type ApiConfig = z.infer<typeof schema> & {
   isProduction: boolean;
+  /** BACKUP_ENCRYPTION_KEY, parsed; set whenever BACKUP_BUCKET is. */
+  backupEncryptionKey?: Buffer;
   /** Set in demo mode: every outgoing email goes here instead. */
   demoEmailRedirect?: string;
 };
@@ -75,8 +83,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     const problems = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
     throw new Error(`Invalid configuration:\n  ${problems.join('\n  ')}`);
   }
+  const { BACKUP_BUCKET, BACKUP_ENCRYPTION_KEY } = parsed.data;
+  if (BACKUP_BUCKET && !BACKUP_ENCRYPTION_KEY) {
+    throw new Error('Invalid configuration:\n  BACKUP_BUCKET is set without BACKUP_ENCRYPTION_KEY');
+  }
   return {
     ...parsed.data,
+    // Throws on a malformed key: the process must not start.
+    backupEncryptionKey: BACKUP_ENCRYPTION_KEY ? parseBackupKey(BACKUP_ENCRYPTION_KEY) : undefined,
     isProduction: parsed.data.NODE_ENV === 'production',
     // Throws in demo mode without a redirect: the process must not start.
     demoEmailRedirect: demoEmailRedirect({

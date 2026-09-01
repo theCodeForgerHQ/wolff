@@ -25,4 +25,17 @@ describe('backup configuration', () => {
   it.each(['0', '-3', '1.5', 'abc'])('refuses a retention of %s days', (days) => {
     expect(() => loadConfig({ BACKUP_RETENTION_DAYS: days })).toThrow(/BACKUP_RETENTION_DAYS/);
   });
+
+  it('refuses a backup bucket without an encryption key, or a malformed key', () => {
+    expect(() => loadConfig({ BACKUP_BUCKET: 'backups' })).toThrow(/BACKUP_ENCRYPTION_KEY/);
+    expect(() =>
+      loadConfig({ BACKUP_BUCKET: 'backups', BACKUP_ENCRYPTION_KEY: 'not-a-key' })
+    ).toThrow(/BACKUP_ENCRYPTION_KEY must be 32 bytes/);
+  });
+
+  it('carries a valid key', () => {
+    const key = Buffer.alloc(32, 7).toString('base64');
+    const config = loadConfig({ BACKUP_BUCKET: 'backups', BACKUP_ENCRYPTION_KEY: key });
+    expect(config.backupEncryptionKey?.equals(Buffer.alloc(32, 7))).toBe(true);
+  });
 });

@@ -384,7 +384,8 @@ const backupDatabase: Processor<'db.backup'> = async (ctx) => {
       writeBackup(
         tx,
         { schemas: backups.schemas, exclude: backups.exclude, deadline: t0 + BACKUP_BUDGET_MS },
-        (body) => backups.store.put(key, body, 'application/gzip')
+        (body) => backups.store.put(key, body, 'application/octet-stream'),
+        backups.encryptionKey
       ),
     { isolationLevel: 'RepeatableRead', maxWait: 10_000, timeout: BACKUP_BUDGET_MS + 30_000 }
   );

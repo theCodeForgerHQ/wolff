@@ -3,15 +3,17 @@
  * that already has the schema, and compares row counts per table with the
  * counts recorded in the backup. See docs/runbook.md "Restore".
  *
- *   RESTORE_TARGET_URL=postgresql://...  BACKUP_BUCKET=backups  STORAGE_ENDPOINT=...
+ *   RESTORE_TARGET_URL=postgresql://...  BACKUP_BUCKET=backups  BACKUP_ENCRYPTION_KEY=...
+ *   STORAGE_ENDPOINT=...
  *   STORAGE_REGION=...  STORAGE_ACCESS_KEY=...  STORAGE_SECRET_KEY=...
- *   pnpm --filter @wolff/api backup:restore [db/2026-08-30.ndjson.gz]
+ *   pnpm --filter @wolff/api backup:restore [db/2026-08-30.ndjson.gz.enc]
  *
  * Without a key it takes the newest backup. Exits 1 when any count differs.
  */
 import { Transform } from 'node:stream';
 import { createPrisma } from '@wolff/database';
 import { BACKUP_PREFIX, restoreDatabase } from '@wolff/jobs/backup';
+import { parseBackupKey } from '@wolff/jobs/backup-cipher';
 import { createS3BackupStore } from '@wolff/jobs/ports';
 
 function required(name: string): string {
@@ -29,6 +31,7 @@ async function main(): Promise<number> {
     secretAccessKey: required('STORAGE_SECRET_KEY'),
   });
   const target = required('RESTORE_TARGET_URL');
+  const secret = parseBackupKey(required('BACKUP_ENCRYPTION_KEY'));
 
   let key = process.argv[2];
   if (!key) {
@@ -55,7 +58,7 @@ async function main(): Promise<number> {
   download.on('error', (error) => body.destroy(error));
   const db = createPrisma(target);
   try {
-    const { header, restored } = await db.$transaction((tx) => restoreDatabase(tx, body), {
+    const { header, restored } = await db.$transaction((tx) => restoreDatabase(tx, body, secret), {
       maxWait: 30_000,
       timeout: 15 * 60_000,
     });

@@ -8,7 +8,8 @@
     "./qstash": "./src/qstash.ts",
     "./testing/redis": "./src/testing/redis.ts",
     "./ports": "./src/ports/index.ts",
-    "./backup": "./src/backup.ts"
+    "./backup": "./src/backup.ts",
+    "./backup-cipher": "./src/backup-cipher.ts"
   },
   "scripts": {
     "lint": "eslint .",

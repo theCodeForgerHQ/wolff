@@ -1,6 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { gunzipSync } from 'node:zlib';
+import { decryptBackup, encryptBackup } from './backup-cipher';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
 import { runJob, type JobContext } from './index';
@@ -33,7 +34,7 @@ function memoryStore(files: { key: string; lastModified: Date }[]): BackupStore 
 
 describe('backupKey', () => {
   it('names one sortable file per UTC day under db/', () => {
-    expect(backupKey(new Date('2026-10-08T23:59:59.999Z'))).toBe('db/2026-10-08.ndjson.gz');
+    expect(backupKey(new Date('2026-10-08T23:59:59.999Z'))).toBe('db/2026-10-08.ndjson.gz.enc');
   });
 });
 
@@ -77,13 +78,30 @@ describe('readBackup', () => {
 
 const url = process.env.TEST_DATABASE_URL;
 
-/** Runs writeBackup with an upload that keeps the bytes in memory. */
-async function exportBuffer(sql: SqlRunner, options: ExportOptions) {
+const KEY = randomBytes(32);
+
+async function collect(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  const { header } = await writeBackup(sql, options, async (body) => {
-    for await (const chunk of body) chunks.push(chunk as Buffer);
-  });
-  return { body: Buffer.concat(chunks), header };
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Runs writeBackup with an upload that keeps the bytes in memory. `body` is
+ * the decrypted gzip, for inspecting; `sealed` is what was uploaded.
+ */
+async function exportBuffer(sql: SqlRunner, options: ExportOptions) {
+  let sealed: Buffer = Buffer.alloc(0);
+  const { header } = await writeBackup(
+    sql,
+    options,
+    async (stream) => {
+      sealed = await collect(stream);
+    },
+    KEY
+  );
+  const body = await collect(Readable.from([sealed]).pipe(decryptBackup(KEY)));
+  return { body, sealed, header };
 }
 
 describe.skipIf(!url)('export and restore (Postgres)', () => {
@@ -94,8 +112,11 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
   const exclude = [`${schema}.chunks`];
   const exportSnapshot = (options: ExportOptions) =>
     db.$transaction((tx) => exportBuffer(tx, options), { isolationLevel: 'RepeatableRead' });
-  const restore = (body: Uint8Array) =>
-    db.$transaction((tx) => restoreDatabase(tx, Readable.from([body])));
+  /** Restores a decrypted gzip body: encrypts it, as the store would hold it. */
+  const restore = async (body: Uint8Array, key = KEY) => {
+    const sealed = await collect(Readable.from([body]).pipe(encryptBackup(KEY)));
+    return db.$transaction((tx) => restoreDatabase(tx, Readable.from([sealed]), key));
+  };
 
   const snapshot = async () => ({
     parents: await db.$queryRawUnsafe<unknown[]>(`SELECT * FROM ${parent} ORDER BY id`),
@@ -243,6 +264,20 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     await restore(body); // leave the rows for the next tests
   });
 
+  it('uploads only ciphertext, and a wrong key restores nothing', async () => {
+    const { body, sealed } = await exportSnapshot({ schemas: [schema], exclude });
+    expect(sealed.subarray(0, 8).toString('latin1')).toBe('WOLFENC1');
+    expect(sealed.includes(Buffer.from(`${schema}.parent`))).toBe(false);
+
+    await db.$executeRawUnsafe(`TRUNCATE ${child}, ${parent}`);
+    await expect(restore(body, randomBytes(32))).rejects.toThrow(/BACKUP_ENCRYPTION_KEY|damaged/);
+    const [{ n }] = await db.$queryRawUnsafe<[{ n: number }]>(
+      `SELECT count(*)::int AS n FROM ${parent}`
+    );
+    expect(n).toBe(0);
+    await restore(body); // leave the rows for the next tests
+  });
+
   it('refuses to restore into tables that hold rows', async () => {
     const { body } = await exportSnapshot({ schemas: [schema], exclude });
 
@@ -276,7 +311,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     const put: { key: string; body: Uint8Array; contentType: string }[] = [];
     const deleted: string[] = [];
     const files = [
-      { key: 'db/2026-10-07.ndjson.gz', lastModified: new Date('2026-10-07T21:00:00Z') },
+      { key: 'db/2026-10-07.ndjson.gz.enc', lastModified: new Date('2026-10-07T21:00:00Z') },
       { key: 'db/2026-09-01.ndjson.gz', lastModified: new Date('2026-09-01T21:00:00Z') },
     ];
     const ctx = {
@@ -285,12 +320,16 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
       backups: {
         schemas: [schema],
         exclude,
+        encryptionKey: KEY,
         keepDays: 14,
         store: {
           put: async (key: string, stream: Readable, contentType: string) => {
-            const chunks: Buffer[] = [];
-            for await (const chunk of stream) chunks.push(chunk as Buffer);
-            put.push({ key, body: Buffer.concat(chunks), contentType });
+            const sealed = await collect(stream);
+            put.push({
+              key,
+              body: await collect(Readable.from([sealed]).pipe(decryptBackup(KEY))),
+              contentType,
+            });
             files.push({ key, lastModified: NOW });
           },
           get: async () => Readable.from([]),
@@ -305,8 +344,8 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     await runJob(ctx, { type: 'db.backup', payload: {}, jobId: 'scheduled:backup' });
 
     expect(put).toHaveLength(1);
-    expect(put[0]!.key).toBe('db/2026-10-08.ndjson.gz');
-    expect(put[0]!.contentType).toBe('application/gzip');
+    expect(put[0]!.key).toBe('db/2026-10-08.ndjson.gz.enc');
+    expect(put[0]!.contentType).toBe('application/octet-stream');
     const stored = readBackup(put[0]!.body).header;
     expect(stored.tables).toEqual([
       { name: `${schema}.parent`, rows: 7 },

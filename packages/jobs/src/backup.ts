@@ -1,7 +1,9 @@
 import { createInterface } from 'node:readline';
 import { PassThrough, Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { pipeline as pipe } from 'node:stream';
 import { createGunzip, createGzip, gunzipSync } from 'node:zlib';
+import { decryptBackup, encryptBackup } from './backup-cipher';
 
 /**
  * Logical database backup for the free demo (Phase 6).
@@ -288,7 +290,7 @@ function byteCounter(): Transform & { bytes: number } {
 }
 
 /**
- * Streams the export through gzip into
+ * Streams the export through gzip and AES-256-GCM (backup-cipher.ts) into
  * `upload`, which must consume the stream to its end. An upload that fails
  * stops the export; an export that fails errors the stream, so the upload
  * must not store what it got (the S3 store aborts the multipart upload).
@@ -296,7 +298,8 @@ function byteCounter(): Transform & { bytes: number } {
 export async function writeBackup(
   sql: SqlRunner,
   options: ExportOptions,
-  upload: (body: Readable) => Promise<void>
+  upload: (body: Readable) => Promise<void>,
+  key: Buffer
 ): Promise<{ header: BackupHeader; bytes: number }> {
   let header: BackupHeader | undefined;
   async function* source() {
@@ -308,7 +311,10 @@ export async function writeBackup(
     body.destroy(error instanceof Error ? error : new Error(String(error)));
     throw error;
   });
-  await Promise.all([pipeline(Readable.from(source()), createGzip(), counter, body), sent]);
+  await Promise.all([
+    pipeline(Readable.from(source()), createGzip(), encryptBackup(key), counter, body),
+    sent,
+  ]);
   return { header: header!, bytes: counter.bytes };
 }
 
@@ -337,7 +343,7 @@ export function readBackup(body: Uint8Array): { header: BackupHeader; batches: B
 }
 
 /**
- * Loads a backup stream (gzipped, already decrypted) into a database that has
+ * Loads a backup stream (as stored: encrypted, gzipped) into a database that has
  * the schema and no rows, table by table as the lines arrive. Each table's
  * batches go into a temporary staging table first and then into the real one
  * in a single INSERT, because Postgres checks a non-deferred foreign key at
@@ -349,11 +355,12 @@ export function readBackup(body: Uint8Array): { header: BackupHeader; batches: B
  */
 export async function restoreDatabase(
   sql: SqlRunner,
-  body: Readable
+  body: Readable,
+  key: Buffer
 ): Promise<{ header: BackupHeader; restored: BackupHeader['tables'] }> {
-  const gunzip = createGunzip();
-  const input = body.pipe(gunzip);
-  body.on('error', (error) => gunzip.destroy(error));
+  // A failure anywhere (download, authentication, gzip) destroys the last
+  // stream with that error, and the line reader below throws it.
+  const input = pipe(body, decryptBackup(key), createGunzip(), () => undefined);
   const lines = createInterface({ input, crlfDelay: Infinity })[Symbol.asyncIterator]();
 
   const first = await lines.next();
@@ -435,11 +442,11 @@ export interface BackupStore {
 export const BACKUP_PREFIX = 'db/';
 
 /**
- * `db/2026-08-30.ndjson.gz`: one file per UTC day, so a retried or repeated
+ * `db/2026-08-30.ndjson.gz.enc`: one file per UTC day, so a retried or repeated
  * run on the same day finds its file and does nothing.
  */
 export function backupKey(at: Date): string {
-  return `${BACKUP_PREFIX}${at.toISOString().slice(0, 10)}.ndjson.gz`;
+  return `${BACKUP_PREFIX}${at.toISOString().slice(0, 10)}.ndjson.gz.enc`;
 }
 
 /**
