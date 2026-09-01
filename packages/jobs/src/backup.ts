@@ -26,6 +26,8 @@ export interface BackupHeader {
   version: typeof BACKUP_VERSION;
   createdAt: string;
   schemas: string[];
+  /** Tables left out on purpose (rebuildable data); empty after a restore. */
+  excluded: string[];
   /** Row count per table, as read in the snapshot. */
   tables: { name: string; rows: number }[];
 }
@@ -80,8 +82,18 @@ function cursorText(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
+/**
+ * Data the backup leaves out because it can be rebuilt from the rest: the
+ * RAG index (2048-dimension embeddings, most of the bytes) and its
+ * bookkeeping. With ai.ingest_state empty, the ai.sweep job finds every
+ * source unindexed and embeds it again (docs/runbook.md, Restore).
+ */
+export const REBUILDABLE_TABLES = ['ai.document_chunks', 'ai.ingest_state'];
+
 export interface ExportOptions {
   schemas: string[];
+  /** Schema-qualified tables to leave out, such as REBUILDABLE_TABLES. */
+  exclude?: string[];
   /** Rows per query. */
   batchSize?: number;
   /** Stop with BackupBudgetError when a batch would start after this time (ms epoch). */
@@ -143,7 +155,8 @@ export async function exportDatabase(
 ): Promise<{ body: Uint8Array; header: BackupHeader }> {
   const batchSize = options.batchSize ?? 500;
   const now = options.now ?? Date.now;
-  const tables = await listTables(sql, options.schemas);
+  const excluded = options.exclude ?? [];
+  const tables = (await listTables(sql, options.schemas)).filter((t) => !excluded.includes(t));
   const lines: string[] = [];
   const counts: BackupHeader['tables'] = [];
 
@@ -183,6 +196,7 @@ export async function exportDatabase(
     version: BACKUP_VERSION,
     createdAt: new Date(now()).toISOString(),
     schemas: options.schemas,
+    excluded,
     tables: counts,
   };
   const text = [JSON.stringify(header), ...lines].join('\n') + '\n';

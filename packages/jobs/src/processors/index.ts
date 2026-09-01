@@ -382,6 +382,7 @@ const backupDatabase: Processor<'db.backup'> = async (ctx) => {
     (tx) =>
       exportDatabase(tx, {
         schemas: backups.schemas,
+        exclude: backups.exclude,
         deadline: t0 + BACKUP_BUDGET_MS,
       }),
     { isolationLevel: 'RepeatableRead', maxWait: 10_000, timeout: BACKUP_BUDGET_MS + 30_000 }

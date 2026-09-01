@@ -115,7 +115,7 @@ export interface JobContext {
   /** Absent when no AI service is configured; AI jobs then do nothing. */
   ai?: AiIndexer;
   /** Where `db.backup` writes. Absent: the job fails, so a missing bucket is noticed. */
-  backups?: { store: BackupStore; keepDays: number; schemas: string[] };
+  backups?: { store: BackupStore; keepDays: number; schemas: string[]; exclude?: string[] };
   /** Public origin of the web app, for links in emails and PDF rendering. */
   appUrl: string;
   requireHttpsWebhooks: boolean;

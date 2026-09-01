@@ -2,6 +2,7 @@ import { createPrisma, withTenantGuard } from '@wolff/database';
 import { createRedis } from '@wolff/jobs/bullmq';
 import { BullMQDispatcher, createJobQueue } from '@wolff/jobs/bullmq';
 import { QStashDispatcher, createQStashVerifier } from '@wolff/jobs/qstash';
+import { REBUILDABLE_TABLES } from '@wolff/jobs/backup';
 import { Client as QStashClient } from '@upstash/qstash';
 import { type Redis } from 'ioredis';
 import { createApp, type AppDeps } from './app';
@@ -130,6 +131,7 @@ function createBackups(config: ApiConfig): JobContext['backups'] {
     }),
     keepDays: config.BACKUP_RETENTION_DAYS,
     schemas: BACKUP_SCHEMAS,
+    exclude: REBUILDABLE_TABLES,
   };
 }
 

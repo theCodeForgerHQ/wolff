@@ -79,6 +79,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
   const schema = `backup_test_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const parent = `"${schema}"."parent"`;
   const child = `"${schema}"."child"`;
+  const exclude = [`${schema}.chunks`];
 
   const snapshot = async () => ({
     parents: await db.$queryRawUnsafe<unknown[]>(`SELECT * FROM ${parent} ORDER BY id`),
@@ -114,6 +115,9 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
       `CREATE TABLE "${schema}"."alembic_version" (version_num text PRIMARY KEY)`
     );
     await db.$executeRawUnsafe(`INSERT INTO "${schema}"."alembic_version" VALUES ('0002')`);
+    // Stands in for ai.document_chunks: rebuildable, left out of the backup.
+    await db.$executeRawUnsafe(`CREATE TABLE "${schema}"."chunks" (id int PRIMARY KEY)`);
+    await db.$executeRawUnsafe(`INSERT INTO "${schema}"."chunks" VALUES (1), (2)`);
     // Rows referencing later rows: in ctid order the child comes first.
     await db.$executeRawUnsafe(
       `INSERT INTO ${child} VALUES
@@ -132,7 +136,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
   it('exports every table in batches and restores the same rows', async () => {
     const before = await snapshot();
     const { body, header } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema], batchSize: 2 }),
+      (tx) => exportDatabase(tx, { schemas: [schema], exclude, batchSize: 2 }),
       { isolationLevel: 'RepeatableRead' }
     );
 
@@ -152,7 +156,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
 
   it('leaves migration history out, so it restores into a freshly migrated database', async () => {
     const { body, header } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema] }),
+      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
       { isolationLevel: 'RepeatableRead' }
     );
     expect(header.tables.map((table) => table.name)).toEqual([
@@ -218,17 +222,23 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
   });
 
   it('refuses to restore into tables that hold rows', async () => {
-    const { body } = await db.$transaction((tx) => exportDatabase(tx, { schemas: [schema] }), {
-      isolationLevel: 'RepeatableRead',
-    });
+    const { body } = await db.$transaction(
+      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
+      {
+        isolationLevel: 'RepeatableRead',
+      }
+    );
 
     await expect(db.$transaction((tx) => restoreDatabase(tx, body))).rejects.toThrow(/not empty/);
   });
 
   it('refuses a target without the schema', async () => {
-    const { body } = await db.$transaction((tx) => exportDatabase(tx, { schemas: [schema] }), {
-      isolationLevel: 'RepeatableRead',
-    });
+    const { body } = await db.$transaction(
+      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
+      {
+        isolationLevel: 'RepeatableRead',
+      }
+    );
     const other = `${schema}_x`;
     const renamed = Buffer.from(
       gunzipSync(body).toString('utf8').replaceAll(`${schema}.`, `${other}.`)
@@ -245,7 +255,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
   it('stops with BackupBudgetError when the deadline has passed', async () => {
     let t = 0;
     await expect(
-      exportDatabase(db, { schemas: [schema], batchSize: 2, deadline: 3, now: () => t++ })
+      exportDatabase(db, { schemas: [schema], exclude, batchSize: 2, deadline: 3, now: () => t++ })
     ).rejects.toBeInstanceOf(BackupBudgetError);
   });
 
@@ -262,6 +272,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
       now: () => NOW,
       backups: {
         schemas: [schema],
+        exclude,
         keepDays: 14,
         store: {
           put: async (key: string, body: Uint8Array, contentType: string) => {
@@ -282,10 +293,12 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     expect(put).toHaveLength(1);
     expect(put[0]!.key).toBe('db/2026-10-08.ndjson.gz');
     expect(put[0]!.contentType).toBe('application/gzip');
-    expect(readBackup(put[0]!.body).header.tables).toEqual([
+    const stored = readBackup(put[0]!.body).header;
+    expect(stored.tables).toEqual([
       { name: `${schema}.child`, rows: 3 },
       { name: `${schema}.parent`, rows: 7 },
     ]);
+    expect(stored.excluded).toEqual([`${schema}.chunks`]);
     expect(deleted).toEqual(['db/2026-09-01.ndjson.gz']);
 
     // A second delivery the same day (QStash retry, a drain run) does nothing.

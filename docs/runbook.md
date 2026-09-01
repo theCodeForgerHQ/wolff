@@ -183,6 +183,22 @@ table and exits 1 on any mismatch. To a fresh database instead of a branch:
 run the migrations (section 1 step 1) and the restore; nothing to empty. The
 backup has no migration history, so the migrations' own history rows stay.
 
+The RAG index is not in the backup: `ai.document_chunks` (the 2048-dimension
+embeddings, most of the bytes) and `ai.ingest_state` are left out because they
+can be rebuilt (`REBUILDABLE_TABLES` in `packages/jobs/src/backup.ts`). After a
+restore both are empty, so the hourly `ai.sweep` schedule (minute 30) finds
+every quote, invoice, contract and client note unindexed and embeds it again,
+in batches inside its 200 s budget. To start it now instead of waiting:
+
+```bash
+curl -s -X POST "$QSTASH_URL/v2/publish/https://wolff-api.vercel.app/jobs/run/ai.sweep" \
+  -H "Authorization: Bearer $QSTASH_TOKEN" -H 'content-type: application/json' \
+  -d '{"type":"ai.sweep","payload":{},"jobId":"manual:ai-sweep"}'
+```
+
+Until it has run, AI search and chat answer without context from the restored
+documents; nothing else depends on the index.
+
 To make a restored branch the live database: point `DATABASE_URL` (web, api)
 and `AI_DATABASE_URL` (ai) at it, or use Neon's "restore branch" on `main`,
 and redeploy. Delete scratch branches afterwards
