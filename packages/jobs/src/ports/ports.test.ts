@@ -3,11 +3,41 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CreateBucketCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { Readable } from 'node:stream';
+import { randomBytes } from 'node:crypto';
+import {
+  CreateBucketCommand,
+  GetObjectCommand,
+  ListMultipartUploadsCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createLogEmailTransport, createResendTransport } from './email';
-import { createLocalStorage, createS3BackupStore, createS3Storage } from './storage';
+import {
+  BACKUP_PART_BYTES,
+  createLocalStorage,
+  createS3BackupStore,
+  createS3Storage,
+} from './storage';
+
+async function bytes(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
+}
+
+/** `total` bytes in 64 KiB chunks, like a gzip stream delivers them. */
+function chunked(data: Buffer, failAfter?: number): Readable {
+  return Readable.from(
+    (function* () {
+      for (let at = 0; at < data.length; at += 65_536) {
+        if (failAfter !== undefined && at >= failAfter) throw new Error('source failed');
+        yield data.subarray(at, at + 65_536);
+      }
+    })()
+  );
+}
 
 describe('Resend email transport', () => {
   let server: Server;
@@ -190,16 +220,66 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('S3 storage (S3Mock container)',
       ...credentials,
     });
 
-    await store.put('db/a.ndjson.gz', new Uint8Array([1, 2, 3]), 'application/gzip');
-    await store.put('db/b.ndjson.gz', new Uint8Array([4]), 'application/gzip');
-    await store.put('other/c', new Uint8Array([5]), 'application/octet-stream');
+    await store.put('db/a.ndjson.gz', Readable.from([Buffer.from([1, 2, 3])]), 'application/gzip');
+    await store.put('db/b.ndjson.gz', Readable.from([Buffer.from([4])]), 'application/gzip');
+    await store.put('other/c', Readable.from([Buffer.from([5])]), 'application/octet-stream');
 
     const listed = await store.list('db/');
     expect(listed.map((file) => file.key).sort()).toEqual(['db/a.ndjson.gz', 'db/b.ndjson.gz']);
     expect(listed.every((file) => file.lastModified instanceof Date)).toBe(true);
-    expect([...(await store.get('db/a.ndjson.gz'))]).toEqual([1, 2, 3]);
+    expect([...(await bytes(await store.get('db/a.ndjson.gz')))]).toEqual([1, 2, 3]);
 
     await store.delete('db/a.ndjson.gz');
     expect((await store.list('db/')).map((file) => file.key)).toEqual(['db/b.ndjson.gz']);
   });
+
+  // Ten-plus MiB through a container: 0.5 s alone, but well past vitest's 5 s
+  // default while the other packages' suites load the machine.
+  const MULTIPART_TIMEOUT_MS = 30_000;
+
+  it(
+    'streams a backup larger than one part as a multipart upload',
+    async () => {
+      const store = createS3BackupStore({
+        endpoint,
+        region: 'us-east-1',
+        bucket: 'backups',
+        ...credentials,
+      });
+      const data = randomBytes(2 * BACKUP_PART_BYTES + 12_345);
+
+      await store.put('db/big.enc', chunked(data), 'application/octet-stream');
+
+      expect((await bytes(await store.get('db/big.enc'))).equals(data)).toBe(true);
+    },
+    MULTIPART_TIMEOUT_MS
+  );
+
+  it(
+    'aborts the multipart upload and stores nothing when the source fails',
+    async () => {
+      const store = createS3BackupStore({
+        endpoint,
+        region: 'us-east-1',
+        bucket: 'backups',
+        ...credentials,
+      });
+      const data = randomBytes(2 * BACKUP_PART_BYTES);
+
+      await expect(
+        store.put('db/broken.enc', chunked(data, BACKUP_PART_BYTES + 65_536), 'application/gzip')
+      ).rejects.toThrow(/source failed/);
+
+      expect((await store.list('db/')).map((file) => file.key)).not.toContain('db/broken.enc');
+      const client = new S3Client({
+        endpoint,
+        region: 'us-east-1',
+        credentials,
+        forcePathStyle: true,
+      });
+      const uploads = await client.send(new ListMultipartUploadsCommand({ Bucket: 'backups' }));
+      expect(uploads.Uploads ?? []).toEqual([]);
+    },
+    MULTIPART_TIMEOUT_MS
+  );
 });

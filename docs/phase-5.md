@@ -255,7 +255,7 @@ created and sent through `/api/v1` (INV/26-27/0002, 15:25Z) wrote a
 `pdf.render` event; the scheduled outbox sweep relayed it and the api
 stored the PDF in Supabase at 15:30Z (138,954 bytes; pdftotext shows
 "Kaveri Studio", the invoice number and 5,900.00). The send email
-reached ajayaditya.dev@gmail.com (Gmail Spam, from the web app's
+reached the owner's Gmail (Gmail Spam, from the web app's
 `/api/v1` send route).
 
 Checks at `e740297` (clean worktree, no `.env`, Node 24.21.0, one fresh

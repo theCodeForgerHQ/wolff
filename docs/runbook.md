@@ -60,7 +60,7 @@ schedules and monitors. Every step uses a free plan that needs no card.
    Set env vars per project; the names each one needs are in its
    the lists below (only web has an `.env.example`; docs/free-tier.md
    explains the shared ones):
-   - api: `DATABASE_URL APP_URL PUBLIC_API_URL WEB_ORIGIN JOB_DISPATCHER=qstash QSTASH_* REDIS_URL STORAGE_PROVIDER=s3 STORAGE_ENDPOINT STORAGE_REGION STORAGE_BUCKET=pdfs STORAGE_ACCESS_KEY STORAGE_SECRET_KEY BACKUP_BUCKET=backups STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET SVC_JWT_SECRET_{WEB,AI,WORKER,LAMBDA} AI_URL ENCRYPTION_KEY RESEND_API_KEY EMAIL_FROM DEMO_MODE DEMO_EMAIL_REDIRECT SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE LOG_LEVEL WEB_PROTECTION_BYPASS`. Do not set `NODE_ENV`.
+   - api: `DATABASE_URL APP_URL PUBLIC_API_URL WEB_ORIGIN JOB_DISPATCHER=qstash QSTASH_* REDIS_URL STORAGE_PROVIDER=s3 STORAGE_ENDPOINT STORAGE_REGION STORAGE_BUCKET=pdfs STORAGE_ACCESS_KEY STORAGE_SECRET_KEY BACKUP_BUCKET=backups BACKUP_ENCRYPTION_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET SVC_JWT_SECRET_{WEB,AI,WORKER,LAMBDA} AI_URL ENCRYPTION_KEY RESEND_API_KEY EMAIL_FROM DEMO_MODE DEMO_EMAIL_REDIRECT SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE LOG_LEVEL WEB_PROTECTION_BYPASS`. Do not set `NODE_ENV`.
    - web: `DATABASE_URL AUTH_SECRET NEXTAUTH_SECRET NEXTAUTH_URL AUTH_TRUST_HOST API_V1_UPSTREAM AI_URL SVC_JWT_SECRET_WEB ENCRYPTION_KEY CRON_SECRET STRIPE_SECRET_KEY NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY STORAGE_PROVIDER STORAGE_ENDPOINT STORAGE_REGION STORAGE_BUCKET STORAGE_ACCESS_KEY STORAGE_SECRET_KEY UPSTASH_REDIS_REST_* RESEND_API_KEY EMAIL_FROM DEMO_* GOOGLE_CLIENT_* SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE NEXT_PUBLIC_SENTRY_DSN NEXT_PUBLIC_APP_*`.
    - ai: `AI_DATABASE_URL` (psycopg URL with `sslmode=require`), `LLM_PROVIDER=nvidia LLM_FALLBACK=groq NVIDIA_API_KEY GROQ_API_KEY GEMINI_API_KEY (optional) AI_MAX_TOKENS AI_DAILY_BUDGET_USD API_INTERNAL_URL AI_PUBLIC_URL AI_REPORTS_DIR=/tmp/reports SVC_JWT_SECRET_{AI,WEB,WORKER} SENTRY_DSN SENTRY_TRACES_SAMPLE_RATE ENVIRONMENT=production PRODUCT_SLUG=wolff`.
      Turn Vercel Authentication on for web only; create its Protection Bypass for
@@ -133,10 +133,23 @@ took 5.8 s; `/readyz` was 200 again at 01:09:42Z. Details: docs/phase-6.md (Phas
 
 QStash schedule `wolff-backup` (`0 21 * * *` UTC) calls `db.backup` on the
 api. It exports every table of the `public` and `ai` schemas, data only, in
-one REPEATABLE READ snapshot, to `backups/db/<UTC date>.ndjson.gz`, then
-deletes files older than `BACKUP_RETENTION_DAYS` (14; never the newest). The
-schema is not in the file: it comes from the migrations. Why not `pg_dump`:
+one REPEATABLE READ snapshot, except the migration history and the RAG index
+(section 4.2). The rows stream through gzip and AES-256-GCM into
+`backups/db/<UTC date>.ndjson.gz.enc` as a multipart upload; then files older
+than `BACKUP_RETENTION_DAYS` (14; never the newest) are deleted. The schema is
+not in the file: it comes from the migrations. Why not `pg_dump`:
 docs/phase-6.md, "Backup design".
+
+**The encryption key.** `BACKUP_ENCRYPTION_KEY` (32 random bytes, base64,
+`openssl rand -base64 32`) is set on wolff-api and kept in the owner's
+`secrets.env`, outside the repo. It is never logged. **Losing it makes every
+backup unrecoverable**: there is no other copy and no way around GCM. Keep a
+second copy in a password manager. The api refuses to start with
+`BACKUP_BUCKET` set and no key, or a malformed key. Storage access uses the
+same `STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` as the PDFs (Supabase S3 keys
+are project-wide); the encryption is what keeps a leaked storage key from
+exposing the data. To rotate the key: set the new one, take a backup, and
+keep the old key until the last file written with it has been pruned (14 days).
 
 Run one now (does nothing if today's file exists):
 
@@ -166,27 +179,50 @@ P=patient-rice-66047365
 psql() { docker run --rm postgres:17 psql "$@"; }   # if psql is not installed
 B=$(neonctl branches create --project-id $P --name restore-$(date +%m%d) --output json | jq -r .branch.id)  # copy of main
 URL=$(neonctl connection-string $B --project-id $P --database-name neondb --role-name neondb_owner)
-# Empty it. public: TRUNCATE as neondb_owner. ai: tables belong to ai_owner, and
+# Empty it, except the migration history (_prisma_migrations, alembic_version):
+# backups leave those tables out and the restore keeps the target's own.
+# public: TRUNCATE as neondb_owner. ai: tables belong to ai_owner, and
 # neondb_owner cannot SET ROLE to it, but may DELETE.
-psql "$URL" -c "DO \$\$ DECLARE l text; BEGIN SELECT string_agg(format('%I.%I',schemaname,tablename),', ') INTO l FROM pg_tables WHERE schemaname='public'; EXECUTE 'TRUNCATE '||l; END \$\$;"
-psql "$URL" -c "DO \$\$ DECLARE r record; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='ai' LOOP EXECUTE format('DELETE FROM ai.%I', r.tablename); END LOOP; END \$\$;"
+psql "$URL" -c "DO \$\$ DECLARE l text; BEGIN SELECT string_agg(format('%I.%I',schemaname,tablename),', ') INTO l FROM pg_tables WHERE schemaname='public' AND tablename <> '_prisma_migrations'; EXECUTE 'TRUNCATE '||l; END \$\$;"
+psql "$URL" -c "DO \$\$ DECLARE r record; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='ai' AND tablename <> 'alembic_version' LOOP EXECUTE format('DELETE FROM ai.%I', r.tablename); END LOOP; END \$\$;"
 ( cd apps/api && RESTORE_TARGET_URL="$URL" BACKUP_BUCKET=backups \
-  node --import tsx scripts/restore-backup.ts )   # newest; or pass a key, e.g. db/2026-08-30.ndjson.gz
+  node --import tsx scripts/restore-backup.ts )   # newest; or pass a key, e.g. db/2026-08-30.ndjson.gz.enc
 neonctl branches delete $B --project-id $P       # when done
 ```
 
-`STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`
-must be in the environment. The script prints backup vs restored rows per
+`BACKUP_ENCRYPTION_KEY`, `STORAGE_ENDPOINT`, `STORAGE_REGION`,
+`STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` must be in the environment. A wrong
+key or a damaged file fails authentication and the restore loads nothing (it
+runs in one transaction). The script prints backup vs restored rows per
 table and exits 1 on any mismatch. To a fresh database instead of a branch:
-run the migrations (section 1 step 1) and the restore; nothing to empty.
+run the migrations (section 1 step 1) and the restore; nothing to empty. The
+backup has no migration history, so the migrations' own history rows stay.
+
+The RAG index is not in the backup: `ai.document_chunks` (the 2048-dimension
+embeddings, most of the bytes) and `ai.ingest_state` are left out because they
+can be rebuilt (`REBUILDABLE_TABLES` in `packages/jobs/src/backup.ts`). After a
+restore both are empty, so the hourly `ai.sweep` schedule (minute 30) finds
+every quote, invoice, contract and client note unindexed and embeds it again,
+in batches inside its 200 s budget. To start it now instead of waiting:
+
+```bash
+curl -s -X POST "$QSTASH_URL/v2/publish/https://wolff-api.vercel.app/jobs/run/ai.sweep" \
+  -H "Authorization: Bearer $QSTASH_TOKEN" -H 'content-type: application/json' \
+  -d '{"type":"ai.sweep","payload":{},"jobId":"manual:ai-sweep"}'
+```
+
+Until it has run, AI search and chat answer without context from the restored
+documents; nothing else depends on the index.
 
 To make a restored branch the live database: point `DATABASE_URL` (web, api)
 and `AI_DATABASE_URL` (ai) at it, or use Neon's "restore branch" on `main`,
 and redeploy. Delete scratch branches afterwards
 (`neonctl branches delete $B --project-id $P`).
 
-Drill (2026-08-30): 65 tables, 1,632 rows, 0 mismatches; branch 4.3 s,
-emptying 6.0 s, restore 62.1 s (download 2.0 s, load 58.2 s), delete 4.0 s.
+Drill (2026-08-30, encrypted format 2): 61 tables, 1,376 rows, 0 mismatches,
+migration history kept; branch 5.9 s, emptying 12.8 s, restore 80.8 s
+(download and load stream together), delete 3.6 s. The backup file was
+150,077 bytes.
 
 ### 4.3 Point-in-time restore (Neon)
 
@@ -280,7 +316,7 @@ When an alert arrives:
    within 6 h, otherwise the newest backup (4.2).
 8. Write down what happened, the timeline and the fix.
 
-Daily glance: last night's `backups/db/<date>.ndjson.gz` exists; QStash shows
+Daily glance: last night's `backups/db/<date>.ndjson.gz.enc` exists; QStash shows
 no failed deliveries; Sentry has no new unresolved issues.
 
 ## 8. Free-tier limits (as checked; vendors change them)

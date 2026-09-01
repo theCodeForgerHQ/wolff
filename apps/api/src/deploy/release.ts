@@ -48,6 +48,8 @@ export interface ReleaseResult {
   deployed: { name: string; url: string; previous?: string }[];
   failed?: { name: string; reason: string };
   rolledBack: string[];
+  /** Rollbacks that threw; the other projects are still rolled back. */
+  rollbackFailed: { name: string; reason: string }[];
   /** After a rollback: every rolled-back project passes its checks again. */
   recovered?: boolean;
   /** Milliseconds per phase, for the runbook's timings. */
@@ -56,6 +58,55 @@ export interface ReleaseResult {
 
 export const SMOKE_ATTEMPTS = 4;
 export const SMOKE_DELAY_MS = 5_000;
+
+/**
+ * The deployment URL from `vercel deploy` stdout: its last line that parses
+ * as an https URL. Throws rather than guess, so a changed CLI output format
+ * fails the release instead of promoting or smoke-testing a garbage string.
+ */
+export function parseDeploymentUrl(output: string): string {
+  const urls = output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line.startsWith('https://') || /\s/.test(line)) return false;
+      try {
+        return new URL(line).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    });
+  const url = urls.pop();
+  if (!url) throw new Error('no deployment URL in the vercel deploy output');
+  return url;
+}
+
+/**
+ * The targets named in a comma-separated list, in the canonical order of
+ * `all`; every target when the list is omitted. An unknown or empty name
+ * throws, so a typo cannot turn into a release that deploys nothing and
+ * exits 0.
+ */
+export function selectTargets(all: ReleaseTarget[], only: string | undefined): ReleaseTarget[] {
+  if (only === undefined) return all;
+  const wanted = only
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (wanted.length === 0) throw new Error('no projects selected');
+  const known = all.map((t) => t.name);
+  for (const name of wanted) {
+    if (!known.includes(name)) {
+      throw new Error(`unknown project "${name}"; expected one of ${known.join(', ')}`);
+    }
+  }
+  return all.filter((t) => wanted.includes(t.name));
+}
+
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** A release step that threw, labelled with the step for the report. */
+class StepError extends Error {}
 
 /** Returns why a check failed, or undefined when it passed. */
 async function runCheck(
@@ -78,7 +129,7 @@ async function runCheck(
         return undefined;
       }
     } catch (error) {
-      reason = `${method} ${check.path} failed: ${error instanceof Error ? error.message : String(error)}`;
+      reason = `${method} ${check.path} failed: ${message(error)}`;
     }
     if (attempt < SMOKE_ATTEMPTS) await deps.sleep(SMOKE_DELAY_MS);
   }
@@ -86,7 +137,13 @@ async function runCheck(
 }
 
 export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Promise<ReleaseResult> {
-  const result: ReleaseResult = { ok: true, deployed: [], rolledBack: [], timings: {} };
+  const result: ReleaseResult = {
+    ok: true,
+    deployed: [],
+    rolledBack: [],
+    rollbackFailed: [],
+    timings: {},
+  };
   const timed = async <T>(label: string, work: () => Promise<T>): Promise<T> => {
     const start = deps.now();
     try {
@@ -95,27 +152,48 @@ export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Prom
       result.timings[label] = deps.now() - start;
     }
   };
+  /** Runs one Vercel call; any error becomes a StepError naming the step. */
+  const step = async <T>(kind: string, work: () => Promise<T>): Promise<T> => {
+    try {
+      return await work();
+    } catch (error) {
+      throw new StepError(`${kind} failed: ${message(error)}`);
+    }
+  };
 
   for (const target of targets) {
-    const previous = await deps.currentProduction(target);
-    let url: string;
     try {
-      url = await timed(`${target.name}.deploy`, () => deps.deploy(target));
+      await releaseOne(target);
     } catch (error) {
-      // Nothing was promoted for this target; still undo the ones before it.
-      result.failed = {
-        name: target.name,
-        reason: `deploy failed: ${error instanceof Error ? error.message : String(error)}`,
-      };
+      if (!(error instanceof StepError)) throw error;
+      result.failed = { name: target.name, reason: error.message };
       break;
     }
+    if (result.failed) break;
+  }
+
+  async function releaseOne(target: ReleaseTarget): Promise<void> {
+    const previous = await step('alias lookup', () => deps.currentProduction(target));
+    // Nothing was promoted for this target if deploy throws; the ones before
+    // it are still undone below.
+    const url = await timed(`${target.name}.deploy`, () =>
+      step('deploy', () => deps.deploy(target))
+    );
+    // Recorded before promote: Vercel may already have pointed the domain at
+    // the new deployment, so a later failure must roll this project back too.
+    result.deployed.push({ name: target.name, url, previous });
     // After a rollback Vercel stops assigning the production domain to new
     // deployments until one is promoted; without this the smoke test would
     // pass against the old deployment.
-    if ((await deps.currentProduction(target)) !== url) {
-      await timed(`${target.name}.promote`, () => deps.promote(target, url));
+    if ((await step('alias lookup', () => deps.currentProduction(target))) !== url) {
+      await timed(`${target.name}.promote`, () => step('promote', () => deps.promote(target, url)));
+      // `vercel promote` can exit 0 without moving the domain; trust only a
+      // fresh read of the alias.
+      const live = await step('alias lookup', () => deps.currentProduction(target));
+      if (live !== url) {
+        throw new StepError(`production alias points at ${live ?? 'nothing'}, expected ${url}`);
+      }
     }
-    result.deployed.push({ name: target.name, url, previous });
     deps.log(`${target.name}: deployed ${url}`);
 
     let reason: string | undefined;
@@ -127,7 +205,7 @@ export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Prom
     });
     if (reason) {
       result.failed = { name: target.name, reason };
-      break;
+      return;
     }
     deps.log(`${target.name}: smoke tests passed`);
   }
@@ -142,12 +220,19 @@ export async function release(targets: ReleaseTarget[], deps: ReleaseDeps): Prom
       deps.log(`${done.name}: no earlier production deployment to roll back to`);
       continue;
     }
-    await timed(`${done.name}.rollback`, () => deps.rollback(target, done.previous!));
+    // Each rollback on its own: one refusal must not leave the rest new.
+    try {
+      await timed(`${done.name}.rollback`, () => deps.rollback(target, done.previous!));
+    } catch (error) {
+      result.rollbackFailed.push({ name: done.name, reason: message(error) });
+      deps.log(`${done.name}: ROLLBACK FAILED: ${message(error)}`);
+      continue;
+    }
     result.rolledBack.push(done.name);
     deps.log(`${done.name}: rolled back to ${done.previous}`);
   }
   // Prove the rollback: the projects rolled back must pass their checks again.
-  result.recovered = true;
+  result.recovered = result.rollbackFailed.length === 0;
   for (const name of result.rolledBack) {
     const target = targets.find((t) => t.name === name)!;
     for (const check of target.smoke) {

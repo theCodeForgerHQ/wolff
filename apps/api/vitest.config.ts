@@ -4,7 +4,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
-    // Suites that use Postgres share one database; run files one after another.
+    // Postgres suites get this package's own copy of the test database
+    // (packages/database/src/testing); its files share it, one after another.
+    globalSetup: ['../../packages/database/src/testing/global-setup.ts'],
+    setupFiles: ['../../packages/database/src/testing/setup.ts'],
     fileParallelism: false,
   },
 });

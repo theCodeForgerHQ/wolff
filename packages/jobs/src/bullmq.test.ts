@@ -58,6 +58,19 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
   const mine: string[] = [];
   const relay = (target = dispatcher) =>
     relayOutboxToJobs(db, target, { ids: mine, now: new Date(Date.now() + 10 * 60_000) });
+  /**
+   * A relay pass while the queue comes back. Each failed pass delays the
+   * event by 2 s, 4 s, 8 s ... of real time, so on a loaded machine a slow
+   * reconnect pushed it past the wait below. The backoff is tested in core's
+   * outbox suite, not here: make this suite's pending events due first.
+   */
+  const relayWhenBack = async () => {
+    await base.outboxEvent.updateMany({
+      where: { id: { in: mine }, status: 'pending' },
+      data: { availableAt: new Date(0) },
+    });
+    return relay().catch(() => ({ enqueued: 0, failed: 0 }));
+  };
   const emailEvent = async () => {
     const id = randomUUID();
     await base.scheduledEmail.create({
@@ -291,7 +304,7 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
       await redis.start();
       startWorker();
       await until(async () => {
-        await relay();
+        await relayWhenBack();
         return (await event.status()) === 'paid';
       }, 'the invoice to be paid');
       await until(
@@ -330,10 +343,7 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
       ).toBe(1);
       expect(await outboxStatus(event.outboxId)).toBe('pending');
       // The connection may still be reconnecting to the new Redis.
-      await until(
-        async () => (await relay().catch(() => ({ enqueued: 0 }))).enqueued === 1,
-        'the relay to enqueue again'
-      );
+      await until(async () => (await relayWhenBack()).enqueued === 1, 'the relay to enqueue again');
 
       await until(async () => (await event.status()) === 'paid', 'the invoice to be paid');
       // The row is marked done after the job's work commits, so wait for it.

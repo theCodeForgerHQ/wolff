@@ -55,6 +55,10 @@ jobs:
           STORAGE_REGION: ${{ secrets.STORAGE_REGION }}
           STORAGE_ACCESS_KEY: ${{ secrets.STORAGE_ACCESS_KEY }}
           STORAGE_SECRET_KEY: ${{ secrets.STORAGE_SECRET_KEY }}
+          # A queued db.backup needs both; the api refuses to start with the
+          # bucket and no key. Leave both unset to skip backups here.
+          BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
           PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

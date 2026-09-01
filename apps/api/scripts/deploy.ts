@@ -13,7 +13,13 @@ import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { release, type ReleaseDeps, type ReleaseTarget } from '../src/deploy/release';
+import {
+  parseDeploymentUrl,
+  release,
+  selectTargets,
+  type ReleaseDeps,
+  type ReleaseTarget,
+} from '../src/deploy/release';
 
 function env(name: string): string {
   const value = process.env[name];
@@ -89,8 +95,13 @@ const all: ReleaseTarget[] = [
     smoke: [{ path: '/login', status: 200, headers: bypass }],
   },
 ];
-const wanted = only ? only.split(',') : all.map((t) => t.name);
-const targets = all.filter((t) => wanted.includes(t.name));
+let targets: ReleaseTarget[];
+try {
+  targets = selectTargets(all, only);
+} catch (error) {
+  console.error(`deploy.ts: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(2);
+}
 
 const project = (t: ReleaseTarget) => ({ VERCEL_ORG_ID: teamId, VERCEL_PROJECT_ID: t.projectId });
 
@@ -107,11 +118,7 @@ const deps: ReleaseDeps = {
   },
   deploy: (t) =>
     run(['deploy', '--prod', '--yes', '--scope', scope], t.dir, project(t)).then(
-      (out) =>
-        out
-          .split('\n')
-          .filter((line) => line.startsWith('https://'))
-          .pop() ?? out
+      parseDeploymentUrl
     ),
   promote: (t, url) =>
     run(['promote', url, '--yes', '--scope', scope], t.dir, project(t)).then(() => undefined),

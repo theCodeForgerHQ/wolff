@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { release, SMOKE_ATTEMPTS, type ReleaseDeps, type ReleaseTarget } from './release';
+import {
+  parseDeploymentUrl,
+  release,
+  selectTargets,
+  SMOKE_ATTEMPTS,
+  type ReleaseDeps,
+  type ReleaseTarget,
+} from './release';
 
 const target = (name: string): ReleaseTarget => ({
   name,
@@ -137,5 +144,119 @@ describe('release', () => {
 
     expect(result.rolledBack).toEqual(['api']);
     expect(result.recovered).toBe(false);
+  });
+
+  it('rolls back when promote throws, including the project whose promote failed', async () => {
+    const { deps, calls, prod } = fakeVercel({ autoAssignOff: true });
+    deps.promote = async (t) => {
+      calls.push(`promote ${t.name}`);
+      if (t.name === 'web') throw new Error('promote refused');
+      prod.set(t.name, `https://${t.name}-new.example.test`);
+    };
+    const result = await release([target('api'), target('web')], deps);
+
+    expect(result.ok).toBe(false);
+    expect(result.failed).toEqual({ name: 'web', reason: 'promote failed: promote refused' });
+    expect(calls).toEqual([
+      'deploy api',
+      'promote api',
+      'deploy web',
+      'promote web',
+      'rollback web https://web-old.example.test',
+      'rollback api https://api-old.example.test',
+    ]);
+    expect(prod.get('api')).toBe('https://api-old.example.test');
+  });
+
+  it('rolls back the earlier projects when the production alias lookup throws', async () => {
+    const { deps, calls } = fakeVercel();
+    const lookup = deps.currentProduction;
+    deps.currentProduction = async (t) => {
+      if (t.name === 'web') throw new Error('alias lookup for web: 500');
+      return lookup(t);
+    };
+    const result = await release([target('api'), target('web')], deps);
+
+    expect(result.ok).toBe(false);
+    expect(result.failed).toEqual({
+      name: 'web',
+      reason: 'alias lookup failed: alias lookup for web: 500',
+    });
+    expect(calls).toEqual(['deploy api', 'rollback api https://api-old.example.test']);
+  });
+
+  it('keeps rolling back the other projects when one rollback throws', async () => {
+    const { deps, calls, prod } = fakeVercel({ broken: ['web'] });
+    const rollback = deps.rollback;
+    deps.rollback = async (t, to) => {
+      if (t.name === 'ai') {
+        calls.push(`rollback ${t.name} ${to}`);
+        throw new Error('rollback refused');
+      }
+      return rollback(t, to);
+    };
+    const result = await release([target('api'), target('ai'), target('web')], deps);
+
+    expect(calls).toEqual([
+      'deploy api',
+      'deploy ai',
+      'deploy web',
+      'rollback web https://web-old.example.test',
+      'rollback ai https://ai-old.example.test',
+      'rollback api https://api-old.example.test',
+    ]);
+    expect(prod.get('api')).toBe('https://api-old.example.test');
+    expect(result.rolledBack).toEqual(['web', 'api']);
+    expect(result.rollbackFailed).toEqual([{ name: 'ai', reason: 'rollback refused' }]);
+    expect(result.recovered).toBe(false);
+  });
+
+  it('fails and rolls back when promote returns but production still points elsewhere', async () => {
+    const { deps, calls, prod } = fakeVercel({ autoAssignOff: true });
+    deps.promote = async (t) => {
+      calls.push(`promote ${t.name}`); // reports success, alias unchanged
+    };
+    const result = await release([target('api')], deps);
+
+    expect(result.ok).toBe(false);
+    expect(result.failed).toEqual({
+      name: 'api',
+      reason:
+        'production alias points at https://api-old.example.test, expected https://api-new.example.test',
+    });
+    expect(calls).toEqual([
+      'deploy api',
+      'promote api',
+      'rollback api https://api-old.example.test',
+    ]);
+    expect(prod.get('api')).toBe('https://api-old.example.test');
+  });
+});
+
+describe('parseDeploymentUrl', () => {
+  it('returns the last https line of the CLI output', () => {
+    const out = 'Vercel CLI 48.0.0\nhttps://wolff-api-abc123.vercel.app\n';
+    expect(parseDeploymentUrl(out)).toBe('https://wolff-api-abc123.vercel.app');
+  });
+
+  it('throws when the output has no deployment URL', () => {
+    expect(() => parseDeploymentUrl('Error: something odd happened')).toThrow(
+      /no deployment URL in the vercel deploy output/
+    );
+    expect(() => parseDeploymentUrl('https://not a url')).toThrow(/no deployment URL/);
+  });
+});
+
+describe('selectTargets', () => {
+  const all = [target('api'), target('ai'), target('web')];
+
+  it('keeps the canonical order and defaults to every project', () => {
+    expect(selectTargets(all, 'web,api').map((t) => t.name)).toEqual(['api', 'web']);
+    expect(selectTargets(all, undefined).map((t) => t.name)).toEqual(['api', 'ai', 'web']);
+  });
+
+  it('rejects an unknown or empty project name', () => {
+    expect(() => selectTargets(all, 'api,wbe')).toThrow(/unknown project "wbe"/);
+    expect(() => selectTargets(all, '')).toThrow(/no projects selected/);
   });
 });
