@@ -172,6 +172,51 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     expect(history.n).toBe(2);
   });
 
+  it('pages by key: a composite primary key, and a NOT NULL unique index without one', async () => {
+    const other = `${schema}_keys`;
+    await db.$executeRawUnsafe(`CREATE SCHEMA "${other}"`);
+    try {
+      await db.$executeRawUnsafe(
+        `CREATE TABLE "${other}"."pairs" (k text, n int, v text, PRIMARY KEY (k, n))`
+      );
+      // Inserted out of key order; keys that sort differently as text and int.
+      await db.$executeRawUnsafe(
+        `INSERT INTO "${other}"."pairs" VALUES ('b',10,'x'),('a',2,'y'),('b',9,'z'),('a',10,'w'),('c',1,NULL)`
+      );
+      // Like verification_tokens: no primary key, a unique NOT NULL column.
+      await db.$executeRawUnsafe(
+        `CREATE TABLE "${other}"."tokens" (identifier text, token text NOT NULL UNIQUE, at timestamptz)`
+      );
+      await db.$executeRawUnsafe(
+        `INSERT INTO "${other}"."tokens" SELECT 'i', 't' || g, '2026-10-08T00:00:00Z'::timestamptz + g * interval '1 second'
+           FROM generate_series(1, 5) g`
+      );
+      const { body, header } = await db.$transaction(
+        (tx) => exportDatabase(tx, { schemas: [other], batchSize: 2 }),
+        { isolationLevel: 'RepeatableRead' }
+      );
+      expect(header.tables).toEqual([
+        { name: `${other}.pairs`, rows: 5 },
+        { name: `${other}.tokens`, rows: 5 },
+      ]);
+      const pairs = readBackup(body)
+        .batches.filter((batch) => batch.table === `${other}.pairs`)
+        .flatMap((batch) => batch.rows as { k: string; n: number }[])
+        .map((row) => `${row.k}${row.n}`);
+      expect(pairs).toEqual(['a2', 'a10', 'b9', 'b10', 'c1']);
+
+      // Nothing to page by: refuse rather than guess.
+      await db.$executeRawUnsafe(`CREATE TABLE "${other}"."loose" (v text)`);
+      await expect(
+        db.$transaction((tx) => exportDatabase(tx, { schemas: [other] }), {
+          isolationLevel: 'RepeatableRead',
+        })
+      ).rejects.toThrow(/loose has no primary key/);
+    } finally {
+      await db.$executeRawUnsafe(`DROP SCHEMA "${other}" CASCADE`);
+    }
+  });
+
   it('refuses to restore into tables that hold rows', async () => {
     const { body } = await db.$transaction((tx) => exportDatabase(tx, { schemas: [schema] }), {
       isolationLevel: 'RepeatableRead',

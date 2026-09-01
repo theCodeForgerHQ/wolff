@@ -75,6 +75,11 @@ async function listTables(sql: SqlRunner, schemas: string[]): Promise<string[]> 
   return rows.map((row) => row.name);
 }
 
+/** A key value from row_to_json, as text its column type's input accepts. */
+function cursorText(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
 export interface ExportOptions {
   schemas: string[];
   /** Rows per query. */
@@ -84,10 +89,53 @@ export interface ExportOptions {
   now?: () => number;
 }
 
+interface KeyColumn {
+  name: string;
+  /** format_type(): the type to cast the cursor value back to. */
+  type: string;
+}
+
+/**
+ * The columns to page a table by: its primary key, or else a unique index
+ * whose columns are all NOT NULL (no expressions, no predicate). A table with
+ * neither cannot be paged reliably, so the backup refuses it.
+ */
+async function pageKey(sql: SqlRunner, table: string): Promise<KeyColumn[]> {
+  const indexes = await sql.$queryRawUnsafe<{ columns: KeyColumn[] }[]>(
+    `SELECT json_agg(json_build_object('name', a.attname,
+                                       'type', format_type(a.atttypid, a.atttypmod))
+                     ORDER BY k.ord) AS columns
+       FROM pg_index i
+       CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord)
+       JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+      WHERE i.indrelid = $1::regclass AND i.indisunique AND i.indpred IS NULL
+        AND i.indexprs IS NULL
+      GROUP BY i.indexrelid, i.indisprimary
+     HAVING bool_and(a.attnotnull)
+      ORDER BY i.indisprimary DESC, count(*), i.indexrelid
+      LIMIT 1`,
+    qualified(table)
+  );
+  const columns = indexes[0]?.columns;
+  if (!columns || columns.length === 0) {
+    throw new Error(
+      `${table} has no primary key or NOT NULL unique index; the backup cannot page it`
+    );
+  }
+  for (const column of columns) {
+    if (!IDENT.test(column.name)) {
+      throw new Error(`Refusing unexpected column name ${JSON.stringify(column.name)}`);
+    }
+  }
+  return columns;
+}
+
 /**
  * Reads every table of `schemas` through `sql`, which must be a transaction
- * at REPEATABLE READ so all batches see one snapshot (`ctid` order is then
- * stable, so LIMIT/OFFSET pages neither skip nor repeat rows).
+ * at REPEATABLE READ so all batches see one snapshot. Each batch starts after
+ * the last key of the one before (keyset paging), so a batch costs an index
+ * range scan however deep into the table it is; LIMIT/OFFSET re-read every
+ * earlier row.
  */
 export async function exportDatabase(
   sql: SqlRunner,
@@ -100,21 +148,30 @@ export async function exportDatabase(
   const counts: BackupHeader['tables'] = [];
 
   for (const table of tables) {
+    const key = await pageKey(sql, table);
+    const keyList = key.map((column) => `"${column.name}"`).join(', ');
+    // ($2::text::type, ...): the cursor travels as text and is cast back to
+    // the column type, so the comparison uses the column's own ordering.
+    const cursor = key.map((column, i) => `$${i + 2}::text::${column.type}`).join(', ');
+    let last: unknown[] | undefined;
     let rows = 0;
     for (;;) {
       if (options.deadline !== undefined && now() >= options.deadline) {
         throw new BackupBudgetError(table);
       }
+      const where = last ? `WHERE (${keyList}) > (${cursor})` : '';
       const [{ batch }] = await sql.$queryRawUnsafe<[{ batch: string }]>(
         `SELECT coalesce(json_agg(row_to_json(t)), '[]')::text AS batch
-           FROM (SELECT * FROM ${qualified(table)} ORDER BY ctid LIMIT $1 OFFSET $2) t`,
+           FROM (SELECT * FROM ${qualified(table)} ${where} ORDER BY ${keyList} LIMIT $1) t`,
         batchSize,
-        rows
+        ...(last ?? [])
       );
-      const parsed = JSON.parse(batch) as unknown[];
+      const parsed = JSON.parse(batch) as Record<string, unknown>[];
       if (parsed.length > 0) {
         lines.push(JSON.stringify({ table, rows: parsed } satisfies BatchLine));
         rows += parsed.length;
+        const tail = parsed[parsed.length - 1]!;
+        last = key.map((column) => cursorText(tail[column.name]));
       }
       if (parsed.length < batchSize) break;
     }
