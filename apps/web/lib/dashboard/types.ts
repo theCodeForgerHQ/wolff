@@ -133,6 +133,8 @@ export interface DashboardData {
   paymentAging: PaymentAgingData;
   gstSummary: GstSummary | null;
   pipelineSummary: PipelineStageSummary[];
+  /** Currencies of the workspace's documents; the totals are in the base one. */
+  currencies: string[];
 }
 
 // Period filter

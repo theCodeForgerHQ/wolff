@@ -9,6 +9,7 @@ import { GstSummaryCard } from '@/components/dashboard/gst-summary-card';
 import { PipelineSummaryCard } from '@/components/dashboard/pipeline-summary-card';
 import { getDashboardData } from '@/lib/dashboard/actions';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
+import { currencyCaption } from '@/lib/dashboard/currency-summary';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,8 +38,13 @@ async function DashboardContent() {
 
   return (
     <>
-      {/* Stats Cards */}
-      <StatsCards stats={data.stats} revenueData={data.revenueData} currency={currency} />
+      {/* Stats Cards, and what currency their totals are in */}
+      <div className="space-y-2">
+        <StatsCards stats={data.stats} revenueData={data.revenueData} currency={currency} />
+        <p className="text-muted-foreground text-xs" data-testid="dashboard-currency-note">
+          {currencyCaption(currency, data.currencies)}
+        </p>
+      </div>
 
       {/* Revenue Chart (full width) */}
       <AnalyticsSection revenueData={data.revenueData} currency={currency} />
