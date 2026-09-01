@@ -81,6 +81,28 @@ export function parseDeploymentUrl(output: string): string {
   return url;
 }
 
+/**
+ * The targets named in a comma-separated list, in the canonical order of
+ * `all`; every target when the list is omitted. An unknown or empty name
+ * throws, so a typo cannot turn into a release that deploys nothing and
+ * exits 0.
+ */
+export function selectTargets(all: ReleaseTarget[], only: string | undefined): ReleaseTarget[] {
+  if (only === undefined) return all;
+  const wanted = only
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (wanted.length === 0) throw new Error('no projects selected');
+  const known = all.map((t) => t.name);
+  for (const name of wanted) {
+    if (!known.includes(name)) {
+      throw new Error(`unknown project "${name}"; expected one of ${known.join(', ')}`);
+    }
+  }
+  return all.filter((t) => wanted.includes(t.name));
+}
+
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** A release step that threw, labelled with the step for the report. */

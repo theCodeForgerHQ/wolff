@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseDeploymentUrl,
   release,
+  selectTargets,
   SMOKE_ATTEMPTS,
   type ReleaseDeps,
   type ReleaseTarget,
@@ -243,5 +244,19 @@ describe('parseDeploymentUrl', () => {
       /no deployment URL in the vercel deploy output/
     );
     expect(() => parseDeploymentUrl('https://not a url')).toThrow(/no deployment URL/);
+  });
+});
+
+describe('selectTargets', () => {
+  const all = [target('api'), target('ai'), target('web')];
+
+  it('keeps the canonical order and defaults to every project', () => {
+    expect(selectTargets(all, 'web,api').map((t) => t.name)).toEqual(['api', 'web']);
+    expect(selectTargets(all, undefined).map((t) => t.name)).toEqual(['api', 'ai', 'web']);
+  });
+
+  it('rejects an unknown or empty project name', () => {
+    expect(() => selectTargets(all, 'api,wbe')).toThrow(/unknown project "wbe"/);
+    expect(() => selectTargets(all, '')).toThrow(/no projects selected/);
   });
 });
