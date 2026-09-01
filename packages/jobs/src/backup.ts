@@ -1,4 +1,7 @@
-import { gunzipSync, gzipSync } from 'node:zlib';
+import { createInterface } from 'node:readline';
+import { PassThrough, Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { createGunzip, createGzip, gunzipSync } from 'node:zlib';
 
 /**
  * Logical database backup for the free demo (Phase 6).
@@ -7,7 +10,8 @@ import { gunzipSync, gzipSync } from 'node:zlib';
  * Postgres client binaries, and there is no other always-on host. So the
  * backup is a data-only export through the app's own connection: every table
  * of the listed schemas, read in bounded batches inside one REPEATABLE READ
- * snapshot, written as gzipped NDJSON. The schema itself is not in the file;
+ * snapshot, streamed as gzipped NDJSON straight into the upload, so memory
+ * holds one batch and one upload part, not the file. The schema itself is not in the file;
  * it comes from the migrations (Prisma for `public`, Alembic for `ai`), and
  * the restore loads the rows into a database that already has it (a Neon
  * schema-only branch, or a freshly migrated one).
@@ -19,7 +23,8 @@ export interface SqlRunner {
 }
 
 export const BACKUP_FORMAT = 'wolff-logical-backup';
-export const BACKUP_VERSION = 1;
+/** 2: header, batches in foreign-key order, trailer with the row counts. */
+export const BACKUP_VERSION = 2;
 
 export interface BackupHeader {
   format: typeof BACKUP_FORMAT;
@@ -35,6 +40,22 @@ export interface BackupHeader {
 interface BatchLine {
   table: string;
   rows: unknown[];
+}
+
+/** First line of the file: what follows, in load order. Counts come last. */
+interface FileHeader {
+  format: typeof BACKUP_FORMAT;
+  version: typeof BACKUP_VERSION;
+  createdAt: string;
+  schemas: string[];
+  excluded: string[];
+  tables: string[];
+}
+
+/** Last line. Its absence means the file was cut short. */
+interface FileTrailer {
+  end: true;
+  tables: BackupHeader['tables'];
 }
 
 export class BackupBudgetError extends Error {
@@ -143,79 +164,10 @@ async function pageKey(sql: SqlRunner, table: string): Promise<KeyColumn[]> {
 }
 
 /**
- * Reads every table of `schemas` through `sql`, which must be a transaction
- * at REPEATABLE READ so all batches see one snapshot. Each batch starts after
- * the last key of the one before (keyset paging), so a batch costs an index
- * range scan however deep into the table it is; LIMIT/OFFSET re-read every
- * earlier row.
- */
-export async function exportDatabase(
-  sql: SqlRunner,
-  options: ExportOptions
-): Promise<{ body: Uint8Array; header: BackupHeader }> {
-  const batchSize = options.batchSize ?? 500;
-  const now = options.now ?? Date.now;
-  const excluded = options.exclude ?? [];
-  const tables = (await listTables(sql, options.schemas)).filter((t) => !excluded.includes(t));
-  const lines: string[] = [];
-  const counts: BackupHeader['tables'] = [];
-
-  for (const table of tables) {
-    const key = await pageKey(sql, table);
-    const keyList = key.map((column) => `"${column.name}"`).join(', ');
-    // ($2::text::type, ...): the cursor travels as text and is cast back to
-    // the column type, so the comparison uses the column's own ordering.
-    const cursor = key.map((column, i) => `$${i + 2}::text::${column.type}`).join(', ');
-    let last: unknown[] | undefined;
-    let rows = 0;
-    for (;;) {
-      if (options.deadline !== undefined && now() >= options.deadline) {
-        throw new BackupBudgetError(table);
-      }
-      const where = last ? `WHERE (${keyList}) > (${cursor})` : '';
-      const [{ batch }] = await sql.$queryRawUnsafe<[{ batch: string }]>(
-        `SELECT coalesce(json_agg(row_to_json(t)), '[]')::text AS batch
-           FROM (SELECT * FROM ${qualified(table)} ${where} ORDER BY ${keyList} LIMIT $1) t`,
-        batchSize,
-        ...(last ?? [])
-      );
-      const parsed = JSON.parse(batch) as Record<string, unknown>[];
-      if (parsed.length > 0) {
-        lines.push(JSON.stringify({ table, rows: parsed } satisfies BatchLine));
-        rows += parsed.length;
-        const tail = parsed[parsed.length - 1]!;
-        last = key.map((column) => cursorText(tail[column.name]));
-      }
-      if (parsed.length < batchSize) break;
-    }
-    counts.push({ name: table, rows });
-  }
-
-  const header: BackupHeader = {
-    format: BACKUP_FORMAT,
-    version: BACKUP_VERSION,
-    createdAt: new Date(now()).toISOString(),
-    schemas: options.schemas,
-    excluded,
-    tables: counts,
-  };
-  const text = [JSON.stringify(header), ...lines].join('\n') + '\n';
-  return { body: gzipSync(Buffer.from(text, 'utf8')), header };
-}
-
-export function readBackup(body: Uint8Array): { header: BackupHeader; batches: BatchLine[] } {
-  const lines = gunzipSync(body).toString('utf8').split('\n').filter(Boolean);
-  const header = JSON.parse(lines[0] ?? 'null') as BackupHeader | null;
-  if (header?.format !== BACKUP_FORMAT || header.version !== BACKUP_VERSION) {
-    throw new Error('Not a wolff logical backup (format or version mismatch)');
-  }
-  return { header, batches: lines.slice(1).map((line) => JSON.parse(line) as BatchLine) };
-}
-
-/**
  * Tables in an order where every foreign key points at a table loaded
- * earlier. A table referencing itself is fine: its rows go in one statement,
- * and Postgres checks a non-deferred foreign key at the end of the statement.
+ * earlier. A table referencing itself is fine: the restore stages its rows
+ * and inserts them in one statement, and Postgres checks a non-deferred
+ * foreign key at the end of the statement.
  */
 async function loadOrder(sql: SqlRunner, tables: string[]): Promise<string[]> {
   const edges = await sql.$queryRawUnsafe<{ child: string; parent: string }[]>(
@@ -251,62 +203,233 @@ async function loadOrder(sql: SqlRunner, tables: string[]): Promise<string[]> {
 }
 
 /**
- * Loads a backup into a database that has the schema and no rows. Runs in
- * whatever `sql` is; pass a transaction so a failed restore leaves nothing.
- * Returns the row count of every table after loading, read back from the
- * database, for comparison with the header.
+ * Yields the backup as NDJSON lines, reading every table of `schemas` through
+ * `sql`, which must be a transaction at REPEATABLE READ so all batches see one
+ * snapshot. Each batch starts after the last key of the one before (keyset
+ * paging), so a batch costs an index range scan however deep into the table
+ * it is; LIMIT/OFFSET re-read every earlier row. Tables come in foreign-key
+ * order, so the restore can load them as they arrive. Returns the header
+ * with the row counts.
+ */
+async function* exportLines(
+  sql: SqlRunner,
+  options: ExportOptions
+): AsyncGenerator<string, BackupHeader> {
+  const batchSize = options.batchSize ?? 500;
+  const now = options.now ?? Date.now;
+  const excluded = options.exclude ?? [];
+  const listed = (await listTables(sql, options.schemas)).filter((t) => !excluded.includes(t));
+  const tables = await loadOrder(sql, listed);
+  const createdAt = new Date(now()).toISOString();
+  const counts: BackupHeader['tables'] = [];
+  yield line({
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    createdAt,
+    schemas: options.schemas,
+    excluded,
+    tables,
+  } satisfies FileHeader);
+
+  for (const table of tables) {
+    const key = await pageKey(sql, table);
+    const keyList = key.map((column) => `"${column.name}"`).join(', ');
+    // ($2::text::type, ...): the cursor travels as text and is cast back to
+    // the column type, so the comparison uses the column's own ordering.
+    const cursor = key.map((column, i) => `$${i + 2}::text::${column.type}`).join(', ');
+    let last: unknown[] | undefined;
+    let rows = 0;
+    for (;;) {
+      if (options.deadline !== undefined && now() >= options.deadline) {
+        throw new BackupBudgetError(table);
+      }
+      const where = last ? `WHERE (${keyList}) > (${cursor})` : '';
+      const [{ batch }] = await sql.$queryRawUnsafe<[{ batch: string }]>(
+        `SELECT coalesce(json_agg(row_to_json(t)), '[]')::text AS batch
+           FROM (SELECT * FROM ${qualified(table)} ${where} ORDER BY ${keyList} LIMIT $1) t`,
+        batchSize,
+        ...(last ?? [])
+      );
+      const parsed = JSON.parse(batch) as Record<string, unknown>[];
+      if (parsed.length > 0) {
+        yield line({ table, rows: parsed } satisfies BatchLine);
+        rows += parsed.length;
+        const tail = parsed[parsed.length - 1]!;
+        last = key.map((column) => cursorText(tail[column.name]));
+      }
+      if (parsed.length < batchSize) break;
+    }
+    counts.push({ name: table, rows });
+  }
+
+  yield line({ end: true, tables: counts } satisfies FileTrailer);
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    createdAt,
+    schemas: options.schemas,
+    excluded,
+    tables: counts,
+  };
+}
+
+const line = (value: unknown) => JSON.stringify(value) + '\n';
+
+/** Counts the bytes passing through, for the job's log line. */
+function byteCounter(): Transform & { bytes: number } {
+  const counter = new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      counter.bytes += chunk.length;
+      done(null, chunk);
+    },
+  }) as Transform & { bytes: number };
+  counter.bytes = 0;
+  return counter;
+}
+
+/**
+ * Streams the export through gzip into
+ * `upload`, which must consume the stream to its end. An upload that fails
+ * stops the export; an export that fails errors the stream, so the upload
+ * must not store what it got (the S3 store aborts the multipart upload).
+ */
+export async function writeBackup(
+  sql: SqlRunner,
+  options: ExportOptions,
+  upload: (body: Readable) => Promise<void>
+): Promise<{ header: BackupHeader; bytes: number }> {
+  let header: BackupHeader | undefined;
+  async function* source() {
+    header = yield* exportLines(sql, options);
+  }
+  const counter = byteCounter();
+  const body = new PassThrough();
+  const sent = upload(body).catch((error: unknown) => {
+    body.destroy(error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  });
+  await Promise.all([pipeline(Readable.from(source()), createGzip(), counter, body), sent]);
+  return { header: header!, bytes: counter.bytes };
+}
+
+function checkHeader(value: unknown): FileHeader {
+  const header = value as Partial<FileHeader> | null;
+  if (header?.format !== BACKUP_FORMAT || header.version !== BACKUP_VERSION) {
+    throw new Error(
+      `Not a wolff logical backup version ${BACKUP_VERSION} (format or version mismatch)`
+    );
+  }
+  return header as FileHeader;
+}
+
+const TRUNCATED = 'Backup file is truncated (no trailer)';
+
+/** Parses a whole decompressed backup in memory; for inspection and tests. */
+export function readBackup(body: Uint8Array): { header: BackupHeader; batches: BatchLine[] } {
+  const lines = gunzipSync(body).toString('utf8').split('\n').filter(Boolean);
+  const file = checkHeader(JSON.parse(lines[0] ?? 'null'));
+  const trailer = JSON.parse(lines[lines.length - 1] ?? 'null') as Partial<FileTrailer> | null;
+  if (lines.length < 2 || trailer?.end !== true) throw new Error(TRUNCATED);
+  return {
+    header: { ...file, tables: trailer.tables! },
+    batches: lines.slice(1, -1).map((text) => JSON.parse(text) as BatchLine),
+  };
+}
+
+/**
+ * Loads a backup stream (gzipped, already decrypted) into a database that has
+ * the schema and no rows, table by table as the lines arrive. Each table's
+ * batches go into a temporary staging table first and then into the real one
+ * in a single INSERT, because Postgres checks a non-deferred foreign key at
+ * the end of the statement: a row may reference a row of its own table in a
+ * later batch. Run it in a transaction: a file without its trailer (cut
+ * short) throws at the end, after rows were loaded. Returns the header with
+ * the counts from the trailer, and every table's count read back from the
+ * database.
  */
 export async function restoreDatabase(
   sql: SqlRunner,
-  body: Uint8Array
+  body: Readable
 ): Promise<{ header: BackupHeader; restored: BackupHeader['tables'] }> {
-  const { header, batches } = readBackup(body);
-  const tables = header.tables.map((table) => table.name);
-  const existing = new Set(await listTables(sql, header.schemas));
-  const missing = tables.filter((table) => !existing.has(table));
+  const gunzip = createGunzip();
+  const input = body.pipe(gunzip);
+  body.on('error', (error) => gunzip.destroy(error));
+  const lines = createInterface({ input, crlfDelay: Infinity })[Symbol.asyncIterator]();
+
+  const first = await lines.next();
+  const file = checkHeader(first.done ? null : JSON.parse(first.value));
+  const existing = new Set(await listTables(sql, file.schemas));
+  const missing = file.tables.filter((table) => !existing.has(table));
   if (missing.length > 0) {
     throw new Error(`Target is missing tables ${missing.join(', ')}; migrate it first`);
   }
-  for (const table of tables) {
-    const [{ n }] = await sql.$queryRawUnsafe<[{ n: number }]>(
-      `SELECT count(*)::int AS n FROM ${qualified(table)}`
-    );
-    if (n > 0) throw new Error(`Target table ${table} is not empty; restore needs empty tables`);
+  for (const table of file.tables) {
+    if ((await countRows(sql, table)) > 0) {
+      throw new Error(`Target table ${table} is not empty; restore needs empty tables`);
+    }
   }
 
-  const rowsByTable = new Map<string, unknown[]>();
-  for (const { table, rows } of batches) {
-    rowsByTable.set(table, [...(rowsByTable.get(table) ?? []), ...rows]);
-  }
-  for (const table of await loadOrder(sql, tables)) {
-    const rows = rowsByTable.get(table);
-    if (!rows || rows.length === 0) continue;
+  let staging: string | undefined;
+  const flush = async () => {
+    if (!staging) return;
+    await sql.$queryRawUnsafe(
+      `INSERT INTO ${qualified(staging)} SELECT * FROM pg_temp.wolff_restore_stage`
+    );
+    await sql.$queryRawUnsafe(`DROP TABLE pg_temp.wolff_restore_stage`);
+    staging = undefined;
+  };
+  let trailer: FileTrailer | undefined;
+  for (let next = await lines.next(); !next.done; next = await lines.next()) {
+    if (!next.value) continue;
+    const parsed = JSON.parse(next.value) as BatchLine | FileTrailer;
+    if ('end' in parsed) {
+      trailer = parsed;
+      continue;
+    }
+    if (trailer) throw new Error('Backup file has data after its trailer');
+    const { table, rows } = parsed;
+    if (!file.tables.includes(table)) throw new Error(`Backup batch for unlisted table ${table}`);
+    if (staging !== table) {
+      await flush();
+      // LIKE copies the columns and their types, no constraints.
+      await sql.$queryRawUnsafe(
+        `CREATE TEMP TABLE wolff_restore_stage (LIKE ${qualified(table)}) ON COMMIT DROP`
+      );
+      staging = table;
+    }
     // json_populate_recordset casts each value with the column's input
     // function, so timestamps, numerics, bytea (\x hex) and pgvector types
     // come back as they were exported by row_to_json.
     await sql.$queryRawUnsafe(
-      `INSERT INTO ${qualified(table)}
+      `INSERT INTO pg_temp.wolff_restore_stage
        SELECT * FROM json_populate_recordset(NULL::${qualified(table)}, $1::json)`,
       JSON.stringify(rows)
     );
   }
+  if (!trailer) throw new Error(TRUNCATED);
+  await flush();
 
   const restored: BackupHeader['tables'] = [];
-  for (const table of tables) {
-    const [{ n }] = await sql.$queryRawUnsafe<[{ n: number }]>(
-      `SELECT count(*)::int AS n FROM ${qualified(table)}`
-    );
-    restored.push({ name: table, rows: n });
+  for (const table of file.tables) {
+    restored.push({ name: table, rows: await countRows(sql, table) });
   }
-  return { header, restored };
+  return { header: { ...file, tables: trailer.tables }, restored };
+}
+
+async function countRows(sql: SqlRunner, table: string): Promise<number> {
+  const [{ n }] = await sql.$queryRawUnsafe<[{ n: number }]>(
+    `SELECT count(*)::int AS n FROM ${qualified(table)}`
+  );
+  return n;
 }
 
 /** Storage for backup files: put, list by prefix, delete, get. */
 export interface BackupStore {
-  put(key: string, body: Uint8Array, contentType: string): Promise<void>;
+  /** Stores the stream once it ends; stores nothing if it errors. */
+  put(key: string, body: Readable, contentType: string): Promise<void>;
   list(prefix: string): Promise<{ key: string; lastModified: Date }[]>;
   delete(key: string): Promise<void>;
-  get(key: string): Promise<Uint8Array>;
+  get(key: string): Promise<Readable>;
 }
 
 export const BACKUP_PREFIX = 'db/';

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 import { gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrisma, withTenantGuard } from '@wolff/database';
@@ -6,11 +7,13 @@ import { runJob, type JobContext } from './index';
 import {
   BackupBudgetError,
   backupKey,
-  exportDatabase,
   pruneBackups,
   readBackup,
   restoreDatabase,
+  writeBackup,
   type BackupStore,
+  type ExportOptions,
+  type SqlRunner,
 } from './backup';
 
 function memoryStore(files: { key: string; lastModified: Date }[]): BackupStore & {
@@ -20,7 +23,7 @@ function memoryStore(files: { key: string; lastModified: Date }[]): BackupStore 
   return {
     deleted,
     put: async () => undefined,
-    get: async () => new Uint8Array(),
+    get: async () => Readable.from([]),
     list: async (prefix) => files.filter((file) => file.key.startsWith(prefix)),
     delete: async (key) => {
       deleted.push(key);
@@ -74,12 +77,25 @@ describe('readBackup', () => {
 
 const url = process.env.TEST_DATABASE_URL;
 
+/** Runs writeBackup with an upload that keeps the bytes in memory. */
+async function exportBuffer(sql: SqlRunner, options: ExportOptions) {
+  const chunks: Buffer[] = [];
+  const { header } = await writeBackup(sql, options, async (body) => {
+    for await (const chunk of body) chunks.push(chunk as Buffer);
+  });
+  return { body: Buffer.concat(chunks), header };
+}
+
 describe.skipIf(!url)('export and restore (Postgres)', () => {
   const db = createPrisma(url);
   const schema = `backup_test_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const parent = `"${schema}"."parent"`;
   const child = `"${schema}"."child"`;
   const exclude = [`${schema}.chunks`];
+  const exportSnapshot = (options: ExportOptions) =>
+    db.$transaction((tx) => exportBuffer(tx, options), { isolationLevel: 'RepeatableRead' });
+  const restore = (body: Uint8Array) =>
+    db.$transaction((tx) => restoreDatabase(tx, Readable.from([body])));
 
   const snapshot = async () => ({
     parents: await db.$queryRawUnsafe<unknown[]>(`SELECT * FROM ${parent} ORDER BY id`),
@@ -135,38 +151,33 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
 
   it('exports every table in batches and restores the same rows', async () => {
     const before = await snapshot();
-    const { body, header } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema], exclude, batchSize: 2 }),
-      { isolationLevel: 'RepeatableRead' }
-    );
+    const { body, header } = await exportSnapshot({ schemas: [schema], exclude, batchSize: 2 });
 
+    // Foreign-key order: parent before child, whatever the names.
     expect(header.tables).toEqual([
-      { name: `${schema}.child`, rows: 3 },
       { name: `${schema}.parent`, rows: 7 },
+      { name: `${schema}.child`, rows: 3 },
     ]);
-    // 2 batches for child (2 + 1), 4 for parent (2 + 2 + 2 + 1).
-    expect(gunzipSync(body).toString('utf8').trim().split('\n')).toHaveLength(1 + 2 + 4);
+    // Header, 4 batches for parent (2 + 2 + 2 + 1), 2 for child (2 + 1), trailer.
+    expect(gunzipSync(body).toString('utf8').trim().split('\n')).toHaveLength(1 + 4 + 2 + 1);
 
     await db.$executeRawUnsafe(`TRUNCATE ${child}, ${parent}`);
-    const { restored } = await db.$transaction((tx) => restoreDatabase(tx, body));
+    const { restored } = await restore(body);
 
     expect(restored).toEqual(header.tables);
     expect(await snapshot()).toEqual(before);
   });
 
   it('leaves migration history out, so it restores into a freshly migrated database', async () => {
-    const { body, header } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
-      { isolationLevel: 'RepeatableRead' }
-    );
+    const { body, header } = await exportSnapshot({ schemas: [schema], exclude });
     expect(header.tables.map((table) => table.name)).toEqual([
-      `${schema}.child`,
       `${schema}.parent`,
+      `${schema}.child`,
     ]);
 
     // The target's own migrations filled its history tables; they stay as they are.
     await db.$executeRawUnsafe(`TRUNCATE ${child}, ${parent}`);
-    const { restored } = await db.$transaction((tx) => restoreDatabase(tx, body));
+    const { restored } = await restore(body);
 
     expect(restored).toEqual(header.tables);
     const [history] = await db.$queryRawUnsafe<[{ n: number }]>(
@@ -195,10 +206,7 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
         `INSERT INTO "${other}"."tokens" SELECT 'i', 't' || g, '2026-10-08T00:00:00Z'::timestamptz + g * interval '1 second'
            FROM generate_series(1, 5) g`
       );
-      const { body, header } = await db.$transaction(
-        (tx) => exportDatabase(tx, { schemas: [other], batchSize: 2 }),
-        { isolationLevel: 'RepeatableRead' }
-      );
+      const { body, header } = await exportSnapshot({ schemas: [other], batchSize: 2 });
       expect(header.tables).toEqual([
         { name: `${other}.pairs`, rows: 5 },
         { name: `${other}.tokens`, rows: 5 },
@@ -211,34 +219,38 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
 
       // Nothing to page by: refuse rather than guess.
       await db.$executeRawUnsafe(`CREATE TABLE "${other}"."loose" (v text)`);
-      await expect(
-        db.$transaction((tx) => exportDatabase(tx, { schemas: [other] }), {
-          isolationLevel: 'RepeatableRead',
-        })
-      ).rejects.toThrow(/loose has no primary key/);
+      await expect(exportSnapshot({ schemas: [other] })).rejects.toThrow(
+        /loose has no primary key/
+      );
     } finally {
       await db.$executeRawUnsafe(`DROP SCHEMA "${other}" CASCADE`);
     }
   });
 
-  it('refuses to restore into tables that hold rows', async () => {
-    const { body } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
-      {
-        isolationLevel: 'RepeatableRead',
-      }
-    );
+  it('refuses a truncated file and loads nothing from it', async () => {
+    const { body } = await exportSnapshot({ schemas: [schema], exclude, batchSize: 2 });
+    const { gzipSync } = await import('node:zlib');
+    const lines = gunzipSync(body).toString('utf8').trim().split('\n');
+    // Cut after the parent batches: no child rows, no trailer.
+    const cut = gzipSync(lines.slice(0, 5).join('\n') + '\n');
 
-    await expect(db.$transaction((tx) => restoreDatabase(tx, body))).rejects.toThrow(/not empty/);
+    await db.$executeRawUnsafe(`TRUNCATE ${child}, ${parent}`);
+    await expect(restore(cut)).rejects.toThrow(/truncated/);
+    const [{ n }] = await db.$queryRawUnsafe<[{ n: number }]>(
+      `SELECT count(*)::int AS n FROM ${parent}`
+    );
+    expect(n).toBe(0);
+    await restore(body); // leave the rows for the next tests
+  });
+
+  it('refuses to restore into tables that hold rows', async () => {
+    const { body } = await exportSnapshot({ schemas: [schema], exclude });
+
+    await expect(restore(body)).rejects.toThrow(/not empty/);
   });
 
   it('refuses a target without the schema', async () => {
-    const { body } = await db.$transaction(
-      (tx) => exportDatabase(tx, { schemas: [schema], exclude }),
-      {
-        isolationLevel: 'RepeatableRead',
-      }
-    );
+    const { body } = await exportSnapshot({ schemas: [schema], exclude });
     const other = `${schema}_x`;
     const renamed = Buffer.from(
       gunzipSync(body).toString('utf8').replaceAll(`${schema}.`, `${other}.`)
@@ -249,13 +261,13 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     const lines = renamed.toString('utf8').split('\n');
     lines[0] = JSON.stringify(header);
 
-    await expect(restoreDatabase(db, gzipSync(lines.join('\n')))).rejects.toThrow(/missing tables/);
+    await expect(restore(gzipSync(lines.join('\n')))).rejects.toThrow(/missing tables/);
   });
 
   it('stops with BackupBudgetError when the deadline has passed', async () => {
     let t = 0;
     await expect(
-      exportDatabase(db, { schemas: [schema], exclude, batchSize: 2, deadline: 3, now: () => t++ })
+      exportBuffer(db, { schemas: [schema], exclude, batchSize: 2, deadline: 3, now: () => t++ })
     ).rejects.toBeInstanceOf(BackupBudgetError);
   });
 
@@ -275,11 +287,13 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
         exclude,
         keepDays: 14,
         store: {
-          put: async (key: string, body: Uint8Array, contentType: string) => {
-            put.push({ key, body, contentType });
+          put: async (key: string, stream: Readable, contentType: string) => {
+            const chunks: Buffer[] = [];
+            for await (const chunk of stream) chunks.push(chunk as Buffer);
+            put.push({ key, body: Buffer.concat(chunks), contentType });
             files.push({ key, lastModified: NOW });
           },
-          get: async () => new Uint8Array(),
+          get: async () => Readable.from([]),
           list: async (prefix: string) => files.filter((file) => file.key.startsWith(prefix)),
           delete: async (key: string) => {
             deleted.push(key);
@@ -295,8 +309,8 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     expect(put[0]!.contentType).toBe('application/gzip');
     const stored = readBackup(put[0]!.body).header;
     expect(stored.tables).toEqual([
-      { name: `${schema}.child`, rows: 3 },
       { name: `${schema}.parent`, rows: 7 },
+      { name: `${schema}.child`, rows: 3 },
     ]);
     expect(stored.excluded).toEqual([`${schema}.chunks`]);
     expect(deleted).toEqual(['db/2026-09-01.ndjson.gz']);

@@ -1,11 +1,16 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
+import type { Readable } from 'node:stream';
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import type { BackupStore } from '../backup';
 import type { ObjectStorage } from '../types';
@@ -57,6 +62,81 @@ export function createS3Storage(options: S3Options): ObjectStorage {
 }
 
 /**
+ * Size of one multipart upload part: S3's minimum for every part but the
+ * last. A backup stream is held in memory one part at a time.
+ */
+export const BACKUP_PART_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Uploads a stream of unknown length: a single PUT when it ends within one
+ * part, else a multipart upload completed only after the stream ends. If the
+ * stream or a part fails, the multipart upload is aborted, so no object (and
+ * no billable orphan parts) is left behind.
+ */
+async function putStream(
+  client: S3Client,
+  target: { Bucket: string; Key: string; ContentType: string },
+  body: Readable
+): Promise<void> {
+  let uploadId: string | undefined;
+  const parts: { ETag: string | undefined; PartNumber: number }[] = [];
+  let pending: Buffer[] = [];
+  let size = 0;
+  const sendPart = async () => {
+    uploadId ??= (await client.send(new CreateMultipartUploadCommand(target))).UploadId;
+    const PartNumber = parts.length + 1;
+    const { ETag } = await client.send(
+      new UploadPartCommand({
+        Bucket: target.Bucket,
+        Key: target.Key,
+        UploadId: uploadId,
+        PartNumber,
+        Body: Buffer.concat(pending),
+      })
+    );
+    parts.push({ ETag, PartNumber });
+    pending = [];
+    size = 0;
+  };
+
+  try {
+    for await (const chunk of body) {
+      pending.push(chunk as Buffer);
+      size += (chunk as Buffer).length;
+      if (size >= BACKUP_PART_BYTES) await sendPart();
+    }
+    if (!uploadId) {
+      await client.send(new PutObjectCommand({ ...target, Body: Buffer.concat(pending) }));
+      return;
+    }
+    if (size > 0) await sendPart();
+    await client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: target.Bucket,
+        Key: target.Key,
+        UploadId: uploadId,
+        MultipartUpload: { Parts: parts },
+      })
+    );
+  } catch (error) {
+    if (uploadId) {
+      // Best effort: the original error is the one to report. A part left
+      // behind by a failed abort holds no complete object.
+      await client
+        .send(
+          new AbortMultipartUploadCommand({
+            Bucket: target.Bucket,
+            Key: target.Key,
+            UploadId: uploadId,
+          })
+        )
+        .catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
+/**
  * The database backups' bucket (Supabase Storage bucket `backups` in the
  * demo): the same driver, plus list, get and delete for retention and restore.
  */
@@ -65,11 +145,8 @@ export function createS3BackupStore(options: S3Options): BackupStore {
   const Bucket = options.bucket;
 
   return {
-    async put(key, body, contentType) {
-      await client.send(
-        new PutObjectCommand({ Bucket, Key: key, Body: body, ContentType: contentType })
-      );
-    },
+    put: (key, body, contentType) =>
+      putStream(client, { Bucket, Key: key, ContentType: contentType }, body),
     async list(prefix) {
       const files: { key: string; lastModified: Date }[] = [];
       let ContinuationToken: string | undefined;
@@ -89,7 +166,8 @@ export function createS3BackupStore(options: S3Options): BackupStore {
     async get(key) {
       const object = await client.send(new GetObjectCommand({ Bucket, Key: key }));
       if (!object.Body) throw new Error(`Backup ${key} has no body`);
-      return object.Body.transformToByteArray();
+      // In Node the SDK's body is a Readable.
+      return object.Body as Readable;
     },
     async delete(key) {
       await client.send(new DeleteObjectCommand({ Bucket, Key: key }));

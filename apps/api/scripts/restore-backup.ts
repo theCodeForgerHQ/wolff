@@ -9,6 +9,7 @@
  *
  * Without a key it takes the newest backup. Exits 1 when any count differs.
  */
+import { Transform } from 'node:stream';
 import { createPrisma } from '@wolff/database';
 import { BACKUP_PREFIX, restoreDatabase } from '@wolff/jobs/backup';
 import { createS3BackupStore } from '@wolff/jobs/ports';
@@ -38,19 +39,31 @@ async function main(): Promise<number> {
   }
 
   const t0 = performance.now();
-  const body = await store.get(key);
-  const t1 = performance.now();
+  // Downloaded and loaded as one stream; count the bytes on the way through.
+  // (A 'data' listener on the download would start it flowing before the
+  // restore reads it, and drop chunks.)
+  let bytes = 0;
+  const download = await store.get(key);
+  const body = download.pipe(
+    new Transform({
+      transform(chunk: Buffer, _encoding, done) {
+        bytes += chunk.length;
+        done(null, chunk);
+      },
+    })
+  );
+  download.on('error', (error) => body.destroy(error));
   const db = createPrisma(target);
   try {
     const { header, restored } = await db.$transaction((tx) => restoreDatabase(tx, body), {
       maxWait: 30_000,
       timeout: 15 * 60_000,
     });
-    const t2 = performance.now();
+    const t1 = performance.now();
 
     const expected = new Map(header.tables.map((table) => [table.name, table.rows]));
     let mismatches = 0;
-    console.log(`backup ${key} (${body.length} bytes, taken ${header.createdAt})`);
+    console.log(`backup ${key} (${bytes} bytes, taken ${header.createdAt})`);
     console.log('table\tbackup\trestored');
     for (const { name, rows } of restored) {
       const flag = rows === expected.get(name) ? '' : '\tMISMATCH';
@@ -60,7 +73,7 @@ async function main(): Promise<number> {
     const total = restored.reduce((sum, table) => sum + table.rows, 0);
     console.log(
       `tables ${restored.length}, rows ${total}, mismatches ${mismatches}; ` +
-        `download ${((t1 - t0) / 1000).toFixed(1)} s, load ${((t2 - t1) / 1000).toFixed(1)} s`
+        `download and load ${((t1 - t0) / 1000).toFixed(1)} s`
     );
     return mismatches === 0 ? 0 : 1;
   } finally {
