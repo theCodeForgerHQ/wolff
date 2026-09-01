@@ -219,8 +219,10 @@ and `AI_DATABASE_URL` (ai) at it, or use Neon's "restore branch" on `main`,
 and redeploy. Delete scratch branches afterwards
 (`neonctl branches delete $B --project-id $P`).
 
-Drill (2026-08-30): 65 tables, 1,632 rows, 0 mismatches; branch 4.3 s,
-emptying 6.0 s, restore 62.1 s (download 2.0 s, load 58.2 s), delete 4.0 s.
+Drill (2026-08-30, encrypted format 2): 61 tables, 1,376 rows, 0 mismatches,
+migration history kept; branch 5.9 s, emptying 12.8 s, restore 80.8 s
+(download and load stream together), delete 3.6 s. The backup file was
+150,077 bytes.
 
 ### 4.3 Point-in-time restore (Neon)
 
