@@ -105,6 +105,15 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
     await db.$executeRawUnsafe(
       `INSERT INTO ${parent} SELECT g, 'p' || g FROM generate_series(1, 7) g`
     );
+    // Migration history, as a freshly migrated target database has it too.
+    await db.$executeRawUnsafe(
+      `CREATE TABLE "${schema}"."_prisma_migrations" (id text PRIMARY KEY)`
+    );
+    await db.$executeRawUnsafe(`INSERT INTO "${schema}"."_prisma_migrations" VALUES ('0001_init')`);
+    await db.$executeRawUnsafe(
+      `CREATE TABLE "${schema}"."alembic_version" (version_num text PRIMARY KEY)`
+    );
+    await db.$executeRawUnsafe(`INSERT INTO "${schema}"."alembic_version" VALUES ('0002')`);
     // Rows referencing later rows: in ctid order the child comes first.
     await db.$executeRawUnsafe(
       `INSERT INTO ${child} VALUES
@@ -139,6 +148,28 @@ describe.skipIf(!url)('export and restore (Postgres)', () => {
 
     expect(restored).toEqual(header.tables);
     expect(await snapshot()).toEqual(before);
+  });
+
+  it('leaves migration history out, so it restores into a freshly migrated database', async () => {
+    const { body, header } = await db.$transaction(
+      (tx) => exportDatabase(tx, { schemas: [schema] }),
+      { isolationLevel: 'RepeatableRead' }
+    );
+    expect(header.tables.map((table) => table.name)).toEqual([
+      `${schema}.child`,
+      `${schema}.parent`,
+    ]);
+
+    // The target's own migrations filled its history tables; they stay as they are.
+    await db.$executeRawUnsafe(`TRUNCATE ${child}, ${parent}`);
+    const { restored } = await db.$transaction((tx) => restoreDatabase(tx, body));
+
+    expect(restored).toEqual(header.tables);
+    const [history] = await db.$queryRawUnsafe<[{ n: number }]>(
+      `SELECT (SELECT count(*) FROM "${schema}"."_prisma_migrations")::int +
+              (SELECT count(*) FROM "${schema}"."alembic_version")::int AS n`
+    );
+    expect(history.n).toBe(2);
   });
 
   it('refuses to restore into tables that hold rows', async () => {

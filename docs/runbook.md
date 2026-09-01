@@ -166,10 +166,12 @@ P=patient-rice-66047365
 psql() { docker run --rm postgres:17 psql "$@"; }   # if psql is not installed
 B=$(neonctl branches create --project-id $P --name restore-$(date +%m%d) --output json | jq -r .branch.id)  # copy of main
 URL=$(neonctl connection-string $B --project-id $P --database-name neondb --role-name neondb_owner)
-# Empty it. public: TRUNCATE as neondb_owner. ai: tables belong to ai_owner, and
+# Empty it, except the migration history (_prisma_migrations, alembic_version):
+# backups leave those tables out and the restore keeps the target's own.
+# public: TRUNCATE as neondb_owner. ai: tables belong to ai_owner, and
 # neondb_owner cannot SET ROLE to it, but may DELETE.
-psql "$URL" -c "DO \$\$ DECLARE l text; BEGIN SELECT string_agg(format('%I.%I',schemaname,tablename),', ') INTO l FROM pg_tables WHERE schemaname='public'; EXECUTE 'TRUNCATE '||l; END \$\$;"
-psql "$URL" -c "DO \$\$ DECLARE r record; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='ai' LOOP EXECUTE format('DELETE FROM ai.%I', r.tablename); END LOOP; END \$\$;"
+psql "$URL" -c "DO \$\$ DECLARE l text; BEGIN SELECT string_agg(format('%I.%I',schemaname,tablename),', ') INTO l FROM pg_tables WHERE schemaname='public' AND tablename <> '_prisma_migrations'; EXECUTE 'TRUNCATE '||l; END \$\$;"
+psql "$URL" -c "DO \$\$ DECLARE r record; BEGIN FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='ai' AND tablename <> 'alembic_version' LOOP EXECUTE format('DELETE FROM ai.%I', r.tablename); END LOOP; END \$\$;"
 ( cd apps/api && RESTORE_TARGET_URL="$URL" BACKUP_BUCKET=backups \
   node --import tsx scripts/restore-backup.ts )   # newest; or pass a key, e.g. db/2026-08-30.ndjson.gz
 neonctl branches delete $B --project-id $P       # when done
@@ -178,7 +180,8 @@ neonctl branches delete $B --project-id $P       # when done
 `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`
 must be in the environment. The script prints backup vs restored rows per
 table and exits 1 on any mismatch. To a fresh database instead of a branch:
-run the migrations (section 1 step 1) and the restore; nothing to empty.
+run the migrations (section 1 step 1) and the restore; nothing to empty. The
+backup has no migration history, so the migrations' own history rows stay.
 
 To make a restored branch the live database: point `DATABASE_URL` (web, api)
 and `AI_DATABASE_URL` (ai) at it, or use Neon's "restore branch" on `main`,

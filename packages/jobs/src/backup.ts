@@ -55,13 +55,22 @@ function qualified(name: string): string {
   return parts.map((part) => `"${part}"`).join('.');
 }
 
+/**
+ * Migration history (Prisma's and Alembic's), in any schema. It describes the
+ * schema, not the data: the restore target was migrated and has its own
+ * history rows, so these tables are neither exported nor loaded.
+ */
+export const MIGRATION_HISTORY_TABLES = ['_prisma_migrations', 'alembic_version'];
+
 async function listTables(sql: SqlRunner, schemas: string[]): Promise<string[]> {
   const rows = await sql.$queryRawUnsafe<{ name: string }[]>(
     `SELECT n.nspname || '.' || c.relname AS name
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE c.relkind = 'r' AND n.nspname = ANY($1::text[])
+        AND c.relname <> ALL($2::text[])
       ORDER BY 1`,
-    schemas
+    schemas,
+    MIGRATION_HISTORY_TABLES
   );
   return rows.map((row) => row.name);
 }
