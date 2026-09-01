@@ -7,7 +7,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./vitest.setup.ts'],
+    // Integration suites get this package's own copy of the test database
+    // (packages/database/src/testing), not the one the other packages use.
+    globalSetup: ['../../packages/database/src/testing/global-setup.ts'],
+    setupFiles: ['./vitest.setup.ts', '../../packages/database/src/testing/setup.ts'],
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', '.next', 'dist', 'e2e/**'],
     coverage: {
