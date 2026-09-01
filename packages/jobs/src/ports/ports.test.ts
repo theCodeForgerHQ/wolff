@@ -233,41 +233,53 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('S3 storage (S3Mock container)',
     expect((await store.list('db/')).map((file) => file.key)).toEqual(['db/b.ndjson.gz']);
   });
 
-  it('streams a backup larger than one part as a multipart upload', async () => {
-    const store = createS3BackupStore({
-      endpoint,
-      region: 'us-east-1',
-      bucket: 'backups',
-      ...credentials,
-    });
-    const data = randomBytes(2 * BACKUP_PART_BYTES + 12_345);
+  // Ten-plus MiB through a container: 0.5 s alone, but well past vitest's 5 s
+  // default while the other packages' suites load the machine.
+  const MULTIPART_TIMEOUT_MS = 30_000;
 
-    await store.put('db/big.enc', chunked(data), 'application/octet-stream');
+  it(
+    'streams a backup larger than one part as a multipart upload',
+    async () => {
+      const store = createS3BackupStore({
+        endpoint,
+        region: 'us-east-1',
+        bucket: 'backups',
+        ...credentials,
+      });
+      const data = randomBytes(2 * BACKUP_PART_BYTES + 12_345);
 
-    expect((await bytes(await store.get('db/big.enc'))).equals(data)).toBe(true);
-  });
+      await store.put('db/big.enc', chunked(data), 'application/octet-stream');
 
-  it('aborts the multipart upload and stores nothing when the source fails', async () => {
-    const store = createS3BackupStore({
-      endpoint,
-      region: 'us-east-1',
-      bucket: 'backups',
-      ...credentials,
-    });
-    const data = randomBytes(2 * BACKUP_PART_BYTES);
+      expect((await bytes(await store.get('db/big.enc'))).equals(data)).toBe(true);
+    },
+    MULTIPART_TIMEOUT_MS
+  );
 
-    await expect(
-      store.put('db/broken.enc', chunked(data, BACKUP_PART_BYTES + 65_536), 'application/gzip')
-    ).rejects.toThrow(/source failed/);
+  it(
+    'aborts the multipart upload and stores nothing when the source fails',
+    async () => {
+      const store = createS3BackupStore({
+        endpoint,
+        region: 'us-east-1',
+        bucket: 'backups',
+        ...credentials,
+      });
+      const data = randomBytes(2 * BACKUP_PART_BYTES);
 
-    expect((await store.list('db/')).map((file) => file.key)).not.toContain('db/broken.enc');
-    const client = new S3Client({
-      endpoint,
-      region: 'us-east-1',
-      credentials,
-      forcePathStyle: true,
-    });
-    const uploads = await client.send(new ListMultipartUploadsCommand({ Bucket: 'backups' }));
-    expect(uploads.Uploads ?? []).toEqual([]);
-  });
+      await expect(
+        store.put('db/broken.enc', chunked(data, BACKUP_PART_BYTES + 65_536), 'application/gzip')
+      ).rejects.toThrow(/source failed/);
+
+      expect((await store.list('db/')).map((file) => file.key)).not.toContain('db/broken.enc');
+      const client = new S3Client({
+        endpoint,
+        region: 'us-east-1',
+        credentials,
+        forcePathStyle: true,
+      });
+      const uploads = await client.send(new ListMultipartUploadsCommand({ Bucket: 'backups' }));
+      expect(uploads.Uploads ?? []).toEqual([]);
+    },
+    MULTIPART_TIMEOUT_MS
+  );
 });
