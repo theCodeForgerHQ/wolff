@@ -25,6 +25,7 @@ import {
   getGstOutwardSupplies,
   getPipelineStageTransitions,
 } from '@wolff/core/reports';
+import { summarisePipelineStages } from './currency-summary';
 
 // Get period start date
 function getPeriodStartDate(period: DashboardPeriod): Date | null {
@@ -639,39 +640,28 @@ export async function getGstSummary() {
   );
 }
 
-// Pipeline stage totals for the default pipeline
+// Pipeline stage totals for the default pipeline, in the base currency
 export async function getPipelineSummary() {
   const { workspaceId } = await getCurrentUserWorkspace();
-  const rows = await getPipelineStageTransitions(db, workspaceId);
-  const map = new Map<
-    string,
-    { stageName: string; position: number; dealCount: number; totalValue: number; currency: string }
-  >();
-  for (const r of rows) {
-    const existing = map.get(r.stageId);
-    if (existing) {
-      existing.dealCount += 1;
-      existing.totalValue += r.value;
-    } else {
-      map.set(r.stageId, {
-        stageName: r.stageName,
-        position: r.stagePosition,
-        dealCount: 1,
-        totalValue: r.value,
-        currency: r.currency,
-      });
-    }
-  }
-  return Array.from(map.entries())
-    .map(([stageId, v]) => ({
-      stageId,
-      stageName: v.stageName,
-      position: v.position,
-      dealCount: v.dealCount,
-      totalValue: v.totalValue,
-      currency: v.currency,
-    }))
-    .sort((a, b) => a.position - b.position);
+  const [rows, baseCurrency, rates] = await Promise.all([
+    getPipelineStageTransitions(db, workspaceId),
+    getWorkspaceCurrency(),
+    getExchangeRates(),
+  ]);
+  return summarisePipelineStages(rows, baseCurrency, rates);
+}
+
+// Every currency the dashboard's totals draw on, so the page can say which
+// ones were converted to the base currency.
+export async function getDashboardCurrencies(): Promise<string[]> {
+  const { workspaceId } = await getCurrentUserWorkspace();
+  const where = { workspaceId, deletedAt: null };
+  const [invoices, quotes, deals] = await Promise.all([
+    db.invoice.findMany({ where, distinct: ['currency'], select: { currency: true } }),
+    db.quote.findMany({ where, distinct: ['currency'], select: { currency: true } }),
+    db.deal.findMany({ where, distinct: ['currency'], select: { currency: true } }),
+  ]);
+  return [...new Set([...invoices, ...quotes, ...deals].map((row) => row.currency))].sort();
 }
 
 // Get all dashboard data
@@ -688,6 +678,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     paymentAging,
     gstSummary,
     pipelineSummary,
+    currencies,
   ] = await Promise.all([
     getDashboardStats(),
     getQuoteStatusCounts(),
@@ -700,6 +691,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     getReceivablesAgeingSummary(),
     getGstSummary(),
     getPipelineSummary(),
+    getDashboardCurrencies(),
   ]);
 
   return {
@@ -714,6 +706,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     paymentAging,
     gstSummary,
     pipelineSummary,
+    currencies,
   };
 }
 
