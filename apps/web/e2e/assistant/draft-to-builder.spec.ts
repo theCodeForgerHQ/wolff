@@ -7,9 +7,6 @@ import { expect, test } from '@playwright/test';
  */
 test('a drafted quote opens in the builder and saves', async ({ page }) => {
   await page.goto('/dashboard');
-  // The demo-mode banner is fixed over the top of the header (a known
-  // layout issue, see docs/phase-5.md); dismiss it as a user would.
-  await page.getByRole('button', { name: 'Dismiss banner' }).click();
   await page.getByRole('button', { name: 'Open the assistant' }).click();
   const panel = page.getByRole('dialog', { name: 'Assistant' });
 
