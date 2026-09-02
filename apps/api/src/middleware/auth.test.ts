@@ -253,19 +253,34 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
 });
 
 describe('failed-authentication limit under concurrency', () => {
-  // Found by the Phase 7 load test: with express-rate-limit's
-  // skipSuccessfulRequests, every request counts until its response is
-  // sent, so more than 30 requests in flight from one address answered
-  // 429 although none had failed to authenticate.
-  it('does not count requests in flight that end up authenticated', async () => {
+  // A parallel burst of bad keys from one address must not get more than
+  // 30 tries: every request reserves a slot when it arrives, before the
+  // key check, so concurrent requests cannot all read a count below 30.
+  it('lets at most 30 of 60 concurrent bad-key requests reach the key check', async () => {
+    let checked = 0;
     const app = express();
-    app.get('/slow', authFailureRateLimit(), (_req, res) => {
-      setTimeout(() => res.json({ ok: true }), 100);
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      checked += 1;
+      setTimeout(() => res.status(401).json({ success: false }), 50);
     });
 
     const statuses = await Promise.all(
-      Array.from({ length: 40 }, async () => (await request(app).get('/slow')).status)
+      Array.from({ length: 60 }, async () => (await request(app).get('/deny')).status)
     );
+
+    expect(checked).toBeLessThanOrEqual(30);
+    expect(statuses.filter((s) => s === 401).length).toBeLessThanOrEqual(30);
+    expect(statuses.filter((s) => s !== 401).every((s) => s === 429)).toBe(true);
+  });
+
+  it('gives back the slot of a request that authenticated', async () => {
+    const app = express();
+    app.get('/ok', authFailureRateLimit(), (_req, res) => {
+      res.json({ ok: true });
+    });
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 45; i++) statuses.push((await request(app).get('/ok')).status);
 
     expect(statuses.filter((s) => s !== 200)).toEqual([]);
   });
@@ -281,5 +296,6 @@ describe('failed-authentication limit under concurrency', () => {
 
     expect(statuses.slice(0, 30).every((s) => s === 401)).toBe(true);
     expect(statuses[30]).toBe(429);
+    expect(statuses.length).toBe(31);
   });
 });
