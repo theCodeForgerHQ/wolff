@@ -1,4 +1,5 @@
 import { request } from '../testing/request';
+import express from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRedis } from '@wolff/jobs/bullmq';
 import { TestRedis } from '@wolff/jobs/testing/redis';
@@ -249,4 +250,36 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
       await container.kill();
     }
   }, 120_000);
+});
+
+describe('failed-authentication limit under concurrency', () => {
+  // Found by the Phase 7 load test: with express-rate-limit's
+  // skipSuccessfulRequests, every request counts until its response is
+  // sent, so more than 30 requests in flight from one address answered
+  // 429 although none had failed to authenticate.
+  it('does not count requests in flight that end up authenticated', async () => {
+    const app = express();
+    app.get('/slow', authFailureRateLimit(), (_req, res) => {
+      setTimeout(() => res.json({ ok: true }), 100);
+    });
+
+    const statuses = await Promise.all(
+      Array.from({ length: 40 }, async () => (await request(app).get('/slow')).status)
+    );
+
+    expect(statuses.filter((s) => s !== 200)).toEqual([]);
+  });
+
+  it('still refuses an address after 30 failures in the window', async () => {
+    const app = express();
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      res.status(401).json({ success: false });
+    });
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 31; i++) statuses.push((await request(app).get('/deny')).status);
+
+    expect(statuses.slice(0, 30).every((s) => s === 401)).toBe(true);
+    expect(statuses[30]).toBe(429);
+  });
 });

@@ -1,5 +1,5 @@
 import type { Request, RequestHandler } from 'express';
-import { rateLimit, type Store } from 'express-rate-limit';
+import { ipKeyGenerator, MemoryStore, rateLimit, type Store } from 'express-rate-limit';
 import type { Redis } from 'ioredis';
 import { RedisStore, type RedisReply } from 'rate-limit-redis';
 import { authenticateApiKey, PUBLISHABLE_KEY_PREFIX } from '@wolff/core/auth/api-keys';
@@ -160,22 +160,45 @@ export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHan
   };
 }
 
+const AUTH_FAILURE_WINDOW_MS = 60_000;
+const AUTH_FAILURES = 30;
+
 /**
  * Failed authentication per client IP: 30 failed attempts a
  * minute, then 429 for the rest of the window, so keys cannot be guessed at
- * speed. Successful requests are not counted. Mount before the key check.
+ * speed. Mount before the key check.
+ *
+ * Only a finished 401 is counted. express-rate-limit's
+ * skipSuccessfulRequests counts every request when it arrives and takes
+ * successful ones back when they finish, so more than 30 requests in
+ * flight from one address were refused although none had failed.
  */
 export function authFailureRateLimit(createStore?: RateLimitStoreFactory): RequestHandler {
-  return rateLimit({
-    windowMs: 60_000,
-    limit: 30,
-    skipSuccessfulRequests: true,
-    requestWasSuccessful: (_req, res) => res.statusCode !== 401,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    store: createStore?.('rl:authfail:'),
-    handler: rateLimited,
-  });
+  const store: Store = createStore?.('rl:authfail:') ?? new MemoryStore();
+  store.init?.({ windowMs: AUTH_FAILURE_WINDOW_MS } as never);
+  const get = store.get?.bind(store);
+  if (!get) throw new Error('The auth-failure limit needs a store that can read a count');
+  const read = async (key: string) => get(key);
+  const count = async (key: string) => store.increment(key);
+
+  return (req, res, next) => {
+    const key = ipKeyGenerator(req.ip ?? 'unknown');
+    read(key)
+      .then((seen) => {
+        if (seen && seen.totalHits >= AUTH_FAILURES) {
+          const left = seen.resetTime
+            ? seen.resetTime.getTime() - Date.now()
+            : AUTH_FAILURE_WINDOW_MS;
+          res.set('Retry-After', String(Math.max(1, Math.ceil(left / 1000))));
+          return rateLimited(req, res, next);
+        }
+        res.on('finish', () => {
+          if (res.statusCode === 401) count(key).catch(() => {});
+        });
+        next();
+      })
+      .catch(next);
+  };
 }
 
 /**
