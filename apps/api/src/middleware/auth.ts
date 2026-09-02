@@ -1,5 +1,5 @@
 import type { Request, RequestHandler } from 'express';
-import { rateLimit, type Store } from 'express-rate-limit';
+import { ipKeyGenerator, MemoryStore, rateLimit, type Store } from 'express-rate-limit';
 import type { Redis } from 'ioredis';
 import { RedisStore, type RedisReply } from 'rate-limit-redis';
 import { authenticateApiKey, PUBLISHABLE_KEY_PREFIX } from '@wolff/core/auth/api-keys';
@@ -160,22 +160,54 @@ export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHan
   };
 }
 
+const AUTH_FAILURE_WINDOW_MS = 60_000;
+const AUTH_FAILURES = 30;
+
 /**
  * Failed authentication per client IP: 30 failed attempts a
  * minute, then 429 for the rest of the window, so keys cannot be guessed at
- * speed. Successful requests are not counted. Mount before the key check.
+ * speed. Mount before the key check.
+ *
+ * Reserve, then release: each request takes a slot atomically when it
+ * arrives, before the key check, and gives it back only when its response
+ * finishes with a status other than 401. A request whose connection closes
+ * before the response finishes keeps its slot, so aborted guesses count. So a parallel burst of bad keys gets at most 30 tries, since
+ * no request can read the count before the others are added to it. The
+ * cost: more than 30 requests in flight at once from one address get 429
+ * even if every one would authenticate. Sequential successful requests
+ * are never limited.
  */
 export function authFailureRateLimit(createStore?: RateLimitStoreFactory): RequestHandler {
-  return rateLimit({
-    windowMs: 60_000,
-    limit: 30,
-    skipSuccessfulRequests: true,
-    requestWasSuccessful: (_req, res) => res.statusCode !== 401,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    store: createStore?.('rl:authfail:'),
-    handler: rateLimited,
-  });
+  const store: Store = createStore?.('rl:authfail:') ?? new MemoryStore();
+  store.init?.({ windowMs: AUTH_FAILURE_WINDOW_MS } as never);
+  const reserve = async (key: string) => store.increment(key);
+  const release = async (key: string) => store.decrement(key);
+
+  return (req, res, next) => {
+    const key = ipKeyGenerator(req.ip ?? 'unknown');
+    reserve(key)
+      .then(({ totalHits, resetTime }) => {
+        let settled = false;
+        // Exactly once per request: keep the slot for a 401 or an abort, give it back otherwise.
+        const settle = (failed: boolean) => {
+          if (settled) return;
+          settled = true;
+          if (!failed) release(key).catch(() => {});
+        };
+        res.on('finish', () => settle(res.statusCode === 401));
+        // A connection closed before its answer keeps the slot: aborting
+        // each guess early must not make it free.
+        res.on('close', () => settle(res.writableFinished ? res.statusCode === 401 : true));
+
+        if (totalHits > AUTH_FAILURES) {
+          const left = resetTime ? resetTime.getTime() - Date.now() : AUTH_FAILURE_WINDOW_MS;
+          res.set('Retry-After', String(Math.max(1, Math.ceil(left / 1000))));
+          return rateLimited(req, res, next);
+        }
+        next();
+      })
+      .catch(next);
+  };
 }
 
 /**

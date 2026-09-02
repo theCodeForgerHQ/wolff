@@ -1,4 +1,7 @@
 import { request } from '../testing/request';
+import express from 'express';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRedis } from '@wolff/jobs/bullmq';
 import { TestRedis } from '@wolff/jobs/testing/redis';
@@ -249,4 +252,95 @@ describe.skipIf(!TEST_DATABASE_URL)('API key authentication (Postgres)', () => {
       await container.kill();
     }
   }, 120_000);
+});
+
+describe('failed-authentication limit under concurrency', () => {
+  // A parallel burst of bad keys from one address must not get more than
+  // 30 tries: every request reserves a slot when it arrives, before the
+  // key check, so concurrent requests cannot all read a count below 30.
+  it('lets at most 30 of 60 concurrent bad-key requests reach the key check', async () => {
+    let checked = 0;
+    const app = express();
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      checked += 1;
+      setTimeout(() => res.status(401).json({ success: false }), 50);
+    });
+
+    const statuses = await Promise.all(
+      Array.from({ length: 60 }, async () => (await request(app).get('/deny')).status)
+    );
+
+    expect(checked).toBeLessThanOrEqual(30);
+    expect(statuses.filter((s) => s === 401).length).toBeLessThanOrEqual(30);
+    expect(statuses.filter((s) => s !== 401).every((s) => s === 429)).toBe(true);
+  });
+
+  it('keeps the slot of a request whose client disconnects before the answer', async () => {
+    // Aborting each guess early must not give its slot back.
+    const app = express();
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      setTimeout(() => {
+        if (!res.destroyed) res.status(401).json({ success: false });
+      }, 100);
+    });
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.once('listening', resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await Promise.all(
+        Array.from(
+          { length: 60 },
+          () =>
+            new Promise<void>((resolve) => {
+              const req = http.get({ host: '127.0.0.1', port, path: '/deny' });
+              req.on('error', () => resolve());
+              req.on('socket', (socket) => {
+                socket.on('connect', () => setTimeout(() => req.destroy(), 20));
+              });
+              req.on('close', () => resolve());
+            })
+        )
+      );
+      // Let the server see every close.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const status = await new Promise<number>((resolve, reject) => {
+        http
+          .get({ host: '127.0.0.1', port, path: '/deny' }, (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          })
+          .on('error', reject);
+      });
+      expect(status).toBe(429);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it('gives back the slot of a request that authenticated', async () => {
+    const app = express();
+    app.get('/ok', authFailureRateLimit(), (_req, res) => {
+      res.json({ ok: true });
+    });
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 45; i++) statuses.push((await request(app).get('/ok')).status);
+
+    expect(statuses.filter((s) => s !== 200)).toEqual([]);
+  });
+
+  it('still refuses an address after 30 failures in the window', async () => {
+    const app = express();
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      res.status(401).json({ success: false });
+    });
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 31; i++) statuses.push((await request(app).get('/deny')).status);
+
+    expect(statuses.slice(0, 30).every((s) => s === 401)).toBe(true);
+    expect(statuses[30]).toBe(429);
+    expect(statuses.length).toBe(31);
+  });
 });
