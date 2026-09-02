@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.include='src/**' --coverage.exclude='**/*.test.*' --coverage.exclude='**/generated/**' --coverage.exclude='**/testing/**' --coverage.reporter=text-summary --coverage.reporter=json-summary",
     "size": "size-limit"
   },
   "dependencies": {
@@ -20,9 +21,10 @@
     "@preact/preset-vite": "^2.10.1",
     "@size-limit/preset-small-lib": "^11.2.0",
     "@testing-library/preact": "^3.2.4",
+    "@vitest/coverage-v8": "5.0.2",
     "eslint": "^9.20.0",
     "globals": "^15.15.0",
-    "jsdom": "^26.0.0",
+    "jsdom": "^29.1.1",
     "size-limit": "^11.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.24.0",

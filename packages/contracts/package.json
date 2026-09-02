@@ -10,13 +10,15 @@
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.include='src/**' --coverage.exclude='**/*.test.*' --coverage.exclude='**/generated/**' --coverage.exclude='**/testing/**' --coverage.reporter=text-summary --coverage.reporter=json-summary"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "5.0.2",
     "typescript": "5.9.3",
     "vitest": "5.0.2"
   }

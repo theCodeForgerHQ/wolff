@@ -15,13 +15,16 @@ export default defineConfig({
     exclude: ['node_modules', '.next', 'dist', 'e2e/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'text-summary', 'json-summary'],
+      // Every source file counts, not only the ones a test imports.
+      include: ['app/**', 'components/**', 'lib/**', 'hooks/**'],
       exclude: [
         'node_modules/**',
         '.next/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/types/**',
+        '**/*.test.*',
       ],
     },
   },

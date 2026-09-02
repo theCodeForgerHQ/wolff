@@ -33,6 +33,11 @@
       "outputs": [],
       "env": ["TEST_DATABASE_URL", "STRIPE_MOCK_URL"]
     },
+    "test:coverage": {
+      "dependsOn": ["build", "^build"],
+      "outputs": ["coverage/**"],
+      "env": ["TEST_DATABASE_URL", "STRIPE_MOCK_URL"]
+    },
     "test:e2e": {
       "dependsOn": ["build"],
       "outputs": []

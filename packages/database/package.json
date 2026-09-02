@@ -25,6 +25,7 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.include='src/**' --coverage.exclude='**/*.test.*' --coverage.exclude='**/generated/**' --coverage.exclude='**/testing/**' --coverage.reporter=text-summary --coverage.reporter=json-summary",
     "backfill:api-key-scopes": "tsx scripts/backfill-api-key-scopes.ts",
     "backfill:workspace-ids": "tsx scripts/backfill-workspace-ids.ts"
   },
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@faker-js/faker": "9.7.0",
     "@types/bcryptjs": "^2.4.6",
+    "@vitest/coverage-v8": "5.0.2",
     "prisma": "7.10.0",
     "tsx": "^4.19.0",
     "typescript": "5.9.3",
