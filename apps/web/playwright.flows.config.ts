@@ -38,6 +38,23 @@ export const E2E_ENV = {
   SVC_JWT_SECRET_WEB: 'e2e-web-'.repeat(8),
 } as const;
 
+/**
+ * The browser for every project: E2E_BROWSER=chromium (default), firefox or
+ * webkit. One browser per run, so the servers and the shared database see
+ * one client at a time.
+ */
+const BROWSER_DEVICES = {
+  chromium: 'Desktop Chrome',
+  firefox: 'Desktop Firefox',
+  webkit: 'Desktop Safari',
+} as const;
+type E2EBrowser = keyof typeof BROWSER_DEVICES;
+const browserName = (process.env.E2E_BROWSER ?? 'chromium') as E2EBrowser;
+if (!(browserName in BROWSER_DEVICES)) {
+  throw new Error(`E2E_BROWSER must be one of ${Object.keys(BROWSER_DEVICES).join(', ')}`);
+}
+export const E2E_DEVICE = devices[BROWSER_DEVICES[browserName]];
+
 const PRODUCT_AUTH_FILE = path.join(__dirname, 'e2e/.auth/product-user.json');
 const widgetPort = Number(process.env.WIDGET_PORT ?? 5173);
 const WIDGET_URL = `http://localhost:${widgetPort}`;
@@ -50,7 +67,7 @@ export default defineConfig({
   timeout: 90_000,
   globalSetup: require.resolve('./e2e/flows/global-setup'),
   use: {
-    ...devices['Desktop Chrome'],
+    ...E2E_DEVICE,
     baseURL,
     trace: 'retain-on-failure',
   },
