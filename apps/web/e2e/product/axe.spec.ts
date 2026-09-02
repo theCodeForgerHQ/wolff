@@ -39,3 +39,34 @@ test.describe('Authenticated axe checks', () => {
     await expectAxeClean(page);
   });
 });
+
+/**
+ * The main dashboard pages at a phone and a desktop width: no serious or
+ * critical violations. Moderate and minor findings are listed
+ * in docs/phase-7.md rather than asserted here.
+ */
+test.describe('Main pages, serious and critical only', () => {
+  const PAGES = [
+    '/dashboard',
+    '/dashboard/analytics',
+    '/quotes',
+    '/invoices',
+    '/clients',
+    '/leads',
+    '/settings',
+  ];
+  for (const path of PAGES) {
+    for (const width of [375, 1440]) {
+      test(`${path} at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(path);
+        await page.waitForLoadState('networkidle');
+        const results = await new AxeBuilder({ page }).analyze();
+        const blocking = results.violations
+          .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+          .map((v) => `${v.impact} ${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+        expect(blocking).toEqual([]);
+      });
+    }
+  }
+});

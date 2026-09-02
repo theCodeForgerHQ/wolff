@@ -11,8 +11,7 @@ export async function DemoModeProvider({ children }: { children: React.ReactNode
   return (
     <>
       <DemoBannerWrapper isDemo={isDemo} />
-      {/* Add padding to account for the fixed banner when in demo mode */}
-      <div className={isDemo ? 'pt-10' : ''}>{children}</div>
+      {children}
     </>
   );
 }

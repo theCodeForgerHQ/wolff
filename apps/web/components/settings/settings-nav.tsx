@@ -73,12 +73,12 @@ export function SettingsNav() {
   return (
     <>
       {/* Mobile: Select dropdown */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <Select
           value={currentItem?.href ?? '/settings/account'}
           onValueChange={(value) => router.push(value)}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Settings section">
             <SelectValue placeholder="Select settings" />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +92,7 @@ export function SettingsNav() {
       </div>
 
       {/* Desktop: Sidebar nav */}
-      <nav className="hidden flex-col gap-0.5 md:flex">
+      <nav className="hidden flex-col gap-0.5 lg:flex">
         {settingsNavItems.map((item) => (
           <Link
             key={item.href}

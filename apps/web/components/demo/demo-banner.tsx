@@ -19,10 +19,9 @@ export function DemoBanner({ className }: DemoBannerProps) {
 
   return (
     // A landmark, so its content is not outside every region (axe "region").
-    <aside
-      aria-label="Demo mode"
-      className={cn('fixed left-0 right-0 top-0 z-50 bg-amber-500 text-amber-950', className)}
-    >
+    // In the page flow under the header, not fixed: a fixed banner covered
+    // the header's buttons.
+    <aside aria-label="Demo mode" className={cn('bg-amber-500 text-amber-950', className)}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between gap-4 py-2 text-sm">
           <div className="flex items-center gap-2">

@@ -27,13 +27,13 @@ const statusConfig: Record<string, { label: string; className: string; icon: Rea
   draft: {
     label: 'Draft',
     className:
-      'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+      'border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
     icon: <FileText className="h-3 w-3" />,
   },
   sent: {
     label: 'Sent',
     className:
-      'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
+      'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
     icon: <Mail className="h-3 w-3" />,
   },
   viewed: {
@@ -45,19 +45,19 @@ const statusConfig: Record<string, { label: string; className: string; icon: Rea
   pending: {
     label: 'Pending',
     className:
-      'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
+      'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
     icon: <Hourglass className="h-3 w-3" />,
   },
   signed: {
     label: 'Signed',
     className:
-      'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
+      'border-green-300 text-green-700 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
     icon: <CheckCircle2 className="h-3 w-3" />,
   },
   expired: {
     label: 'Expired',
     className:
-      'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
+      'border-red-300 text-red-700 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
     icon: <Clock className="h-3 w-3" />,
   },
 };
@@ -148,7 +148,7 @@ export function getContractColumns(
           statusConfig.draft || {
             label: 'Unknown',
             className:
-              'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+              'border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
             icon: <FileText className="h-3 w-3" />,
           };
 
@@ -200,6 +200,7 @@ export function getContractColumns(
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const contract = row.original;
         const actions: RowAction<ContractInstanceListItem>[] = [];

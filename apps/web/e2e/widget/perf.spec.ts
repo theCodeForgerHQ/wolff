@@ -8,7 +8,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Widget performance', () => {
   test('lead form is interactive within 300 ms of DOMContentLoaded (Fast 3G, 4x CPU)', async ({
     page,
+    browserName,
   }) => {
+    // The throttling profile is set through the Chrome DevTools Protocol, so
+    // this measurement exists in Chromium only.
+    test.skip(browserName !== 'chromium', 'CPU and network throttling need CDP (Chromium only)');
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     await cdp.send('Network.enable');

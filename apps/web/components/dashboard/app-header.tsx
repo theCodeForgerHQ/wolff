@@ -192,7 +192,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
     <header className="bg-card sticky top-0 z-50 border-b">
       <div className="flex items-center justify-between gap-4 px-4 py-2 sm:px-6">
         {/* Left: Sidebar trigger + Breadcrumbs */}
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <SidebarTrigger className="[&_svg]:size-5!" />
           <Tooltip>
             <TooltipTrigger asChild>
@@ -204,10 +204,10 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               {BETA_TOOLTIP_MESSAGE}
             </TooltipContent>
           </Tooltip>
-          <Separator orientation="vertical" className="h-4! hidden md:block" />
+          <Separator orientation="vertical" className="h-4! hidden lg:block" />
 
           {/* Breadcrumbs - hidden on mobile */}
-          <Breadcrumb className="hidden md:block">
+          <Breadcrumb className="hidden lg:block">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/dashboard">Home</BreadcrumbLink>
@@ -229,7 +229,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
 
           {/* Search - visible on mobile when expanded */}
           {searchOpen && (
-            <div className="relative md:hidden">
+            <div className="relative lg:hidden">
               <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Search..."
@@ -249,7 +249,8 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
               variant="ghost"
               size="icon"
               onClick={() => setSearchOpen(true)}
-              className="md:hidden"
+              className="lg:hidden"
+              aria-label="Search"
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -259,7 +260,7 @@ export function AppHeader({ user, unreadCount = 0, notifications = [] }: AppHead
           <Button
             variant="ghost"
             size="sm"
-            className="hidden md:flex"
+            className="hidden lg:flex"
             onClick={() => setCommandOpen(true)}
           >
             <Search className="mr-2 h-4 w-4" />

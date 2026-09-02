@@ -87,8 +87,8 @@ export function DataTableToolbar<TData>({
   const currentStatusFilter = statusColumn?.getFilterValue() as string | undefined;
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex flex-1 items-center space-x-2">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-1 flex-wrap items-center gap-2">
         {/* Show dropdown - page size selector */}
         {showPageSizeSelector && (
           <div className="flex items-center space-x-2">
@@ -97,7 +97,7 @@ export function DataTableToolbar<TData>({
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => table.setPageSize(Number(value))}
             >
-              <SelectTrigger className="h-9 w-[70px]">
+              <SelectTrigger className="h-9 w-[70px]" aria-label="Rows per page">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent side="bottom">
@@ -132,7 +132,7 @@ export function DataTableToolbar<TData>({
               }
             }}
           >
-            <SelectTrigger className="h-9 w-[150px]">
+            <SelectTrigger className="h-9 w-[150px]" aria-label="Filter by status">
               <SelectValue placeholder="All status" />
             </SelectTrigger>
             <SelectContent>

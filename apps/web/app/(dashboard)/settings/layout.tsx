@@ -11,14 +11,14 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
       <div className="mb-6">
         <SettingsBreadcrumb />
       </div>
-      <div className="flex flex-col gap-6 md:flex-row">
-        <aside className="shrink-0 md:w-48">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <aside className="shrink-0 lg:w-48">
           <SettingsNav />
         </aside>
-        <div className="bg-border hidden w-px md:block" />
-        <main className="min-w-0 flex-1">
+        <div className="bg-border hidden w-px lg:block" />
+        <div className="min-w-0 flex-1">
           <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
+        </div>
       </div>
     </div>
   );

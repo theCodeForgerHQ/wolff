@@ -142,6 +142,7 @@ export function getLeadColumns(options: LeadColumnsOptions = {}): ColumnDef<Lead
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
         <DataTableRowActions
           row={row.original}

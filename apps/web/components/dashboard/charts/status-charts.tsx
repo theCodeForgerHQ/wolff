@@ -85,7 +85,11 @@ function StatusChart({
               animationDuration={500}
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                  aria-label={`${entry.name}: ${entry.value}`}
+                />
               ))}
             </Pie>
             <Tooltip content={<StatusTooltip />} />

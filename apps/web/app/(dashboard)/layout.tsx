@@ -105,7 +105,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Suspense fallback={<SidebarFallback />}>
           <SidebarWithData user={session.user} />
         </Suspense>
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <Suspense fallback={<HeaderFallback />}>
             <HeaderWithData user={session.user} />
           </Suspense>

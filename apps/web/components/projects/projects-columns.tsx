@@ -162,6 +162,7 @@ export function getProjectColumns(
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const project = row.original;
         return (

@@ -178,6 +178,7 @@ export function createQuoteColumns({
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const status = row.original.status;
         const canDelete = status === 'draft';

@@ -67,6 +67,7 @@ export function BlocksPanel() {
           size="icon"
           className="h-8 w-8 md:hidden"
           onClick={toggleBlocksPanel}
+          aria-label="Close blocks panel"
         >
           <X className="h-4 w-4" />
         </Button>

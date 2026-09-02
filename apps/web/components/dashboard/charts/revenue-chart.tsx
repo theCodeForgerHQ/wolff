@@ -151,7 +151,7 @@ export function RevenueChart({
         </div>
         {showPeriodSelector && onPeriodChange && (
           <Select value={period} onValueChange={(v) => onPeriodChange(v as DashboardPeriod)}>
-            <SelectTrigger className="h-7 w-[100px] text-xs">
+            <SelectTrigger className="h-7 w-[100px] text-xs" aria-label="Revenue period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -166,8 +166,11 @@ export function RevenueChart({
       </CardHeader>
       <CardContent className="pt-0">
         {isEmpty ? (
-          <div className="flex h-[280px] items-center justify-center">
-            <p className="text-muted-foreground text-sm">No revenue data for this period</p>
+          <div className="flex h-[120px] flex-col items-center justify-center gap-1 text-center">
+            <p className="text-sm font-medium">No revenue in this period</p>
+            <p className="text-muted-foreground text-xs">
+              Payments recorded against invoices appear here.
+            </p>
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[280px] w-full">

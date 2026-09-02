@@ -20,6 +20,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+const subscribeToNothing = () => () => {};
+
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
@@ -172,6 +174,15 @@ const Sidebar = React.forwardRef<
     ref
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    // While hydrating, render what the server rendered (the desktop sidebar,
+    // hidden below md by CSS). The sidebar can arrive in a streamed Suspense
+    // boundary after the provider already knows it is on mobile; rendering
+    // the drawer then fails hydration (React #418).
+    const isHydrated = React.useSyncExternalStore(
+      subscribeToNothing,
+      () => true,
+      () => false
+    );
 
     if (collapsible === 'none') {
       return (
@@ -188,7 +199,7 @@ const Sidebar = React.forwardRef<
       );
     }
 
-    if (isMobile) {
+    if (isMobile && isHydrated) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent

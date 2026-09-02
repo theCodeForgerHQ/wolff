@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { defineConfig, devices } from '@playwright/test';
-import { E2E_ENV } from './playwright.flows.config';
+import { defineConfig } from '@playwright/test';
+import { E2E_DEVICE, E2E_ENV } from './playwright.flows.config';
 
 /**
  * The assistant end to end (Phase 5): the built web app, apps/api
@@ -32,7 +32,7 @@ export default defineConfig({
   timeout: 120_000,
   // The app's Google provider points at the mock OIDC server it starts.
   globalSetup: require.resolve('./e2e/flows/global-setup'),
-  use: { ...devices['Desktop Chrome'], baseURL, trace: 'retain-on-failure' },
+  use: { ...E2E_DEVICE, baseURL, trace: 'retain-on-failure' },
   projects: [
     { name: 'setup', testDir: './e2e/product', testMatch: /auth\.setup\.ts/ },
     {
