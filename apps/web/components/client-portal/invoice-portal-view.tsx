@@ -69,7 +69,7 @@ export function InvoicePortalView({ invoice, accessToken }: InvoicePortalViewPro
         >
           <Check className="h-5 w-5" style={{ color: accentColor }} />
         </div>
-        <h3 className="text-base font-semibold tracking-tight">{invoice.business.name}</h3>
+        <h1 className="text-base font-semibold tracking-tight">{invoice.business.name}</h1>
         <p className="mt-1 text-3xl font-bold tracking-tight" style={{ color: accentColor }}>
           {formatCurrency(invoice.totals.amountDue || invoice.totals.total, currency)}
         </p>

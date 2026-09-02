@@ -93,7 +93,7 @@ export function QuotePortalView({ quote, accessToken }: QuotePortalViewProps) {
         >
           <Check className="h-5 w-5" style={{ color: accentColor }} />
         </div>
-        <h3 className="text-base font-semibold tracking-tight">{quote.business.name}</h3>
+        <h1 className="text-base font-semibold tracking-tight">{quote.business.name}</h1>
         <p className="mt-1 text-3xl font-bold tracking-tight" style={{ color: accentColor }}>
           {formatCurrency(quote.totals.total, currency)}
         </p>

@@ -20,15 +20,15 @@ import {
 
 const statusColors: Record<string, string> = {
   draft:
-    'border-gray-300 text-gray-600 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
-  sent: 'border-blue-300 text-blue-600 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
+    'border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
+  sent: 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-950',
   viewed:
     'border-yellow-300 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-400 dark:bg-yellow-950',
   partial:
-    'border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
-  paid: 'border-green-300 text-green-600 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
+    'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-950',
+  paid: 'border-green-300 text-green-700 bg-green-50 dark:border-green-600 dark:text-green-400 dark:bg-green-950',
   overdue:
-    'border-red-300 text-red-600 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
+    'border-red-300 text-red-700 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-950',
   voided:
     'border-gray-300 text-gray-500 bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:bg-gray-900',
 };
@@ -161,7 +161,7 @@ export function getInvoiceColumns(
               {statusLabels[status] || status}
             </Badge>
             {isOverdue && (
-              <span className="flex items-center gap-1 text-xs text-red-600">
+              <span className="flex items-center gap-1 text-xs text-red-700">
                 <AlertCircle className="h-3 w-3" />
               </span>
             )}
@@ -218,12 +218,12 @@ export function getInvoiceColumns(
           <div className="whitespace-nowrap">
             <div className="font-medium">{formatCurrency(total, curr)}</div>
             {status === 'partial' && amountDue > 0 && (
-              <div className="text-sm text-amber-600">
+              <div className="text-sm text-amber-700">
                 {formatCurrency(amountDue, curr)} remaining
               </div>
             )}
             {status !== 'partial' && amountDue > 0 && amountDue !== total && (
-              <div className="text-sm text-orange-600">Due: {formatCurrency(amountDue, curr)}</div>
+              <div className="text-sm text-orange-700">Due: {formatCurrency(amountDue, curr)}</div>
             )}
           </div>
         );
@@ -247,6 +247,7 @@ export function getInvoiceColumns(
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         const invoice = row.original;
         const actions: RowAction<InvoiceListItem>[] = [];

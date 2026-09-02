@@ -107,6 +107,7 @@ export function getClientColumns(options: ClientColumnsOptions = {}): ColumnDef<
     },
     {
       id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => {
         // Low #89: Disable quick actions since custom actions array already has view/delete
         return (

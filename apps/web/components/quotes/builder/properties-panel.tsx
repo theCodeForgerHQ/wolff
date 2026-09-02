@@ -51,6 +51,7 @@ export function PropertiesPanel() {
             size="icon"
             className="h-8 w-8 md:hidden"
             onClick={togglePropertiesPanel}
+            aria-label="Close properties panel"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -78,6 +79,7 @@ export function PropertiesPanel() {
           size="icon"
           className="h-8 w-8 md:hidden"
           onClick={togglePropertiesPanel}
+          aria-label="Close properties panel"
         >
           <X className="h-4 w-4" />
         </Button>

@@ -151,7 +151,7 @@ export function RevenueChart({
         </div>
         {showPeriodSelector && onPeriodChange && (
           <Select value={period} onValueChange={(v) => onPeriodChange(v as DashboardPeriod)}>
-            <SelectTrigger className="h-7 w-[100px] text-xs">
+            <SelectTrigger className="h-7 w-[100px] text-xs" aria-label="Revenue period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

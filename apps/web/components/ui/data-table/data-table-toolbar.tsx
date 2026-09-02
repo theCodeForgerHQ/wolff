@@ -97,7 +97,7 @@ export function DataTableToolbar<TData>({
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => table.setPageSize(Number(value))}
             >
-              <SelectTrigger className="h-9 w-[70px]">
+              <SelectTrigger className="h-9 w-[70px]" aria-label="Rows per page">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent side="bottom">
@@ -132,7 +132,7 @@ export function DataTableToolbar<TData>({
               }
             }}
           >
-            <SelectTrigger className="h-9 w-[150px]">
+            <SelectTrigger className="h-9 w-[150px]" aria-label="Filter by status">
               <SelectValue placeholder="All status" />
             </SelectTrigger>
             <SelectContent>

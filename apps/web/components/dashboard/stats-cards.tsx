@@ -30,7 +30,7 @@ function StatItem({ title, value, change, changeLabel }: StatItemProps) {
       <div className="mt-0.5 flex items-center gap-1.5">
         <span
           className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+            isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
           }`}
         >
           {isPositive ? (

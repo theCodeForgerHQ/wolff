@@ -78,7 +78,7 @@ export function SettingsNav() {
           value={currentItem?.href ?? '/settings/account'}
           onValueChange={(value) => router.push(value)}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label="Settings section">
             <SelectValue placeholder="Select settings" />
           </SelectTrigger>
           <SelectContent>

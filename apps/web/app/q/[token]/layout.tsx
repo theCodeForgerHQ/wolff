@@ -10,5 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default function QuotePortalLayout({ children }: { children: React.ReactNode }) {
-  return <div className="bg-linear-to-b from-muted/30 to-background min-h-screen">{children}</div>;
+  return (
+    <main className="bg-linear-to-b from-muted/30 to-background min-h-screen">{children}</main>
+  );
 }
