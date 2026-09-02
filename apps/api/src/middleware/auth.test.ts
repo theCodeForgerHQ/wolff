@@ -1,5 +1,7 @@
 import { request } from '../testing/request';
 import express from 'express';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRedis } from '@wolff/jobs/bullmq';
 import { TestRedis } from '@wolff/jobs/testing/redis';
@@ -271,6 +273,49 @@ describe('failed-authentication limit under concurrency', () => {
     expect(checked).toBeLessThanOrEqual(30);
     expect(statuses.filter((s) => s === 401).length).toBeLessThanOrEqual(30);
     expect(statuses.filter((s) => s !== 401).every((s) => s === 429)).toBe(true);
+  });
+
+  it('keeps the slot of a request whose client disconnects before the answer', async () => {
+    // Aborting each guess early must not give its slot back.
+    const app = express();
+    app.get('/deny', authFailureRateLimit(), (_req, res) => {
+      setTimeout(() => {
+        if (!res.destroyed) res.status(401).json({ success: false });
+      }, 100);
+    });
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise((resolve) => server.once('listening', resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await Promise.all(
+        Array.from(
+          { length: 60 },
+          () =>
+            new Promise<void>((resolve) => {
+              const req = http.get({ host: '127.0.0.1', port, path: '/deny' });
+              req.on('error', () => resolve());
+              req.on('socket', (socket) => {
+                socket.on('connect', () => setTimeout(() => req.destroy(), 20));
+              });
+              req.on('close', () => resolve());
+            })
+        )
+      );
+      // Let the server see every close.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const status = await new Promise<number>((resolve, reject) => {
+        http
+          .get({ host: '127.0.0.1', port, path: '/deny' }, (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          })
+          .on('error', reject);
+      });
+      expect(status).toBe(429);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 
   it('gives back the slot of a request that authenticated', async () => {
