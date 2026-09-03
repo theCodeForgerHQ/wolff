@@ -24,7 +24,8 @@
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.include='src/**' --coverage.exclude='**/*.test.*' --coverage.exclude='**/generated/**' --coverage.exclude='**/testing/**' --coverage.reporter=text-summary --coverage.reporter=json-summary"
   },
   "dependencies": {
     "@wolff/contracts": "workspace:*",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "5.0.2",
     "fast-check": "^3.23.2",
     "typescript": "5.9.3",
     "vitest": "5.0.2"
