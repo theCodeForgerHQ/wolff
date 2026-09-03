@@ -177,11 +177,20 @@ const AUTH_FAILURES = 30;
  * even if every one would authenticate. Sequential successful requests
  * are never limited.
  */
-export function authFailureRateLimit(createStore?: RateLimitStoreFactory): RequestHandler {
+export function authFailureRateLimit(
+  createStore?: RateLimitStoreFactory,
+  { windowMs = AUTH_FAILURE_WINDOW_MS }: { windowMs?: number } = {}
+): RequestHandler {
   const store: Store = createStore?.('rl:authfail:') ?? new MemoryStore();
-  store.init?.({ windowMs: AUTH_FAILURE_WINDOW_MS } as never);
+  store.init?.({ windowMs } as never);
   const reserve = async (key: string) => store.increment(key);
-  const release = async (key: string) => store.decrement(key);
+  // A slot reserved in a window that has since ended is not given back: the
+  // count it was added to is gone, and decrementing would cancel a failure
+  // counted in the new window instead.
+  const release = async (key: string, resetTime: Date | undefined) => {
+    if (resetTime && Date.now() >= resetTime.getTime()) return;
+    await store.decrement(key);
+  };
 
   return (req, res, next) => {
     const key = ipKeyGenerator(req.ip ?? 'unknown');
@@ -192,7 +201,7 @@ export function authFailureRateLimit(createStore?: RateLimitStoreFactory): Reque
         const settle = (failed: boolean) => {
           if (settled) return;
           settled = true;
-          if (!failed) release(key).catch(() => {});
+          if (!failed) release(key, resetTime).catch(() => {});
         };
         res.on('finish', () => settle(res.statusCode === 401));
         // A connection closed before its answer keeps the slot: aborting
@@ -200,7 +209,7 @@ export function authFailureRateLimit(createStore?: RateLimitStoreFactory): Reque
         res.on('close', () => settle(res.writableFinished ? res.statusCode === 401 : true));
 
         if (totalHits > AUTH_FAILURES) {
-          const left = resetTime ? resetTime.getTime() - Date.now() : AUTH_FAILURE_WINDOW_MS;
+          const left = resetTime ? resetTime.getTime() - Date.now() : windowMs;
           res.set('Retry-After', String(Math.max(1, Math.ceil(left / 1000))));
           return rateLimited(req, res, next);
         }
@@ -215,9 +224,33 @@ export function authFailureRateLimit(createStore?: RateLimitStoreFactory): Reque
  * `rl:` prefix.
  */
 export function redisRateLimitStore(redis: Redis, prefix = 'rl:key:'): Store {
-  return new RedisStore({
-    prefix,
-    sendCommand: (command: string, ...args: string[]) =>
-      redis.call(command, ...args) as Promise<RedisReply>,
-  });
+  return new GuardedRedisStore(redis, prefix);
+}
+
+/**
+ * Decrements only a counter that exists and is above 0. RedisStore's plain
+ * DECR on a key whose window expired creates it at -1 with no TTL, a key
+ * that never expires. DECR on an existing key keeps its TTL.
+ */
+const GUARDED_DECREMENT = `
+local hits = tonumber(redis.call("GET", KEYS[1]))
+if hits and hits > 0 then return redis.call("DECR", KEYS[1]) end
+return 0
+`;
+
+class GuardedRedisStore extends RedisStore {
+  constructor(
+    private readonly redis: Redis,
+    prefix: string
+  ) {
+    super({
+      prefix,
+      sendCommand: (command: string, ...args: string[]) =>
+        redis.call(command, ...args) as Promise<RedisReply>,
+    });
+  }
+
+  override async decrement(key: string): Promise<void> {
+    await this.redis.eval(GUARDED_DECREMENT, 1, this.prefixKey(key));
+  }
 }
