@@ -42,7 +42,7 @@ async function DashboardContent() {
       <div className="space-y-2">
         <StatsCards stats={data.stats} revenueData={data.revenueData} currency={currency} />
         <p className="text-muted-foreground text-xs" data-testid="dashboard-currency-note">
-          {currencyCaption(currency, data.currencies)}
+          {currencyCaption(currency, data.currencyNote.currencies, data.currencyNote)}
         </p>
       </div>
 

@@ -49,29 +49,48 @@ async function fetchRatesFromApi(): Promise<Record<string, number> | null> {
 }
 
 /**
- * Get exchange rates (USD as base). Cached for 24 hours.
- * Returns API rates if available, otherwise static fallback.
+ * Where a set of rates came from: `live` from the rates service (cached up
+ * to 24 hours), `stale` from an earlier fetch when the service is down,
+ * `fallback` the static table above.
  */
-export async function getExchangeRates(): Promise<Record<string, number>> {
-  // Return cached if fresh
+export type ExchangeRateSource = 'live' | 'stale' | 'fallback';
+
+/**
+ * Get exchange rates (USD as base) and where they came from. Cached for 24
+ * hours. Returns API rates if available, otherwise the last fetched ones,
+ * otherwise the static fallback.
+ */
+export async function getExchangeRatesWithSource(): Promise<{
+  rates: Record<string, number>;
+  source: ExchangeRateSource;
+}> {
   if (cachedRates && Date.now() - cachedRates.fetchedAt < CACHE_TTL_MS) {
-    return cachedRates.rates;
+    return { rates: cachedRates.rates, source: 'live' };
   }
 
-  // Try API
   const apiRates = await fetchRatesFromApi();
   if (apiRates) {
     cachedRates = { rates: apiRates, fetchedAt: Date.now() };
-    return apiRates;
+    return { rates: apiRates, source: 'live' };
   }
 
-  // Fallback to static
-  if (cachedRates) {
-    // Use stale cache rather than static if we had a previous successful fetch
-    return cachedRates.rates;
-  }
+  if (cachedRates) return { rates: cachedRates.rates, source: 'stale' };
 
-  return STATIC_RATES;
+  return { rates: STATIC_RATES, source: 'fallback' };
+}
+
+/** Get exchange rates (USD as base); see getExchangeRatesWithSource. */
+export async function getExchangeRates(): Promise<Record<string, number>> {
+  return (await getExchangeRatesWithSource()).rates;
+}
+
+/** Whether an amount in `fromCurrency` can be expressed in `baseCurrency`. */
+export function canConvert(
+  fromCurrency: string,
+  baseCurrency: string,
+  rates: Record<string, number>
+): boolean {
+  return fromCurrency === baseCurrency || (!!rates[fromCurrency] && !!rates[baseCurrency]);
 }
 
 /**
@@ -97,8 +116,11 @@ export async function convertCurrency(
 }
 
 /**
- * Convert an amount to USD (synchronous, using pre-fetched rates).
- * Use this in loops where you already have the rates.
+ * Convert an amount to the base currency (synchronous, using pre-fetched
+ * rates). Use this in loops where you already have the rates. An amount
+ * whose currency has no rate is left out (0): added as it is, it would be
+ * a number in neither currency. Callers say which currencies were left out
+ * (canConvert).
  */
 export function convertToBase(
   amount: number,
@@ -107,11 +129,7 @@ export function convertToBase(
   rates: Record<string, number>
 ): number {
   if (fromCurrency === baseCurrency || amount === 0) return amount;
+  if (!canConvert(fromCurrency, baseCurrency, rates)) return 0;
 
-  const fromRate = rates[fromCurrency];
-  const toRate = rates[baseCurrency];
-
-  if (!fromRate || !toRate) return amount;
-
-  return (amount / fromRate) * toRate;
+  return (amount / rates[fromCurrency]!) * rates[baseCurrency]!;
 }

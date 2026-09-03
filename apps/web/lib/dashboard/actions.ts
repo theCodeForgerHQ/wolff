@@ -18,7 +18,12 @@ import type {
   DashboardPeriod,
 } from './types';
 import { toNumber } from '@/lib/utils';
-import { getExchangeRates, convertToBase } from '@/lib/currency/exchange-rates';
+import {
+  canConvert,
+  convertToBase,
+  getExchangeRates,
+  getExchangeRatesWithSource,
+} from '@/lib/currency/exchange-rates';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
 import {
   getReceivablesAgeing,
@@ -651,17 +656,26 @@ export async function getPipelineSummary() {
   return summarisePipelineStages(rows, baseCurrency, rates);
 }
 
-// Every currency the dashboard's totals draw on, so the page can say which
-// ones were converted to the base currency.
-export async function getDashboardCurrencies(): Promise<string[]> {
+// Every currency the dashboard's totals draw on, the ones with no rate (left
+// out of the totals), and where the rates came from, so the page can say so.
+export async function getDashboardCurrencies(): Promise<DashboardData['currencyNote']> {
   const { workspaceId } = await getCurrentUserWorkspace();
   const where = { workspaceId, deletedAt: null };
-  const [invoices, quotes, deals] = await Promise.all([
+  const [invoices, quotes, deals, baseCurrency, { rates, source }] = await Promise.all([
     db.invoice.findMany({ where, distinct: ['currency'], select: { currency: true } }),
     db.quote.findMany({ where, distinct: ['currency'], select: { currency: true } }),
     db.deal.findMany({ where, distinct: ['currency'], select: { currency: true } }),
+    getWorkspaceCurrency(),
+    getExchangeRatesWithSource(),
   ]);
-  return [...new Set([...invoices, ...quotes, ...deals].map((row) => row.currency))].sort();
+  const currencies = [
+    ...new Set([...invoices, ...quotes, ...deals].map((row) => row.currency)),
+  ].sort();
+  return {
+    currencies,
+    unconvertible: currencies.filter((c) => !canConvert(c, baseCurrency, rates)),
+    source,
+  };
 }
 
 // Get all dashboard data
@@ -678,7 +692,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     paymentAging,
     gstSummary,
     pipelineSummary,
-    currencies,
+    currencyNote,
   ] = await Promise.all([
     getDashboardStats(),
     getQuoteStatusCounts(),
@@ -706,7 +720,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     paymentAging,
     gstSummary,
     pipelineSummary,
-    currencies,
+    currencyNote,
   };
 }
 
