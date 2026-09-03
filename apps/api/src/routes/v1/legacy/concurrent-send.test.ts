@@ -4,11 +4,11 @@ import { request } from '../../../testing/request';
 import { TEST_DATABASE_URL, issueKey, testApp, testDb } from '../../../testing/harness';
 
 /**
- * Two sends of one draft invoice at once. Both read `draft`, both email
+ * Two sends of one draft invoice (or quote) at once. Both read `draft`, both email
  * (the provider deduplicates by idempotency key), but only one may issue
  * the invoice: one `sent` event and one PDF render, not two.
  */
-describe.skipIf(!TEST_DATABASE_URL)('concurrent sends of a draft invoice (Postgres)', () => {
+describe.skipIf(!TEST_DATABASE_URL)('concurrent sends of a draft document (Postgres)', () => {
   const { base, db } = testDb();
   // Slow enough that both requests read the invoice before either updates it.
   const app = testApp(db, {
@@ -17,6 +17,7 @@ describe.skipIf(!TEST_DATABASE_URL)('concurrent sends of a draft invoice (Postgr
   let workspaceId = '';
   let key = '';
   let invoiceId = '';
+  let quoteId = '';
 
   beforeAll(async () => {
     const ws = await base.workspace.create({
@@ -40,6 +41,17 @@ describe.skipIf(!TEST_DATABASE_URL)('concurrent sends of a draft invoice (Postgr
           subtotal: 100,
           amountDue: 100,
           dueDate: new Date('2026-12-01'),
+        },
+      })
+    ).id;
+    quoteId = (
+      await base.quote.create({
+        data: {
+          workspaceId,
+          clientId: ws.clients[0]!.id,
+          quoteNumber: 'CS-Q1',
+          total: 100,
+          subtotal: 100,
         },
       })
     ).id;
@@ -68,6 +80,25 @@ describe.skipIf(!TEST_DATABASE_URL)('concurrent sends of a draft invoice (Postgr
     expect(events.filter((e) => e.eventType === 'sent')).toHaveLength(1);
     const renders = await base.outboxEvent.findMany({
       where: { workspaceId, type: 'pdf.render', aggregateId: invoiceId },
+    });
+    expect(renders).toHaveLength(1);
+  });
+
+  it('issues the quote once: one sent event and one PDF render', async () => {
+    const send = () =>
+      request(app)
+        .post(`/v1/quotes/${quoteId}/send`)
+        .set('Authorization', `Bearer ${key}`)
+        .send({});
+
+    const statuses = (await Promise.all([send(), send()])).map((r) => r.status);
+
+    expect(statuses).toEqual([200, 200]);
+    expect((await base.quote.findUniqueOrThrow({ where: { id: quoteId } })).status).toBe('sent');
+    const events = await base.quoteEvent.findMany({ where: { quoteId } });
+    expect(events.filter((e) => e.eventType === 'sent')).toHaveLength(1);
+    const renders = await base.outboxEvent.findMany({
+      where: { workspaceId, type: 'pdf.render', aggregateId: quoteId },
     });
     expect(renders).toHaveLength(1);
   });
