@@ -11,7 +11,7 @@
  *   DATABASE_URL="..." pnpm db:seed:prod
  */
 
-import 'dotenv/config';
+import './env';
 import { createPrisma } from '../src/client';
 import bcrypt from 'bcryptjs';
 import { upsertNumberSequence } from './seed-helpers';

@@ -3,7 +3,7 @@
  * Fixes corrupted workspace names, user names, and quote/invoice amounts
  * that were changed during manual testing.
  */
-import 'dotenv/config';
+import './env';
 import { createPrisma } from '../src/client';
 
 const prisma = createPrisma();
