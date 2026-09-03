@@ -161,41 +161,48 @@ around the model, not a model: its schema-valid 1.0 is true by construction.
 ### Web vitals (field data from the live demo)
 
 p75 of the samples the app's own `/api/vitals` endpoint logged on Vercel,
-summarised with `apps/web/lib/observability/web-vitals.ts`:
+summarised with `apps/web/lib/observability/web-vitals.ts` (deployment of
+2026-08-30, this release):
 
-| Metric | p75     | Rating | Samples |
-| ------ | ------- | ------ | ------- |
-| LCP    | 1556 ms | good   | 28      |
-| INP    | 48 ms   | good   | 25      |
-| CLS    | 0.001   | good   | 41      |
-| FCP    | 1244 ms | good   | 39      |
-| TTFB   | 71 ms   | good   | 35      |
-| FID    | 7 ms    | good   | 28      |
+| Metric | p75    | Rating | Samples |
+| ------ | ------ | ------ | ------- |
+| LCP    | 856 ms | good   | 27      |
+| INP    | 8 ms   | good   | 16      |
+| CLS    | 0.001  | good   | 21      |
+| FCP    | 856 ms | good   | 27      |
+| TTFB   | 54 ms  | good   | 22      |
+| FID    | 4 ms   | good   | 21      |
 
 Caveat: the demo is behind Vercel authentication and has no real users. These
 samples come from scripted browsing (Playwright Chromium, desktop 1440 px and
 an emulated Pixel 7, signed in as the demo user, 8 dashboard pages × 4 rounds
-each) from one machine in India on 2026-08-30. Most TTFB samples (about 40 ms)
-are below the network round trip to the us-east-1 servers, so that row does not
-measure the server; the reason was not investigated.
+each) from one machine in India, so they describe one fast machine on one
+network, not a user population. Most TTFB samples (about 40 ms) are below the
+network round trip to the us-east-1 servers, so that row does not measure the
+server; the reason was not investigated. A run on the previous deployment the
+same morning (196 samples) gave LCP 1,556 ms, INP 48 ms, CLS 0.001 at p75
+([phase-7](docs/phase-7.md)).
 
-### Lighthouse (live demo, Lighthouse 12)
+### Lighthouse (live demo, Lighthouse 12, this release)
 
-| Page       | Form factor | Performance | Accessibility | Best practices | LCP   | TBT      | CLS   |
-| ---------- | ----------- | ----------- | ------------- | -------------- | ----- | -------- | ----- |
-| /login     | mobile      | 53          | 100           | 96             | 5.7 s | 591 ms   | 0     |
-| /dashboard | mobile      | 43          | 90            | 96             | 7.5 s | 925 ms   | 0.001 |
-| /invoices  | mobile      | 47          | 91            | 96             | 5.8 s | 1,299 ms | 0.043 |
-| /deals     | mobile      | 45          | 90            | 96             | 5.4 s | 3,272 ms | 0.001 |
-| /login     | desktop     | 79          | 100           | 96             | 2.1 s | 46 ms    | 0     |
-| /dashboard | desktop     | 91          | 90            | 96             | 1.5 s | 140 ms   | 0.001 |
-| /invoices  | desktop     | 96          | 91            | 96             | 1.0 s | 18 ms    | 0.001 |
-| /deals     | desktop     | 92          | 96            | 96             | 1.4 s | 8 ms     | 0     |
+| Page       | Form factor | Performance | Accessibility | Best practices | LCP   | TBT    | CLS   |
+| ---------- | ----------- | ----------- | ------------- | -------------- | ----- | ------ | ----- |
+| /login     | mobile      | 81          | 100           | 96             | 3.9 s | 282 ms | 0     |
+| /dashboard | mobile      | 69          | 95            | 96             | 4.3 s | 484 ms | 0.001 |
+| /invoices  | mobile      | 75          | 96            | 96             | 4.5 s | 286 ms | 0.001 |
+| /deals     | mobile      | 72          | 95            | 96             | 5.3 s | 276 ms | 0.001 |
+| /login     | desktop     | 98          | 100           | 96             | 1.1 s | 21 ms  | 0     |
+| /dashboard | desktop     | 88          | 96            | 96             | 1.2 s | 36 ms  | 0.001 |
+| /invoices  | desktop     | 94          | 96            | 96             | 1.4 s | 20 ms  | 0.001 |
+| /deals     | desktop     | 96          | 96            | 96             | 1.0 s | 14 ms  | 0.001 |
 
-Lighthouse's mobile profile (4× CPU slowdown, slow 4G) shows the dashboard's
-JavaScript cost: performance in the 40s and LCP over 5 s. That is the main open
-front-end performance problem. SEO scores are not shown: the demo is
-deliberately not indexable (protected deployment, no robots.txt).
+One run per page from an M1 laptop on a home connection; Lighthouse scores
+move by several points between runs (an earlier run, made while E2E suites
+were using the same CPU, scored mobile 43-53 and is not used). Lighthouse's
+mobile profile (4× CPU slowdown, slow 4G) puts LCP at 3.9-5.3 s: the
+dashboard's JavaScript is the main open front-end performance problem. The
+accessibility points lost are the header's "Beta" badge contrast. SEO is not
+shown: the demo is deliberately not indexable.
 
 ### Operations drills (live demo)
 
@@ -283,7 +290,7 @@ job was reproduced locally.
 
 ## Known limitations
 
-- **Mobile performance.** Lighthouse mobile scores are 43-53; the dashboard
+- **Mobile performance.** Lighthouse mobile LCP is 3.9-5.3 s; the dashboard
   ships too much JavaScript for a slow phone.
 - **AI latency.** Free LLM endpoints are slow; quote drafts can exceed the
   60 s limit, and the Groq fallback has about 10 s of headroom.
