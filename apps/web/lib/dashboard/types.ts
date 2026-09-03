@@ -1,3 +1,5 @@
+import type { ExchangeRateSource } from '@/lib/currency/exchange-rates';
+
 // Dashboard overview stats
 export interface DashboardStats {
   totalQuotes: number;
@@ -133,8 +135,16 @@ export interface DashboardData {
   paymentAging: PaymentAgingData;
   gstSummary: GstSummary | null;
   pipelineSummary: PipelineStageSummary[];
-  /** Currencies of the workspace's documents; the totals are in the base one. */
-  currencies: string[];
+  /**
+   * Currencies of the workspace's documents (the totals are in the base
+   * one), those with no exchange rate (left out of the totals), and where
+   * the rates came from.
+   */
+  currencyNote: {
+    currencies: string[];
+    unconvertible: string[];
+    source: ExchangeRateSource;
+  };
 }
 
 // Period filter

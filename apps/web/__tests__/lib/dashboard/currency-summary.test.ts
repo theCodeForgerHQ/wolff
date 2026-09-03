@@ -65,4 +65,32 @@ describe('currencyCaption', () => {
       'Amounts in USD. GBP amounts are converted at current exchange rates.'
     );
   });
+
+  it('says the rates are the fallback ones when the live rates were not available', () => {
+    expect(currencyCaption('INR', ['USD', 'INR'], { source: 'fallback' })).toBe(
+      'Amounts in INR. USD amounts are converted at fallback exchange rates (fixed, approximate).'
+    );
+  });
+
+  it('names the currencies that could not be converted and are left out of the totals', () => {
+    expect(currencyCaption('INR', ['INR', 'USD', 'XYZ'], { unconvertible: ['XYZ'] })).toBe(
+      'Amounts in INR. USD amounts are converted at current exchange rates. ' +
+        'XYZ amounts are left out of the totals: no exchange rate.'
+    );
+    expect(currencyCaption('INR', ['INR', 'XYZ', 'ABC'], { unconvertible: ['XYZ', 'ABC'] })).toBe(
+      'Amounts in INR. ABC and XYZ amounts are left out of the totals: no exchange rate.'
+    );
+  });
+});
+
+describe('summarisePipelineStages with a currency that has no rate', () => {
+  it('leaves the deal out of the stage total but still counts it', () => {
+    const stages = summarisePipelineStages(
+      [row('lead', 1, 100, 'USD'), row('lead', 1, 999, 'XYZ')],
+      'INR',
+      rates
+    );
+
+    expect(stages[0]).toMatchObject({ dealCount: 2, totalValue: 8000 });
+  });
 });
