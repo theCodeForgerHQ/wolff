@@ -61,6 +61,7 @@ export function requireApiKey(db: Db): RequestHandler {
       actor: 'api_key',
       rateLimitPerMin: result.key.rateLimitPerMin,
     };
+    releaseAuthFailureSlot(req);
     next();
   };
 }
@@ -109,6 +110,7 @@ export function requirePublishableKey(db: Db): RequestHandler {
       actor: 'publishable_key',
       rateLimitPerMin: result.key.rateLimitPerMin,
     };
+    releaseAuthFailureSlot(req);
     next();
   };
 }
@@ -161,6 +163,14 @@ export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHan
 }
 
 const AUTH_FAILURE_WINDOW_MS = 60_000;
+
+/** The pending failed-auth slot of each request, settled at most once. */
+const authFailureSlots = new WeakMap<Request, (failed: boolean) => void>();
+
+/** Called by the key checks on success: the request is not a failed attempt. */
+function releaseAuthFailureSlot(req: Request): void {
+  authFailureSlots.get(req)?.(false);
+}
 const AUTH_FAILURES = 30;
 
 /**
@@ -169,13 +179,15 @@ const AUTH_FAILURES = 30;
  * speed. Mount before the key check.
  *
  * Reserve, then release: each request takes a slot atomically when it
- * arrives, before the key check, and gives it back only when its response
- * finishes with a status other than 401. A request whose connection closes
- * before the response finishes keeps its slot, so aborted guesses count. So a parallel burst of bad keys gets at most 30 tries, since
- * no request can read the count before the others are added to it. The
- * cost: more than 30 requests in flight at once from one address get 429
- * even if every one would authenticate. Sequential successful requests
- * are never limited.
+ * arrives, before the key check. requireApiKey and requirePublishableKey
+ * give it back the moment the key is accepted; a request that does not
+ * reach them gives it back when its response finishes with a status other
+ * than 401. A 401 keeps its slot, and so does a request whose connection
+ * closes before an answer, so aborted guesses count. A parallel burst of
+ * bad keys gets at most 30 tries, since no request can read the count
+ * before the others are added to it. The cost: more than 30 requests from
+ * one address whose key checks overlap get 429 even if every key is good;
+ * a slow endpoint no longer holds the slot after its key check.
  */
 export function authFailureRateLimit(
   createStore?: RateLimitStoreFactory,
@@ -197,12 +209,16 @@ export function authFailureRateLimit(
     reserve(key)
       .then(({ totalHits, resetTime }) => {
         let settled = false;
-        // Exactly once per request: keep the slot for a 401 or an abort, give it back otherwise.
+        // Exactly once per request: given back as soon as the key check
+        // passes; otherwise kept for a 401 or an abort and given back for
+        // any other finished response.
         const settle = (failed: boolean) => {
           if (settled) return;
           settled = true;
+          authFailureSlots.delete(req);
           if (!failed) release(key, resetTime).catch(() => {});
         };
+        authFailureSlots.set(req, settle);
         res.on('finish', () => settle(res.statusCode === 401));
         // A connection closed before its answer keeps the slot: aborting
         // each guess early must not make it free.
