@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 import { faker } from '@faker-js/faker';
 import Decimal from 'decimal.js';
 import { createPrisma } from '../src/client';

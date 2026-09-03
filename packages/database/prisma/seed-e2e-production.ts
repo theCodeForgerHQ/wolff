@@ -15,7 +15,7 @@
  *   DATABASE_URL="..." E2E_USER_EMAIL="..." npx tsx prisma/seed-e2e-production.ts
  */
 
-import 'dotenv/config';
+import './env';
 import { createPrisma } from '../src/client';
 import { upsertNumberSequence } from './seed-helpers';
 

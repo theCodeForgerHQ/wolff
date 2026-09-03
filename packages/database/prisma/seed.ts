@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 import { createPrisma } from '../src/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
