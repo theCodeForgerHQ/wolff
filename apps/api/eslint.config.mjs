@@ -32,6 +32,14 @@ export default [
     },
   },
   {
+    // k6 scripts run in k6's JavaScript runtime, not Node.
+    files: ['load/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: { __ENV: 'readonly', __VU: 'readonly', __ITER: 'readonly', console: 'readonly' },
+    },
+  },
+  {
     ignores: ['dist/**', 'node_modules/**'],
   },
 ];
