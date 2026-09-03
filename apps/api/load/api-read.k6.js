@@ -48,8 +48,12 @@ export default function () {
   } else {
     res = http.get(`${BASE}/v1/invoices/${INVOICE_ID}`, { ...auth, tags: { name: 'invoice' } });
   }
-  // Status and error of each failure, so the summary's failure count can be explained.
+  // Status and error of each failure, so the summary's failure count can be
+  // explained. A 429 from the per-key limiter carries RateLimit-Policy (it
+  // runs after the key check); one from the failed-auth limiter does not.
   if (!check(res, { 'status 200': (x) => x.status === 200 })) {
-    console.warn(`failed: ${res.status} ${res.error || ''} ${res.request.url}`);
+    const limiter =
+      res.status !== 429 ? '' : res.headers['Ratelimit-Policy'] ? 'per-key' : 'failed-auth';
+    console.warn(`failed: ${res.status} ${limiter} ${res.error || ''} ${res.request.url}`);
   }
 }

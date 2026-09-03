@@ -3,6 +3,8 @@
 # Needs DATABASE_URL pointing at a migrated scratch database, and Docker
 # (k6 runs in the grafana/k6 image). Seeds the same fixed workspace and key
 # as the Schemathesis job. Usage: DATABASE_URL=... scripts/loadtest.sh
+# LOADTEST_REDIS_URL=redis://... runs the API with Redis, as in production
+# (rate limits and idempotency in Redis); without it they use memory.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,8 +16,8 @@ K6_IMAGE="${K6_IMAGE:-grafana/k6:1.3.0}"
 pnpm exec tsx scripts/schemathesis-seed.ts
 INVOICE_ID="$(pnpm exec tsx -e "import { PARITY } from './src/testing/parity/seed'; console.log(PARITY.invoices.sent)")"
 
-# Production mode, without Redis: rate limits and idempotency use memory.
-NODE_ENV=production LOG_LEVEL=warn PORT="$PORT" METRICS_PORT=$((PORT + 1)) REDIS_URL= \
+NODE_ENV=production LOG_LEVEL=warn PORT="$PORT" METRICS_PORT=$((PORT + 1)) \
+  REDIS_URL="${LOADTEST_REDIS_URL:-}" \
   WEB_ORIGIN=http://localhost:3000 APP_URL=http://localhost:3000 \
   PUBLIC_API_URL="http://127.0.0.1:$PORT" \
   pnpm exec tsx src/server.ts > "${LOADTEST_SERVER_LOG:-/tmp/loadtest-api.log}" 2>&1 &
