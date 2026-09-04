@@ -160,9 +160,14 @@ around the model, not a model: its schema-valid 1.0 is true by construction.
 
 ### Web vitals (field data from the live demo)
 
-p75 of the samples the app's own `/api/vitals` endpoint logged on Vercel,
-summarised with `apps/web/lib/observability/web-vitals.ts` (deployment of
-2026-08-30, this release):
+**Source: scripted browsing, not users.** The demo is behind Vercel
+authentication and has no real users. A Playwright script (Chromium, desktop
+1440 px and an emulated Pixel 7, signed in as the demo user, 8 dashboard
+pages × 4 rounds, one click and one Tab per page) browsed the deployment of
+2026-08-30 from one machine in India; the app's own `/api/vitals` endpoint
+logged the beacons on Vercel, summarised at p75 with
+`apps/web/lib/observability/web-vitals.ts`. Small samples: one fast machine
+on one network.
 
 | Metric | p75    | Rating | Samples |
 | ------ | ------ | ------ | ------- |
@@ -170,18 +175,21 @@ summarised with `apps/web/lib/observability/web-vitals.ts` (deployment of
 | INP    | 8 ms   | good   | 16      |
 | CLS    | 0.001  | good   | 21      |
 | FCP    | 856 ms | good   | 27      |
-| TTFB   | 54 ms  | good   | 22      |
 | FID    | 4 ms   | good   | 21      |
 
-Caveat: the demo is behind Vercel authentication and has no real users. These
-samples come from scripted browsing (Playwright Chromium, desktop 1440 px and
-an emulated Pixel 7, signed in as the demo user, 8 dashboard pages × 4 rounds
-each) from one machine in India, so they describe one fast machine on one
-network, not a user population. Most TTFB samples (about 40 ms) are below the
-network round trip to the us-east-1 servers, so that row does not measure the
-server; the reason was not investigated. A run on the previous deployment the
-same morning (196 samples) gave LCP 1,556 ms, INP 48 ms, CLS 0.001 at p75
-([phase-7](docs/phase-7.md)).
+- **LCP equals FCP** because, on most loads, the largest element is painted in
+  the first contentful paint (server-rendered pages without a hero image): in
+  the raw beacons, 24 of the 29 LCP values exactly equal an FCP value (23 of
+  29 in the earlier run below). The two p75s coincide; they are not one
+  metric reported twice.
+- **TTFB is left out:** most samples (about 40 ms) are below the network round
+  trip to the us-east-1 servers, so it does not measure the server here (why
+  was not investigated).
+- Counts differ per metric because a beacon is lost when the script navigates
+  away before it is sent.
+- A run on the previous deployment the same morning (196 samples) gave LCP
+  1,556 ms, INP 48 ms, CLS 0.001 at p75 ([phase-7](docs/phase-7.md)); the
+  difference was not analysed.
 
 ### Lighthouse (live demo, Lighthouse 12, this release)
 
@@ -215,14 +223,37 @@ shown: the demo is deliberately not indexable.
 
 ### Load test (local only)
 
-k6 against the Express API on one laptop (Apple M1, 8 GB; API, Postgres and
-k6 on the same machine), three read endpoints, offered load stepping 50 → 100
-→ 200 → 400 requests/s: 61,600 requests, p50 3.9 ms, p95 14.2 ms, p99 173 ms.
-932 requests (1.5%) got 429 from the failed-authentication limiter, which
-counts requests in flight (see [phase-7](docs/phase-7.md)). This says the
-code path is not slow on a small dataset; it says nothing about capacity in
-production, and no scale claim is made. Run it with
-`DATABASE_URL=… apps/api/scripts/loadtest.sh`.
+k6 1.3.0 against the Express API in production mode on one laptop (Apple M1,
+8 GB; API, Postgres, Redis and k6 on the same machine), with rate limits and
+idempotency in **Redis** as in production. Three read endpoints (40% client
+list, 40% invoice list, 20% one invoice) on a small dataset. Offered load
+(ramping arrival rate, 6 minutes): starts at 10/s, ramps to 50/s over 30 s,
+holds 60 s, then the same ramp-and-hold to 100, 200 and 400 requests/s. One
+API key, rate limit 100,000/min (the per-key limiter never applies).
+
+Two runs at the same commit, minutes apart:
+
+| Run | Requests | p50     | p95      | p99      | Failed           | Dropped | Thresholds                        |
+| --- | -------- | ------- | -------- | -------- | ---------------- | ------- | --------------------------------- |
+| A   | 61,505   | 6.44 ms | 101.3 ms | 265.6 ms | 714 (1.16%), 429 | 144     | **fail** (`http_req_failed` ≥ 1%) |
+| B   | 61,630   | 6.09 ms | 19.2 ms  | 61.2 ms  | 12 (0.01%), 429  | 19      | pass                              |
+
+Thresholds: `http_req_failed` rate < 1% and p95 of the client list < 500 ms
+(A: 84 ms, B: 17 ms). Every failure was a 429. In run B the script recorded
+which limiter answered each one (a per-key 429 carries `RateLimit-Policy`, a
+failed-auth 429 does not): all 12 came from the **failed-authentication
+limiter**, in one second at 400/s during a latency spike (max 878 ms). That
+limiter reserves a slot per request until the key check passes, so more than
+30 requests from one address whose key checks overlap get 429 (see
+[phase-7](docs/phase-7.md)). Run A predates that instrumentation, so its 714
+are attributed only by inference; a few short unit-test runs shared the CPU
+during its first two minutes. The spread between A and B is itself a result:
+two runs are not enough to give one number. The p50 includes the 429s, which
+answer fast, so it is slightly optimistic.
+
+This says the read path is not slow on a small dataset; it says nothing about
+capacity in production, and no scale claim is made. Run it with
+`DATABASE_URL=… LOADTEST_REDIS_URL=redis://… apps/api/scripts/loadtest.sh`.
 
 ## Quick start
 
@@ -252,22 +283,30 @@ Sign in with `demo@wolff.demo` / `DemoPassword123!`. Email goes to Mailpit
 docs at `/docs`) and the AI service (`docker compose up -d ai`, offline model by
 default) are optional for the dashboard.
 
+Measured once, cold, on an Apple M1 Mac (not a Codespace): these exact steps
+from `git clone` to a signed-in dashboard took 133 s with an empty pnpm store
+and cache (install 83 s, 1.5 GB). The three images were cached for that run;
+pulled cold in an empty Docker daemon they took another 79 s (763 MB
+unpacked). About 3.5 minutes in all, on a fast connection.
+
 ## Tests and CI
 
-| Suite                                               | Tests              | Line coverage                                                                         |
-| --------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------- |
-| `apps/web` (Vitest)                                 | 1,255              | 15.3% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
-| `apps/api` (Vitest, Postgres, Testcontainers)       | 451                | 90.4%                                                                                 |
-| `packages/core`                                     | 288                | 76.0%                                                                                 |
-| `packages/jobs` (real Redis and S3 containers)      | 117 + 1 skipped    | 92.8%                                                                                 |
-| `packages/database`                                 | 42                 | 88.9%                                                                                 |
-| `packages/contracts`                                | 18                 | 13.9% (its schemas are exercised by the api tests, which do not count here)           |
-| `apps/widget`                                       | 12                 | 86.3%                                                                                 |
-| `services/ai` (pytest)                              | 234 + 1 skipped    | 94% statements                                                                        |
-| E2E (Playwright: flows, product, widget, assistant) | 50                 | Chromium, Firefox and WebKit                                                          |
-| Visual regression                                   | 7 pages × 3 widths | darwin and linux baselines                                                            |
+| Suite                                               | Tests                           | Line coverage                                                                         |
+| --------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
+| `apps/web` (Vitest)                                 | 1,264                           | 15.4% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
+| `apps/api` (Vitest, Postgres, Testcontainers)       | 465                             | 90.5%                                                                                 |
+| `packages/core`                                     | 360                             | 93.4%                                                                                 |
+| `packages/jobs` (real Redis and S3 containers)      | 117 + 1 skipped                 | 92.8%                                                                                 |
+| `packages/database`                                 | 42                              | 88.9%                                                                                 |
+| `packages/contracts`                                | 18                              | 13.9% (its schemas are exercised by the api tests, which do not count here)           |
+| `apps/widget`                                       | 12                              | 86.3%                                                                                 |
+| `services/ai` (pytest)                              | 234 + 1 skipped                 | 94% statements                                                                        |
+| E2E (Playwright: flows, product, widget, assistant) | 51                              | Chromium, Firefox and WebKit                                                          |
+| Visual regression                                   | 10 pages × 3 widths (30 images) | darwin and linux baselines                                                            |
 
-Coverage counts every source file, not just the ones a test imports. Commands:
+Coverage counts every source file, not just the ones a test imports. There are
+no coverage badges yet: badge services need the public repository and a CI run.
+Commands:
 
 ```bash
 TEST_DATABASE_URL=postgresql://wolff:wolff_dev_only@localhost:5432/wolff_test \
@@ -280,8 +319,9 @@ E2E_BROWSER=firefox pnpm --filter @wolff/web exec playwright test -c playwright.
 Other checks: Schemathesis over all 51 OpenAPI operations, the `/api/v1`
 parity suite (112 recorded responses), the AI isolation suite (`pytest -m
 isolation`, 0 leaks), axe (no serious or critical violations on the main
-pages), and a check that no dashboard page scrolls sideways from 320 to
-1920 px.
+pages), and a check that none of 8 dashboard pages (dashboard, quotes,
+invoices, clients, leads, deals, automations, settings) scrolls sideways, as a
+page or inside its content area, at 320, 375, 768, 1024, 1440 and 1920 px.
 
 CI is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (lint,
 type-check, unit, migrations, AI, Schemathesis, build, E2E and visual). It has
