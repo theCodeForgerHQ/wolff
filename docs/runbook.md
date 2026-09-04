@@ -73,7 +73,7 @@ schedules and monitors. Every step uses a free plan that needs no card.
 10. **UptimeRobot:** HTTP(s) monitors on api `/readyz`, ai `/healthz`, web
     `/login`, 5-minute interval, email alert contact. The free monitor checks
     with HEAD; every monitored route must answer HEAD (ai answered 405 until
-    `1223531`, which UptimeRobot reported as down).
+    `7646fcc`, which UptimeRobot reported as down).
 11. **Check:** section 7's list, then trigger one backup (section 4.1).
 
 ## 2. Deploy

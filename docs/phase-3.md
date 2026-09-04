@@ -7,37 +7,37 @@ Phase 3 has a task list and a definition of done.
 
 | Area                                  | Before                                  | After                                                                                                | Commit               |
 | ------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------- |
-| CRM models                            | None                                    | `Lead`, `Pipeline`, `Stage`, `Deal`, `DealActivity` with migrations                                  | `35c5a01`            |
-| GST models/fields                     | None                                    | GST fields on invoices, line items, clients, business profiles; GST enums                            | `25140b0`            |
-| Recurring invoice numbering           | Used old `NumberSequence` key           | Updated to composite `workspaceId_type_financialYear` key                                            | `e5c63ab`            |
-| CRM core                              | None                                    | `packages/core/src/crm`: pipelines, lead conversion, deal moves, activities                          | `9ddac44`            |
-| Seed NumberSequence lookups           | Old unique key                          | Updated to composite `workspaceId_type_financialYear` key                                            | `7975ddf`            |
-| Payment provider models               | Stripe only                             | `PaymentProvider` enum, Razorpay settings, `ProviderWebhookEvent`, `JobRun`                          | `67734a9`            |
-| GST engine                            | None                                    | `packages/core/src/gst`: split-rounding engine, ≥15 golden vectors, Rule 46 validation, FY numbering | `8d3aa9a`, `3f92626` |
-| CRM API                               | None                                    | `GET/POST/PATCH/DELETE /v1/leads`, `/v1/pipelines`, `/v1/deals`, bulk actions, lead conversion       | `c1366d5`            |
-| Razorpay webhooks                     | Stripe only                             | `POST /webhooks/razorpay/:workspaceId` with HMAC verification and idempotency                        | `540b17f`            |
-| Reports                               | None                                    | SQL views + `packages/core/src/reports` + `GET /v1/reports/*`                                        | `8404f7d`, `956ad3d` |
-| Demo seed                             | None                                    | `packages/database/prisma/seed-demo.ts`: Kaveri Studio + Northlight Design                           | `abf6e74`            |
-| Payment provider interface            | None                                    | `apps/api/src/payments/provider.ts` + `POST /v1/invoices/:id/payment-links`                          | `40aa75f`            |
-| Deal → quote                          | None                                    | `packages/core/src/quotes` + `POST /v1/deals/:id/quote`                                              | `e9b0191`            |
-| Lead import/dedupe                    | Single create                           | `POST /v1/leads/import` with email/phone upsert                                                      | `bdc4854`            |
-| GST PDF template                      | None                                    | `packages/core/src/gst/pdf-template.ts` Rule 46 layout                                               | `a0ab3d5`            |
-| Phase 3 closure doc                   | None                                    | Initial `docs/phase-3.md`                                                                            | `27b7f6c`            |
-| Review fixes (tenant guard)           | CRM models missing workspace scoping    | Enrolled `Lead`/`Pipeline`/`Stage`/`Deal`/`DealActivity` in `WORKSPACE_SCOPED_MODELS`                | `17b263b`            |
-| Review fixes (idempotency)            | Payment-links created premature Payment | `requireIdempotencyKey` middleware; pending Payment row created with link for webhook reconciliation | `201581f`            |
-| Review fixes (provider errors)        | Raw Stripe/Razorpay errors leaked       | Wrapped checkout errors with `provider_error` code                                                   | `f4b5f07`            |
-| Review fixes (GST)                    | Rule 46 POS mismatch, serial race       | Aligned place-of-supply validation; validate serial before incrementing sequence                     | `12ad79a`            |
-| Review fixes (reports)                | Deleted deals in pipeline view          | Excluded deleted deals from `v_pipeline_stage_transitions`                                           | `9222de7`            |
-| Razorpay settings UI                  | Stripe only                             | Encrypted Razorpay key/webhook secret storage, enable toggle, settings form card                     | `320d8c9`            |
-| Dashboard charts                      | Revenue only                            | Receivables ageing, GST summary and pipeline summary wired to SQL views                              | `253f10b`            |
-| Leads table UI                        | None                                    | `/leads` page with search, filters, row actions, bulk delete and conversion                          | `47b72b6`            |
-| Deals Kanban UI                       | None                                    | `/deals` drag-and-drop board with optimistic stage moves and column totals                           | `1c9e549`            |
-| Deal → quote UI                       | API only                                | One-click “Create Quote” on deal cards navigates to the quote editor                                 | `be3b141`            |
-| E2E lead-to-paid flow                 | None                                    | Playwright flow test: widget lead → convert → deal → quote → payment recording                       | `a2d99f9`            |
-| Review fixes (payment reconcile)      | Payment row missing from payment-link   | Pending Payment row created with provider id for webhook reconciliation                              | `d06921a`            |
-| Review fixes (seed NumberSequence)    | Compound-key upsert with null failed    | Seed helpers use findFirst + id update for nullable financialYear                                    | `bea2755`            |
-| Review fixes (runtime NumberSequence) | Compound-key upsert with null failed    | Atomic raw-SQL helper used by quotes/invoices/credit notes                                           | `b48f985`            |
-| Review fixes (E2E selectors)          | Strict-mode violations in flow test     | Added test ids and row-action selectors; improved dialog accessibility                               | `fac4d25`            |
+| CRM models                            | None                                    | `Lead`, `Pipeline`, `Stage`, `Deal`, `DealActivity` with migrations                                  | `e1c4bc3`            |
+| GST models/fields                     | None                                    | GST fields on invoices, line items, clients, business profiles; GST enums                            | `ad9aa80`            |
+| Recurring invoice numbering           | Used old `NumberSequence` key           | Updated to composite `workspaceId_type_financialYear` key                                            | `3299254`            |
+| CRM core                              | None                                    | `packages/core/src/crm`: pipelines, lead conversion, deal moves, activities                          | `bb9f298`            |
+| Seed NumberSequence lookups           | Old unique key                          | Updated to composite `workspaceId_type_financialYear` key                                            | `cbff264`            |
+| Payment provider models               | Stripe only                             | `PaymentProvider` enum, Razorpay settings, `ProviderWebhookEvent`, `JobRun`                          | `3e0e6fb`            |
+| GST engine                            | None                                    | `packages/core/src/gst`: split-rounding engine, ≥15 golden vectors, Rule 46 validation, FY numbering | `8c762a8`, `43a3d59` |
+| CRM API                               | None                                    | `GET/POST/PATCH/DELETE /v1/leads`, `/v1/pipelines`, `/v1/deals`, bulk actions, lead conversion       | `030598e`            |
+| Razorpay webhooks                     | Stripe only                             | `POST /webhooks/razorpay/:workspaceId` with HMAC verification and idempotency                        | `471be9c`            |
+| Reports                               | None                                    | SQL views + `packages/core/src/reports` + `GET /v1/reports/*`                                        | `10b0853`, `d4580b5` |
+| Demo seed                             | None                                    | `packages/database/prisma/seed-demo.ts`: Kaveri Studio + Northlight Design                           | `53c4fc1`            |
+| Payment provider interface            | None                                    | `apps/api/src/payments/provider.ts` + `POST /v1/invoices/:id/payment-links`                          | `6268c21`            |
+| Deal → quote                          | None                                    | `packages/core/src/quotes` + `POST /v1/deals/:id/quote`                                              | `76a193b`            |
+| Lead import/dedupe                    | Single create                           | `POST /v1/leads/import` with email/phone upsert                                                      | `35320db`            |
+| GST PDF template                      | None                                    | `packages/core/src/gst/pdf-template.ts` Rule 46 layout                                               | `c0c7dc1`            |
+| Phase 3 closure doc                   | None                                    | Initial `docs/phase-3.md`                                                                            | `e5e14fa`            |
+| Review fixes (tenant guard)           | CRM models missing workspace scoping    | Enrolled `Lead`/`Pipeline`/`Stage`/`Deal`/`DealActivity` in `WORKSPACE_SCOPED_MODELS`                | `7efd348`            |
+| Review fixes (idempotency)            | Payment-links created premature Payment | `requireIdempotencyKey` middleware; pending Payment row created with link for webhook reconciliation | `098dd56`            |
+| Review fixes (provider errors)        | Raw Stripe/Razorpay errors leaked       | Wrapped checkout errors with `provider_error` code                                                   | `febc4ad`            |
+| Review fixes (GST)                    | Rule 46 POS mismatch, serial race       | Aligned place-of-supply validation; validate serial before incrementing sequence                     | `0198478`            |
+| Review fixes (reports)                | Deleted deals in pipeline view          | Excluded deleted deals from `v_pipeline_stage_transitions`                                           | `f775243`            |
+| Razorpay settings UI                  | Stripe only                             | Encrypted Razorpay key/webhook secret storage, enable toggle, settings form card                     | `e626c40`            |
+| Dashboard charts                      | Revenue only                            | Receivables ageing, GST summary and pipeline summary wired to SQL views                              | `eb680b9`            |
+| Leads table UI                        | None                                    | `/leads` page with search, filters, row actions, bulk delete and conversion                          | `8e26995`            |
+| Deals Kanban UI                       | None                                    | `/deals` drag-and-drop board with optimistic stage moves and column totals                           | `383bb7d`            |
+| Deal → quote UI                       | API only                                | One-click “Create Quote” on deal cards navigates to the quote editor                                 | `44d7036`            |
+| E2E lead-to-paid flow                 | None                                    | Playwright flow test: widget lead → convert → deal → quote → payment recording                       | `e0063b8`            |
+| Review fixes (payment reconcile)      | Payment row missing from payment-link   | Pending Payment row created with provider id for webhook reconciliation                              | `2b4cd95`            |
+| Review fixes (seed NumberSequence)    | Compound-key upsert with null failed    | Seed helpers use findFirst + id update for nullable financialYear                                    | `7070425`            |
+| Review fixes (runtime NumberSequence) | Compound-key upsert with null failed    | Atomic raw-SQL helper used by quotes/invoices/credit notes                                           | `fa308d7`            |
+| Review fixes (E2E selectors)          | Strict-mode violations in flow test     | Added test ids and row-action selectors; improved dialog accessibility                               | `4985579`            |
 
 ## Definition of done
 
@@ -59,7 +59,7 @@ Phase 3 has a task list and a definition of done.
   `docs/phase-4.md`, H7), together with a reverse-charge correction.
 - FY numbering as built restarted at `INV-0001` each FY without the year
   in the number, so the first GST invoice after 1 April would have hit the
-  unique key on (workspace, number). Since `76b761b` a GST number carries
+  unique key on (workspace, number). Since `4d1d033` a GST number carries
   the FY: `INV/26-27/0001`. Several invoice paths (edit, duplicate,
   auto-create from a quote, recurring, legacy `/api/v1`) also bypassed the
   engine and the Rule 46 gate until the Phase 4 re-review
@@ -78,7 +78,7 @@ Phase 3 has a task list and a definition of done.
   As built, Stripe Checkout only worked against stripe-mock: real Stripe
   (API 2022-08-01 and later) returns no PaymentIntent on a new session and
   the code threw. Reconciled on `checkout.session.completed` since
-  `dc15428`. Razorpay orders used the platform's key until `3195c0d`.
+  `091afbd`. Razorpay orders used the platform's key until `91d07af`.
 - `POST /v1/invoices/:id/payment-links` returns a provider-specific payload.
 - Razorpay inbound webhook verifies HMAC-SHA256 and dedupes by `X-Razorpay-Event-Id`.
 - Webhook events (`payment.captured`, `payment.failed`, `order.paid`, `refund.processed`) apply to invoices/payments.
@@ -170,10 +170,10 @@ A peer review of `phase2-core-api..phase3-crm-gst-razorpay` found the issues bel
 ## Deviations and known issues
 
 - **CSV lead import**: the route accepts JSON arrays. CSV parsing is a future enhancement; the dedupe logic is format-agnostic.
-- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. Invoice numbers in the web app now come from `packages/core` (`nextInvoiceNumber`, FY-aware); credit notes used the non-FY sequence until `829054e` (Phase 4, third review): a GST workspace now numbers them per FY, `CN/26-27/0001`.
+- **Legacy web numbering**: updated to the new `workspaceId_type_financialYear` key with a null FY cast so type-check passes. Invoice numbers in the web app now come from `packages/core` (`nextInvoiceNumber`, FY-aware); credit notes used the non-FY sequence until `f2a6e5a` (Phase 4, third review): a GST workspace now numbers them per FY, `CN/26-27/0001`.
 - **Web lint warnings**: pre-existing React Compiler warnings in `apps/web` remain; they do not fail lint.
 - **Live payment E2E**: the lead-to-paid Playwright flow records a manual payment. Live Stripe/Razorpay checkout and webhook reconciliation require real provider credentials and a background worker (Phase 4).
-- **Razorpay client**: orders were created with the platform's env-configured Razorpay client, not with the workspace's own key. Fixed in `3195c0d` (workspace keys, `not_configured` when it has none); see `docs/phase-4.md`.
+- **Razorpay client**: orders were created with the platform's env-configured Razorpay client, not with the workspace's own key. Fixed in `91d07af` (workspace keys, `not_configured` when it has none); see `docs/phase-4.md`.
 - **Test counts above** are as recorded at Phase 3's close and were not re-run; current counts are in `docs/phase-4.md`.
 
 ## What needs the repo owner
@@ -185,7 +185,7 @@ A peer review of `phase2-core-api..phase3-crm-gst-razorpay` found the issues bel
 
 Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
 Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
-from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+from commits `8011d97` and `6c1748c`. Account-specific evidence (ids,
 timestamps) is kept outside the repo.
 
 - A Razorpay test payment (Netbanking, test mode) on a GST invoice marks it

@@ -1,8 +1,8 @@
 # Phase 6b: full `/api/v1` parity port
 
-Branch `phase6b-api-parity`, from `92a7b2d` (tag `phases1-5-verified`).
+Branch `phase6b-api-parity`, from `c3ffbf4` (tag `phases1-5-verified`).
 Built, reviewed by the other developer and fixed; see "Review findings and
-fixes" at the end. Pre-fix tip tagged `phase6b-pre-review-fixes` (`aba8d44`). Nothing
+fixes" at the end. Pre-fix tip tagged `phase6b-pre-review-fixes` (`e797e75`). Nothing
 is pushed.
 
 ## Deletion date of the Next routes
@@ -16,15 +16,15 @@ the Next routes under `apps/web/app/api/v1` for one week as the fallback
 
 | Item                                                                          | Where                                                                                                   | Commit                |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- |
-| Invoice email and payment receipt in the document's currency (bug found live) | `apps/web/app/api/v1/invoices/[id]/send/route.ts`, `apps/web/lib/payments/internal.ts`                  | `088f051`             |
-| Invoice-from-quote moved to core, shared by web and api                       | `packages/core/src/invoices/from-quote.ts`                                                              | `98809e9`             |
-| Quote-sent / invoice-sent email templates in core                             | `packages/core/src/email/templates.ts`                                                                  | `062b473`             |
-| Recorded Next responses + scenario, seed, normalizer, recorder                | `apps/api/src/testing/parity/`, `scripts/record-parity.ts`, `src/routes/v1/__parity__/next-api-v1.json` | `721e9c2`             |
-| The 11 route files ported to Express, behind the existing auth stack          | `apps/api/src/routes/v1/legacy/`                                                                        | `f426c81`             |
-| OpenAPI for the 20 ported operations                                          | `packages/contracts/src/legacy-v1.ts`, `apps/api/src/openapi/legacy-v1.ts`                              | `cf17a20`             |
-| `/api/v1/*` rewritten to the API on Vercel (`API_V1_UPSTREAM`)                | `apps/web/lib/config/api-v1-rewrite.ts`, `proxy.ts` (was `next.config.ts`)                              | `45989ed`, `9685fa7`  |
-| Schemathesis: script, seed, CI job                                            | `apps/api/scripts/schemathesis*.{sh,ts}`, `.github/workflows/ci.yml`                                    | `cb6e93d`             |
-| Fixes from a security note and from Schemathesis                              | see below                                                                                               | `3363e68` … `4a899c9` |
+| Invoice email and payment receipt in the document's currency (bug found live) | `apps/web/app/api/v1/invoices/[id]/send/route.ts`, `apps/web/lib/payments/internal.ts`                  | `d697fd2`             |
+| Invoice-from-quote moved to core, shared by web and api                       | `packages/core/src/invoices/from-quote.ts`                                                              | `24ba005`             |
+| Quote-sent / invoice-sent email templates in core                             | `packages/core/src/email/templates.ts`                                                                  | `541af3c`             |
+| Recorded Next responses + scenario, seed, normalizer, recorder                | `apps/api/src/testing/parity/`, `scripts/record-parity.ts`, `src/routes/v1/__parity__/next-api-v1.json` | `45ac878`             |
+| The 11 route files ported to Express, behind the existing auth stack          | `apps/api/src/routes/v1/legacy/`                                                                        | `38245cd`             |
+| OpenAPI for the 20 ported operations                                          | `packages/contracts/src/legacy-v1.ts`, `apps/api/src/openapi/legacy-v1.ts`                              | `cfd7515`             |
+| `/api/v1/*` rewritten to the API on Vercel (`API_V1_UPSTREAM`)                | `apps/web/lib/config/api-v1-rewrite.ts`, `proxy.ts` (was `next.config.ts`)                              | `780e341`, `9e0a180`  |
+| Schemathesis: script, seed, CI job                                            | `apps/api/scripts/schemathesis*.{sh,ts}`, `.github/workflows/ci.yml`                                    | `bd7d04d`             |
+| Fixes from a security note and from Schemathesis                              | see below                                                                                               | `c5ea7d2` … `905ab57` |
 
 ## Phase 6b criteria
 
@@ -80,9 +80,9 @@ API answers them with the standard envelope.
    a string"), a NUL character, an import row that is `null` or has a
    non-string email or phone (a row error), the email of a deleted client
    (409).
-3. The 21st email of the hour answers **429** instead of 502 (`e6d76c1`),
+3. The 21st email of the hour answers **429** instead of 502 (`57c4700`),
    with `Retry-After` set to the seconds left in the workspace's window
-   (`83060f0`). Nothing is sent and nothing changes, as before.
+   (`2b4db69`). Nothing is sent and nothing changes, as before.
 4. Unhandled errors answer the API's `{ success:false, error:{ code:
 'internal_error' } }` and are reported to Sentry; the Next routes answered
    `{ error: 'Internal server error' }` or an empty 500.
@@ -90,9 +90,9 @@ API answers them with the standard envelope.
    one address) instead of one email with several `to`. Each recipient has
    its own idempotency key per document version and email content, so a
    retry after a partial failure does not email the recipients who already
-   got it (`1a72ddb`).
+   got it (`8854281`).
 6. A request without a key gets 401 whatever its body holds; the NUL check
-   runs after authentication (`3b7557c`).
+   runs after authentication (`784b855`).
 
 ## Breaking change: scopes are now enforced
 
@@ -123,7 +123,7 @@ against the Next route and the middleware:
   so without a shared Redis store (the API without `REDIS_URL`, and tests)
   each had its own 20/hour bucket: alternating documents sent 40/hour. The
   deployed demo uses Redis and the same key prefix, so it was not affected.
-  Fixed in `3363e68`: one sender for both. The test sends 22 times from two
+  Fixed in `c5ea7d2`: one sender for both. The test sends 22 times from two
   keys, alternating quotes and invoices and changing recipients; the first 20
   go out, the last two do not (`[200, 200]` before the fix, `[429, 429]` now).
 - The other ported routes are all on the same `/v1` router; none is mounted
@@ -139,35 +139,35 @@ fresh servers only.
 
 | #   | Finding (500 unless noted)                                                                                                                                      | Area               | Fix, test-first                   |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------------------------------- |
-| 1   | NaN `page`/`limit` on the 3 lists                                                                                                                               | ported (also Next) | `f9b1b4c`                         |
-| 2   | `recipients` not a list; non-object line item; email of a deleted client                                                                                        | ported (also Next) | `f9b1b4c`                         |
-| 3   | NUL character in any text (Postgres 22021)                                                                                                                      | all routes         | `62185b3`, legacy shape `386c7ae` |
-| 4   | Plain `Error`s for caller mistakes in deals/leads (no client or lead, unknown stage, no stages)                                                                 | CRM (Phase 3)      | `a71d2fd`                         |
-| 5   | Deal for an unknown client/lead, lead owner not a user: FK violations                                                                                           | CRM                | `a71d2fd`                         |
-| 6   | **Tenant gap:** a user of another workspace was accepted as lead owner (create, update, bulk assign) and deal owner                                             | CRM                | `a71d2fd`, `ca52670`              |
-| 7   | Bulk `status` with an unknown value; replacing stages with a foreign stage id                                                                                   | CRM                | `a71d2fd`                         |
-| 8   | Stage position / deal value beyond the column (int, numeric 12,2)                                                                                               | contracts          | `a71d2fd`                         |
-| 9   | `lineItems` not a list                                                                                                                                          | ported (also Next) | `386c7ae`                         |
-| 10  | Two stages at one position                                                                                                                                      | contracts          | `ed69229`                         |
-| 11  | A value of the wrong JSON type reaching Prisma (`clientId: {}`)                                                                                                 | ported (also Next) | `bee689b`                         |
-| 12  | Second deal on a lead; removing a stage that holds deals                                                                                                        | CRM                | `5992251`                         |
-| 13  | `clients: [null]` in import                                                                                                                                     | ported (also Next) | `58cc043`                         |
-| 14  | 502 when the hourly email limit is reached                                                                                                                      | ported             | `e6d76c1` (429)                   |
-| 15  | Lead conversion when a client has the email / the lead has a deal; deal owner on update                                                                         | CRM                | `ca52670`                         |
-| 16  | Undocumented codes (cursor 400s, deal 404/409, stages 409, convert 409/422, list 400s) and `expectedCloseDate` documented as a date but returned as a timestamp | docs               | `ebda532`, `365101a`, `4a899c9`   |
+| 1   | NaN `page`/`limit` on the 3 lists                                                                                                                               | ported (also Next) | `0c0b4ba`                         |
+| 2   | `recipients` not a list; non-object line item; email of a deleted client                                                                                        | ported (also Next) | `0c0b4ba`                         |
+| 3   | NUL character in any text (Postgres 22021)                                                                                                                      | all routes         | `3c32df7`, legacy shape `d6045a6` |
+| 4   | Plain `Error`s for caller mistakes in deals/leads (no client or lead, unknown stage, no stages)                                                                 | CRM (Phase 3)      | `4ceadf0`                         |
+| 5   | Deal for an unknown client/lead, lead owner not a user: FK violations                                                                                           | CRM                | `4ceadf0`                         |
+| 6   | **Tenant gap:** a user of another workspace was accepted as lead owner (create, update, bulk assign) and deal owner                                             | CRM                | `4ceadf0`, `0964b37`              |
+| 7   | Bulk `status` with an unknown value; replacing stages with a foreign stage id                                                                                   | CRM                | `4ceadf0`                         |
+| 8   | Stage position / deal value beyond the column (int, numeric 12,2)                                                                                               | contracts          | `4ceadf0`                         |
+| 9   | `lineItems` not a list                                                                                                                                          | ported (also Next) | `d6045a6`                         |
+| 10  | Two stages at one position                                                                                                                                      | contracts          | `b59c68d`                         |
+| 11  | A value of the wrong JSON type reaching Prisma (`clientId: {}`)                                                                                                 | ported (also Next) | `a4ad130`                         |
+| 12  | Second deal on a lead; removing a stage that holds deals                                                                                                        | CRM                | `297d98a`                         |
+| 13  | `clients: [null]` in import                                                                                                                                     | ported (also Next) | `8027eb8`                         |
+| 14  | 502 when the hourly email limit is reached                                                                                                                      | ported             | `57c4700` (429)                   |
+| 15  | Lead conversion when a client has the email / the lead has a deal; deal owner on update                                                                         | CRM                | `0964b37`                         |
+| 16  | Undocumented codes (cursor 400s, deal 404/409, stages 409, convert 409/422, list 400s) and `expectedCloseDate` documented as a date but returned as a timestamp | docs               | `b622acb`, `d26e8db`, `905ab57`   |
 
 Not checked in CI, with reasons in `scripts/schemathesis.sh`: positive/negative
 data acceptance (the ported routes validate by hand; their request schemas are
 loose on purpose), unsupported methods (Express answers 404, not 405), and the
 stateful phase (no OpenAPI links). Instead of links, the seed creates fixed
 fixtures and writes a config that pins every `{id}` operation to one
-(`9f5382c`); see "Review findings and fixes". One unique-violation 500 on lead create was
+(`d2573ba`); see "Review findings and fixes". One unique-violation 500 on lead create was
 logged once and not reproduced (case-insensitive duplicate email answers 409);
 it is left as a known issue.
 
 ## Checks at the build tip (before the review)
 
-Run on 2026-08-23 at `4b78440` in a fresh `git worktree` (only the committed
+Run on 2026-08-23 at `1628982` in a fresh `git worktree` (only the committed
 `.env.example` files, no `.env`), Node 24.21.0, Postgres 17 + pgvector,
 stripe-mock 0.205.0, Redis 7; one fresh database per suite, suites one at a
 time (script `/tmp/p6b-checks.sh`, outside the repo).
@@ -193,7 +193,7 @@ Actions itself.
 
 ## Verified on the deployed demo at the build tip (2026-08-23)
 
-Deployed wolff-api and wolff-web from `git archive` of `4b78440`.
+Deployed wolff-api and wolff-web from `git archive` of `1628982`.
 `/readyz` ready; `/openapi.json` lists the ported paths.
 
 - One call per ported route file, through `https://wolff-web.vercel.app/api/v1`
@@ -228,9 +228,9 @@ Deployed wolff-api and wolff-web from `git archive` of `4b78440`.
 
 ### History cleanup list (not rewritten; needs the owner's approval)
 
-- `58cc043` "fix(api): fail an import row that is not an object instead of
+- `8027eb8` "fix(api): fail an import row that is not an object instead of
   answering 500": its body cites a test that landed in the next commit,
-  `e6d76c1`, so `58cc043` has the fix without its test.
+  `57c4700`, so `8027eb8` has the fix without its test.
 
 ## Needs the owner
 
@@ -244,28 +244,28 @@ Deployed wolff-api and wolff-web from `git archive` of `4b78440`.
 
 ## Review findings and fixes
 
-One peer review of `92a7b2d..aba8d44`. Each finding was checked
+One peer review of `c3ffbf4..e797e75`. Each finding was checked
 against the code before fixing; fixes are one commit each, test first, and
 each test was seen failing on the code before the fix (guard reverts in a
 /tmp copy).
 
 | #   | Finding                                                               | Verdict                                                                                                                                                                                                                                                                      | Fix                              |
 | --- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| 1   | Scope tests missed routes                                             | Confirmed: 10 of 20 operations had no 403 case                                                                                                                                                                                                                               | `54328c5`; 22 of 22 mutants fail |
-| 2   | Every PrismaClientValidationError mapped to 400                       | Confirmed. Types are checked per route (22 cases); the mapping is gone; a coordinator follow-up: Prisma messages carry query values, so reports and logs get only class, code and model.operation, and Sentry events drop bodies, cookies, query strings and headers         | `53e1070`, `087fbf6`, `611473c`  |
-| 3   | Per-IP auth-failure limit behind the rewrite might key on a Vercel IP | **Not a defect.** Live, 2026-08-23 and 2026-08-30: the API's request log shows `X-Forwarded-For` = the caller's own IP both directly and through the rewrite, and a forged value is replaced, so `req.ip` (`trust proxy 1`) is the caller's. Test pins the per-caller keying | `eab7d45` (test only)            |
-| 4   | `58cc043` claims a test from `e6d76c1`                                | Confirmed; recorded above, not rewritten                                                                                                                                                                                                                                     | this doc                         |
-| 5   | Retry-After fixed at 3600                                             | Confirmed                                                                                                                                                                                                                                                                    | `83060f0`                        |
-| 6   | Partial sends re-email earlier recipients on retry                    | Confirmed (random attempt id in the key)                                                                                                                                                                                                                                     | `1a72ddb`                        |
-| 7   | NUL check before the key check                                        | Confirmed (400 before 401)                                                                                                                                                                                                                                                   | `3b7557c`                        |
-| 8   | Import: array email → 500                                             | Confirmed; it failed even earlier than reported (the duplicate lookup passed the array to Prisma). Numeric phone failed the whole batch                                                                                                                                      | `22d45f4`                        |
-| 9   | USD hard-coded on the dashboard                                       | Confirmed for the editor line; the two analytics sections take the base currency the totals are converted to and label it                                                                                                                                                    | `5c96a76`, `1e28232`             |
-| 10  | Session cookie forwarded to the API                                   | Confirmed live (the API's log showed a cookie). Stripping is possible in the proxy, so the rewrite moved there                                                                                                                                                               | `9685fa7`                        |
-| 11  | Schemathesis mostly 404 on `{id}` paths                               | Confirmed: 20 of 30 `{id}` operations reached a 2xx, 39% of their requests 404. Now 28 of 30, 7%. The run found two real OpenAPI gaps                                                                                                                                        | `9f5382c`, `4e9f317`, `dd693ee`  |
+| 1   | Scope tests missed routes                                             | Confirmed: 10 of 20 operations had no 403 case                                                                                                                                                                                                                               | `ea58428`; 22 of 22 mutants fail |
+| 2   | Every PrismaClientValidationError mapped to 400                       | Confirmed. Types are checked per route (22 cases); the mapping is gone; a coordinator follow-up: Prisma messages carry query values, so reports and logs get only class, code and model.operation, and Sentry events drop bodies, cookies, query strings and headers         | `3611984`, `a5ee8b2`, `f17a23e`  |
+| 3   | Per-IP auth-failure limit behind the rewrite might key on a Vercel IP | **Not a defect.** Live, 2026-08-23 and 2026-08-30: the API's request log shows `X-Forwarded-For` = the caller's own IP both directly and through the rewrite, and a forged value is replaced, so `req.ip` (`trust proxy 1`) is the caller's. Test pins the per-caller keying | `3783499` (test only)            |
+| 4   | `8027eb8` claims a test from `57c4700`                                | Confirmed; recorded above, not rewritten                                                                                                                                                                                                                                     | this doc                         |
+| 5   | Retry-After fixed at 3600                                             | Confirmed                                                                                                                                                                                                                                                                    | `2b4db69`                        |
+| 6   | Partial sends re-email earlier recipients on retry                    | Confirmed (random attempt id in the key)                                                                                                                                                                                                                                     | `8854281`                        |
+| 7   | NUL check before the key check                                        | Confirmed (400 before 401)                                                                                                                                                                                                                                                   | `784b855`                        |
+| 8   | Import: array email → 500                                             | Confirmed; it failed even earlier than reported (the duplicate lookup passed the array to Prisma). Numeric phone failed the whole batch                                                                                                                                      | `845831c`                        |
+| 9   | USD hard-coded on the dashboard                                       | Confirmed for the editor line; the two analytics sections take the base currency the totals are converted to and label it                                                                                                                                                    | `cb66da8`, `e44b4cd`             |
+| 10  | Session cookie forwarded to the API                                   | Confirmed live (the API's log showed a cookie). Stripping is possible in the proxy, so the rewrite moved there                                                                                                                                                               | `9e0a180`                        |
+| 11  | Schemathesis mostly 404 on `{id}` paths                               | Confirmed: 20 of 30 `{id}` operations reached a 2xx, 39% of their requests 404. Now 28 of 30, 7%. The run found two real OpenAPI gaps                                                                                                                                        | `d2573ba`, `5d6bc29`, `62e44b5`  |
 | 12  | Demo key 403 on clients and quotes                                    | Widened on Neon (8 → 17 scopes); breaking change documented above                                                                                                                                                                                                            | data + this doc                  |
-| 13  | Flaky keyboard E2E                                                    | Root cause in the test: dnd-kit adds its keydown listener in a `setTimeout` after pick-up; traced in the page, the arrow key arrived first in 8 of 8 failures. Tests now wait for that timer                                                                                 | `f8d2d1d`; widget port `004928a` |
+| 13  | Flaky keyboard E2E                                                    | Root cause in the test: dnd-kit adds its keydown listener in a `setTimeout` after pick-up; traced in the page, the arrow key arrived first in 8 of 8 failures. Tests now wait for that timer                                                                                 | `0fd52d1`; widget port `1a2c733` |
 
-### Checks at the fixed tip `9f5382c`
+### Checks at the fixed tip `d2573ba`
 
 Clean `git worktree` (only `.env.example` files), Node 24.21.0, Postgres 17,
 stripe-mock, Redis; a fresh database per suite, suites one at a time.
@@ -288,7 +288,7 @@ stripe-mock, Redis; a fresh database per suite, suites one at a time.
 | E2E visual (7 tests x 3 widths, darwin)     | 21 passed, CI=1, retries 0            |
 | Keyboard tests, 10 consecutive runs         | 10 of 10 passed, CI=1, retries 0      |
 
-The E2E rows were run on 2026-08-30 at `9f5382c` in the clean worktree, after
+The E2E rows were run on 2026-08-30 at `d2573ba` in the clean worktree, after
 a production build with `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_wolffE2E`,
 on fresh migrated and seeded databases (one per config), widget preview on
 :5180. Keyboard runs: `--project setup --project product -g keyboard`, ten
@@ -297,7 +297,7 @@ was 3 passed (sign-in setup, the Kanban move, the automation reorder), 0
 failed. An earlier attempt at this count is void: 8 of its 10 runs never
 started because the previous run's servers still held :5180.
 
-### Live, after redeploying api and web from `git archive` of `9f5382c` (2026-08-30)
+### Live, after redeploying api and web from `git archive` of `d2573ba` (2026-08-30)
 
 Redeployed with `vercel deploy --prod` from a `git archive` copy (no `.env`
 files): api `wolff-5g02finew`, web `wolff-okm5u6e7u`. Checked at 00:25-00:30 UTC.
@@ -320,7 +320,7 @@ files): api `wolff-5g02finew`, web `wolff-okm5u6e7u`. Checked at 00:25-00:30 UTC
   `concurrent_idempotent_requests` (checked directly: same key, two
   concurrent calls, one 200 and one 409, one email). A retry after a partial
   failure cannot be forced on the live provider; it is covered by the test in
-  `1a72ddb` (mock only) and by the earlier sequential same-key check against
+  `8854281` (mock only) and by the earlier sequential same-key check against
   Resend (two sends, one email).
 - Known issue, LOW: in that same-version race the second request answers 502
   "could not be sent" although the email did go out once. Not fixed in this

@@ -1,17 +1,17 @@
 # Phase 2: core + thin API + jobs + outbox + free demo env
 
-Branch `phase2-core-api`, on top of `phase1-upgrades` (`af481ab`).
+Branch `phase2-core-api`, on top of `phase1-upgrades` (`a970c07`).
 Phase 2 has a task list and a definition of done.
 
 ## What changed
 
 | Area                   | Before             | After                                                                                                                                               | Commit                          |
 | ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| OpenAPI/Scalar/Postman | None               | `GET /openapi.json`, `GET /docs` (Scalar), `pnpm openapi:postman` generates `docs/api/postman_collection.json`, `openapi:gen` script, CI diff check | `bcec306`, `be5d5a3`, `aec2a25` |
-| API entry points       | None               | `apps/api/src/server.ts` (local/ECS), `src/index.ts` (Vercel zero-config), build/start/dev scripts                                                  | `f8641d1`                       |
-| Observability          | Config only        | Sentry + OTel init, `/metrics` (Prometheus) on the internal METRICS_PORT                                                                            | `ad9fd57`                       |
-| Worker                 | Package logic only | `apps/api/src/worker.ts` (long-running), `src/worker-drain.ts` (GitHub Actions), `pnpm worker`, `pnpm worker:drain`                                 | `ad9fd57`                       |
-| Free demo env          | Not documented     | `docs/free-tier.md`, `.github/workflows/jobs-drain.yml`                                                                                             | `9e23009`                       |
+| OpenAPI/Scalar/Postman | None               | `GET /openapi.json`, `GET /docs` (Scalar), `pnpm openapi:postman` generates `docs/api/postman_collection.json`, `openapi:gen` script, CI diff check | `45b073d`, `dcbbbe9`, `24786bc` |
+| API entry points       | None               | `apps/api/src/server.ts` (local/ECS), `src/index.ts` (Vercel zero-config), build/start/dev scripts                                                  | `7e91e19`                       |
+| Observability          | Config only        | Sentry + OTel init, `/metrics` (Prometheus) on the internal METRICS_PORT                                                                            | `7d2af88`                       |
+| Worker                 | Package logic only | `apps/api/src/worker.ts` (long-running), `src/worker-drain.ts` (GitHub Actions), `pnpm worker`, `pnpm worker:drain`                                 | `7d2af88`                       |
+| Free demo env          | Not documented     | `docs/free-tier.md`, `.github/workflows/jobs-drain.yml`                                                                                             | `eee6918`                       |
 
 ## Definition of done
 
@@ -173,13 +173,13 @@ close and were not re-run; current counts are in `docs/phase-4.md`.
 
 Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
 Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
-from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+from commits `8011d97` and `6c1748c`. Account-specific evidence (ids,
 timestamps) is kept outside the repo.
 
 - QStash delivers immediate jobs to `/jobs/run/:type`, which verifies the
   signature (`payments.reconcile`, `pdf.render`, `webhooks.deliver`).
   Found and fixed on the deployed api: the webhook handlers pushed jobs
-  after answering, and Vercel froze the function mid-publish (`fc6ba48`).
+  after answering, and Vercel froze the function mid-publish (`6c1748c`).
 - `worker:drain` from a local machine against Redis Cloud and Neon relays
   the pending outbox rows and runs the due jobs (0 remaining).
 - `pdf.render` stores a PDF in Supabase Storage through the S3 API and

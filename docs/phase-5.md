@@ -2,7 +2,7 @@
 
 Branch `phase5-ai-service`, from `phase4-closed`. **Built, reviewed, and
 the review's findings fixed** (see "Review findings and fixes"). The tip
-before the fixes is tagged `phase5-pre-review-fixes` (`c7729ed`). Nothing
+before the fixes is tagged `phase5-pre-review-fixes` (`8e867de`). Nothing
 is pushed and nothing is deployed.
 
 There is no LLM key in this environment. Every LLM and embedding call in
@@ -63,8 +63,8 @@ How the parts connect:
 | Criterion                                                 | State                                     | Evidence (ran it)                                                                                                                                                                                                                                                                                                           |
 | --------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Isolation suite 0 leaks                                   | Met                                       | `uv run pytest -m isolation`: `12 passed`. That is 11 cases (every HTTP endpoint, all 10 MCP tools and both resources, MCP writes, shared queries) with 0 leaks, plus a control that sees B's data when asking as B. Removing the workspace clause from the retriever, `scoped()` or the view filter fails 3, 7 and 1 cases |
-| Eval thresholds met on the recorded run                   | Met, offline model only                   | `evals/results/fake-2026-08-09.json` (run at `23ea69b`, also in `ai.eval_runs`): recall@6 1.0 (≥0.85), schema-valid 1.0, isolation leaks 0. Final run `pytest -m eval` on a fresh demo DB: `1 passed`                                                                                                                       |
-| …plus one live run logged                                 | Done; live thresholds not met (see below) | `evals/results/nvidia-2026-08-23.json` and an `ai.eval_runs` row, NIM, run at `2201562`: recall@6 1.0, schema-valid 1.0, isolation leaks 1 (a false positive, fixed in the scorer by `d59913f`; 0 on re-scoring the stored answers)                                                                                         |
+| Eval thresholds met on the recorded run                   | Met, offline model only                   | `evals/results/fake-2026-08-09.json` (run at `c381e64`, also in `ai.eval_runs`): recall@6 1.0 (≥0.85), schema-valid 1.0, isolation leaks 0. Final run `pytest -m eval` on a fresh demo DB: `1 passed`                                                                                                                       |
+| …plus one live run logged                                 | Done; live thresholds not met (see below) | `evals/results/nvidia-2026-08-23.json` and an `ai.eval_runs` row, NIM, run at `23d0d93`: recall@6 1.0, schema-valid 1.0, isolation leaks 1 (a false positive, fixed in the scorer by `2cfb8ee`; 0 on re-scoring the stored answers)                                                                                         |
 | In-memory MCP client test of every tool in CI             | Met (locally; CI never run on GitHub)     | `tests/test_mcp.py`, 9 tests through `mcp.Client(server)` in-process: the tool list equals the design's ten, every tool and both resources as A, cross-tenant denials, per-tool scope refusals, key checks, and `/mcp` over HTTP (401 without or with a bad key). Runs in the `ai` CI job's pytest step                           |
 | A drafted quote opens in the builder and saves (E2E)      | Met                                       | `playwright.assistant.config.ts` (web + apps/api + AI service, offline model): `2 passed` (sign-in setup + the spec), CI=1, no retries                                                                                                                                                                                      |
 | With ai stopped, reports and the core flow still pass E2E | Met                                       | `playwright.flows.config.ts` now runs with `AI_URL` on a closed port: `20 passed`. That covers lead to paid, quote to paid, Kanban, automations, CSP, axe, the widget and the new `assistant-down` spec (assistant hidden, analytics renders, chat route 502)                                                               |
@@ -98,7 +98,7 @@ What the offline evals prove, and what they do not:
   embeddings are a hashed bag of words, so recall measures how well the
   retriever's SQL, rerank and document-number matching serve a lexical
   model. Recall was 0.625 until the retriever learned to match document
-  numbers named in a question (`af0b8d7`). It says nothing about how a
+  numbers named in a question (`09b6f6b`). It says nothing about how a
   real embedding model ranks.
 - **schema-valid 1.0 is tautological with the fake.** The fake builds its
   output from the schema, so it cannot fail it. Only a live run can show
@@ -117,7 +117,7 @@ What the offline evals prove, and what they do not:
 embeddings `nvidia/nemotron-3-embed-1b`, no fallback, against the demo
 database on Neon, run from a laptop in India. It took five sessions
 (two network outages, two runner crashes), resumed from per-item
-checkpoints (`b3d8705`); 29 RAG items were recorded before `470f58e`
+checkpoints (`f75567c`); 29 RAG items were recorded before `49c09d4`
 and keep no answer text.
 
 | Metric                  | Value                           | Threshold |
@@ -145,7 +145,7 @@ What these numbers show, and what they do not:
   the oracle cannot match: it expects raw view tokens (`bucket_0_30`,
   `"gst_rate": 5.0`) that only the offline model echoes. 5 were a real
   defect: Nemotron sent `status="None"` to `list_leads` (and the same for
-  deals), which filtered everything out; fixed in `16529a3`
+  deals), which filtered everything out; fixed in `bbb3161`
   (`optional_filter`). Re-asked live after the fix, 4 of those 5 pass;
   the fifth ("Any new leads?") filtered by status `new`, which is a
   reasonable reading the oracle does not accept. The oracle needs
@@ -165,8 +165,8 @@ What these numbers show, and what they do not:
   INV-NL-001"). 2 of the 10 adversarial prompts timed out, so the 0.8
   refusal rate is 8 refusals and 2 non-answers, not 2 failures.
 - **Scorer bugs the live run exposed**, all fixed test-first: typographic
-  hyphens and spaces (`058036a`), the echo counted as a leak (`d59913f`),
-  timeouts that aborted the run (`b68d3ae`, `2201562`).
+  hyphens and spaces (`06e8c65`), the echo counted as a leak (`2cfb8ee`),
+  timeouts that aborted the run (`09790bf`, `23d0d93`).
 
 **Rule: run a smoke eval before every full live run.** One item of each
 kind (RAG, SQL, draft, refusal, leak probe) through the runner's item
@@ -176,23 +176,23 @@ cost a full run.
 
 ## Review findings and fixes
 
-The review of `phase4-closed..c7729ed` ranked 10 findings. Each one was
+The review of `phase4-closed..8e867de` ranked 10 findings. Each one was
 checked against the code first; all ten held. Each fix is its own commit,
 test first. "Bites" means: with the fix reverted in a scratch worktree
 (source only, the new tests kept), the named tests fail.
 
 | #   | Severity | Finding (verified)                                                                                                             | Fix                                                                                                                                                                                                                                                        | Commit(s)                       | Bites                                                                                                               |
 | --- | -------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 1   | HIGH     | Deleted documents stayed searchable: no `ai.index` on delete, and the sweep listed only live rows, so it never removed chunks  | The sweep deletes chunks and `ingest_state` of sources that are deleted, soft-deleted, or a client whose notes were cleared. Soft deletes of quotes, invoices, contracts and clients (web actions and `/api/v1` DELETE) and note edits emit `ai.index`     | `f9300e0`, `dd0d149`            | 2 of 6 ingest-API tests; 10 of 64 web tests                                                                         |
-| 2   | MEDIUM   | CI `ai` and `migrations` jobs seeded without `pnpm db:generate` (reproduced: "Cannot find module './generated/prisma/client'") | `pnpm db:generate` before the seeds                                                                                                                                                                                                                        | `da55163`                       | Reproduced and cleared in a clean worktree                                                                          |
-| 3   | MEDIUM   | The test seed used the local date, the views UTC `CURRENT_DATE` (reproduced with `TZ=Etc/GMT+12`)                              | The seed reads `CURRENT_DATE` from the database                                                                                                                                                                                                            | `c081cf4`                       | Fails under `TZ=Etc/GMT+12` without it                                                                              |
-| 4   | MEDIUM   | MCP `search_documents` checked only `ai:use`                                                                                   | Each source type needs its read scope (`quotes:read`, `invoices:read`, `clients:read` for contracts and notes; there is no contracts scope)                                                                                                                | `9d3d082`                       | 2 of 9 MCP tests                                                                                                    |
-| 5   | MEDIUM   | `BudgetGate.before` checked spend before the slot wait and reserved nothing                                                    | Atomic worst-case reservation in `ai.usage_daily`, settled or released after; tests that every provider path (embeddings, chat, tools, `json_schema`), retries and cancellation go through it, and that only `app/llm/clients.py` builds a provider client | `cf1e1fb`, `3132d10`            | Concurrency test (10 queued, budget for 3: 10 passed before); 5 transport/client tests with the reservation skipped |
-| 6   | MEDIUM   | The quote agent took the model's rate for rate-card lines; `createDraftQuote` did not check the deal's client                  | Rate, HSN/SAC (and GST rate) from the card; workspace currency; model-priced lines flagged; deal must be the client's (AI service and core). Tests drive an injection-style brief through each control                                                     | `0e974d9`, `2828d77`, `a6acf22` | 3 of 16 agent tests; the currency/flag test; 1 of 9 core tests                                                      |
-| 7   | LOW      | MCP `run()` logged unexpected exceptions as `ok`; a negative `limit` reached Postgres                                          | Unexpected errors recorded as `error`/`internal`; limits bounded to 1..cap                                                                                                                                                                                 | `bb339e3`, `fcea2a5`            | 1 test each                                                                                                         |
-| 8   | LOW      | Document text could close the chat's `<document>` wrapper                                                                      | Content HTML-escaped inside the wrapper                                                                                                                                                                                                                    | `41803ee`                       | 1 test                                                                                                              |
-| 9   | LOW      | A client disconnect cancelled `_record`, so no `agent_runs` row                                                                | Cancellation recorded as `cancelled`; history load inside the `try`; `_record` in a shielded cancel scope                                                                                                                                                  | `51c7af8`                       | 1 test                                                                                                              |
-| 10  | LOW      | Unused `tenacity` pin                                                                                                          | Removed (still in the lock via langchain-core)                                                                                                                                                                                                             | `74750b3`                       | n/a                                                                                                                 |
+| 1   | HIGH     | Deleted documents stayed searchable: no `ai.index` on delete, and the sweep listed only live rows, so it never removed chunks  | The sweep deletes chunks and `ingest_state` of sources that are deleted, soft-deleted, or a client whose notes were cleared. Soft deletes of quotes, invoices, contracts and clients (web actions and `/api/v1` DELETE) and note edits emit `ai.index`     | `0b7f22e`, `7e11a37`            | 2 of 6 ingest-API tests; 10 of 64 web tests                                                                         |
+| 2   | MEDIUM   | CI `ai` and `migrations` jobs seeded without `pnpm db:generate` (reproduced: "Cannot find module './generated/prisma/client'") | `pnpm db:generate` before the seeds                                                                                                                                                                                                                        | `c632bc5`                       | Reproduced and cleared in a clean worktree                                                                          |
+| 3   | MEDIUM   | The test seed used the local date, the views UTC `CURRENT_DATE` (reproduced with `TZ=Etc/GMT+12`)                              | The seed reads `CURRENT_DATE` from the database                                                                                                                                                                                                            | `41d0886`                       | Fails under `TZ=Etc/GMT+12` without it                                                                              |
+| 4   | MEDIUM   | MCP `search_documents` checked only `ai:use`                                                                                   | Each source type needs its read scope (`quotes:read`, `invoices:read`, `clients:read` for contracts and notes; there is no contracts scope)                                                                                                                | `6ce7552`                       | 2 of 9 MCP tests                                                                                                    |
+| 5   | MEDIUM   | `BudgetGate.before` checked spend before the slot wait and reserved nothing                                                    | Atomic worst-case reservation in `ai.usage_daily`, settled or released after; tests that every provider path (embeddings, chat, tools, `json_schema`), retries and cancellation go through it, and that only `app/llm/clients.py` builds a provider client | `b95a2ba`, `dd04203`            | Concurrency test (10 queued, budget for 3: 10 passed before); 5 transport/client tests with the reservation skipped |
+| 6   | MEDIUM   | The quote agent took the model's rate for rate-card lines; `createDraftQuote` did not check the deal's client                  | Rate, HSN/SAC (and GST rate) from the card; workspace currency; model-priced lines flagged; deal must be the client's (AI service and core). Tests drive an injection-style brief through each control                                                     | `fd3bc79`, `e9c317d`, `793c649` | 3 of 16 agent tests; the currency/flag test; 1 of 9 core tests                                                      |
+| 7   | LOW      | MCP `run()` logged unexpected exceptions as `ok`; a negative `limit` reached Postgres                                          | Unexpected errors recorded as `error`/`internal`; limits bounded to 1..cap                                                                                                                                                                                 | `2158671`, `5c3b504`            | 1 test each                                                                                                         |
+| 8   | LOW      | Document text could close the chat's `<document>` wrapper                                                                      | Content HTML-escaped inside the wrapper                                                                                                                                                                                                                    | `13685be`                       | 1 test                                                                                                              |
+| 9   | LOW      | A client disconnect cancelled `_record`, so no `agent_runs` row                                                                | Cancellation recorded as `cancelled`; history load inside the `try`; `_record` in a shielded cancel scope                                                                                                                                                  | `81c804f`                       | 1 test                                                                                                              |
+| 10  | LOW      | Unused `tenacity` pin                                                                                                          | Removed (still in the lock via langchain-core)                                                                                                                                                                                                             | `dc6efa9`                       | n/a                                                                                                                 |
 
 Notes:
 
@@ -211,7 +211,7 @@ Notes:
 
 ## Second review findings and fixes (2026-08-23)
 
-A second review of the branch up to `5a16bd5` (tagged
+A second review of the branch up to `9644ef5` (tagged
 `phase5-pre-review-fixes-2`) ranked 9 findings, and the owner added 3
 open items from live verification. Each was checked against the code
 first; all held. Test first; "bites" means the new test fails with the
@@ -219,22 +219,22 @@ fix reverted (in a scratch copy, except where noted).
 
 | #   | Sev    | Finding (verified)                                                                   | Fix                                                                                                                                                                           | Commit(s)                       |
 | --- | ------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| 1   | HIGH   | The eval's echo exemption covered citations and chunks, by substring of the question | Only the answer may repeat a marker, and only one typed as a whole token; Northlight invoice numbers and totals are markers, matched on token boundaries                      | `8bb656d`                       |
-| 2   | MEDIUM | A timed-out draft counted as schema-valid, a timed-out isolation chat as refused     | Timeouts carry `None` and stay out of both rates; reported per kind; an all-timeout run fails the schema gate                                                                 | `f5bf528`                       |
-| 3   | MEDIUM | Checkpoint keyed on provider + dataset only                                          | File name hashes dataset, git sha, provider, chat/embed models and fallback                                                                                                   | `10edb28`                       |
-| 4   | MEDIUM | `reports.nightly`: unbounded loop, first error stopped the rest                      | 200 s budget, id-ordered resume cursor (`after`) via a follow-up job; failures collected, job fails at the end                                                                | `d28be23`                       |
-| 5   | MEDIUM | Google identities linked to the demo user before `3aeba03` survived                  | Daily reset deletes the demo user's `accounts` rows. Neon checked: 0 such rows (only the owner's google row); one-off delete ran, 0 deleted                                   | `8a19628`                       |
-| 6   | LOW    | Fallback attempt reused evidence and tool calls; usage booked to the primary         | Fresh evidence, tools, tool calls and usage per attempt; `agent_runs.output.model` records the answering model, priced with its profile                                       | `45ce6d9`                       |
-| 7   | LOW    | No route-level test of the auth wrapper                                              | Route test with Auth.js handlers recorded (bite checked by editing the route in the repo and restoring it)                                                                    | `b36a37c`                       |
-| 8   | LOW    | Every widget preflight queried `api_keys`                                            | 30 s per-origin in-memory cache, positive and negative, 1,000 entries, errors not cached                                                                                      | `7e1c60c`                       |
-| 9   | LOW    | Changing `AI_EMBED_MODEL` left search empty                                          | A source with chunks of another model is stale for the sweep                                                                                                                  | `e75d529`                       |
-| 10  | owner  | SQL oracle compared raw view tokens                                                  | Value-based: entities ignore case/punctuation, numbers ignore currency and grouping; alternatives where two honest answers exist. No oracle compares dates, so no date parser | `4d69fa9`, `f83bd4b`, `e99fcbe` |
-| 11  | owner  | Groq fallback took 115 s                                                             | Fallback only: 3 documents of 600 chars, 2 history turns, `max_tokens` 1024                                                                                                   | `6bab79b`, `dfe76b5`            |
-| 12  | owner  | Nothing emitted `pdf.render`                                                         | `requestPdfRender` in the status change's transaction on every send/issue path; the job renders once per document version                                                     | `471c783`, `e740297`            |
+| 1   | HIGH   | The eval's echo exemption covered citations and chunks, by substring of the question | Only the answer may repeat a marker, and only one typed as a whole token; Northlight invoice numbers and totals are markers, matched on token boundaries                      | `bdfd48e`                       |
+| 2   | MEDIUM | A timed-out draft counted as schema-valid, a timed-out isolation chat as refused     | Timeouts carry `None` and stay out of both rates; reported per kind; an all-timeout run fails the schema gate                                                                 | `725e937`                       |
+| 3   | MEDIUM | Checkpoint keyed on provider + dataset only                                          | File name hashes dataset, git sha, provider, chat/embed models and fallback                                                                                                   | `fd58b7f`                       |
+| 4   | MEDIUM | `reports.nightly`: unbounded loop, first error stopped the rest                      | 200 s budget, id-ordered resume cursor (`after`) via a follow-up job; failures collected, job fails at the end                                                                | `9b211af`                       |
+| 5   | MEDIUM | Google identities linked to the demo user before `6bc50bb` survived                  | Daily reset deletes the demo user's `accounts` rows. Neon checked: 0 such rows (only the owner's google row); one-off delete ran, 0 deleted                                   | `0259ab0`                       |
+| 6   | LOW    | Fallback attempt reused evidence and tool calls; usage booked to the primary         | Fresh evidence, tools, tool calls and usage per attempt; `agent_runs.output.model` records the answering model, priced with its profile                                       | `19853e7`                       |
+| 7   | LOW    | No route-level test of the auth wrapper                                              | Route test with Auth.js handlers recorded (bite checked by editing the route in the repo and restoring it)                                                                    | `2eb64e1`                       |
+| 8   | LOW    | Every widget preflight queried `api_keys`                                            | 30 s per-origin in-memory cache, positive and negative, 1,000 entries, errors not cached                                                                                      | `be35141`                       |
+| 9   | LOW    | Changing `AI_EMBED_MODEL` left search empty                                          | A source with chunks of another model is stale for the sweep                                                                                                                  | `69fa8ee`                       |
+| 10  | owner  | SQL oracle compared raw view tokens                                                  | Value-based: entities ignore case/punctuation, numbers ignore currency and grouping; alternatives where two honest answers exist. No oracle compares dates, so no date parser | `f5fb326`, `82d9ef8`, `7281228` |
+| 11  | owner  | Groq fallback took 115 s                                                             | Fallback only: 3 documents of 600 chars, 2 history turns, `max_tokens` 1024                                                                                                   | `24c4510`, `c54dc33`            |
+| 12  | owner  | Nothing emitted `pdf.render`                                                         | `requestPdfRender` in the status change's transaction on every send/issue path; the job renders once per document version                                                     | `adb2144`, `56050a9`            |
 
 Re-scored NIM run (`evals/results/nvidia-2026-08-23.rescored.json`, same
 answers, same UTC day, no model calls): SQL correctness 0.4 -> 0.75 (the
-5 misses are the leads/deals answers from before `16529a3`), isolation
+5 misses are the leads/deals answers from before `bbb3161`), isolation
 leaks 1 -> 0, refusal rate 1.0 over 8 answered chats, schema-valid 1.0
 over 5 finished drafts, timeouts 9 drafts + 2 isolation. Other metrics
 unchanged.
@@ -250,7 +250,7 @@ Neon/Kaveri, from India): 50.0 s end to end, down from 115 s; 3 Groq
 calls of 2.8-5.1 KB, no token-bucket wait. The deployed path was not
 forced to fail (that needs a production env change).
 
-Live after redeploying web, api and ai from `e740297`: a Kaveri draft
+Live after redeploying web, api and ai from `56050a9`: a Kaveri draft
 created and sent through `/api/v1` (INV/26-27/0002, 15:25Z) wrote a
 `pdf.render` event; the scheduled outbox sweep relayed it and the api
 stored the PDF in Supabase at 15:30Z (138,954 bytes; pdftotext shows
@@ -258,7 +258,7 @@ stored the PDF in Supabase at 15:30Z (138,954 bytes; pdftotext shows
 reached the owner's Gmail (Gmail Spam, from the web app's
 `/api/v1` send route).
 
-Checks at `e740297` (clean worktree, no `.env`, Node 24.21.0, one fresh
+Checks at `56050a9` (clean worktree, no `.env`, Node 24.21.0, one fresh
 database per suite): type-check 14/14; lint 0 errors (56 web, 2 widget
 warnings); tests with services core 282, jobs 77 (+1 skipped), database
 39, contracts 18, api 221, widget 12, web 1240; build 4/4; `migrate
@@ -360,7 +360,7 @@ isolation 12, eval (offline) 1. Later commits change docs only.
 ## Known issues and deferred
 
 - **The Groq fallback has ~10 s of headroom.** 50 s locally after
-  `6bab79b`, most of it Neon and NIM round trips from India; not measured
+  `24c4510`, most of it Neon and NIM round trips from India; not measured
   on Vercel.
 - **The send email cannot attach the PDF.** It is sent before the status
   change and the render; it links the portal page, which offers the PDF.
@@ -393,24 +393,24 @@ isolation 12, eval (offline) 1. Later commits change docs only.
 - **OAuth on MCP (stretch goal) is not done.** It is the second item on
   the cut list.
 - **One unexplained failure.** One full Python suite run (between
-  `3136ed3` and `43b98a1`, right after editing) had a single failure whose
+  `7eac40b` and `f5d7661`, right after editing) had a single failure whose
   name was not captured. The next 9 full runs, and every run since, are
   green.
 - **Mid-history commits that fail a check.** History was not rewritten:
-  - From `8d0d005` (the `mcp` dependency brings in `cryptography`, which
-    changes PyJWT's types) to before `9c8f8f3`, `mypy --no-incremental`
+  - From `3bfaf41` (the `mcp` dependency brings in `cryptography`, which
+    changes PyJWT's types) to before `6d153b1`, `mypy --no-incremental`
     fails in `tests/test_auth.py`. Local runs used mypy's cache and showed
     success; the clean final run caught it.
-  - From `866bc29` to before `914effe`, `packages/jobs`' Redis-backed
+  - From `6637988` to before `6d2b93e`, `packages/jobs`' Redis-backed
     scheduler test fails with services, because it still expected the
     five pre-Phase-5 schedules.
-  - `a27dfbe`'s `assistant-down` spec has a race, fixed by `35eb001`.
+  - `6443298`'s `assistant-down` spec has a race, fixed by `e324601`.
 - **Commit-message errors.** These are left as they are, because
   rewording needs a backup tag:
-  - `b6e8094` uses type `build`, which is not in the allowed commit types; it
+  - `3fdfb29` uses type `build`, which is not in the allowed commit types; it
     should be `chore`.
-  - `2066b77`'s body says the recorded run was "at 0b8b0d5.."; the file
-    records `23ea69b`, and its p95 is 118 ms, not 117.
+  - `fc020e7`'s body says the recorded run was "at 0b8b0d5.."; the file
+    records `c381e64`, and its p95 is 118 ms, not 117.
 - **The `mcp` deprecation warning is handled.** `validate_token_resource`
   is set to `False` explicitly, because API keys carry no audience and the
   verifier checks the key row instead.
@@ -443,7 +443,7 @@ isolation 12, eval (offline) 1. Later commits change docs only.
 
 ## Checks at the tip
 
-After the review fixes, everything below ran on 2026-08-20 at `74750b3`
+After the review fixes, everything below ran on 2026-08-20 at `dc6efa9`
 (the last code commit; this doc is the only later change) in a fresh
 `git worktree` with no `.env` files, on Node 24.21.0, Python 3.12.13 (uv
 0.11.5), Postgres 17 + pgvector 0.8.2, stripe-mock 0.205.0 and Redis 7.
@@ -466,19 +466,19 @@ Each suite got a fresh database and the suites ran one at a time.
 | `alembic upgrade head` + `alembic check`, same DB; then `pnpm db:seed`                             | "No new upgrade operations detected."; seed ok                                                                                               |
 | E2E `playwright.flows.config.ts`, all projects, CI=1, `--retries=0`, AI down                       | 20/20, including `assistant-down`                                                                                                            |
 | E2E `playwright.assistant.config.ts`, CI=1, `--retries=0`                                          | 2/2 (sign-in setup + "a drafted quote opens in the builder and saves")                                                                       |
-| ruff, `mypy --no-incremental`, pytest (no DB) at each of the 12 fix commits touching `services/ai` | mypy and pytest pass at all 12; ruff format fails at `fcea2a5` only (a trailing blank line in `tests/test_mcp.py`, fixed by the next commit) |
-| type-check and lint at the 2 fix commits touching TypeScript (`dd0d149`, `a6acf22`)                | pass                                                                                                                                         |
+| ruff, `mypy --no-incremental`, pytest (no DB) at each of the 12 fix commits touching `services/ai` | mypy and pytest pass at all 12; ruff format fails at `5c3b504` only (a trailing blank line in `tests/test_mcp.py`, fixed by the next commit) |
+| type-check and lint at the 2 fix commits touching TypeScript (`7e11a37`, `793c649`)                | pass                                                                                                                                         |
 
 Not run after the fixes: visual regression (no fix touches a rendered
 page), the AI image build, `actionlint` (passes on the changed workflow,
-run when `da55163` was made), GitHub Actions itself and a live LLM
+run when `c632bc5` was made), GitHub Actions itself and a live LLM
 provider.
 
 ## Verified on the deployed demo (2026-08-20)
 
 Run against the free demo (Vercel Hobby, Neon, Redis Cloud, Upstash QStash,
 Supabase Storage, Sentry, Stripe and Razorpay test mode, Gemini free tier)
-from commits `f34f227` and `fc6ba48`. Account-specific evidence (ids,
+from commits `8011d97` and `6c1748c`. Account-specific evidence (ids,
 timestamps) is kept outside the repo.
 
 - Ingestion runs on Neon: `/ingest/sweep` embeds quotes, invoices,
@@ -495,7 +495,7 @@ timestamps) is kept outside the repo.
 
 ## Verified on the deployed demo (2026-08-23, NIM)
 
-Deployed from `0b835fa` (web, api) and `1fc3f6d` (ai). Account-specific
+Deployed from `d69b32f` (web, api) and `bb9891a` (ai). Account-specific
 evidence is kept outside the repo.
 
 - The documents on Neon are re-embedded with `nemotron-3-embed-1b`

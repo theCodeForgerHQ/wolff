@@ -1,6 +1,6 @@
 # Phase 1 baseline
 
-Measured on 2026-07-16 on branch `phase0-baseline` (HEAD `a1f6f4d`), before any
+Measured on 2026-07-16 on branch `phase0-baseline` (HEAD `1cfdd44`), before any
 Phase 1 upgrade. Machine: macOS 15 (Darwin 24.6), Node 26.6.0 (the project
 targets Node 24 via `.nvmrc`), pnpm 9.15.0, Postgres 16.15 in Docker.
 
@@ -92,7 +92,7 @@ DATABASE_URL=… pnpm --filter @wolff/web exec playwright test -c playwright.vis
 3. **Dashboard hydration mismatch.** React error #418 (text mismatch) on
    `/dashboard` raises the global "An unexpected error occurred." toast.
    Cause: Recent Activity's "N seconds ago" text differs between server
-   and browser. Fixed in `3557318` (Phase 4 re-review).
+   and browser. Fixed in `2a21fd7` (Phase 4 re-review).
 4. **Schema drift** (above).
 
 ## Deferred

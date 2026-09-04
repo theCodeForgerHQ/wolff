@@ -1,22 +1,22 @@
 # Phase 6: Operations (backups, rollback, alerts, runbook)
 
-Branch `phase6-operations` from tag `phase6b-closed` (`1071935`). Nothing pushed.
+Branch `phase6-operations` from tag `phase6b-closed` (`1c548af`). Nothing pushed.
 Reviewed; the findings and their fixes are in "Review findings
-and fixes" at the end. Pre-fix tag `phase6-pre-review-fixes` (`0bb2e5a`).
+and fixes" at the end. Pre-fix tag `phase6-pre-review-fixes` (`6ca9d7a`).
 
 ## Commits
 
 | Commit               | What                                                                          |
 | -------------------- | ----------------------------------------------------------------------------- |
-| `1223531`            | fix(ai): answer HEAD on /healthz (the "wolff-ai down" false alarm)            |
-| `02ceec1`            | feat(jobs): logical database export, restore and backup pruning               |
-| `ecbe447`            | feat(jobs): S3 backup store with list, get and delete                         |
-| `98d20f6`            | feat(jobs): nightly db.backup job on a QStash schedule                        |
-| `9317124`            | feat(api): backup:restore script with per-table count comparison              |
-| `bb5d2e5`            | feat(ops): one-command deploy with smoke tests and automatic rollback         |
-| `3c43eda`            | feat(ops): Sentry alert workflows for new, regressed and spiking issues       |
-| `0518e01`            | fix(ops): promote the new deployment when Vercel did not (found in the drill) |
-| `2c2ebf5`, `d2d7c82` | docs(ops): runbook, then the other developer's gaps                               |
+| `7646fcc`            | fix(ai): answer HEAD on /healthz (the "wolff-ai down" false alarm)            |
+| `8ea32b6`            | feat(jobs): logical database export, restore and backup pruning               |
+| `8c3f942`            | feat(jobs): S3 backup store with list, get and delete                         |
+| `db718fc`            | feat(jobs): nightly db.backup job on a QStash schedule                        |
+| `598bd9f`            | feat(api): backup:restore script with per-table count comparison              |
+| `0777f05`            | feat(ops): one-command deploy with smoke tests and automatic rollback         |
+| `8ed37ec`            | feat(ops): Sentry alert workflows for new, regressed and spiking issues       |
+| `d4e5b98`            | fix(ops): promote the new deployment when Vercel did not (found in the drill) |
+| `083900b`, `3a84b25` | docs(ops): runbook, then the other developer's gaps                               |
 
 ## Backup design (deviation from "pg_dump")
 
@@ -59,7 +59,7 @@ the plan's text "a scratch Neon branch", which is what was done.
   invoices 67/67, clients 23/23, ai.document_chunks 116/116, md5 of invoice
   ids+totals equal (`c16524ac...` both).
 - Second-operator repeat: 65 tables, 1,632 rows, 0 mismatches, restore 58 s.
-- Repeat after the review fixes (2026-08-30 02:04-02:08 UTC, api `c1f0aea`):
+- Repeat after the review fixes (2026-08-30 02:04-02:08 UTC, api `e91463b`):
   QStash publish 02:04:50Z, DELIVERED 200 2.1 s after creation; object
   `backups/db/2026-08-30.ndjson.gz.enc`, **150,077 bytes** (was 1,195,935: the
   embeddings are no longer in it), `application/octet-stream`, starts with the
@@ -97,9 +97,9 @@ Exit 1; `/readyz` 200 afterwards. Broken production for 24 s.
 
 Finding: after the rollback the project had `autoAssignCustomDomains=false`, so
 the next `--prod` deploy would not take the domain and the smoke test would
-have tested the old deployment. Fixed in `0518e01` (test first: red, then
+have tested the old deployment. Fixed in `d4e5b98` (test first: red, then
 green); the restoring deploy of the tip then ran `api.promote` 5.2 s, smoke
-1.8 s, and the flag is true again. Full three-project deploy of `bb5d2e5`:
+1.8 s, and the flag is true again. Full three-project deploy of `0777f05`:
 3 m 32 s, all smoke tests passed.
 
 ### An alert fires and reaches the owner's email — met
@@ -119,23 +119,23 @@ regressed issue` (1346056) `lastTriggered` 01:02:22Z after a
   arrived in Gmail at 01:30 UTC (two copies).
 - False alarm fix: the cause was not a cold start. UptimeRobot checks with HEAD,
   and FastAPI's GET route answered 405 (`curl -I`: ai 405, api 200). Fixed in
-  `1223531`; monitor timeout unchanged; warm `/healthz` 0.7-1.0 s.
+  `7646fcc`; monitor timeout unchanged; warm `/healthz` 0.7-1.0 s.
 
 ### The runbook followed end to end by the other developer — met for operations, not for setup from zero
 
 The developer who had not written the runbook ran deploy (106 s, exit 0), backup,
 restore (0 mismatches), PITR, the Sentry test, the alert script (updated, no
 duplicates) and on-call checks: all passed. It reported 14 text gaps, fixed in
-`d2d7c82`. Setup from zero and secret rotation were reviewed against the live
+`3a84b25`. Setup from zero and secret rotation were reviewed against the live
 projects but not executed (would need new accounts / would rotate live secrets).
 
-## Checks (Node 24.21.0, at `0518e01`; later commits are docs only)
+## Checks (Node 24.21.0, at `d4e5b98`; later commits are docs only)
 
 - type-check: 14/14 tasks; lint: 0 errors (56 warnings, web, pre-existing); build 4/4.
 - jobs with Postgres + Redis + S3Mock: 94 tests, 93 passed + 1 skipped after the
   scheduler-list update; api: 437 tests (this line said 430 before the review;
-  437 is the count at `0bb2e5a`). The api failures seen in the full run came from
-  the packages sharing one test database; fixed in `001e372` (see the review
+  437 is the count at `6ca9d7a`). The api failures seen in the full run came from
+  the packages sharing one test database; fixed in `bb8fb59` (see the review
   section). The local DB had to be migrated first (Docker was reset on 2026-08-30).
 - deploy tests 15/15 (`src/deploy`); ai pytest 143 passed, 92 skipped (DB tests
   skipped: no AI test DB env); ruff, format, mypy clean.
@@ -149,8 +149,8 @@ projects but not executed (would need new accounts / would rotate live secrets).
   `secrets.env`).
 - QStash: 8 schedules (new `wolff-backup`, `0 21 * * *`).
 - Sentry workflows 1346056, 1346057 (email to the org owner).
-- Deployed: api, ai, web from `bb5d2e5`; api again from `0518e01`; api again
-  from `c1f0aea` with the fixed deploy script (review fixes; current).
+- Deployed: api, ai, web from `0777f05`; api again from `d4e5b98`; api again
+  from `e91463b` with the fixed deploy script (review fixes; current).
 - Neon: 3 drill branches + 2 by the second operator created and deleted; only `main`.
 
 ## Owner items
@@ -178,27 +178,27 @@ were reverted one at a time in a `/tmp` worktree to confirm their tests go red
 
 | #   | Finding                                                                                     | Fix                                                                                                                                                                                                                |
 | --- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | HIGH: only `deploy()` errors were caught; promote/alias/rollback errors escaped mid-release | `f232d2c` every step's error fails the release, each rollback in its own try/catch (`rollbackFailed`); `9e1fc28` no parsed deployment URL fails the deploy                                                         |
-| 2   | HIGH: restore into a migrated DB failed on `_prisma_migrations` / `ai.alembic_version`      | `290aab3` both are left out of export and restore; runbook no longer empties them. The claim in `02ceec1` ("or a freshly migrated database") was false until this fix                                              |
-| 3   | MEDIUM: packages ran in parallel against one test DB                                        | `001e372` per-package copy `<base>_t_<pkg>` via a vitest globalSetup. The 3 green runs also needed `c1f0aea` (new multipart tests' timeout) and `74badb0` (Redis-loss test waits independent of the relay backoff) |
-| 4   | MEDIUM: LIMIT/OFFSET, three in-memory copies, embeddings in the file                        | `7409f0f` keyset paging; `fcfbb2c` streamed gzip into a multipart upload, streamed restore (format 2); `c907199` RAG tables excluded, rebuilt by `ai.sweep` (runbook 4.2)                                          |
-| 5   | MEDIUM: no check that promote moved the alias                                               | `5b4275c` alias re-read after promote; mismatch fails and rolls back                                                                                                                                               |
-| 6   | MEDIUM: backups unencrypted                                                                 | `3dd48f5` AES-256-GCM with `BACKUP_ENCRYPTION_KEY` (set on wolff-api; in the owner's `secrets.env`); no separate storage key (Supabase S3 keys are project-wide, so it would not narrow access)                    |
-| 7   | LOW: jobs-drain lacked the backup env                                                       | `8c15e56`                                                                                                                                                                                                          |
-| 8   | LOW: unknown project name deployed nothing and exited 0                                     | `006a40d` exits 2 with the valid names                                                                                                                                                                             |
-| 9   | LOW: wrong test counts, personal addresses in docs                                          | this doc: api 437 at `0bb2e5a`, ai 234 passed + 1 skipped with the AI test DB (143 + 92 skipped without it); addresses replaced in phase-5 and phase-6 docs                                                        |
+| 1   | HIGH: only `deploy()` errors were caught; promote/alias/rollback errors escaped mid-release | `6ea403b` every step's error fails the release, each rollback in its own try/catch (`rollbackFailed`); `9b586a6` no parsed deployment URL fails the deploy                                                         |
+| 2   | HIGH: restore into a migrated DB failed on `_prisma_migrations` / `ai.alembic_version`      | `6e1c5c6` both are left out of export and restore; runbook no longer empties them. The claim in `8ea32b6` ("or a freshly migrated database") was false until this fix                                              |
+| 3   | MEDIUM: packages ran in parallel against one test DB                                        | `bb8fb59` per-package copy `<base>_t_<pkg>` via a vitest globalSetup. The 3 green runs also needed `e91463b` (new multipart tests' timeout) and `e54cd5c` (Redis-loss test waits independent of the relay backoff) |
+| 4   | MEDIUM: LIMIT/OFFSET, three in-memory copies, embeddings in the file                        | `ced3fb2` keyset paging; `910ceec` streamed gzip into a multipart upload, streamed restore (format 2); `5411f86` RAG tables excluded, rebuilt by `ai.sweep` (runbook 4.2)                                          |
+| 5   | MEDIUM: no check that promote moved the alias                                               | `023f64d` alias re-read after promote; mismatch fails and rolls back                                                                                                                                               |
+| 6   | MEDIUM: backups unencrypted                                                                 | `fc1ee55` AES-256-GCM with `BACKUP_ENCRYPTION_KEY` (set on wolff-api; in the owner's `secrets.env`); no separate storage key (Supabase S3 keys are project-wide, so it would not narrow access)                    |
+| 7   | LOW: jobs-drain lacked the backup env                                                       | `f855911`                                                                                                                                                                                                          |
+| 8   | LOW: unknown project name deployed nothing and exited 0                                     | `f476893` exits 2 with the valid names                                                                                                                                                                             |
+| 9   | LOW: wrong test counts, personal addresses in docs                                          | this doc: api 437 at `6ca9d7a`, ai 234 passed + 1 skipped with the AI test DB (143 + 92 skipped without it); addresses replaced in phase-5 and phase-6 docs                                                        |
 
 Measured on the live demo: backup 1,195,935 → 150,077 bytes; QStash had
 the job's 200 2.1 s after the message was created; restore of the encrypted file 80.8 s,
 0 mismatches (details under the restore criterion). Redeployed api with the
-fixed script: `scripts/deploy.sh HEAD api` at `c1f0aea`, deploy 92.6 s,
+fixed script: `scripts/deploy.sh HEAD api` at `e91463b`, deploy 92.6 s,
 smoke 2.1 s, exit 0.
 
 Process note: two guard checks (the deploy URL parser, the test-DB config)
 were run by swapping a file in the repo and restoring it, not in a `/tmp` copy
 as required; `git diff` was clean afterwards.
 
-### Checks at `74badb0` (Node 24.21.0, clean worktree, no `.env` files)
+### Checks at `e54cd5c` (Node 24.21.0, clean worktree, no `.env` files)
 
 | Check                                          | Result                                                                                                                         |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -211,6 +211,6 @@ as required; `git diff` was clean afterwards.
 | ai: ruff, ruff format, mypy                    | clean; 81 files formatted; mypy 77 files                                                                                       |
 | ai: pytest with the AI test DB                 | 234 passed, 1 skipped                                                                                                          |
 
-Before the fix, at `0bb2e5a`, the same root run passed once and failed once
+Before the fix, at `6ca9d7a`, the same root run passed once and failed once
 (jobs Stripe test timed out at 5.1 s while the other packages shared its DB).
 E2E and visual suites were not rerun: nothing they cover changed.
