@@ -5,6 +5,7 @@ import { randomBytes, createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
+import { hasRole } from '@/lib/workspace/roles';
 import { logger } from '@/lib/logger';
 import type {
   BusinessProfileData,
@@ -61,7 +62,7 @@ export async function updateWorkspaceName(name: string): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
   // HIGH #10: Only owner/admin can rename workspace
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins can rename the workspace');
   }
 
@@ -108,7 +109,7 @@ export async function getBusinessProfile(): Promise<BusinessProfileData | null> 
 export async function updateBusinessProfile(input: UpdateBusinessProfileInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update business profile');
   }
 
@@ -163,7 +164,7 @@ export async function updateBusinessProfile(input: UpdateBusinessProfileInput): 
 // Update business logo
 export async function updateBusinessLogo(logoUrl: string | null): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update business logo');
   }
 
@@ -216,7 +217,7 @@ export async function getEmailSettings(): Promise<EmailSettingsData | null> {
 // Update email settings
 export async function updateEmailSettings(input: UpdateEmailSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update email settings');
   }
 
@@ -279,7 +280,7 @@ export async function getBrandingSettings(): Promise<BrandingSettingsData | null
 // Update branding settings
 export async function updateBrandingSettings(input: UpdateBrandingSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update branding settings');
   }
 
@@ -350,7 +351,7 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
 // Update payment settings
 export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can modify payment settings');
   }
 

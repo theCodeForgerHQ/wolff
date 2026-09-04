@@ -22,7 +22,7 @@ describe('assistant routes', () => {
     vi.stubEnv('AI_URL', 'http://ai.test/');
     vi.stubEnv('SVC_JWT_SECRET_WEB', SECRET);
     vi.stubGlobal('fetch', fetchMock);
-    workspace.mockResolvedValue({ userId: 'u1', workspaceId: 'ws1', role: 'editor' });
+    workspace.mockResolvedValue({ userId: 'u1', workspaceId: 'ws1', role: 'member' });
     resetAiHealthCache();
   });
 
