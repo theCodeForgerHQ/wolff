@@ -139,7 +139,7 @@ export async function listAutomations(ctx: CoreContext, query: ListAutomationsQu
     }),
     ctx.db.automation.count({ where: { workspaceId: ctx.workspaceId } }),
   ]);
-  const page = toCursorPage(items, limit + 1);
+  const page = toCursorPage(items, limit);
   return { ...page, meta: { ...page.meta, total } };
 }
 
@@ -165,7 +165,7 @@ export async function listAutomationRuns(ctx: CoreContext, query: ListAutomation
     }),
     ctx.db.automationRun.count({ where: countWhere }),
   ]);
-  const page = toCursorPage(items, limit + 1);
+  const page = toCursorPage(items, limit);
   return { ...page, meta: { ...page.meta, total } };
 }
 
