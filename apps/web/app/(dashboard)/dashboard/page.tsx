@@ -50,14 +50,14 @@ async function DashboardContent() {
       <AnalyticsSection revenueData={data.revenueData} currency={currency} />
 
       {/* CRM / GST / Aging summary row */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <PaymentAgingChart data={data.paymentAging} className="lg:col-span-1" />
         <GstSummaryCard data={data.gstSummary} currency={currency} />
         <PipelineSummaryCard data={data.pipelineSummary} currency={currency} />
       </div>
 
       {/* Activity + Recent Items (2-column layout) */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-2">
           <RecentActivity activities={data.recentActivity} currency={currency} />
         </div>
@@ -84,14 +84,14 @@ function DashboardSkeleton() {
       <Skeleton className="h-[350px]" />
 
       {/* CRM / GST / Aging summary row skeleton */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Skeleton className="h-80" />
         <Skeleton className="h-80" />
         <Skeleton className="h-80" />
       </div>
 
       {/* Activity + Recent Items Skeleton */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-2">
           <Skeleton className="h-96" />
         </div>
