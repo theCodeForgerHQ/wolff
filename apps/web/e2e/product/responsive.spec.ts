@@ -21,6 +21,7 @@ const PAGES = [
   '/leads',
   '/deals',
   '/automations',
+  '/settings',
 ];
 
 for (const path of PAGES) {
