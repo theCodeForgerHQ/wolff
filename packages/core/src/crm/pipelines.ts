@@ -114,6 +114,15 @@ export async function replacePipelineStages(
     await tx.stage.deleteMany({
       where: { pipelineId, workspaceId, id: { notIn: keepIds } },
     });
+    // Positions are unique per pipeline, so updating one stage at a time
+    // would collide when two swap. Park the kept stages on free negative
+    // positions first; the loop below gives each its final one.
+    for (const [index, id] of keepIds.entries()) {
+      await tx.stage.update({
+        where: { id, pipelineId, workspaceId },
+        data: { position: -(index + 1) },
+      });
+    }
 
     for (const s of stages) {
       if (s.id) {

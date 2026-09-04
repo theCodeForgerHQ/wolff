@@ -372,31 +372,38 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
     });
     const emailSent = result.outcome === 'sent';
 
-    // The status changes only when the email went out.
+    // The status changes only when the email went out, and only from the
+    // status read above: of two sends of one draft, one issues the invoice
+    // (PDF render, `sent` event); the other finds it already sent and
+    // records nothing. The email itself is deduplicated by the provider.
+    let won = false;
     if (emailSent) {
       const outbox = await db.$transaction(async (tx) => {
-        await tx.invoice.update({
-          where: { id, workspaceId },
+        const { count } = await tx.invoice.updateMany({
+          where: { id, workspaceId, status: invoice.status },
           data: { status: 'sent', sentAt: new Date() },
         });
+        won = count === 1;
         // Issued now: render its PDF (a resend changes nothing the client sees).
-        return invoice.status === 'draft'
+        return won && invoice.status === 'draft'
           ? requestPdfRender(tx, { workspaceId, documentType: 'invoice', documentId: id })
           : null;
       });
       if (outbox) await deps.onOutboxEvents?.([outbox.id]);
     }
 
-    await db.invoiceEvent
-      .create({
-        data: {
-          invoiceId: id,
-          eventType: emailSent ? 'sent' : 'send_failed',
-          actorType: 'system',
-          metadata: { via: 'api', emailSent },
-        },
-      })
-      .catch(() => {});
+    if (won || !emailSent) {
+      await db.invoiceEvent
+        .create({
+          data: {
+            invoiceId: id,
+            eventType: emailSent ? 'sent' : 'send_failed',
+            actorType: 'system',
+            metadata: { via: 'api', emailSent },
+          },
+        })
+        .catch(() => {});
+    }
 
     if (result.outcome === 'limited') {
       res.set('Retry-After', String(result.retryAfterS));
