@@ -59,5 +59,10 @@
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "@prometheus-io/client": "^0.16.1",
     "isomorphic-dompurify": "^3.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "dompurify": ">=3.4.17"
+    }
   }
 }
