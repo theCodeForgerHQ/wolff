@@ -6,6 +6,8 @@ import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { validateRequestOrigin } from '@/lib/csrf';
 
+const SENT = { success: true, message: 'Verification email sent' };
+
 export async function POST(request: Request) {
   try {
     // Bug #50: CSRF origin validation
@@ -21,16 +23,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Rate limit by email to prevent abuse
-    const rateLimitResult = await checkRateLimit(`resend-verification:${email}`, {
-      limit: 3,
-      windowMs: 15 * 60 * 1000,
-    });
-    if (rateLimitResult.limited) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
-      );
+    // Rate limit by IP (shared networks get some room), then by address so one
+    // inbox cannot be flooded.
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const limits: [string, number][] = [
+      [`resend-verification:ip:${clientIp}`, 10],
+      [`resend-verification:${email}`, 3],
+    ];
+    for (const [key, limit] of limits) {
+      const rateLimitResult = await checkRateLimit(key, { limit, windowMs: 15 * 60 * 1000 });
+      if (rateLimitResult.limited) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { status: 429, headers: getRateLimitHeaders(rateLimitResult) }
+        );
+      }
     }
 
     const user = await prisma.user.findUnique({
@@ -38,12 +45,11 @@ export async function POST(request: Request) {
       select: { id: true, email: true, name: true, emailVerifiedAt: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    if (user.emailVerifiedAt) {
-      return NextResponse.json({ error: 'Email is already verified' }, { status: 400 });
+    // The route is unauthenticated, so an unknown or already verified address
+    // gets the same answer as a real send: it must not reveal which accounts
+    // exist.
+    if (!user || user.emailVerifiedAt) {
+      return NextResponse.json(SENT);
     }
 
     // Delete existing unused tokens for this user
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to send verification email' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: 'Verification email sent' });
+    return NextResponse.json(SENT);
   } catch (error) {
     logger.error({ err: error }, 'Resend verification error');
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
