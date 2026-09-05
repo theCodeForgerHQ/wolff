@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { hasRole } from '@/lib/workspace/roles';
+import { webhookUrlProblem } from '@/lib/webhooks/url-policy';
 import { logger } from '@/lib/logger';
 import type {
   BusinessProfileData,
@@ -1685,16 +1686,9 @@ export async function createWebhook(input: {
     throw new Error('Viewers cannot create webhooks');
   }
 
-  // Bug #91: Validate URL scheme is http: or https: only
-  try {
-    const parsed = new URL(input.url.trim());
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error('Webhook URL must use http or https protocol');
-    }
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('protocol')) throw e;
-    throw new Error('Webhook URL must be a valid http or https URL');
-  }
+  // Bug #91: only http(s), and never a private address
+  const urlProblem = webhookUrlProblem(input.url);
+  if (urlProblem) throw new Error(urlProblem);
 
   // Generate a signing secret if none provided
   const secret = input.secret || `whsec_${randomBytes(24).toString('hex')}`;
@@ -1739,15 +1733,8 @@ export async function updateWebhook(input: {
 
   // Bug #91: Validate URL scheme on update too
   if (input.url !== undefined) {
-    try {
-      const parsed = new URL(input.url.trim());
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error('Webhook URL must use http or https protocol');
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('protocol')) throw e;
-      throw new Error('Webhook URL must be a valid http or https URL');
-    }
+    const urlProblem = webhookUrlProblem(input.url);
+    if (urlProblem) throw new Error(urlProblem);
   }
 
   const data: Record<string, unknown> = {};

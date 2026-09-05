@@ -1,6 +1,7 @@
 'use server';
 
 import { randomBytes } from 'crypto';
+import { webhookUrlProblem } from './url-policy';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -38,13 +39,9 @@ export async function createWebhookEndpoint(data: { url: string; events: string[
   }
 
   // Validate URL
-  try {
-    const parsed = new URL(data.url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return { success: false, error: 'URL must use HTTP or HTTPS protocol' };
-    }
-  } catch {
-    return { success: false, error: 'Invalid URL' };
+  const urlProblem = webhookUrlProblem(data.url);
+  if (urlProblem) {
+    return { success: false, error: urlProblem };
   }
 
   // Validate events
@@ -98,13 +95,9 @@ export async function updateWebhookEndpoint(
 
   // Validate URL if provided
   if (data.url) {
-    try {
-      const parsed = new URL(data.url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        return { success: false, error: 'URL must use HTTP or HTTPS protocol' };
-      }
-    } catch {
-      return { success: false, error: 'Invalid URL' };
+    const urlProblem = webhookUrlProblem(data.url);
+    if (urlProblem) {
+      return { success: false, error: urlProblem };
     }
   }
 

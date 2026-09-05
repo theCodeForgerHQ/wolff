@@ -4,6 +4,7 @@ import { domainEvents } from '@/lib/events/emitter';
 import type { DomainEvent, DomainEventType } from '@/lib/events/types';
 import { logger } from '@/lib/logger';
 import { decrypt } from '@wolff/core/encryption';
+import { webhookTransport, webhookUrlProblem } from './url-policy';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS = [1000, 4000, 16000]; // Exponential backoff in ms
@@ -18,7 +19,7 @@ function computeSignature(payload: string, secret: string): string {
 /**
  * Deliver a webhook event to a single endpoint.
  */
-async function deliverToEndpoint(
+export async function deliverToEndpoint(
   workspaceId: string,
   endpointId: string,
   endpointUrl: string,
@@ -45,36 +46,34 @@ async function deliverToEndpoint(
     },
   });
 
+  // Endpoints saved before the URL rules existed may point at a private
+  // address. That will not change between attempts, so fail without retrying.
+  const problem = webhookUrlProblem(endpointUrl);
+  if (problem) {
+    await prisma.webhookDelivery.update({
+      where: { id: delivery.id },
+      data: { status: 'failed', response: `Error: ${problem}`, nextRetry: null },
+    });
+    return;
+  }
+
   // Attempt delivery with retries
   for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-      const response = await fetch(endpointUrl, {
-        method: 'POST',
+      const response = await webhookTransport.post(endpointUrl, {
         headers: {
           'Content-Type': 'application/json',
           'X-Signature-256': signature,
           'X-Webhook-Event': event.type,
         },
         body: payloadJson,
-        signal: controller.signal,
+        timeoutMs: 10_000,
       });
 
-      clearTimeout(timeout);
-
       const statusCode = response.status;
-      let responseBody: string;
-      try {
-        responseBody = await response.text();
-        // Limit stored response size
-        if (responseBody.length > 1000) {
-          responseBody = responseBody.slice(0, 1000) + '...';
-        }
-      } catch {
-        responseBody = '';
-      }
+      // Limit stored response size
+      const responseBody =
+        response.body.length > 1000 ? response.body.slice(0, 1000) + '...' : response.body;
 
       if (statusCode >= 200 && statusCode < 300) {
         // Success
