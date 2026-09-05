@@ -2,6 +2,7 @@
 
 import { randomBytes } from 'crypto';
 import { webhookUrlProblem } from './url-policy';
+import { hasRole } from '@/lib/workspace/roles';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -34,8 +35,8 @@ function generateSecret(): string {
 export async function createWebhookEndpoint(data: { url: string; events: string[] }) {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    return { success: false, error: 'Insufficient permissions' };
+  if (!hasRole(role, 'admin')) {
+    return { success: false, error: 'Only admins and owners can manage webhooks' };
   }
 
   // Validate URL
@@ -81,8 +82,8 @@ export async function updateWebhookEndpoint(
 ) {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    return { success: false, error: 'Insufficient permissions' };
+  if (!hasRole(role, 'admin')) {
+    return { success: false, error: 'Only admins and owners can manage webhooks' };
   }
 
   const existing = await prisma.webhookEndpoint.findFirst({
@@ -130,8 +131,8 @@ export async function updateWebhookEndpoint(
 export async function deleteWebhookEndpoint(id: string) {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    return { success: false, error: 'Insufficient permissions' };
+  if (!hasRole(role, 'admin')) {
+    return { success: false, error: 'Only admins and owners can manage webhooks' };
   }
 
   const existing = await prisma.webhookEndpoint.findFirst({

@@ -1682,8 +1682,8 @@ export async function createWebhook(input: {
 }): Promise<{ id: string }> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot create webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can create webhooks');
   }
 
   // Bug #91: only http(s), and never a private address
@@ -1718,8 +1718,8 @@ export async function updateWebhook(input: {
 }): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot update webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can update webhooks');
   }
 
   // Verify the webhook belongs to this workspace
@@ -1755,8 +1755,8 @@ export async function updateWebhook(input: {
 export async function deleteWebhook(id: string): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot delete webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can delete webhooks');
   }
 
   // Verify the webhook belongs to this workspace
