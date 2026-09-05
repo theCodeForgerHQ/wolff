@@ -8,7 +8,19 @@ import { validateRequestOrigin } from '@/lib/csrf';
 
 const SENT = { success: true, message: 'Verification email sent' };
 
+/** Every answer that depends on the account takes at least this long. */
+const MIN_RESPONSE_MS = 500;
+
 export async function POST(request: Request) {
+  // Without a floor, an unknown address (no token write, no email) answers
+  // visibly faster than a real one, which would reveal the account.
+  const started = Date.now();
+  const respond = async (body: object, init?: ResponseInit) => {
+    const wait = MIN_RESPONSE_MS - (Date.now() - started);
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    return NextResponse.json(body, init);
+  };
+
   try {
     // Bug #50: CSRF origin validation
     if (!validateRequestOrigin(request)) {
@@ -49,7 +61,7 @@ export async function POST(request: Request) {
     // gets the same answer as a real send: it must not reveal which accounts
     // exist.
     if (!user || user.emailVerifiedAt) {
-      return NextResponse.json(SENT);
+      return respond(SENT);
     }
 
     // Delete existing unused tokens for this user
@@ -84,10 +96,10 @@ export async function POST(request: Request) {
       if (!sent.success) throw new Error(sent.error || 'Verification email was not sent');
     } catch (emailError) {
       logger.error({ err: emailError }, 'Failed to send verification email');
-      return NextResponse.json({ error: 'Failed to send verification email' }, { status: 500 });
+      return respond({ error: 'Failed to send verification email' }, { status: 500 });
     }
 
-    return NextResponse.json(SENT);
+    return respond(SENT);
   } catch (error) {
     logger.error({ err: error }, 'Resend verification error');
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });

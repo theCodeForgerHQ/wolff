@@ -91,4 +91,24 @@ describe('POST /api/auth/resend-verification', () => {
       ])
     );
   });
+
+  // Same answer is not enough if the real path is visibly slower (token
+  // write and email send): every path takes at least the same minimum.
+  it('takes the same minimum time whether or not the account exists', async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    let started = Date.now();
+    await post({ email: 'nobody@example.com' });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(450);
+
+    mocks.findUnique.mockResolvedValue({
+      id: 'u-1',
+      email: 'new@example.com',
+      name: 'N',
+      emailVerifiedAt: null,
+    });
+    mocks.send.mockResolvedValue({ success: true });
+    started = Date.now();
+    await post({ email: 'new@example.com' });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(450);
+  });
 });
