@@ -8,10 +8,12 @@ export const WORKSPACE_ROLES = ['viewer', 'member', 'admin', 'owner'] as const;
 export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number];
 
 /**
- * Whether `role` is at least `min`. A role outside WORKSPACE_ROLES (a stale
- * or mistyped value from the database) is denied rather than ranked.
+ * Whether `role` is at least `min`. A value outside WORKSPACE_ROLES, on
+ * either side (a stale or mistyped role from the database, a wrong
+ * minimum), is denied rather than ranked.
  */
 export function hasRole(role: WorkspaceRole, min: WorkspaceRole): boolean {
   const rank = WORKSPACE_ROLES.indexOf(role);
-  return rank !== -1 && rank >= WORKSPACE_ROLES.indexOf(min);
+  const needed = WORKSPACE_ROLES.indexOf(min);
+  return rank !== -1 && needed !== -1 && rank >= needed;
 }

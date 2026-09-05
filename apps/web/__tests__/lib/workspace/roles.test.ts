@@ -11,6 +11,12 @@ describe('hasRole', () => {
     expect(hasRole('admin', 'owner')).toBe(false);
   });
 
+  it('denies when the minimum is not a known role', () => {
+    for (const role of ['viewer', 'member', 'admin', 'owner'] as const) {
+      expect(hasRole(role, 'editor' as never)).toBe(false);
+    }
+  });
+
   it('denies a role it does not know, whatever the minimum', () => {
     for (const role of ['editor', '', undefined, null, 'OWNER']) {
       expect(hasRole(role as never, 'viewer')).toBe(false);
