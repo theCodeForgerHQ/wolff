@@ -4,7 +4,7 @@ import { domainEvents } from '@/lib/events/emitter';
 import type { DomainEvent, DomainEventType } from '@/lib/events/types';
 import { logger } from '@/lib/logger';
 import { decrypt } from '@wolff/core/encryption';
-import { webhookTransport, webhookUrlProblem } from './url-policy';
+import { PRIVATE_ADDRESS, webhookTransport, webhookUrlProblem } from './url-policy';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAYS = [1000, 4000, 16000]; // Exponential backoff in ms
@@ -103,6 +103,20 @@ export async function deliverToEndpoint(
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      // The host resolved to a private address. Another attempt resolves the
+      // same way, so stop rather than sleep through the retry schedule.
+      if (errorMessage === PRIVATE_ADDRESS) {
+        await prisma.webhookDelivery.update({
+          where: { id: delivery.id },
+          data: {
+            status: 'failed',
+            attempts: attempt + 1,
+            response: `Error: ${errorMessage}`,
+            nextRetry: null,
+          },
+        });
+        return;
+      }
       await prisma.webhookDelivery.update({
         where: { id: delivery.id },
         data: {

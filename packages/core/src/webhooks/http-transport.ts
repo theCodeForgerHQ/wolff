@@ -6,7 +6,8 @@ import type { WebhookTransport } from './deliver';
 import { isPublicAddress } from './ssrf';
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
-const PRIVATE_ADDRESS = 'Webhook URL resolves to a private address';
+/** The error a refused (private) address fails with. Retrying will not help. */
+export const PRIVATE_ADDRESS = 'Webhook URL resolves to a private address';
 
 /**
  * DNS lookup that refuses private addresses. It is the lookup the socket

@@ -35,6 +35,18 @@ vi.mock('@/lib/workspace/get-current-workspace', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 // The emitter imports outbound.ts to register its listeners; only delivery is under test.
 vi.mock('@/lib/events/emitter', () => ({ domainEvents: { on: vi.fn(), emit: vi.fn() } }));
+// A public-looking host name that resolves to loopback, as a DNS-rebinding
+// or attacker-controlled record would. Only that name is faked.
+vi.mock('node:dns', async (importOriginal) => {
+  const dns = await importOriginal<typeof import('node:dns')>();
+  const lookup = (host: string, options: unknown, callback: (...args: unknown[]) => void) => {
+    if (host !== 'rebind.example.com') {
+      return (dns.lookup as (...args: unknown[]) => void)(host, options, callback);
+    }
+    callback(null, [{ address: '127.0.0.1', family: 4 }]);
+  };
+  return { ...dns, default: { ...dns, lookup }, lookup };
+});
 vi.mock('@wolff/core/encryption', () => ({ encrypt: (v: string) => v, decrypt: (v: string) => v }));
 
 import { deliverToEndpoint } from '@/lib/webhooks/outbound';
@@ -85,6 +97,24 @@ describe('outbound webhook delivery', () => {
     expect(mocks.deliveryUpdate.mock.calls.map((c) => c[0].data.response).join(' ')).toMatch(
       /private address/
     );
+  });
+});
+
+describe('outbound webhook delivery to a host name that resolves privately', () => {
+  it('is refused at connect time, without a request or retries', async () => {
+    const port = (server.address() as AddressInfo).port;
+    const started = Date.now();
+    await deliverToEndpoint('ws-1', 'ep-1', `http://rebind.example.com:${port}/hook`, 'secret', {
+      type: 'invoice.paid',
+      payload: { workspaceId: 'ws-1' },
+    } as never);
+
+    expect(hits).toBe(0);
+    const last = mocks.deliveryUpdate.mock.calls.at(-1)![0];
+    expect(last.data.status).toBe('failed');
+    expect(last.data.response).toMatch(/private address/);
+    // The retry schedule sleeps 1 s then 4 s; a refused address is not retried.
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });
 

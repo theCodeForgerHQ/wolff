@@ -1,4 +1,6 @@
-import { checkWebhookUrl, createHttpTransport } from '@wolff/core/webhooks';
+import { checkWebhookUrl, createHttpTransport, PRIVATE_ADDRESS } from '@wolff/core/webhooks';
+
+export { PRIVATE_ADDRESS };
 
 /**
  * The web app's rules for workspace webhook URLs, the same as the API's
