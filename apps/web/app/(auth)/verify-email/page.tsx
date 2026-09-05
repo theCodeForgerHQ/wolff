@@ -1,11 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function VerifyEmailPage() {
+  // useSearchParams needs a Suspense boundary to prerender.
+  return (
+    <Suspense>
+      <VerifyEmail />
+    </Suspense>
+  );
+}
+
+function VerifyEmail() {
+  // Sign-up redirects here with the address. An unverified user has no
+  // session, so the resend route needs it in the body.
+  const [email, setEmail] = useState(useSearchParams().get('email') ?? '');
   const [isResending, setIsResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +29,11 @@ export default function VerifyEmailPage() {
     setIsResending(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/resend-verification', { method: 'POST' });
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
       const data = await res.json();
       if (res.ok) {
         setResent(true);
@@ -53,8 +72,22 @@ export default function VerifyEmailPage() {
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="space-y-1 text-left">
+              <Label htmlFor="resend-email">Email</Label>
+              <Input
+                id="resend-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
-            <Button variant="outline" onClick={handleResend} disabled={isResending}>
+            <Button
+              variant="outline"
+              onClick={handleResend}
+              disabled={isResending || !email.trim()}
+            >
               {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Resend verification email
             </Button>

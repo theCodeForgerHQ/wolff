@@ -69,11 +69,13 @@ export async function POST(request: Request) {
       const { sendVerificationEmail } = await import('@/lib/services/email');
       const baseUrl = getBaseUrl();
       const verifyUrl = `${baseUrl}/verify-email/confirm?token=${rawToken}`;
-      await sendVerificationEmail({
+      const sent = await sendVerificationEmail({
         to: user.email,
         name: user.name || 'there',
         verifyUrl,
       });
+      // It reports a failed send in its result rather than throwing.
+      if (!sent.success) throw new Error(sent.error || 'Verification email was not sent');
     } catch (emailError) {
       logger.error({ err: emailError }, 'Failed to send verification email');
       return NextResponse.json({ error: 'Failed to send verification email' }, { status: 500 });

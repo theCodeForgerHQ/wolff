@@ -70,7 +70,7 @@ export function RegisterForm() {
       }
 
       toast.success('Account created! Please check your email to verify.');
-      router.push('/verify-email');
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
