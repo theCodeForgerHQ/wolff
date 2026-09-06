@@ -260,6 +260,27 @@ describe.skipIf(!url)('automations: CRUD, trigger scan and step ticks (Postgres)
       await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
     });
 
+    it('shares a scan between automations: one cannot take the whole limit', async () => {
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.updateMany({
+        where: { workspaceId: ctx.workspaceId, status: 'overdue' },
+        data: { status: 'paid' },
+      });
+      const first = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const second = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const invoices = await overdueInvoices(3);
+
+      await scanAutomationTriggers(db, { now, limit: 10, perAutomation: 2 });
+
+      for (const a of [first, second]) {
+        expect(await base.automationRun.count({ where: { automationId: a.id } })).toBe(2);
+      }
+
+      await base.automationRun.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.deleteMany({ where: { id: { in: invoices.map((i) => i.id) } } });
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+    });
+
     it('starts one run per subject even when two scans overlap', async () => {
       const a = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
       const invoices = await overdueInvoices(5);

@@ -205,7 +205,11 @@ const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => 
     // ticking every running run cost a message and an invocation each,
     // every period.
     const now = ctx.now();
-    const created = await scanAutomationTriggers(ctx.db, { now });
+    const created = await scanAutomationTriggers(ctx.db, {
+      now,
+      onError: (err, automationId) =>
+        logger.error({ err, automationId }, 'Automation trigger scan failed for one automation'),
+    });
     for (const id of created) {
       await ctx.dispatch({
         type: 'automations.tick',

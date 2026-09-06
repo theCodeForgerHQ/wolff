@@ -1,5 +1,5 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
-import type { Prisma } from '@wolff/database';
+import { Prisma } from '@wolff/database';
 import type { CoreContext, Db, DbTx } from '../context';
 import { moveDealInTx } from '../crm/deals';
 import { CoreError } from '../errors';
@@ -604,46 +604,68 @@ export async function listDueAutomationRuns(
 
 const STALL_DAYS = 7;
 
-/** The subjects an active automation's trigger currently matches. */
-function triggerSubjects(
+/**
+ * Up to `take` subjects the automation's trigger matches that have no run of
+ * this automation yet. The "no run yet" check is a NOT EXISTS in the query,
+ * so its cost does not grow with the number of runs the automation has had.
+ * Pinned to the automation's own workspace.
+ */
+async function newTriggerSubjects(
   db: Db,
-  automation: { workspaceId: string; trigger: string },
-  options: { now: Date; exclude: string[]; take: number }
-): Promise<{ id: string }[]> | null {
+  automation: { id: string; workspaceId: string; trigger: string },
+  options: { now: Date; take: number }
+): Promise<string[]> {
   const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
-  const base = {
-    workspaceId: automation.workspaceId,
-    ...(options.exclude.length ? { id: { notIn: options.exclude } } : {}),
-  };
-  const query = { select: { id: true }, orderBy: { id: 'asc' as const }, take: options.take };
+  const ws = automation.workspaceId;
+  const noRun = Prisma.sql`NOT EXISTS (SELECT 1 FROM automation_runs r
+    WHERE r.automation_id = ${automation.id} AND r.subject_id = s.id)`;
+  let rows: { id: string }[];
   switch (automation.trigger) {
     case 'invoice.overdue':
-      return db.invoice.findMany({ where: { ...base, status: 'overdue' }, ...query });
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM invoices s
+        WHERE s.workspace_id = ${ws} AND s.status = 'overdue' AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
     case 'quote.sent_no_response':
-      return db.quote.findMany({
-        where: { ...base, status: 'sent', updatedAt: { lt: stallCutoff } },
-        ...query,
-      });
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM quotes s
+        WHERE s.workspace_id = ${ws} AND s.status = 'sent' AND s.updated_at < ${stallCutoff}
+          AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
     case 'deal.stalled':
-      return db.deal.findMany({ where: { ...base, updatedAt: { lt: stallCutoff } }, ...query });
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM deals s
+        WHERE s.workspace_id = ${ws} AND s.updated_at < ${stallCutoff} AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
     default:
-      return null;
+      return [];
   }
+  return rows.map((row) => row.id);
 }
 
 /**
  * Starts a run for each subject an active automation's trigger matches and
- * that has no run of that automation yet. Per automation: one query for the
- * subjects it already has, one for the new ones, one insert. At most
- * `limit` runs per scan; the next scan starts the rest. The unique
- * (automation, subject) index makes overlapping scans safe: the second
- * insert of a pair is skipped.
+ * that has no run of that automation yet: per automation one query and one
+ * insert. At most `limit` runs per scan and `perAutomation` per automation,
+ * so one busy automation cannot take a whole scan from the others; the next
+ * scan starts the rest. One automation failing does not stop the scan. The
+ * unique (automation, subject) index makes overlapping scans safe: the
+ * second insert of a pair is skipped.
  */
 export async function scanAutomationTriggers(
   db: Db,
-  options: { now: Date; limit?: number }
+  options: {
+    now: Date;
+    limit?: number;
+    perAutomation?: number;
+    onError?: (error: unknown, automationId: string) => void;
+  }
 ): Promise<string[]> {
   let remaining = options.limit ?? 200;
+  const perAutomation = options.perAutomation ?? 50;
   // The scheduler runs for every workspace, so this one list is unscoped;
   // everything after it is pinned to the automation's own workspace.
   const automations = await db.$unscoped.automation.findMany({
@@ -655,30 +677,27 @@ export async function scanAutomationTriggers(
   for (const automation of automations) {
     if (remaining <= 0) break;
     if (!subjectTypeOf[automation.trigger as AutomationTrigger]) continue;
-
-    const started = await db.automationRun.findMany({
-      where: { workspaceId: automation.workspaceId, automationId: automation.id },
-      select: { subjectId: true },
-    });
-    const subjects = await triggerSubjects(db, automation, {
-      now: options.now,
-      exclude: started.map((r) => r.subjectId),
-      take: remaining,
-    });
-    if (!subjects?.length) continue;
-
-    const runs = await db.automationRun.createManyAndReturn({
-      data: subjects.map((subject) => ({
-        workspaceId: automation.workspaceId,
-        automationId: automation.id,
-        subjectId: subject.id,
-        status: 'running',
-      })),
-      select: { id: true },
-      skipDuplicates: true,
-    });
-    for (const run of runs) created.push(run.id);
-    remaining -= runs.length;
+    try {
+      const subjects = await newTriggerSubjects(db, automation, {
+        now: options.now,
+        take: Math.min(remaining, perAutomation),
+      });
+      if (subjects.length === 0) continue;
+      const runs = await db.automationRun.createManyAndReturn({
+        data: subjects.map((subjectId) => ({
+          workspaceId: automation.workspaceId,
+          automationId: automation.id,
+          subjectId,
+          status: 'running',
+        })),
+        select: { id: true },
+        skipDuplicates: true,
+      });
+      for (const run of runs) created.push(run.id);
+      remaining -= runs.length;
+    } catch (error) {
+      options.onError?.(error, automation.id);
+    }
   }
 
   return created;
