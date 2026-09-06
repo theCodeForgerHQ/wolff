@@ -109,17 +109,24 @@ describe('POST /jobs/run/:type', () => {
     expect(res.status).toBe(401);
   });
 
-  it('refuses a signed job whose type is not the one in the URL', async () => {
+  // QStash retries every answer that is not 2xx, unless it is 489 with
+  // Upstash-NonRetryable-Error: true (upstash.com/docs/qstash/features/retry).
+  const expectNotRetried = (res: { status: number; headers: Record<string, string> }) => {
+    expect(res.status).toBe(489);
+    expect(res.headers['upstash-nonretryable-error']).toBe('true');
+  };
+
+  it('refuses, without retries, a signed job whose type is not the one in the URL', async () => {
     const run = vi.fn();
     const { post } = setup(run);
 
     const res = await post('email.send', { ...job, type: 'payments.reconcile' });
 
-    expect(res.status).toBe(400);
+    expectNotRetried(res);
     expect(run).not.toHaveBeenCalled();
   });
 
-  it('answers 400, which QStash does not retry, for a job that can never succeed', async () => {
+  it('answers a job that can never succeed so that QStash does not retry it', async () => {
     const { InvalidJobError } = await import('@wolff/jobs');
     const { post } = setup(async () => {
       throw new InvalidJobError('email.send', 'bad payload');
@@ -127,7 +134,7 @@ describe('POST /jobs/run/:type', () => {
 
     const res = await post('email.send', job);
 
-    expect(res.status).toBe(400);
+    expectNotRetried(res);
     expect(res.body.error.code).toBe('validation_error');
   });
 

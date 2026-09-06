@@ -9,6 +9,7 @@ import {
 } from '@wolff/jobs';
 import { QSTASH_RETRIES, type QStashVerifier } from '@wolff/jobs/qstash';
 import type { ApiConfig } from '../config';
+import type { Response } from 'express';
 import { sendData, sendError } from '../http';
 
 /**
@@ -18,8 +19,17 @@ import { sendData, sendError } from '../http';
  * for this exact URL and body. Without signing keys the route refuses
  * everything.
  *
- * The status tells QStash what to do: 2xx done, 4xx do not retry, 5xx retry.
+ * The status tells QStash what to do. It retries every answer that is not
+ * 2xx, unless it is 489 with `Upstash-NonRetryable-Error: true`
+ * (upstash.com/docs/qstash/features/retry): so 2xx done, 489 failed for good,
+ * anything else retried.
  */
+
+/** A job that can never succeed: tell QStash not to retry it. */
+function sendNotRetryable(res: Response, message: string) {
+  res.set('Upstash-NonRetryable-Error', 'true');
+  sendError(res, 'validation_error', message, undefined, 489);
+}
 export interface JobRunDeps {
   verify: QStashVerifier;
   context: JobContext;
@@ -52,17 +62,17 @@ export function jobRoutes(config: ApiConfig, deps: JobRunDeps | undefined): Rout
     try {
       job = JSON.parse(body) as Job;
     } catch {
-      return sendError(res, 'validation_error', 'Job body is not valid JSON');
+      return sendNotRetryable(res, 'Job body is not valid JSON');
     }
     if (!isJobType(type) || job?.type !== type || typeof job.jobId !== 'string') {
-      return sendError(res, 'validation_error', 'Job does not match the route it was sent to');
+      return sendNotRetryable(res, 'Job does not match the route it was sent to');
     }
 
     try {
       await (deps.run ?? runJob)(deps.context, job);
     } catch (error) {
       if (error instanceof InvalidJobError) {
-        return sendError(res, 'validation_error', error.message);
+        return sendNotRetryable(res, error.message);
       }
       // QStash says how many times it has retried. On its last delivery the
       // job has failed for good: record that (outbox event failed, webhook
