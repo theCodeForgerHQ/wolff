@@ -291,8 +291,19 @@ async function liveWorkspaceIds(ctx: JobContext): Promise<string[]> {
   const rows = await ctx.db.$unscoped.workspace.findMany({
     where: { deletedAt: null },
     select: { id: true },
+    orderBy: { id: 'asc' },
   });
   return rows.map((row) => row.id);
+}
+
+/**
+ * `ids` starting at a different place each day, so a run that stops at its
+ * time budget does not leave the same workspaces out every time.
+ */
+function rotateDaily<T>(ids: T[], now: Date): T[] {
+  if (ids.length === 0) return ids;
+  const offset = Math.floor(now.getTime() / 86_400_000) % ids.length;
+  return [...ids.slice(offset), ...ids.slice(0, offset)];
 }
 
 /**
@@ -308,14 +319,27 @@ const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
   const deadline = ctx.now().getTime() + AI_SWEEP_BUDGET_MS;
   // One call per workspace per round, scoped by that workspace's token, so a
   // big backlog in one workspace cannot starve the others.
-  let pending = await liveWorkspaceIds(ctx);
-  while (pending.length > 0) {
+  // A workspace whose sweep fails (a document the AI service cannot ingest)
+  // is reported at the end and not called again this run; the others go on.
+  let pending = rotateDaily(await liveWorkspaceIds(ctx), ctx.now());
+  const failed: { id: string; error: unknown }[] = [];
+  sweeping: while (pending.length > 0) {
     const next: string[] = [];
     for (const id of pending) {
-      if (ctx.now().getTime() >= deadline) return;
-      if ((await ai.sweep(id)).more) next.push(id);
+      if (ctx.now().getTime() >= deadline) break sweeping;
+      try {
+        if ((await ai.sweep(id)).more) next.push(id);
+      } catch (error) {
+        failed.push({ id, error });
+      }
     }
     pending = next;
+  }
+  if (failed.length > 0) {
+    throw new AggregateError(
+      failed.map((f) => f.error),
+      `AI sweep failed for ${failed.length} workspace(s): ${failed.map((f) => f.id).join(', ')}`
+    );
   }
 };
 
