@@ -558,15 +558,48 @@ async function resolveSubject(
   return null;
 }
 
-/** Ids of runs still in progress, across workspaces, for the periodic tick. */
-export async function listRunningAutomationRuns(db: Db, limit = 500): Promise<string[]> {
+/** A run that has not moved for this long, on a step that is not a wait, is stuck. */
+const STUCK_AFTER_MS = 15 * 60_000;
+
+/**
+ * Ids of running runs that have work to do now, for the periodic tick: a
+ * wait whose days are over (its wake-up job was lost or late), or a run
+ * that has not moved for 15 minutes on any other step (its tick failed). A
+ * run still inside a wait is left alone, so the tick costs nothing for it.
+ */
+export async function listDueAutomationRuns(
+  db: Db,
+  options: { now: Date; limit?: number }
+): Promise<string[]> {
+  const now = options.now.getTime();
   const runs = await db.$unscoped.automationRun.findMany({
     where: { status: 'running' },
-    select: { id: true },
+    select: {
+      id: true,
+      currentStep: true,
+      waitingSince: true,
+      updatedAt: true,
+      automation: { select: { steps: true } },
+    },
     orderBy: { updatedAt: 'asc' },
-    take: limit,
+    take: 1000,
   });
-  return runs.map((r) => r.id);
+  const due: string[] = [];
+  for (const run of runs) {
+    const steps = Array.isArray(run.automation.steps)
+      ? (run.automation.steps as unknown as AutomationStep[])
+      : [];
+    const step = steps[run.currentStep];
+    const waitEnds =
+      step?.type === 'wait' && run.waitingSince
+        ? run.waitingSince.getTime() + step.days * 86_400_000
+        : null;
+    const isDue =
+      waitEnds !== null ? waitEnds <= now : now - run.updatedAt.getTime() >= STUCK_AFTER_MS;
+    if (isDue) due.push(run.id);
+    if (due.length >= (options.limit ?? 100)) break;
+  }
+  return due;
 }
 
 const STALL_DAYS = 7;

@@ -9,7 +9,7 @@ import {
   scanInvoiceReminders,
 } from '@wolff/core/invoices';
 import {
-  listRunningAutomationRuns,
+  listDueAutomationRuns,
   scanAutomationTriggers,
   tickAutomationRun,
 } from '@wolff/core/automations';
@@ -198,10 +198,12 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
 
 const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => {
   if (!runId) {
-    // The periodic tick: start runs for new subjects, then give every run
-    // that is still going a tick. The database is the record, so a wake-up
-    // job lost with Redis (or never scheduled, on the drain) costs at most
-    // one period; ticking a run whose wait is not over does nothing.
+    // The periodic tick: start runs for new subjects, then tick the runs
+    // that have work to do now (a wait that is over, or a run stuck on a
+    // step). The database is the record, so a wake-up job that was lost
+    // costs at most one period. Runs still inside a wait are not touched:
+    // ticking every running run cost a message and an invocation each,
+    // every period.
     const now = ctx.now();
     const created = await scanAutomationTriggers(ctx.db, { now });
     for (const id of created) {
@@ -212,7 +214,7 @@ const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => 
       });
     }
     const stamp = now.toISOString().slice(0, 16);
-    for (const id of await listRunningAutomationRuns(ctx.db)) {
+    for (const id of await listDueAutomationRuns(ctx.db, { now })) {
       if (created.includes(id)) continue;
       await ctx.dispatch({
         type: 'automations.tick',

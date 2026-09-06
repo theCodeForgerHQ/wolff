@@ -563,6 +563,11 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     expect(stillWaiting.status).toBe('running');
     expect(stillWaiting.currentStep).toBe(0);
 
+    // A periodic tick during the wait sends nothing for it.
+    clock = new Date(NOW.getTime() + 86_400_000);
+    await runJob(testCtx, { type: 'automations.tick', payload: {}, jobId: `mid:${waiting.id}` });
+    expect(local.dispatched).toHaveLength(1);
+
     // Three days later the periodic tick (the drain, on the demo) resumes
     // it, even if the delayed job was lost with Redis.
     clock = new Date(NOW.getTime() + 3 * 86_400_000 + 60_000);
