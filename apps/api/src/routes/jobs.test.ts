@@ -27,9 +27,11 @@ async function signature(url: string, body: string, key = CURRENT): Promise<stri
 
 function setup(
   run: (ctx: JobContext, job: Job) => Promise<void>,
-  onExhausted?: (ctx: JobContext, job: Job, error: unknown) => Promise<void>
+  onExhausted?: (ctx: JobContext, job: Job, error: unknown) => Promise<void>,
+  report: (error: unknown) => void = () => {}
 ) {
   const app = createApp({
+    report,
     db: {} as Db,
     config: testConfig({ PUBLIC_API_URL: API }),
     jobs: {
@@ -136,6 +138,44 @@ describe('POST /jobs/run/:type', () => {
 
     expectNotRetried(res);
     expect(res.body.error.code).toBe('validation_error');
+  });
+
+  // While Neon was over quota every run failed this way; each one became a
+  // Sentry error and a fast retry.
+  it.each([
+    [
+      'Neon over its quota',
+      Object.assign(
+        new Error(
+          'Invalid `prisma.automation.findMany()` invocation: Database error. Code: `53000`. Message: `Your account or project has exceeded the quota.`'
+        ),
+        { code: 'P2039', name: 'PrismaClientKnownRequestError' }
+      ),
+    ],
+    [
+      'an unreachable server',
+      Object.assign(new Error("Can't reach database server"), { code: 'P1001' }),
+    ],
+    ['a dropped connection', new Error('Connection terminated due to connection timeout')],
+    [
+      'a pool client after an error',
+      new Error('Client has encountered a connection error and is not queryable'),
+    ],
+  ])('answers 503 with Retry-After, and no error report, for %s', async (_label, error) => {
+    const report = vi.fn();
+    const { post } = setup(
+      async () => {
+        throw error;
+      },
+      undefined,
+      report
+    );
+
+    const res = await post('email.send', job);
+
+    expect(res.status).toBe(503);
+    expect(Number(res.headers['retry-after'])).toBeGreaterThanOrEqual(600);
+    expect(report).not.toHaveBeenCalled();
   });
 
   it('answers 500, which QStash retries, when the job fails', async () => {
