@@ -38,6 +38,25 @@ describe('QStash schedules', () => {
     expect(perDay).toBeLessThanOrEqual(300);
   });
 
+  it('does not retry a scheduled run: the next run is never far away', async () => {
+    const created: Record<string, unknown>[] = [];
+    const client: QStashScheduleClient = {
+      schedules: {
+        create: async (request) => {
+          created.push(request);
+          return { scheduleId: request.scheduleId! };
+        },
+        list: async () => [],
+        delete: async () => undefined,
+      },
+    };
+
+    await syncQStashSchedules(client, 'https://api.example.test', 'wolff');
+
+    expect(created.length).toBeGreaterThan(0);
+    for (const request of created) expect(request.retries).toBe(0);
+  });
+
   it('creates or updates each schedule under a stable id with a signed job body', async () => {
     const created: Record<string, unknown>[] = [];
     const deleted: string[] = [];

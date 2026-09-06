@@ -22,6 +22,9 @@ export interface QStashPublisher {
 /** Retries QStash makes itself. Anything beyond that falls to the cron drain via the sweeper. */
 export const QSTASH_RETRIES = 3;
 
+/** Retries for scheduled runs; see syncQStashSchedules. */
+export const SCHEDULE_RETRIES = 0;
+
 export class QStashDispatcher implements JobDispatcher {
   private readonly apiUrl: string;
 
@@ -136,7 +139,10 @@ export async function syncQStashSchedules(
       body: JSON.stringify(job),
       headers: { 'content-type': 'application/json' },
       scheduleId,
-      retries: QSTASH_RETRIES,
+      // A failed scheduled run is not retried: the next one is never far
+      // away, and retries against a database that is down only multiply the
+      // failing invocations (and the Sentry alerts).
+      retries: SCHEDULE_RETRIES,
     });
     ids.push(scheduleId);
   }
