@@ -569,105 +569,83 @@ export async function listRunningAutomationRuns(db: Db, limit = 500): Promise<st
   return runs.map((r) => r.id);
 }
 
-export async function scanAutomationTriggers(db: Db, options: { now: Date }) {
+const STALL_DAYS = 7;
+
+/** The subjects an active automation's trigger currently matches. */
+function triggerSubjects(
+  db: Db,
+  automation: { workspaceId: string; trigger: string },
+  options: { now: Date; exclude: string[]; take: number }
+): Promise<{ id: string }[]> | null {
+  const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
+  const base = {
+    workspaceId: automation.workspaceId,
+    ...(options.exclude.length ? { id: { notIn: options.exclude } } : {}),
+  };
+  const query = { select: { id: true }, orderBy: { id: 'asc' as const }, take: options.take };
+  switch (automation.trigger) {
+    case 'invoice.overdue':
+      return db.invoice.findMany({ where: { ...base, status: 'overdue' }, ...query });
+    case 'quote.sent_no_response':
+      return db.quote.findMany({
+        where: { ...base, status: 'sent', updatedAt: { lt: stallCutoff } },
+        ...query,
+      });
+    case 'deal.stalled':
+      return db.deal.findMany({ where: { ...base, updatedAt: { lt: stallCutoff } }, ...query });
+    default:
+      return null;
+  }
+}
+
+/**
+ * Starts a run for each subject an active automation's trigger matches and
+ * that has no run of that automation yet. Per automation: one query for the
+ * subjects it already has, one for the new ones, one insert. At most
+ * `limit` runs per scan; the next scan starts the rest. The unique
+ * (automation, subject) index makes overlapping scans safe: the second
+ * insert of a pair is skipped.
+ */
+export async function scanAutomationTriggers(
+  db: Db,
+  options: { now: Date; limit?: number }
+): Promise<string[]> {
+  let remaining = options.limit ?? 200;
   // The scheduler runs for every workspace, so this one list is unscoped;
   // everything after it is pinned to the automation's own workspace.
-  const automations = await db.$unscoped.automation.findMany({ where: { isActive: true } });
+  const automations = await db.$unscoped.automation.findMany({
+    where: { isActive: true },
+    orderBy: { id: 'asc' },
+  });
   const created: string[] = [];
-  const STALL_DAYS = 7;
-  const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
 
   for (const automation of automations) {
-    const subjectType = subjectTypeOf[automation.trigger as AutomationTrigger];
-    if (!subjectType) continue;
+    if (remaining <= 0) break;
+    if (!subjectTypeOf[automation.trigger as AutomationTrigger]) continue;
 
-    if (automation.trigger === 'invoice.overdue') {
-      const subjects = await db.invoice.findMany({
-        where: { workspaceId: automation.workspaceId, status: 'overdue' },
-        select: { id: true },
-      });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
-    }
+    const started = await db.automationRun.findMany({
+      where: { workspaceId: automation.workspaceId, automationId: automation.id },
+      select: { subjectId: true },
+    });
+    const subjects = await triggerSubjects(db, automation, {
+      now: options.now,
+      exclude: started.map((r) => r.subjectId),
+      take: remaining,
+    });
+    if (!subjects?.length) continue;
 
-    if (automation.trigger === 'quote.sent_no_response') {
-      const subjects = await db.quote.findMany({
-        where: {
-          workspaceId: automation.workspaceId,
-          status: 'sent',
-          updatedAt: { lt: stallCutoff },
-        },
-        select: { id: true },
-      });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
-    }
-
-    if (automation.trigger === 'deal.stalled') {
-      const subjects = await db.deal.findMany({
-        where: {
-          workspaceId: automation.workspaceId,
-          updatedAt: { lt: stallCutoff },
-        },
-        select: { id: true },
-      });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
-    }
+    const runs = await db.automationRun.createManyAndReturn({
+      data: subjects.map((subject) => ({
+        workspaceId: automation.workspaceId,
+        automationId: automation.id,
+        subjectId: subject.id,
+        status: 'running',
+      })),
+      select: { id: true },
+      skipDuplicates: true,
+    });
+    for (const run of runs) created.push(run.id);
+    remaining -= runs.length;
   }
 
   return created;
