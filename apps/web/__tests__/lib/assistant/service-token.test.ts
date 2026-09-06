@@ -11,7 +11,7 @@ describe('assistant service token', () => {
       secret: SECRET,
       userId: 'u1',
       workspaceId: 'ws1',
-      role: 'editor',
+      role: 'member',
     });
     expect(decodeProtectedHeader(token).kid).toBe('web');
     const { payload } = await jwtVerify(token, new TextEncoder().encode(SECRET), {
@@ -19,7 +19,7 @@ describe('assistant service token', () => {
       audience: 'ai',
     });
     expect(payload).toMatchObject({ sub: 'u1', workspaceId: 'ws1' });
-    expect(payload.scopes).toEqual(scopesForRole('editor'));
+    expect(payload.scopes).toEqual(scopesForRole('member'));
     expect(payload.exp! - payload.iat!).toBe(60);
     expect(typeof payload.jti).toBe('string');
   });
@@ -27,7 +27,7 @@ describe('assistant service token', () => {
   it('gives viewers the assistant but not drafting', () => {
     expect(scopesForRole('viewer')).toContain('ai:use');
     expect(scopesForRole('viewer')).not.toContain('quotes:write');
-    for (const role of ['owner', 'admin', 'editor'] as const) {
+    for (const role of ['owner', 'admin', 'member'] as const) {
       expect(scopesForRole(role)).toEqual(expect.arrayContaining(['ai:use', 'quotes:write']));
     }
   });

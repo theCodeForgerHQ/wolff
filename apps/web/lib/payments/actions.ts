@@ -10,6 +10,7 @@ import {
   retrieveConnectAccount,
 } from '@/lib/services/stripe';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
+import { hasRole } from '@/lib/workspace/roles';
 import { encrypt } from '@wolff/core/encryption';
 import { toNumber, getBaseUrl } from '@/lib/utils';
 import type {
@@ -20,6 +21,9 @@ import type {
 } from './types';
 import { isValidRefundAmount, toRefundMinorUnits } from './refund-amount';
 import { logger } from '@/lib/logger';
+
+/** Payment settings and refunds move money, so they need an admin. */
+const ADMIN_ONLY = { success: false, error: 'Only admins and owners can manage payments' } as const;
 
 /**
  * Bug #85: Sanitize Stripe errors — never expose raw Stripe messages to end users.
@@ -98,7 +102,8 @@ export async function updatePaymentSettings(data: {
   passProcessingFees?: boolean;
   defaultPaymentTerms?: number;
 }): Promise<{ success: boolean; error?: string }> {
-  const { workspaceId } = await getCurrentUserWorkspace();
+  const { workspaceId, role } = await getCurrentUserWorkspace();
+  if (!hasRole(role, 'admin')) return ADMIN_ONLY;
 
   try {
     const update: Record<string, unknown> = {};
@@ -160,7 +165,8 @@ export async function createStripeOnboardingLink(options?: {
     return { success: false, error: 'Stripe is not configured' };
   }
 
-  const { workspaceId } = await getCurrentUserWorkspace();
+  const { workspaceId, role } = await getCurrentUserWorkspace();
+  if (!hasRole(role, 'admin')) return ADMIN_ONLY;
   const baseUrl = getBaseUrl();
   const returnPath =
     options?.returnTo === 'onboarding'
@@ -412,7 +418,8 @@ export async function refundPayment(
     return { success: false, error: 'Stripe is not configured' };
   }
 
-  const { workspaceId } = await getCurrentUserWorkspace();
+  const { workspaceId, role } = await getCurrentUserWorkspace();
+  if (!hasRole(role, 'admin')) return ADMIN_ONLY;
 
   try {
     const payment = await prisma.payment.findFirst({

@@ -67,13 +67,18 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
   const handleSave = () => {
     startTransition(async () => {
       try {
-        await updatePaymentSettings({
+        const result = await updatePaymentSettings({
           ...settings,
           activeProviders: razorpay.enabled ? ['stripe', 'razorpay'] : ['stripe'],
           razorpayKeyId: razorpay.keyId || null,
           razorpayKeySecret: razorpay.keySecret || null,
           razorpayWebhookSecret: razorpay.webhookSecret || null,
         });
+        // A refusal (not an admin) or a failed save comes back in the result.
+        if (!result.success) {
+          toast.error(result.error || 'Failed to save payment settings');
+          return;
+        }
         toast.success('Payment settings saved');
         router.refresh();
       } catch {
@@ -87,6 +92,8 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
       const result = await createStripeOnboardingLink();
       if (result.success && result.url) {
         window.location.href = result.url;
+      } else {
+        toast.error(result.error || 'Could not start Stripe onboarding');
       }
     });
   };

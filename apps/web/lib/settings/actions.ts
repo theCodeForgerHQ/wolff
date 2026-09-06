@@ -5,6 +5,8 @@ import { randomBytes, createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
+import { hasRole } from '@/lib/workspace/roles';
+import { webhookUrlProblem } from '@/lib/webhooks/url-policy';
 import { logger } from '@/lib/logger';
 import type {
   BusinessProfileData,
@@ -61,7 +63,7 @@ export async function updateWorkspaceName(name: string): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
   // HIGH #10: Only owner/admin can rename workspace
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins can rename the workspace');
   }
 
@@ -108,7 +110,7 @@ export async function getBusinessProfile(): Promise<BusinessProfileData | null> 
 export async function updateBusinessProfile(input: UpdateBusinessProfileInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update business profile');
   }
 
@@ -163,7 +165,7 @@ export async function updateBusinessProfile(input: UpdateBusinessProfileInput): 
 // Update business logo
 export async function updateBusinessLogo(logoUrl: string | null): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update business logo');
   }
 
@@ -216,7 +218,7 @@ export async function getEmailSettings(): Promise<EmailSettingsData | null> {
 // Update email settings
 export async function updateEmailSettings(input: UpdateEmailSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update email settings');
   }
 
@@ -279,7 +281,7 @@ export async function getBrandingSettings(): Promise<BrandingSettingsData | null
 // Update branding settings
 export async function updateBrandingSettings(input: UpdateBrandingSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can update branding settings');
   }
 
@@ -350,7 +352,7 @@ export async function getPaymentSettings(): Promise<PaymentSettingsData | null> 
 // Update payment settings
 export async function updatePaymentSettings(input: UpdatePaymentSettingsInput): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
-  if (role === 'viewer' || role === 'editor') {
+  if (!hasRole(role, 'admin')) {
     throw new Error('Only admins and owners can modify payment settings');
   }
 
@@ -1680,20 +1682,13 @@ export async function createWebhook(input: {
 }): Promise<{ id: string }> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot create webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can create webhooks');
   }
 
-  // Bug #91: Validate URL scheme is http: or https: only
-  try {
-    const parsed = new URL(input.url.trim());
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error('Webhook URL must use http or https protocol');
-    }
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('protocol')) throw e;
-    throw new Error('Webhook URL must be a valid http or https URL');
-  }
+  // Bug #91: only http(s), and never a private address
+  const urlProblem = webhookUrlProblem(input.url);
+  if (urlProblem) throw new Error(urlProblem);
 
   // Generate a signing secret if none provided
   const secret = input.secret || `whsec_${randomBytes(24).toString('hex')}`;
@@ -1723,8 +1718,8 @@ export async function updateWebhook(input: {
 }): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot update webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can update webhooks');
   }
 
   // Verify the webhook belongs to this workspace
@@ -1738,15 +1733,8 @@ export async function updateWebhook(input: {
 
   // Bug #91: Validate URL scheme on update too
   if (input.url !== undefined) {
-    try {
-      const parsed = new URL(input.url.trim());
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error('Webhook URL must use http or https protocol');
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('protocol')) throw e;
-      throw new Error('Webhook URL must be a valid http or https URL');
-    }
+    const urlProblem = webhookUrlProblem(input.url);
+    if (urlProblem) throw new Error(urlProblem);
   }
 
   const data: Record<string, unknown> = {};
@@ -1767,8 +1755,8 @@ export async function updateWebhook(input: {
 export async function deleteWebhook(id: string): Promise<void> {
   const { workspaceId, role } = await getCurrentUserWorkspace();
 
-  if (role === 'viewer') {
-    throw new Error('Viewers cannot delete webhooks');
+  if (!hasRole(role, 'admin')) {
+    throw new Error('Only admins and owners can delete webhooks');
   }
 
   // Verify the webhook belongs to this workspace

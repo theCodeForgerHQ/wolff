@@ -70,6 +70,7 @@ describe('Settings Actions', () => {
     mockGetCurrentUserWorkspace.mockResolvedValue({
       workspaceId: WORKSPACE_ID,
       userId: USER_ID,
+      role: 'owner',
     });
   });
 

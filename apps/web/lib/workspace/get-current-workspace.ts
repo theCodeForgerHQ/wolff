@@ -5,10 +5,11 @@ import { cookies } from 'next/headers';
 import { prisma } from '@wolff/database';
 import { auth } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { hasRole, type WorkspaceRole } from './roles';
 
 const ACTIVE_WORKSPACE_COOKIE = 'active-workspace-id';
 
-export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'viewer';
+export type { WorkspaceRole } from './roles';
 
 interface WorkspaceContext {
   workspaceId: string;
@@ -70,23 +71,12 @@ export const getCurrentUserWorkspace = cache(async (): Promise<WorkspaceContext>
 });
 
 /**
- * Role hierarchy for permission checks.
- * Higher value = more permissions.
- */
-const ROLE_LEVELS: Record<WorkspaceRole, number> = {
-  viewer: 0,
-  editor: 1,
-  admin: 2,
-  owner: 3,
-};
-
-/**
  * Check if the current user has the minimum required role.
  * Throws an error if the user doesn't have sufficient permissions.
  */
 export async function requireRole(minRole: WorkspaceRole): Promise<WorkspaceContext> {
   const ctx = await getCurrentUserWorkspace();
-  if (ROLE_LEVELS[ctx.role] < ROLE_LEVELS[minRole]) {
+  if (!hasRole(ctx.role, minRole)) {
     throw new Error(`Insufficient permissions. Required: ${minRole}, current: ${ctx.role}`);
   }
   return ctx;

@@ -1,6 +1,7 @@
 import { chromium, FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { prisma } from '@wolff/database';
 
 // Test user credentials - can be overridden with environment variables
 const TEST_USER = {
@@ -393,7 +394,14 @@ async function setupOnboardingUser(appUrl: string, authDir: string) {
     await page.waitForLoadState('networkidle');
 
     if (page.url().includes('/verify-email')) {
-      console.log('📧 Registered; signing in to reach onboarding...');
+      // Sign-in needs a verified address, and an unsent verification email no
+      // longer verifies it (the suite has no mailbox). Mark it verified, as
+      // following the link would.
+      await prisma.user.update({
+        where: { email: ONBOARDING_USER.email.toLowerCase() },
+        data: { emailVerifiedAt: new Date() },
+      });
+      console.log('📧 Registered and verified; signing in to reach onboarding...');
       await page.goto(`${appUrl}/login`);
       await page.waitForLoadState('networkidle');
       await page.getByRole('textbox', { name: 'Email' }).fill(ONBOARDING_USER.email);

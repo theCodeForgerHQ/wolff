@@ -83,14 +83,11 @@ export async function POST(request: Request) {
         throw new Error(emailResult.error || 'Verification email was not sent');
       }
     } catch (emailError) {
-      // Bug #48: If verification email fails, auto-verify the user so they aren't
-      // stuck unable to log in with no way to get a verification link.
-      // They can still use the app; the email wasn't critical for security at signup.
-      logger.error({ err: emailError }, 'Failed to send verification email — auto-verifying user');
-      await prisma.user.update({
-        where: { id: result.id },
-        data: { emailVerifiedAt: new Date() },
-      });
+      // The account stays unverified. Verifying it here would hand a verified
+      // account for this address to whoever registered it, without proof that
+      // they own it. /verify-email offers "Resend verification email".
+      emailSent = false;
+      logger.error({ err: emailError }, 'Failed to send verification email');
     }
 
     // Bug #72: Audit log for new account creation
@@ -102,7 +99,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         user: { id: result.id, name: result.name, email: result.email },
-        message: 'Account created. Please check your email to verify your account.',
+        message: emailSent
+          ? 'Account created. Please check your email to verify your account.'
+          : 'Account created, but the verification email could not be sent. Use "Resend verification email" to try again.',
       },
       { status: 201 }
     );
