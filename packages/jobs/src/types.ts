@@ -128,6 +128,12 @@ export interface JobContext {
   /** Public origin of the web app, for links in emails and PDF rendering. */
   appUrl: string;
   requireHttpsWebhooks: boolean;
+  /**
+   * The push runtime (QStash): a failed webhook attempt schedules the next
+   * one itself, with the design's delay, because QStash's own retries are
+   * few and close together. A worker's queue applies those delays itself.
+   */
+  selfScheduledRetries?: boolean;
   now: () => Date;
 }
 

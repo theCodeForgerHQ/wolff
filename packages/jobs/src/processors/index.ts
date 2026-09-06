@@ -1,5 +1,6 @@
 import { relayOutboxToJobs } from '../relay';
 import { runTickSteps, tickSteps } from '../tick';
+import { WEBHOOK_RETRY_DELAYS_MS } from '../retry-delays';
 import { createHash } from 'node:crypto';
 import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
 import {
@@ -15,7 +16,12 @@ import {
 } from '@wolff/core/automations';
 import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
 import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
-import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
+import {
+  WebhookDeliveryError,
+  deliverWebhook,
+  fanOutDomainEvent,
+  recordDeliveryExhausted,
+} from '@wolff/core/webhooks';
 import type { JobContext, JobType, Processor } from '../types';
 import { backupKey, pruneBackups, writeBackup } from '../backup';
 import { logger } from '@wolff/core/logger';
@@ -42,11 +48,37 @@ const fanOutWebhooks: Processor<'webhooks.fanout'> = async (ctx, { outboxEventId
 };
 
 const deliver: Processor<'webhooks.deliver'> = async (ctx, job) => {
-  await deliverWebhook(ctx.db, job, {
-    transport: ctx.webhooks,
-    requireHttps: ctx.requireHttpsWebhooks,
-    now: ctx.now(),
-  });
+  try {
+    await deliverWebhook(ctx.db, job, {
+      transport: ctx.webhooks,
+      requireHttps: ctx.requireHttpsWebhooks,
+      now: ctx.now(),
+    });
+  } catch (error) {
+    if (!ctx.selfScheduledRetries || !(error instanceof WebhookDeliveryError)) throw error;
+    // The attempt is recorded; schedule the next one with the design's delay,
+    // or give up after the last, as the worker's queue would.
+    const delivery = await ctx.db.webhookDelivery.findFirst({
+      where: { id: job.deliveryId, workspaceId: job.workspaceId },
+      select: { attempts: true },
+    });
+    const attempts = delivery?.attempts ?? 0;
+    const delayMs = WEBHOOK_RETRY_DELAYS_MS[attempts - 1];
+    if (delayMs === undefined) {
+      await recordDeliveryExhausted(ctx.db, job);
+      return;
+    }
+    await ctx.db.webhookDelivery.updateMany({
+      where: { id: job.deliveryId, workspaceId: job.workspaceId },
+      data: { nextRetry: new Date(ctx.now().getTime() + delayMs) },
+    });
+    await ctx.dispatch({
+      type: 'webhooks.deliver',
+      payload: job,
+      jobId: `webhook-retry:${job.deliveryId}:${attempts}`,
+      delayMs,
+    });
+  }
 };
 
 const sendEmail: Processor<'email.send'> = async (ctx, { scheduledEmailId, workspaceId }) => {

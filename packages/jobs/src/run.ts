@@ -1,6 +1,9 @@
 import { completeOutboxEvent, failOutboxEvent } from '@wolff/core/outbox';
 import { recordDeliveryExhausted } from '@wolff/core/webhooks';
 import { processors } from './processors';
+import { WEBHOOK_RETRY_DELAYS_MS } from './retry-delays';
+
+export { WEBHOOK_RETRY_DELAYS_MS };
 import { jobPayloads, type Job, type JobContext, type JobType } from './types';
 
 const MINUTE = 60_000;
@@ -13,17 +16,6 @@ export interface RetryPolicy {
 }
 
 const exponential = (baseMs: number) => (attemptsMade: number) => baseMs * 2 ** (attemptsMade - 1);
-
-/** 8 attempts, waiting 1m, 5m, 30m, 2h, 6h, 12h, 24h between them. */
-export const WEBHOOK_RETRY_DELAYS_MS = [
-  MINUTE,
-  5 * MINUTE,
-  30 * MINUTE,
-  2 * HOUR,
-  6 * HOUR,
-  12 * HOUR,
-  24 * HOUR,
-];
 
 /** Attempts and backoff per job type, from the table in the design. */
 export const RETRY_POLICIES: Record<JobType, RetryPolicy> = {

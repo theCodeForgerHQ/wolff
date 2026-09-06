@@ -181,6 +181,7 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
         : undefined,
     appUrl: config.APP_URL,
     requireHttpsWebhooks: config.NODE_ENV !== 'development',
+    selfScheduledRetries: config.JOB_DISPATCHER === 'qstash',
     now: () => new Date(),
   };
 
