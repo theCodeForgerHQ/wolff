@@ -83,24 +83,29 @@ export function createQStashVerifier(keys: {
  * The schedules of the free demo (owner decision 2026-08-23, a deliberate
  * deviation from the design's GitHub Actions cron; see docs/phase-2.md).
  * QStash calls `POST /jobs/run/:type` itself, signed, so nothing has to run
- * outside Vercel. Free tier: at most 10 schedules and 1,000 messages a day;
- * these fire about 246 times a day, the rest is left for the jobs they fan
- * out to. Every job has to end inside Vercel's 300 s function limit; the
- * sweeps are bounded per run and pick up where they stopped. UTC.
+ * outside Vercel. Free tier: at most 10 schedules and 1,000 messages a day.
+ * Every job has to end inside Vercel's 300 s function limit; the sweeps are
+ * bounded per run and pick up where they stopped. UTC.
+ *
+ * Every schedule fires at minute 0, so the database (Neon suspends 5 minutes
+ * after the last query) wakes at most once an hour. Spread over the hour, as
+ * they were, the schedules kept it awake most of the day and used up the
+ * free compute quota: every run failed from 2026-09-03 to the reset on
+ * 11-01, and the failing invocations then used up Vercel's CPU allowance.
+ * The frequent jobs run together in one hourly `scheduled.tick` (tick.ts).
+ * About 26 messages a day.
  */
 export const QSTASH_SCHEDULES: Record<string, { type: JobType; cron: string }> = {
-  // Requeues stale events and relays what is due: emails, webhook deliveries.
-  'outbox-sweep': { type: 'outbox.sweep', cron: '*/15 * * * *' },
-  automations: { type: 'automations.tick', cron: '7,22,37,52 * * * *' },
-  recurring: { type: 'recurring.generate', cron: '0 * * * *' },
-  // Hourly rather than nightly: each run embeds a bounded batch, so a
-  // backlog is worked off over a few hours instead of failing at 300 s.
-  'ai-sweep': { type: 'ai.sweep', cron: '30 * * * *' },
-  reminders: { type: 'reminders.scan', cron: '0 3 * * *' },
-  overdue: { type: 'invoices.mark_overdue', cron: '15 0 * * *' },
-  'reports-nightly': { type: 'reports.nightly', cron: '30 20 * * *' },
-  // 02:30 IST, after the nightly reports. One file per day; see db.backup.
-  backup: { type: 'db.backup', cron: '0 21 * * *' },
+  // Automations, recurring invoices, overdue (00:00), reminders (03:00), then
+  // the outbox relay, so what they created is sent in the same run.
+  tick: { type: 'scheduled.tick', cron: '0 * * * *' },
+  // Re-embeds what changed. New and edited documents are indexed when they
+  // change (the ai.index outbox event); this only catches what was missed.
+  'ai-sweep': { type: 'ai.sweep', cron: '0 1 * * *' },
+  // 01:30 IST, after the IST day has ended.
+  'reports-nightly': { type: 'reports.nightly', cron: '0 20 * * *' },
+  // Sunday 02:30 IST. Weekly: a full export is the heaviest job there is.
+  backup: { type: 'db.backup', cron: '0 21 * * 0' },
 };
 
 /** The part of the QStash client the schedule sync uses. */
@@ -139,9 +144,9 @@ export async function syncQStashSchedules(
       body: JSON.stringify(job),
       headers: { 'content-type': 'application/json' },
       scheduleId,
-      // A failed scheduled run is not retried: the next one is never far
-      // away, and retries against a database that is down only multiply the
-      // failing invocations (and the Sentry alerts).
+      // A failed scheduled run is not retried: the next one is at most 30
+      // minutes away, and retries against a database that is down only
+      // multiply the failing invocations (and the Sentry alerts).
       retries: SCHEDULE_RETRIES,
     });
     ids.push(scheduleId);

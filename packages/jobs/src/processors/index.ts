@@ -1,4 +1,5 @@
 import { relayOutboxToJobs } from '../relay';
+import { runTickSteps, tickSteps } from '../tick';
 import { createHash } from 'node:crypto';
 import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
 import {
@@ -403,6 +404,12 @@ const backupDatabase: Processor<'db.backup'> = async (ctx) => {
   );
 };
 
+const scheduledTick: Processor<'scheduled.tick'> = async (ctx) => {
+  await runTickSteps(tickSteps(ctx.now().getUTCHours()), (type) =>
+    (processors[type] as Processor<typeof type>)(ctx, {})
+  );
+};
+
 export const processors: { [T in JobType]: Processor<T> } = {
   'payments.reconcile': reconcilePayment,
   'webhooks.fanout': fanOutWebhooks,
@@ -420,6 +427,7 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'ai.sweep': sweepAiIndex,
   'reports.nightly': nightlyReports,
   'db.backup': backupDatabase,
+  'scheduled.tick': scheduledTick,
 };
 
 export type { JobContext };

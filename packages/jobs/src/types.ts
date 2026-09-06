@@ -40,6 +40,8 @@ export const jobPayloads = {
   // `after`: resume cursor, the last workspace id a cut-off run reported.
   'reports.nightly': z.object({ after: id.optional() }),
   'db.backup': z.object({}),
+  // QStash only: the hourly run of the frequent jobs; see tick.ts.
+  'scheduled.tick': z.object({}),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;

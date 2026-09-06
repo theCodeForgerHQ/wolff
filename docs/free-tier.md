@@ -151,18 +151,23 @@ Vercel. The schedules are defined in `QSTASH_SCHEDULES`
 QSTASH_TOKEN=... PUBLIC_API_URL=https://<api> pnpm --filter @wolff/api schedules:sync
 ```
 
-| Schedule (`wolff-*`) | Job                                                                     | Cron (UTC)           |
-| -------------------- | ----------------------------------------------------------------------- | -------------------- |
-| outbox-sweep         | `outbox.sweep`: requeue stale events, relay due ones (emails, webhooks) | `*/15 * * * *`       |
-| automations          | `automations.tick`                                                      | `7,22,37,52 * * * *` |
-| recurring            | `recurring.generate`                                                    | `0 * * * *`          |
-| ai-sweep             | `ai.sweep`: re-embed what changed, bounded batches                      | `30 * * * *`         |
-| reminders            | `reminders.scan`                                                        | `0 3 * * *`          |
-| overdue              | `invoices.mark_overdue`                                                 | `15 0 * * *`         |
-| reports-nightly      | `reports.nightly`                                                       | `30 20 * * *`        |
-| backup               | `db.backup`: logical export to the `backups` bucket, 14-day retention   | `0 21 * * *`         |
+| Schedule (`wolff-*`) | Job                                                                                                                      | Cron (UTC)   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| tick                 | `scheduled.tick`: automations, recurring invoices, overdue (00:00), reminders (03:00), then the outbox relay (`tick.ts`) | `0 * * * *`  |
+| ai-sweep             | `ai.sweep`: re-embed what the `ai.index` events missed, bounded batches                                                  | `0 1 * * *`  |
+| reports-nightly      | `reports.nightly`                                                                                                        | `0 20 * * *` |
+| backup               | `db.backup`: logical export to the `backups` bucket, 14-day retention                                                    | `0 21 * * 0` |
 
-8 of the free tier's 10 schedules, about 246 messages a day of 1,000. Every
+4 of the free tier's 10 schedules, about 26 messages a day of 1,000. Every
+schedule fires at minute 0, so Neon (which suspends 5 minutes after the last
+query) wakes at most once an hour. Spread over the hour, as they were until
+2026-09-04, they kept it awake most of the day and used up the free compute
+quota: every job failed from 2026-09-03 until the quota reset on 09-04, and
+the failing invocations then used up Vercel's CPU allowance (the team was
+blocked on 09-04). Emails and webhooks that a request creates are pushed at
+once; the ones the scheduled jobs create go out in the same tick, because
+the relay is its last step. Scheduled runs are not retried
+(`SCHEDULE_RETRIES = 0`); the next run is never more than an hour away. Every
 job must end inside Vercel's 300 s limit: the outbox sweep relays at most
 200 events per run, and the AI sweep stops starting calls after 200 s, each
 call embedding at most 25 sources in at most about 40 s; the rest is picked
