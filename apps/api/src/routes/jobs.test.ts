@@ -206,4 +206,16 @@ describe('POST /jobs/run/:type', () => {
       expect.any(Error)
     );
   });
+
+  it('still records the job as failed on the last delivery when the database looks down', async () => {
+    const exhausted = vi.fn(async () => {});
+    const { post } = setup(async () => {
+      throw new Error('Connection terminated unexpectedly');
+    }, exhausted);
+
+    const res = await post('email.send', job, { retried: 3 });
+
+    expect(res.status).toBe(503);
+    expect(exhausted).toHaveBeenCalled();
+  });
 });

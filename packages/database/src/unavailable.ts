@@ -13,9 +13,13 @@ const PRISMA_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017']);
 const SQLSTATE = /^(08|53)\d{3}$|^57P0[1-3]$/;
 const SQLSTATE_IN_MESSAGE = /Code: `(08\d{3}|53\d{3}|57P0[1-3])`/;
 
-/** pg driver messages for a lost or unusable connection. */
-const DRIVER_MESSAGES =
-  /Connection terminated|connection timeout|is not queryable|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|Can't reach database server/i;
+/**
+ * Messages only the pg driver and Prisma produce for a lost or unusable
+ * database connection. Generic socket errors (ECONNREFUSED, ETIMEDOUT, ...)
+ * are left out on purpose: webhook and email deliveries fail with the same
+ * ones, and a customer's endpoint being down is not a database outage.
+ */
+const DRIVER_MESSAGES = /^Connection terminated|is not queryable|Can't reach database server/;
 
 /**
  * Whether `error` (or its cause) says the database is unavailable, rather

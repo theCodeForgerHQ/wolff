@@ -87,15 +87,23 @@ export function jobRoutes(
       // Not a fault of this job: every job fails the same way until the
       // database is back. One log line, no error report (an outage would
       // otherwise be thousands of them), and a retry that waits.
+      const retried = Number(req.get('upstash-retried') ?? 0);
       if (isDatabaseUnavailable(error)) {
         logger.warn({ jobId: job.jobId, type }, 'Job deferred: database unavailable');
+        // QStash will not deliver it again: record the failure if we can (it
+        // needs the database, so it may fail too; the job is lost either way).
+        if (retried >= QSTASH_RETRIES) {
+          await (deps.onExhausted ?? handleExhaustedJob)(deps.context, job, error).catch(
+            (recordError: unknown) =>
+              logger.warn({ err: recordError, jobId: job.jobId }, 'Could not record failed job')
+          );
+        }
         res.set('Retry-After', String(DATABASE_RETRY_AFTER_S));
         return sendError(res, 'internal_error', 'Database unavailable', undefined, 503);
       }
       // QStash says how many times it has retried. On its last delivery the
       // job has failed for good: record that (outbox event failed, webhook
       // delivery exhausted, email failed) as the BullMQ worker does.
-      const retried = Number(req.get('upstash-retried') ?? 0);
       if (retried >= QSTASH_RETRIES) {
         await (deps.onExhausted ?? handleExhaustedJob)(deps.context, job, error);
       }
