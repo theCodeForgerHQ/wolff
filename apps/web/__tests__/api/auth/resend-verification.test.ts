@@ -5,7 +5,22 @@ const mocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
   send: vi.fn(),
   rateLimit: vi.fn(),
+  afterTasks: [] as (() => unknown)[],
+  logError: vi.fn(),
 }));
+
+// after() needs a request scope; collect the work and run it like Next does,
+// once the response is out.
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: (task: () => unknown) => mocks.afterTasks.push(task),
+}));
+vi.mock('@/lib/logger', () => ({
+  logger: { error: mocks.logError, warn: vi.fn(), info: vi.fn() },
+}));
+const runAfter = async () => {
+  for (const task of mocks.afterTasks.splice(0)) await task();
+};
 
 vi.mock('@wolff/database', () => ({
   prisma: {
@@ -35,6 +50,7 @@ describe('POST /api/auth/resend-verification', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.rateLimit.mockResolvedValue({ limited: false });
+    mocks.afterTasks.length = 0;
     mocks.findUnique.mockResolvedValue({
       id: 'u-1',
       email: 'new@example.com',
@@ -43,18 +59,26 @@ describe('POST /api/auth/resend-verification', () => {
     });
   });
 
-  it('sends the email and says so', async () => {
+  it('answers, then sends the email after the response', async () => {
     mocks.send.mockResolvedValue({ success: true });
     const res = await post({ email: 'new@example.com' });
     expect(res.status).toBe(200);
+    expect(mocks.send).not.toHaveBeenCalled();
+
+    await runAfter();
     expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ to: 'new@example.com' }));
   });
 
   // sendVerificationEmail reports failure in its result; it does not throw.
-  it('does not claim success when the email was not sent', async () => {
+  it('logs a failed send without changing the answer', async () => {
     mocks.send.mockResolvedValue({ success: false, error: 'provider down' });
     const res = await post({ email: 'new@example.com' });
-    expect(res.status).toBe(500);
+    await runAfter();
+    expect(res.status).toBe(200);
+    expect(mocks.logError).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u-1' }),
+      'Failed to send verification email'
+    );
   });
 
   // The route is unauthenticated: its answer must not tell whether an
@@ -73,6 +97,7 @@ describe('POST /api/auth/resend-verification', () => {
     });
     const verified = await post({ email: 'v@example.com' });
 
+    await runAfter();
     const knownBody = await known.json();
     for (const res of [unknown, verified]) {
       expect(res.status).toBe(known.status);
