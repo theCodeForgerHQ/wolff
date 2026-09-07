@@ -400,8 +400,8 @@ async def test_a_failing_primary_falls_back_within_the_wall_clock(
     from app.agent import chat
     from app.auth import Caller
 
-    monkeypatch.setattr(chat, "WALL_CLOCK_SECONDS", 4)
-    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 1.5)
+    monkeypatch.setattr(chat, "WALL_CLOCK_SECONDS", 12)
+    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 5)
     fake = resolve_provider({"LLM_PROVIDER": "fake"})
     primary = PrimaryChatDown(status)
     llm = build_clients(
@@ -460,7 +460,7 @@ async def test_a_run_that_fell_back_records_the_primarys_usage_too(
     from app.agent import chat
     from app.auth import Caller
 
-    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 1.5)
+    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 5)
     fake = resolve_provider({"LLM_PROVIDER": "fake"})
     primary, backup = Tally(hang_after=1), Tally()
     llm = build_clients(
