@@ -8,7 +8,8 @@ every request passes the same checks:
   minute, and a requests-per-day counter shared through Redis;
 - bounded concurrency;
 - two retries on 429/5xx/timeouts, honouring ``Retry-After`` (the SDKs'
-  own retries are switched off so they do not multiply);
+  own retries are switched off so they do not multiply), none inside
+  ``single_attempt()`` (interactive chat, which falls back instead);
 - the model allowlist, checked on the request body;
 - a ``UsageGate`` that reserves the request's worst-case cost before it
   waits for a slot (refusing it when the budget cannot cover that) and
@@ -22,7 +23,9 @@ import json
 import math
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -33,6 +36,19 @@ RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_SECONDS = 30.0
 _DECODED_BODY_HEADERS = frozenset({"content-encoding", "content-length"})
+_single_attempt: ContextVar[bool] = ContextVar("llm_single_attempt", default=False)
+
+
+@contextmanager
+def single_attempt() -> Iterator[None]:
+    """Requests made inside this block get one attempt: a 429/5xx is
+    returned at once instead of being retried after its Retry-After. For
+    interactive calls that have a fallback provider and a deadline."""
+    token = _single_attempt.set(True)
+    try:
+        yield
+    finally:
+        _single_attempt.reset(token)
 
 
 class LlmUnavailable(Exception):
@@ -229,8 +245,9 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         )
 
     async def _send_with_retries(self, request: httpx.Request) -> httpx.Response:
-        for attempt in range(MAX_ATTEMPTS):
-            last = attempt == MAX_ATTEMPTS - 1
+        attempts = 1 if _single_attempt.get() else MAX_ATTEMPTS
+        for attempt in range(attempts):
+            last = attempt == attempts - 1
             try:
                 response = await self._inner.handle_async_request(request)
             except (httpx.TimeoutException, httpx.NetworkError):

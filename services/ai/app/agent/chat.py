@@ -31,13 +31,17 @@ from app.budget import cost, metered
 from app.db.models import AgentRun, ChatMessage, ChatSession
 from app.llm.clients import is_fallback_error
 from app.llm.providers import ProviderProfile
-from app.llm.transport import Usage
+from app.llm.transport import Usage, single_attempt
 from app.prompts import load_prompt
 from app.services import Services
 
 NOT_FOUND = "I couldn't find that in your documents."
 MAX_TOOL_ITERATIONS = 8
 WALL_CLOCK_SECONDS = 60
+#: Each provider's share of the wall clock. Requests get one attempt (no
+#: Retry-After sleeps), so a rate-limited, failing or hung primary leaves
+#: the fallback time to answer.
+PROVIDER_SECONDS = 25
 HISTORY_TURNS = 10
 # The fallback (Groq's free tier: 8,000 tokens a minute) starts over inside
 # the same wall clock, so it gets a smaller prompt and reply budget: fewer
@@ -135,7 +139,7 @@ async def run_chat(
 
     try:
         history = await _history(svc, sid)
-        with metered(caller.workspace_id):
+        with metered(caller.workspace_id), single_attempt():
             async with asyncio.timeout(WALL_CLOCK_SECONDS):
                 # The fallback provider (LLM_FALLBACK) gets the question again
                 # from the start if the first one fails as a provider.
@@ -156,33 +160,38 @@ async def run_chat(
                     )
                     turns = history[-FALLBACK_HISTORY_TURNS * 2 :] if trimmed else history
                     agent = create_agent(model, tools=tools, system_prompt=prompt.text)
+                    deadline = asyncio.timeout(PROVIDER_SECONDS)
                     try:
-                        stream = agent.astream(
-                            {"messages": [*turns, HumanMessage(message)]},
-                            config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
-                            stream_mode="updates",
-                        )
-                        async for update in stream:
-                            for node in update.values():
-                                for msg in (node or {}).get("messages", []):
-                                    if not isinstance(msg, AIMessage):
-                                        continue
-                                    meta: dict[str, Any] = dict(msg.usage_metadata or {})
-                                    usage = Usage(
-                                        usage.model,
-                                        usage.tokens_in + int(meta.get("input_tokens", 0)),
-                                        usage.tokens_out + int(meta.get("output_tokens", 0)),
-                                    )
-                                    for call in msg.tool_calls:
-                                        tool_calls.append(
-                                            {"name": call["name"], "args": call["args"]}
+                        async with deadline:
+                            stream = agent.astream(
+                                {"messages": [*turns, HumanMessage(message)]},
+                                config={"recursion_limit": MAX_TOOL_ITERATIONS * 2 + 1},
+                                stream_mode="updates",
+                            )
+                            async for update in stream:
+                                for node in update.values():
+                                    for msg in (node or {}).get("messages", []):
+                                        if not isinstance(msg, AIMessage):
+                                            continue
+                                        meta: dict[str, Any] = dict(msg.usage_metadata or {})
+                                        usage = Usage(
+                                            usage.model,
+                                            usage.tokens_in + int(meta.get("input_tokens", 0)),
+                                            usage.tokens_out + int(meta.get("output_tokens", 0)),
                                         )
-                                        yield ChatEvent("tool_call", {"name": call["name"]})
-                                    if not msg.tool_calls:
-                                        final = _text(msg.content)
+                                        for call in msg.tool_calls:
+                                            tool_calls.append(
+                                                {"name": call["name"], "args": call["args"]}
+                                            )
+                                            yield ChatEvent("tool_call", {"name": call["name"]})
+                                        if not msg.tool_calls:
+                                            final = _text(msg.content)
                         break
                     except Exception as exc:
-                        if attempt == len(attempts) - 1 or not is_fallback_error(exc):
+                        timed_out = isinstance(exc, TimeoutError) and deadline.expired()
+                        if attempt == len(attempts) - 1 or not (
+                            timed_out or is_fallback_error(exc)
+                        ):
                             raise
     except Exception as exc:
         status, error = "error", type(exc).__name__

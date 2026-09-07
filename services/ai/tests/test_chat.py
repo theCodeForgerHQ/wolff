@@ -365,3 +365,62 @@ async def test_the_fallback_gets_a_trimmed_context_and_a_lower_max_tokens(
         for doc in result["documents"]:
             # The wrapper adds ~30 characters around the trimmed text.
             assert len(doc["content"]) <= chars + 40
+
+
+class PrimaryChatDown(httpx.AsyncBaseTransport):
+    """Embeddings work; every chat call is answered ``status`` with a
+    Retry-After of 30 s (what NIM sends when out of quota), or hangs."""
+
+    def __init__(self, status: int | None) -> None:
+        self.fake = FakeOpenAITransport()
+        self.status = status
+        self.chats = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/chat/completions"):
+            self.chats += 1
+            if self.status is None:
+                await anyio.sleep_forever()
+            return httpx.Response(
+                self.status or 503,
+                headers={"retry-after": "30"},
+                json={"error": {"message": "exceeded your current quota"}},
+                request=request,
+            )
+        return await self.fake.handle_async_request(request)
+
+
+@requires_db
+@pytest.mark.parametrize("status", [429, 503, None])
+async def test_a_failing_primary_falls_back_within_the_wall_clock(
+    services: Services, ws_a: Seeded, monkeypatch: pytest.MonkeyPatch, status: int | None
+) -> None:
+    """A 429/503 (or a hung primary) must reach the fallback at once, not
+    after retries that sleep out the Retry-After and spend the wall clock."""
+    from app.agent import chat
+    from app.auth import Caller
+
+    monkeypatch.setattr(chat, "WALL_CLOCK_SECONDS", 4)
+    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 1.5)
+    fake = resolve_provider({"LLM_PROVIDER": "fake"})
+    primary = PrimaryChatDown(status)
+    llm = build_clients(
+        fake,
+        gate=services.budget,
+        daily=MemoryDailyCounter(),
+        inner=primary,
+        fallback=replace(fake, name="fake-backup", chat_model="fake-backup-chat"),
+        fallback_inner=FakeOpenAITransport(),
+    )
+    who = Caller(
+        issuer="web",
+        workspace_id=ws_a.workspace_id,
+        user_id=ws_a.user_id,
+        scopes=frozenset({"ai:use"}),
+    )
+    try:
+        events = [e async for e in chat.run_chat(replace(services, llm=llm), who, "hi there")]
+    finally:
+        await llm.aclose()
+    assert events[-1].event == "done"
+    assert primary.chats == 1
