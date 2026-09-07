@@ -419,10 +419,11 @@ const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after, only, 
   for (const { id } of rows) {
     if (last !== undefined && ctx.now().getTime() >= deadline) {
       const day = started.toISOString().slice(0, 10);
+      // A retry run keeps to its workspaces when it continues.
       await ctx.dispatch({
         type: 'reports.nightly',
-        payload: { after: last },
-        jobId: `reports.nightly:${day}:${last}`,
+        payload: { after: last, ...(only ? { only, round } : {}) },
+        jobId: `reports.nightly:${day}:${round ? `r${round}:` : ''}${last}`,
       });
       break;
     }
@@ -443,12 +444,17 @@ const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after, only, 
     if (next <= REPORT_RETRY_ROUNDS) {
       logger.warn({ failed, round: next }, 'Nightly reports failed; retrying those workspaces');
       const day = started.toISOString().slice(0, 10);
-      await ctx.dispatch({
-        type: 'reports.nightly',
-        payload: { only: failed, round: next },
-        jobId: `reports.nightly:${day}:retry:${next}`,
-        delayMs: REPORT_RETRY_DELAY_MS,
-      });
+      // One retry job per 200 workspaces (the payload's limit), named by the
+      // round and where this chunk started, so retries of different chunks
+      // of the same night are not deduplicated into one.
+      for (let i = 0; i < failed.length; i += 200) {
+        await ctx.dispatch({
+          type: 'reports.nightly',
+          payload: { only: failed.slice(i, i + 200), round: next },
+          jobId: `reports.nightly:${day}:retry:${next}:from:${after ?? '-'}:${i}`,
+          delayMs: REPORT_RETRY_DELAY_MS,
+        });
+      }
       return;
     }
     throw new Error(
