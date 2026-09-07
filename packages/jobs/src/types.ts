@@ -38,7 +38,12 @@ export const jobPayloads = {
   }),
   'ai.sweep': z.object({}),
   // `after`: resume cursor, the last workspace id a cut-off run reported.
-  'reports.nightly': z.object({ after: id.optional() }),
+  'reports.nightly': z.object({
+    after: id.optional(),
+    // A retry of the workspaces that failed, and which retry it is.
+    only: z.array(id).max(200).optional(),
+    round: z.number().int().min(1).max(5).optional(),
+  }),
   'db.backup': z.object({}),
   // QStash only: the hourly run of the frequent jobs; see tick.ts.
   'scheduled.tick': z.object({}),

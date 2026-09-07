@@ -393,14 +393,23 @@ const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
  */
 export const REPORTS_BUDGET_MS = 200_000;
 
-const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
+/** Retries of the workspaces whose nightly report failed: at most this many, this far apart. */
+const REPORT_RETRY_ROUNDS = 2;
+const REPORT_RETRY_DELAY_MS = 10 * 60_000;
+
+const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after, only, round }) => {
   const ai = ctx.ai;
   if (!ai) return;
   const started = ctx.now();
   const deadline = started.getTime() + REPORTS_BUDGET_MS;
   // In id order so a run cut off at the budget resumes after its last report.
   const rows = await ctx.db.$unscoped.workspace.findMany({
-    where: { deletedAt: null, ...(after ? { id: { gt: after } } : {}) },
+    where: {
+      deletedAt: null,
+      ...(after || only
+        ? { id: { ...(after ? { gt: after } : {}), ...(only ? { in: only } : {}) } }
+        : {}),
+    },
     select: { id: true },
     orderBy: { id: 'asc' },
   });
@@ -427,8 +436,21 @@ const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
     last = id;
   }
   if (failed.length > 0) {
-    // Fails the job so it is retried and reported; reports are upserts, so a
-    // retry rewrites the ones that succeeded without harm.
+    // Retrying the job would run every report in it again, each an LLM call
+    // against the budget: try again later for only the ones that failed, and
+    // fail (reported) when the last round fails too.
+    const next = (round ?? 0) + 1;
+    if (next <= REPORT_RETRY_ROUNDS) {
+      logger.warn({ failed, round: next }, 'Nightly reports failed; retrying those workspaces');
+      const day = started.toISOString().slice(0, 10);
+      await ctx.dispatch({
+        type: 'reports.nightly',
+        payload: { only: failed, round: next },
+        jobId: `reports.nightly:${day}:retry:${next}`,
+        delayMs: REPORT_RETRY_DELAY_MS,
+      });
+      return;
+    }
     throw new Error(
       `nightly report failed for ${failed.length} workspace(s): ${failed.join(', ')}`,
       { cause: errors }

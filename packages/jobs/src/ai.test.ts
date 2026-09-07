@@ -197,9 +197,10 @@ describe('reports.nightly', () => {
       },
     };
     // Honours the cursor the way Postgres would: ids after `gt`, in order.
-    const findMany = vi.fn(async (args: { where: { id?: { gt: string } } }) =>
+    const findMany = vi.fn(async (args: { where: { id?: { gt?: string; in?: string[] } } }) =>
       ids
-        .filter((id) => !args.where.id || id > args.where.id.gt)
+        .filter((id) => !args.where.id?.gt || id > args.where.id.gt)
+        .filter((id) => !args.where.id?.in || args.where.id.in.includes(id))
         .sort()
         .map((id) => ({ id }))
     );
@@ -231,12 +232,28 @@ describe('reports.nightly', () => {
     expect(next.calls).toEqual(['w4', 'w5', 'w6', 'w7']);
   });
 
-  it('reports every other workspace when one fails, then fails the job', async () => {
+  // A retry of the whole job re-ran every report in it, each an LLM call
+  // against the budget. Only the workspaces that failed are tried again.
+  it('reports every other workspace when one fails, then retries only that one, later', async () => {
     const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3'], 1_000, ['w2']);
-    await expect(processors['reports.nightly'](ctx, {})).rejects.toThrow(
+    await expect(processors['reports.nightly'](ctx, {})).resolves.toBeUndefined();
+    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(dispatched).toEqual([
+      {
+        type: 'reports.nightly',
+        payload: { only: ['w2'], round: 1 },
+        jobId: 'reports.nightly:2026-10-06:retry:1',
+        delayMs: 10 * 60_000,
+      },
+    ]);
+  });
+
+  it('runs a retry for its workspaces only, and fails for good after the last round', async () => {
+    const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3'], 1_000, ['w2']);
+    await expect(processors['reports.nightly'](ctx, { only: ['w2'], round: 2 })).rejects.toThrow(
       'nightly report failed for 1 workspace(s): w2'
     );
-    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(calls).toEqual(['w2']);
     expect(dispatched).toEqual([]);
   });
 
