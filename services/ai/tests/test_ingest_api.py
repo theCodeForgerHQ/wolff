@@ -254,3 +254,84 @@ async def test_a_new_embedding_model_makes_every_source_stale(
             ).scalars()
         )
     assert models == {"fake-embed-2"}
+
+
+@requires_db
+async def test_a_failing_source_is_recorded_and_does_not_block_the_sweep(
+    client: AsyncClient, admin_engine: AsyncEngine, migrated: AsyncEngine, monkeypatch: Any
+) -> None:
+    """A source whose loading or embedding raises must not fail the sweep
+    call (500) and, picked first every run, keep the rest from indexing: it
+    is recorded as an error and given up after MAX_INGEST_ATTEMPTS."""
+    from app.api import ingest as ingest_api
+    from app.rag import ingest as rag_ingest
+    from app.rag.loaders import load_document
+    from tests.seed import seed_workspace
+
+    ws = await seed_workspace(admin_engine, "a")
+    poison = ws.quote_id
+    load = load_document
+
+    async def broken(session: Any, workspace_id: str, kind: str, source_id: str) -> Any:
+        if source_id == poison:
+            raise ValueError("cannot render this quote")
+        return await load(session, workspace_id, kind, source_id)
+
+    monkeypatch.setattr(rag_ingest, "load_document", broken)
+    monkeypatch.setattr(ingest_api, "SWEEP_BATCH", 1)
+
+    calls = 0
+    while (await _sweep(client, ws))["processed"]:
+        calls += 1
+        assert calls < 30
+
+    async with migrated.connect() as conn:
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT source_id, status, error, attempts FROM ai.ingest_state "
+                    "WHERE workspace_id = :w"
+                ),
+                {"w": ws.workspace_id},
+            )
+        ).all()
+    states = {r.source_id: r for r in rows}
+    assert states[poison].status == "error"
+    assert "cannot render this quote" in states[poison].error
+    assert states[poison].attempts == ingest_api.MAX_INGEST_ATTEMPTS
+    others = [r for r in rows if r.source_id != poison]
+    assert others and all(r.status == "indexed" and r.attempts == 0 for r in others)
+
+
+@requires_db
+async def test_an_embedding_provider_failure_is_503_and_not_the_sources_fault(
+    client: AsyncClient, admin_engine: AsyncEngine, migrated: AsyncEngine, monkeypatch: Any
+) -> None:
+    from openai import APIConnectionError
+
+    from app.llm.clients import LlmClients
+    from tests.seed import seed_workspace
+
+    ws = await seed_workspace(admin_engine, "a")
+
+    async def down(self: Any, texts: Any) -> Any:
+        raise APIConnectionError(request=None)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(LlmClients, "embed", down)
+    token = service_token(ws.workspace_id, ["ai:index"], issuer="worker", user=None)
+    r = await client.post("/ingest/sweep", headers=auth(token))
+    assert r.status_code == 503, r.text
+    assert r.json()["error"]["code"] == "ai_unavailable"
+    token = service_token(ws.workspace_id, ["ai:index"], issuer="worker", user=None)
+    one = await client.post(
+        "/ingest", json={"sourceType": "quote", "sourceId": ws.quote_id}, headers=auth(token)
+    )
+    assert one.status_code == 503, one.text
+    async with migrated.connect() as conn:
+        errors = await conn.scalar(
+            text(
+                "SELECT count(*) FROM ai.ingest_state WHERE workspace_id = :w AND status = 'error'"
+            ),
+            {"w": ws.workspace_id},
+        )
+    assert errors == 0

@@ -64,6 +64,7 @@ async def _record(
         "indexed_at": datetime.now(UTC),
         "status": status,
         "error": error,
+        "attempts": 0,
     }
     statement = insert(IngestState).values(**values)
     await session.execute(
@@ -75,6 +76,40 @@ async def _record(
             where=IngestState.workspace_id == workspace_id,
         )
     )
+
+
+async def record_failure(
+    session: AsyncSession,
+    workspace_id: str,
+    source_type: str,
+    source_id: str,
+    source_updated_at: datetime | None,
+    error: str,
+) -> None:
+    """Record a failed attempt (status 'error', one more attempt). Commits.
+    ``indexed_at`` stays empty so the source is still stale."""
+    values = {
+        "source_type": source_type,
+        "source_id": source_id,
+        "workspace_id": workspace_id,
+        "source_updated_at": source_updated_at,
+        "indexed_at": None,
+        "status": "error",
+        "error": error[:1000],
+        "attempts": 1,
+    }
+    statement = insert(IngestState).values(**values)
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=[IngestState.source_type, IngestState.source_id],
+            set_={
+                **{k: v for k, v in values.items() if k not in ("source_type", "source_id")},
+                "attempts": IngestState.attempts + 1,
+            },
+            where=IngestState.workspace_id == workspace_id,
+        )
+    )
+    await session.commit()
 
 
 async def ingest(

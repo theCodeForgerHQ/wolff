@@ -107,6 +107,8 @@ class IngestState(AiBase):
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)
+    #: Failed attempts since the last success; the sweep gives up at a limit.
+    attempts: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
 class ChatSession(AiBase):
