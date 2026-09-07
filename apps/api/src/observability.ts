@@ -37,6 +37,16 @@ export function stripRequestData<E extends Sentry.ErrorEvent>(event: E): E {
   return { ...event, request: { method, url: url?.split('?')[0] } };
 }
 
+/**
+ * Trace sampling: none for job runs, `rate` for everything else. A job run
+ * is a scheduled background invocation; tracing it cost CPU in every one and
+ * filled Sentry with performance issues (N+1, Blocking Operation) about the
+ * scheduler rather than about requests.
+ */
+export function jobsUntracedSampler(rate: number) {
+  return (context: { name?: string }): number => (context.name?.includes('/jobs/') ? 0 : rate);
+}
+
 export function initObservability(
   config: ApiConfig,
   options: ObservabilityOptions = {}
@@ -54,7 +64,7 @@ export function initObservability(
       dsn: config.SENTRY_DSN,
       environment: config.NODE_ENV,
       release: config.GIT_SHA,
-      tracesSampleRate: config.SENTRY_TRACES_SAMPLE_RATE,
+      tracesSampler: jobsUntracedSampler(config.SENTRY_TRACES_SAMPLE_RATE),
       beforeSend: stripRequestData,
       ...(options.transport ? { transport: options.transport } : {}),
     });
