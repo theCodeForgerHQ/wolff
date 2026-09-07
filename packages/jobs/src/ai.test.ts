@@ -242,7 +242,7 @@ describe('reports.nightly', () => {
       {
         type: 'reports.nightly',
         payload: { only: ['w2'], round: 1 },
-        jobId: 'reports.nightly:2026-10-06:retry:1',
+        jobId: 'reports.nightly:2026-10-06:retry:1:from:-:0',
         delayMs: 10 * 60_000,
       },
     ]);
@@ -255,6 +255,29 @@ describe('reports.nightly', () => {
     );
     expect(calls).toEqual(['w2']);
     expect(dispatched).toEqual([]);
+  });
+
+  it('keeps a retry to its workspaces when it continues after its time budget', async () => {
+    const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3', 'w4'], 150_000);
+    await processors['reports.nightly'](ctx, { only: ['w1', 'w2', 'w3'], round: 1 });
+    expect(calls).toEqual(['w1', 'w2']);
+    expect(dispatched).toEqual([
+      {
+        type: 'reports.nightly',
+        payload: { after: 'w2', only: ['w1', 'w2', 'w3'], round: 1 },
+        jobId: 'reports.nightly:2026-10-06:r1:w2',
+      },
+    ]);
+  });
+
+  it('names the retry of each chunk apart, and splits more than 200 failures', async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+    const { ctx, dispatched } = nightly(ids, 1, ids);
+    await processors['reports.nightly'](ctx, { after: 'a' });
+    const retries = dispatched as { payload: { only: string[] }; jobId: string }[];
+    expect(retries.map((r) => r.payload.only.length)).toEqual([200, 50]);
+    expect(new Set(retries.map((r) => r.jobId)).size).toBe(2);
+    expect(retries[0]!.jobId).toContain(':from:a:0');
   });
 
   it('posts with scope reports:run only', async () => {
