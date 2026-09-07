@@ -143,6 +143,9 @@ export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHan
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     store: createStore?.('rl:key:'),
+    // A store that errors (Redis down) lets the request through: an outage
+    // of the counter must not take the API down with it.
+    passOnStoreError: true,
     handler: rateLimited,
   });
   const burst = rateLimit({
@@ -152,6 +155,9 @@ export function apiKeyRateLimit(createStore?: RateLimitStoreFactory): RequestHan
     standardHeaders: false,
     legacyHeaders: false,
     store: createStore?.('rl:burst:'),
+    // A store that errors (Redis down) lets the request through: an outage
+    // of the counter must not take the API down with it.
+    passOnStoreError: true,
     handler: rateLimited,
   });
   return (req, res, next) => {
