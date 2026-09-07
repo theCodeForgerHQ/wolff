@@ -1,5 +1,5 @@
 import { createPrisma, withTenantGuard } from '@wolff/database';
-import { createRedis } from '@wolff/jobs/bullmq';
+import { createRedis, createRequestRedis } from '@wolff/jobs/bullmq';
 import { BullMQDispatcher, createJobQueue } from '@wolff/jobs/bullmq';
 import { QStashDispatcher, createQStashVerifier } from '@wolff/jobs/qstash';
 import { REBUILDABLE_TABLES } from '@wolff/jobs/backup';
@@ -37,7 +37,7 @@ export interface BootstrapDeps {
 
 function createRedisConnection(url: string | undefined): Redis | undefined {
   if (!url) return undefined;
-  return createRedis(url);
+  return createRequestRedis(url);
 }
 
 function createReplayCache(redis?: Redis) {
@@ -57,7 +57,7 @@ class NoOpDispatcher implements JobDispatcher {
   }
 }
 
-function createJobDispatcher(config: ApiConfig, redis?: Redis): JobDispatcher {
+function createJobDispatcher(config: ApiConfig, redis?: Redis, queueRedis?: Redis): JobDispatcher {
   if (config.JOB_DISPATCHER === 'qstash') {
     if (
       !config.QSTASH_TOKEN ||
@@ -76,7 +76,7 @@ function createJobDispatcher(config: ApiConfig, redis?: Redis): JobDispatcher {
     logger.warn('BullMQ dispatcher selected but REDIS_URL is missing; jobs will be dropped');
     return new NoOpDispatcher();
   }
-  return new BullMQDispatcher(createJobQueue(redis));
+  return new BullMQDispatcher(createJobQueue(queueRedis ?? redis));
 }
 
 function createJobRunDeps(config: ApiConfig, ctx: JobContext, redis?: Redis): AppDeps['jobs'] {
@@ -181,10 +181,17 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
         : undefined,
     appUrl: config.APP_URL,
     requireHttpsWebhooks: config.NODE_ENV !== 'development',
+    selfScheduledRetries: config.JOB_DISPATCHER === 'qstash',
     now: () => new Date(),
   };
 
-  const dispatcher = createJobDispatcher(config, redis);
+  // The queue gets the worker-style connection BullMQ expects, not the
+  // request path's bounded one.
+  const queueRedis =
+    config.JOB_DISPATCHER === 'bullmq' && config.REDIS_URL
+      ? createRedis(config.REDIS_URL)
+      : undefined;
+  const dispatcher = createJobDispatcher(config, redis, queueRedis);
   jobContext.dispatch = (job) => dispatcher.dispatch(job);
 
   const appDeps: AppDeps = {
@@ -214,6 +221,7 @@ export function bootstrap(config: ApiConfig): BootstrapDeps {
     jobContext,
     close: async () => {
       await redis?.quit();
+      await queueRedis?.quit();
       await base.$disconnect();
     },
   };

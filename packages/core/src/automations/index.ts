@@ -1,5 +1,5 @@
 import type { AutomationStep, AutomationTrigger } from '@wolff/contracts';
-import type { Prisma } from '@wolff/database';
+import { Prisma } from '@wolff/database';
 import type { CoreContext, Db, DbTx } from '../context';
 import { moveDealInTx } from '../crm/deals';
 import { CoreError } from '../errors';
@@ -558,115 +558,145 @@ async function resolveSubject(
   return null;
 }
 
-/** Ids of runs still in progress, across workspaces, for the periodic tick. */
-export async function listRunningAutomationRuns(db: Db, limit = 500): Promise<string[]> {
+/** A run that has not moved for this long, on a step that is not a wait, is stuck. */
+const STUCK_AFTER_MS = 15 * 60_000;
+
+/**
+ * Ids of running runs that have work to do now, for the periodic tick: a
+ * wait whose days are over (its wake-up job was lost or late), or a run
+ * that has not moved for 15 minutes on any other step (its tick failed). A
+ * run still inside a wait is left alone, so the tick costs nothing for it.
+ */
+export async function listDueAutomationRuns(
+  db: Db,
+  options: { now: Date; limit?: number }
+): Promise<string[]> {
+  const now = options.now.getTime();
   const runs = await db.$unscoped.automationRun.findMany({
     where: { status: 'running' },
-    select: { id: true },
+    select: {
+      id: true,
+      currentStep: true,
+      waitingSince: true,
+      updatedAt: true,
+      automation: { select: { steps: true } },
+    },
     orderBy: { updatedAt: 'asc' },
-    take: limit,
+    take: 1000,
   });
-  return runs.map((r) => r.id);
+  const due: string[] = [];
+  for (const run of runs) {
+    const steps = Array.isArray(run.automation.steps)
+      ? (run.automation.steps as unknown as AutomationStep[])
+      : [];
+    const step = steps[run.currentStep];
+    const waitEnds =
+      step?.type === 'wait' && run.waitingSince
+        ? run.waitingSince.getTime() + step.days * 86_400_000
+        : null;
+    const isDue =
+      waitEnds !== null ? waitEnds <= now : now - run.updatedAt.getTime() >= STUCK_AFTER_MS;
+    if (isDue) due.push(run.id);
+    if (due.length >= (options.limit ?? 100)) break;
+  }
+  return due;
 }
 
-export async function scanAutomationTriggers(db: Db, options: { now: Date }) {
+const STALL_DAYS = 7;
+
+/**
+ * Up to `take` subjects the automation's trigger matches that have no run of
+ * this automation yet. The "no run yet" check is a NOT EXISTS in the query,
+ * so its cost does not grow with the number of runs the automation has had.
+ * Pinned to the automation's own workspace.
+ */
+async function newTriggerSubjects(
+  db: Db,
+  automation: { id: string; workspaceId: string; trigger: string },
+  options: { now: Date; take: number }
+): Promise<string[]> {
+  const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
+  const ws = automation.workspaceId;
+  const noRun = Prisma.sql`NOT EXISTS (SELECT 1 FROM automation_runs r
+    WHERE r.automation_id = ${automation.id} AND r.subject_id = s.id)`;
+  let rows: { id: string }[];
+  switch (automation.trigger) {
+    case 'invoice.overdue':
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM invoices s
+        WHERE s.workspace_id = ${ws} AND s.status = 'overdue' AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
+    case 'quote.sent_no_response':
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM quotes s
+        WHERE s.workspace_id = ${ws} AND s.status = 'sent' AND s.updated_at < ${stallCutoff}
+          AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
+    case 'deal.stalled':
+      rows = await db.$unscoped.$queryRaw<{ id: string }[]>`
+        SELECT s.id FROM deals s
+        WHERE s.workspace_id = ${ws} AND s.updated_at < ${stallCutoff} AND ${noRun}
+        ORDER BY s.id LIMIT ${options.take}`;
+      break;
+    default:
+      return [];
+  }
+  return rows.map((row) => row.id);
+}
+
+/**
+ * Starts a run for each subject an active automation's trigger matches and
+ * that has no run of that automation yet: per automation one query and one
+ * insert. At most `limit` runs per scan and `perAutomation` per automation,
+ * so one busy automation cannot take a whole scan from the others; the next
+ * scan starts the rest. One automation failing does not stop the scan. The
+ * unique (automation, subject) index makes overlapping scans safe: the
+ * second insert of a pair is skipped.
+ */
+export async function scanAutomationTriggers(
+  db: Db,
+  options: {
+    now: Date;
+    limit?: number;
+    perAutomation?: number;
+    onError?: (error: unknown, automationId: string) => void;
+  }
+): Promise<string[]> {
+  let remaining = options.limit ?? 200;
+  const perAutomation = options.perAutomation ?? 50;
   // The scheduler runs for every workspace, so this one list is unscoped;
   // everything after it is pinned to the automation's own workspace.
-  const automations = await db.$unscoped.automation.findMany({ where: { isActive: true } });
+  const automations = await db.$unscoped.automation.findMany({
+    where: { isActive: true },
+    orderBy: { id: 'asc' },
+  });
   const created: string[] = [];
-  const STALL_DAYS = 7;
-  const stallCutoff = new Date(options.now.getTime() - STALL_DAYS * 86_400_000);
 
   for (const automation of automations) {
-    const subjectType = subjectTypeOf[automation.trigger as AutomationTrigger];
-    if (!subjectType) continue;
-
-    if (automation.trigger === 'invoice.overdue') {
-      const subjects = await db.invoice.findMany({
-        where: { workspaceId: automation.workspaceId, status: 'overdue' },
-        select: { id: true },
+    if (remaining <= 0) break;
+    if (!subjectTypeOf[automation.trigger as AutomationTrigger]) continue;
+    try {
+      const subjects = await newTriggerSubjects(db, automation, {
+        now: options.now,
+        take: Math.min(remaining, perAutomation),
       });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
-    }
-
-    if (automation.trigger === 'quote.sent_no_response') {
-      const subjects = await db.quote.findMany({
-        where: {
+      if (subjects.length === 0) continue;
+      const runs = await db.automationRun.createManyAndReturn({
+        data: subjects.map((subjectId) => ({
           workspaceId: automation.workspaceId,
-          status: 'sent',
-          updatedAt: { lt: stallCutoff },
-        },
+          automationId: automation.id,
+          subjectId,
+          status: 'running',
+        })),
         select: { id: true },
+        skipDuplicates: true,
       });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
-    }
-
-    if (automation.trigger === 'deal.stalled') {
-      const subjects = await db.deal.findMany({
-        where: {
-          workspaceId: automation.workspaceId,
-          updatedAt: { lt: stallCutoff },
-        },
-        select: { id: true },
-      });
-      for (const subject of subjects) {
-        const existing = await db.automationRun.findFirst({
-          where: {
-            workspaceId: automation.workspaceId,
-            automationId: automation.id,
-            subjectId: subject.id,
-          },
-        });
-        if (!existing) {
-          const run = await db.automationRun.create({
-            data: {
-              workspaceId: automation.workspaceId,
-              automationId: automation.id,
-              subjectId: subject.id,
-              status: 'running',
-            },
-          });
-          created.push(run.id);
-        }
-      }
+      for (const run of runs) created.push(run.id);
+      remaining -= runs.length;
+    } catch (error) {
+      options.onError?.(error, automation.id);
     }
   }
 

@@ -92,3 +92,23 @@ describe('error reporting', () => {
     }
   });
 });
+
+describe('tracing and metrics on serverless', () => {
+  it('samples no traces for job runs, and the configured rate elsewhere', async () => {
+    const { jobsUntracedSampler } = await import('./observability');
+    const sample = jobsUntracedSampler(0.1);
+    // Tracing every scheduled job run produced the N+1 and Blocking
+    // Operation noise in Sentry and cost CPU in every invocation.
+    expect(sample({ name: 'POST /jobs/run/scheduled.tick' })).toBe(0);
+    expect(sample({ name: 'GET /v1/invoices' })).toBe(0.1);
+    expect(sample({})).toBe(0.1);
+  });
+
+  it('still serves process metrics on the metrics port', async () => {
+    const { createMetricsApp } = await import('./observability');
+    const { request } = await import('./testing/request');
+    const res = await request(createMetricsApp()).get('/metrics');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('wolff_process_cpu_user_seconds_total');
+  });
+});

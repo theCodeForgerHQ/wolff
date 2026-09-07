@@ -1558,6 +1558,9 @@ model AutomationRun {
   automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
   workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  // One run per automation and subject: the trigger scan relies on it when
+  // two scans overlap.
+  @@unique([automationId, subjectId])
   @@index([workspaceId, status])
   @@index([automationId, status])
   @@index([subjectId])

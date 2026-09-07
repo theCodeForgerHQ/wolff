@@ -8,7 +8,7 @@ import {
   deleteAutomation,
   getAutomation,
   getAutomationRun,
-  listRunningAutomationRuns,
+  listDueAutomationRuns,
   scanAutomationTriggers,
   tickAutomationRun,
   updateAutomation,
@@ -212,12 +212,112 @@ describe.skipIf(!url)('automations: CRUD, trigger scan and step ticks (Postgres)
       expect(pairs.join()).not.toContain(inactive.id);
       expect(pairs.join()).not.toContain(notOverdue.id);
       expect(pairs.join()).not.toContain(freshQuote.id);
-      expect(await listRunningAutomationRuns(db, 10_000)).toEqual(
-        expect.arrayContaining(runs.map((r) => r.id))
-      );
 
       await base.automationRun.deleteMany({ where: { workspaceId: ctx.workspaceId } });
       await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+    });
+  });
+
+  describe('trigger scan limits', () => {
+    const overdueInvoices = (n: number) =>
+      Promise.all(
+        Array.from({ length: n }, (_, i) =>
+          base.invoice.create({
+            data: {
+              workspaceId: ctx.workspaceId,
+              clientId,
+              invoiceNumber: `LIM-${run}-${i}`,
+              status: 'overdue',
+              total: 1,
+              subtotal: 1,
+              amountDue: 1,
+              dueDate: new Date('2026-09-01'),
+            },
+          })
+        )
+      );
+
+    it('starts at most `limit` runs per scan, and the next scan starts the rest', async () => {
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      // Only this test's overdue invoices (the scan test left one).
+      await base.invoice.updateMany({
+        where: { workspaceId: ctx.workspaceId, status: 'overdue' },
+        data: { status: 'paid' },
+      });
+      const a = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const invoices = await overdueInvoices(3);
+
+      expect(await scanAutomationTriggers(db, { now, limit: 2 })).toHaveLength(2);
+      expect(await scanAutomationTriggers(db, { now, limit: 2 })).toHaveLength(1);
+      expect(await scanAutomationTriggers(db, { now, limit: 2 })).toHaveLength(0);
+      const subjects = (await base.automationRun.findMany({ where: { automationId: a.id } }))
+        .map((r) => r.subjectId)
+        .sort();
+      expect(subjects).toEqual(invoices.map((i) => i.id).sort());
+
+      await base.automationRun.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.deleteMany({ where: { id: { in: invoices.map((i) => i.id) } } });
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+    });
+
+    it('shares a scan between automations: one cannot take the whole limit', async () => {
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.updateMany({
+        where: { workspaceId: ctx.workspaceId, status: 'overdue' },
+        data: { status: 'paid' },
+      });
+      const first = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const second = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const invoices = await overdueInvoices(3);
+
+      await scanAutomationTriggers(db, { now, limit: 10, perAutomation: 2 });
+
+      for (const a of [first, second]) {
+        expect(await base.automationRun.count({ where: { automationId: a.id } })).toBe(2);
+      }
+
+      await base.automationRun.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.deleteMany({ where: { id: { in: invoices.map((i) => i.id) } } });
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+    });
+
+    it('starts one run per subject even when two scans overlap', async () => {
+      const a = await automation('invoice.overdue', [{ type: 'wait', days: 1 }]);
+      const invoices = await overdueInvoices(5);
+
+      // A QStash redelivery can run a scan while another is still going.
+      await Promise.all([scanAutomationTriggers(db, { now }), scanAutomationTriggers(db, { now })]);
+
+      const runs = await base.automationRun.findMany({ where: { automationId: a.id } });
+      expect(runs).toHaveLength(5);
+
+      await base.automationRun.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+      await base.invoice.deleteMany({ where: { id: { in: invoices.map((i) => i.id) } } });
+      await base.automation.deleteMany({ where: { workspaceId: ctx.workspaceId } });
+    });
+  });
+
+  describe('due runs for the periodic tick', () => {
+    it('lists only runs with work to do: a finished wait, or a run stuck on a step', async () => {
+      const waits = await automation('invoice.overdue', [{ type: 'wait', days: 2 }]);
+      const acts = await automation('invoice.overdue', [{ type: 'ai_draft_email' }]);
+      const at = (ms: number) => new Date(now.getTime() + ms);
+
+      const waitOver = await runOf(waits.id, undefined, { waitingSince: at(-3 * DAY) });
+      const stillWaiting = await runOf(waits.id, undefined, { waitingSince: at(-1 * DAY) });
+      const stuck = await runOf(acts.id);
+      await base.$executeRaw`UPDATE automation_runs SET updated_at = ${at(-20 * 60_000)} WHERE id = ${stuck.id}`;
+      const justTicked = await runOf(acts.id);
+      await base.$executeRaw`UPDATE automation_runs SET updated_at = ${at(-60_000)} WHERE id = ${justTicked.id}`;
+      const finished = await runOf(acts.id, undefined, { status: 'done' });
+      await base.$executeRaw`UPDATE automation_runs SET updated_at = ${at(-DAY)} WHERE id = ${finished.id}`;
+
+      const due = await listDueAutomationRuns(db, { now });
+
+      expect(due).toEqual(expect.arrayContaining([waitOver.id, stuck.id]));
+      expect(due).not.toContain(stillWaiting.id);
+      expect(due).not.toContain(justTicked.id);
+      expect(due).not.toContain(finished.id);
     });
   });
 

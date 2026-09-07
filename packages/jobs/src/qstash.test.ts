@@ -140,3 +140,20 @@ describe('QStashDispatcher', () => {
     expect(published[0]!.delay).toBe(2);
   });
 });
+
+describe('QStashDispatcher timeout', () => {
+  // The outbox relay publishes inside a transaction that holds row locks; a
+  // QStash API that hangs must not hold them (and the function) for long.
+  it('gives up on a publish that does not answer in time', async () => {
+    const dispatcher = new QStashDispatcher({
+      client: { publishJSON: () => new Promise(() => {}) },
+      apiUrl: 'https://api.example.test',
+      timeoutMs: 50,
+    });
+    const started = Date.now();
+    await expect(
+      dispatcher.dispatch({ type: 'outbox.sweep', payload: {}, jobId: 'j-1' })
+    ).rejects.toThrow(/did not accept/);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});

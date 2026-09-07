@@ -1,4 +1,8 @@
 import { relayOutboxToJobs } from '../relay';
+import { runTickSteps, tickSteps } from '../tick';
+import { PdfPageError } from '../ports/pdf';
+import { InvalidJobError } from '../run';
+import { WEBHOOK_RETRY_DELAYS_MS } from '../retry-delays';
 import { createHash } from 'node:crypto';
 import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
 import {
@@ -8,13 +12,18 @@ import {
   scanInvoiceReminders,
 } from '@wolff/core/invoices';
 import {
-  listRunningAutomationRuns,
+  listDueAutomationRuns,
   scanAutomationTriggers,
   tickAutomationRun,
 } from '@wolff/core/automations';
 import { requeueStaleOutboxEvents } from '@wolff/core/outbox';
 import { processProviderEvent, redriveStaleProviderEvents } from '@wolff/core/payments';
-import { deliverWebhook, fanOutDomainEvent } from '@wolff/core/webhooks';
+import {
+  WebhookDeliveryError,
+  deliverWebhook,
+  fanOutDomainEvent,
+  recordDeliveryExhausted,
+} from '@wolff/core/webhooks';
 import type { JobContext, JobType, Processor } from '../types';
 import { backupKey, pruneBackups, writeBackup } from '../backup';
 import { logger } from '@wolff/core/logger';
@@ -41,11 +50,37 @@ const fanOutWebhooks: Processor<'webhooks.fanout'> = async (ctx, { outboxEventId
 };
 
 const deliver: Processor<'webhooks.deliver'> = async (ctx, job) => {
-  await deliverWebhook(ctx.db, job, {
-    transport: ctx.webhooks,
-    requireHttps: ctx.requireHttpsWebhooks,
-    now: ctx.now(),
-  });
+  try {
+    await deliverWebhook(ctx.db, job, {
+      transport: ctx.webhooks,
+      requireHttps: ctx.requireHttpsWebhooks,
+      now: ctx.now(),
+    });
+  } catch (error) {
+    if (!ctx.selfScheduledRetries || !(error instanceof WebhookDeliveryError)) throw error;
+    // The attempt is recorded; schedule the next one with the design's delay,
+    // or give up after the last, as the worker's queue would.
+    const delivery = await ctx.db.webhookDelivery.findFirst({
+      where: { id: job.deliveryId, workspaceId: job.workspaceId },
+      select: { attempts: true },
+    });
+    const attempts = delivery?.attempts ?? 0;
+    const delayMs = WEBHOOK_RETRY_DELAYS_MS[attempts - 1];
+    if (delayMs === undefined) {
+      await recordDeliveryExhausted(ctx.db, job);
+      return;
+    }
+    await ctx.db.webhookDelivery.updateMany({
+      where: { id: job.deliveryId, workspaceId: job.workspaceId },
+      data: { nextRetry: new Date(ctx.now().getTime() + delayMs) },
+    });
+    await ctx.dispatch({
+      type: 'webhooks.deliver',
+      payload: job,
+      jobId: `webhook-retry:${job.deliveryId}:${attempts}`,
+      delayMs,
+    });
+  }
 };
 
 const sendEmail: Processor<'email.send'> = async (ctx, { scheduledEmailId, workspaceId }) => {
@@ -182,7 +217,17 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
   if (document.pdfUrl === key) return;
   const base = ctx.appUrl.replace(/\/$/, '');
   const path = documentType === 'invoice' ? 'i' : 'q';
-  const pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
+  let pdf: Uint8Array;
+  try {
+    pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
+  } catch (error) {
+    // A 4xx page will answer the same way next time: do not retry it (each
+    // try launches Chromium). A 5xx may pass.
+    if (error instanceof PdfPageError && error.status < 500) {
+      throw new InvalidJobError('pdf.render', error.message);
+    }
+    throw error;
+  }
   await ctx.storage.put(key, pdf, 'application/pdf');
 
   if (documentType === 'invoice') {
@@ -197,12 +242,18 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
 
 const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => {
   if (!runId) {
-    // The periodic tick: start runs for new subjects, then give every run
-    // that is still going a tick. The database is the record, so a wake-up
-    // job lost with Redis (or never scheduled, on the drain) costs at most
-    // one period; ticking a run whose wait is not over does nothing.
+    // The periodic tick: start runs for new subjects, then tick the runs
+    // that have work to do now (a wait that is over, or a run stuck on a
+    // step). The database is the record, so a wake-up job that was lost
+    // costs at most one period. Runs still inside a wait are not touched:
+    // ticking every running run cost a message and an invocation each,
+    // every period.
     const now = ctx.now();
-    const created = await scanAutomationTriggers(ctx.db, { now });
+    const created = await scanAutomationTriggers(ctx.db, {
+      now,
+      onError: (err, automationId) =>
+        logger.error({ err, automationId }, 'Automation trigger scan failed for one automation'),
+    });
     for (const id of created) {
       await ctx.dispatch({
         type: 'automations.tick',
@@ -211,7 +262,7 @@ const tickAutomation: Processor<'automations.tick'> = async (ctx, { runId }) => 
       });
     }
     const stamp = now.toISOString().slice(0, 16);
-    for (const id of await listRunningAutomationRuns(ctx.db)) {
+    for (const id of await listDueAutomationRuns(ctx.db, { now })) {
       if (created.includes(id)) continue;
       await ctx.dispatch({
         type: 'automations.tick',
@@ -284,8 +335,19 @@ async function liveWorkspaceIds(ctx: JobContext): Promise<string[]> {
   const rows = await ctx.db.$unscoped.workspace.findMany({
     where: { deletedAt: null },
     select: { id: true },
+    orderBy: { id: 'asc' },
   });
   return rows.map((row) => row.id);
+}
+
+/**
+ * `ids` starting at a different place each day, so a run that stops at its
+ * time budget does not leave the same workspaces out every time.
+ */
+function rotateDaily<T>(ids: T[], now: Date): T[] {
+  if (ids.length === 0) return ids;
+  const offset = Math.floor(now.getTime() / 86_400_000) % ids.length;
+  return [...ids.slice(offset), ...ids.slice(0, offset)];
 }
 
 /**
@@ -301,14 +363,27 @@ const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
   const deadline = ctx.now().getTime() + AI_SWEEP_BUDGET_MS;
   // One call per workspace per round, scoped by that workspace's token, so a
   // big backlog in one workspace cannot starve the others.
-  let pending = await liveWorkspaceIds(ctx);
-  while (pending.length > 0) {
+  // A workspace whose sweep fails (a document the AI service cannot ingest)
+  // is reported at the end and not called again this run; the others go on.
+  let pending = rotateDaily(await liveWorkspaceIds(ctx), ctx.now());
+  const failed: { id: string; error: unknown }[] = [];
+  sweeping: while (pending.length > 0) {
     const next: string[] = [];
     for (const id of pending) {
-      if (ctx.now().getTime() >= deadline) return;
-      if ((await ai.sweep(id)).more) next.push(id);
+      if (ctx.now().getTime() >= deadline) break sweeping;
+      try {
+        if ((await ai.sweep(id)).more) next.push(id);
+      } catch (error) {
+        failed.push({ id, error });
+      }
     }
     pending = next;
+  }
+  if (failed.length > 0) {
+    throw new AggregateError(
+      failed.map((f) => f.error),
+      `AI sweep failed for ${failed.length} workspace(s): ${failed.map((f) => f.id).join(', ')}`
+    );
   }
 };
 
@@ -318,14 +393,23 @@ const sweepAiIndex: Processor<'ai.sweep'> = async (ctx) => {
  */
 export const REPORTS_BUDGET_MS = 200_000;
 
-const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
+/** Retries of the workspaces whose nightly report failed: at most this many, this far apart. */
+const REPORT_RETRY_ROUNDS = 2;
+const REPORT_RETRY_DELAY_MS = 10 * 60_000;
+
+const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after, only, round }) => {
   const ai = ctx.ai;
   if (!ai) return;
   const started = ctx.now();
   const deadline = started.getTime() + REPORTS_BUDGET_MS;
   // In id order so a run cut off at the budget resumes after its last report.
   const rows = await ctx.db.$unscoped.workspace.findMany({
-    where: { deletedAt: null, ...(after ? { id: { gt: after } } : {}) },
+    where: {
+      deletedAt: null,
+      ...(after || only
+        ? { id: { ...(after ? { gt: after } : {}), ...(only ? { in: only } : {}) } }
+        : {}),
+    },
     select: { id: true },
     orderBy: { id: 'asc' },
   });
@@ -352,8 +436,21 @@ const nightlyReports: Processor<'reports.nightly'> = async (ctx, { after }) => {
     last = id;
   }
   if (failed.length > 0) {
-    // Fails the job so it is retried and reported; reports are upserts, so a
-    // retry rewrites the ones that succeeded without harm.
+    // Retrying the job would run every report in it again, each an LLM call
+    // against the budget: try again later for only the ones that failed, and
+    // fail (reported) when the last round fails too.
+    const next = (round ?? 0) + 1;
+    if (next <= REPORT_RETRY_ROUNDS) {
+      logger.warn({ failed, round: next }, 'Nightly reports failed; retrying those workspaces');
+      const day = started.toISOString().slice(0, 10);
+      await ctx.dispatch({
+        type: 'reports.nightly',
+        payload: { only: failed, round: next },
+        jobId: `reports.nightly:${day}:retry:${next}`,
+        delayMs: REPORT_RETRY_DELAY_MS,
+      });
+      return;
+    }
     throw new Error(
       `nightly report failed for ${failed.length} workspace(s): ${failed.join(', ')}`,
       { cause: errors }
@@ -403,6 +500,12 @@ const backupDatabase: Processor<'db.backup'> = async (ctx) => {
   );
 };
 
+const scheduledTick: Processor<'scheduled.tick'> = async (ctx) => {
+  await runTickSteps(tickSteps(ctx.now().getUTCHours()), (type) =>
+    (processors[type] as Processor<typeof type>)(ctx, {})
+  );
+};
+
 export const processors: { [T in JobType]: Processor<T> } = {
   'payments.reconcile': reconcilePayment,
   'webhooks.fanout': fanOutWebhooks,
@@ -420,6 +523,7 @@ export const processors: { [T in JobType]: Processor<T> } = {
   'ai.sweep': sweepAiIndex,
   'reports.nightly': nightlyReports,
   'db.backup': backupDatabase,
+  'scheduled.tick': scheduledTick,
 };
 
 export type { JobContext };

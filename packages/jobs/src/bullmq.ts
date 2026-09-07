@@ -31,6 +31,23 @@ export function createRedis(url: string): Redis {
   });
 }
 
+/**
+ * The connection for request-path work (rate limits, the replay cache). The
+ * worker's connection retries a command forever (BullMQ needs that); on a
+ * serverless instance thawed with a dead socket that hangs the request until
+ * the function's time limit. This one connects on first use and gives a
+ * command at most a couple of seconds.
+ */
+export function createRequestRedis(url: string): Redis {
+  return new IORedis(url, {
+    lazyConnect: true,
+    connectTimeout: 3_000,
+    commandTimeout: 2_000,
+    maxRetriesPerRequest: 1,
+    ...(url.startsWith('rediss://') ? { tls: {} } : {}),
+  });
+}
+
 export function createJobQueue(connection: ConnectionOptions, name: string = QUEUE_NAME): Queue {
   return new Queue(name, { connection, prefix: QUEUE_PREFIX });
 }

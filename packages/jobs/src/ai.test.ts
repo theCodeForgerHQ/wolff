@@ -90,7 +90,12 @@ describe('ai processors', () => {
       now: () => new Date(0),
     };
     await processors['ai.sweep'](ctx as unknown as JobContext, {});
-    expect(findMany).toHaveBeenCalledWith({ where: { deletedAt: null }, select: { id: true } });
+    expect(findMany).toHaveBeenCalledWith({
+      where: { deletedAt: null },
+      select: { id: true },
+      // Ordered, so the daily rotation starts from a stable place.
+      orderBy: { id: 'asc' },
+    });
     expect(port.calls).toEqual([
       ['sweep', 'w1'],
       ['sweep', 'w2'],
@@ -99,8 +104,13 @@ describe('ai processors', () => {
 });
 
 describe('ai.sweep in bounded batches', () => {
-  function setup(backlog: Record<string, number>, msPerCall: number) {
-    let clock = 0;
+  function setup(
+    backlog: Record<string, number>,
+    msPerCall: number,
+    start = 0,
+    failing: string[] = []
+  ) {
+    let clock = start;
     const calls: string[] = [];
     const left = { ...backlog };
     const port = {
@@ -108,6 +118,7 @@ describe('ai.sweep in bounded batches', () => {
       nightlyReport: async () => undefined,
       sweep: async (ws: string) => {
         calls.push(ws);
+        if (failing.includes(ws)) throw new Error(`AI service /ingest answered 500 for ${ws}`);
         clock += msPerCall;
         left[ws] = Math.max(0, (left[ws] ?? 0) - 1);
         return { more: left[ws]! > 0 };
@@ -127,6 +138,22 @@ describe('ai.sweep in bounded batches', () => {
     await processors['ai.sweep'](ctx, {});
     expect(calls).toEqual(['w1', 'w2', 'w3', 'w1', 'w3', 'w1']);
     expect(left).toEqual({ w1: 0, w2: 0, w3: 0 });
+  });
+
+  // One workspace's poison document made /ingest answer 500 every run, and
+  // the throw stopped the sweep for every workspace after it.
+  it('sweeps the other workspaces when one fails, then fails with it', async () => {
+    const { ctx, calls, left } = setup({ w1: 1, w2: 1, w3: 1 }, 1_000, 0, ['w1']);
+    await expect(processors['ai.sweep'](ctx, {})).rejects.toThrow(/w1/);
+    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(left).toMatchObject({ w2: 0, w3: 0 });
+  });
+
+  it('starts from a different workspace each day, so none is always last', async () => {
+    const day = 86_400_000;
+    const { ctx, calls } = setup({ w1: 1, w2: 1, w3: 1 }, 1_000, day);
+    await processors['ai.sweep'](ctx, {});
+    expect(calls).toEqual(['w2', 'w3', 'w1']);
   });
 
   it('stops at its time budget and leaves the rest for the next run', async () => {
@@ -170,9 +197,10 @@ describe('reports.nightly', () => {
       },
     };
     // Honours the cursor the way Postgres would: ids after `gt`, in order.
-    const findMany = vi.fn(async (args: { where: { id?: { gt: string } } }) =>
+    const findMany = vi.fn(async (args: { where: { id?: { gt?: string; in?: string[] } } }) =>
       ids
-        .filter((id) => !args.where.id || id > args.where.id.gt)
+        .filter((id) => !args.where.id?.gt || id > args.where.id.gt)
+        .filter((id) => !args.where.id?.in || args.where.id.in.includes(id))
         .sort()
         .map((id) => ({ id }))
     );
@@ -204,12 +232,28 @@ describe('reports.nightly', () => {
     expect(next.calls).toEqual(['w4', 'w5', 'w6', 'w7']);
   });
 
-  it('reports every other workspace when one fails, then fails the job', async () => {
+  // A retry of the whole job re-ran every report in it, each an LLM call
+  // against the budget. Only the workspaces that failed are tried again.
+  it('reports every other workspace when one fails, then retries only that one, later', async () => {
     const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3'], 1_000, ['w2']);
-    await expect(processors['reports.nightly'](ctx, {})).rejects.toThrow(
+    await expect(processors['reports.nightly'](ctx, {})).resolves.toBeUndefined();
+    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(dispatched).toEqual([
+      {
+        type: 'reports.nightly',
+        payload: { only: ['w2'], round: 1 },
+        jobId: 'reports.nightly:2026-10-06:retry:1',
+        delayMs: 10 * 60_000,
+      },
+    ]);
+  });
+
+  it('runs a retry for its workspaces only, and fails for good after the last round', async () => {
+    const { ctx, calls, dispatched } = nightly(['w1', 'w2', 'w3'], 1_000, ['w2']);
+    await expect(processors['reports.nightly'](ctx, { only: ['w2'], round: 2 })).rejects.toThrow(
       'nightly report failed for 1 workspace(s): w2'
     );
-    expect(calls).toEqual(['w1', 'w2', 'w3']);
+    expect(calls).toEqual(['w2']);
     expect(dispatched).toEqual([]);
   });
 

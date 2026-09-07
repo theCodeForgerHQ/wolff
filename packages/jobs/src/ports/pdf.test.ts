@@ -67,3 +67,29 @@ describe.skipIf(!chrome)('createChromiumPdfRenderer (real Chrome)', () => {
     }
   }, 60_000);
 });
+
+describe.skipIf(!chrome)('createChromiumPdfRenderer error pages (real Chrome)', () => {
+  // The page an error answers with (a 404, or the hosting provider's login
+  // page) must not be stored as the document's PDF.
+  it.each([404, 401, 500])(
+    'refuses a page that answered %i',
+    async (status) => {
+      const server = createServer((_req, res) => {
+        res.writeHead(status, { 'content-type': 'text/html' });
+        res.end('<html><body>Not the invoice</body></html>');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const renderer = createChromiumPdfRenderer({ executablePath: chrome });
+        await expect(renderer.render(`http://127.0.0.1:${port}/i/token`)).rejects.toMatchObject({
+          name: 'PdfPageError',
+          status,
+        });
+      } finally {
+        server.close();
+      }
+    },
+    60_000
+  );
+});

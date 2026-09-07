@@ -112,7 +112,7 @@ export function createApp(deps: AppDeps): Express {
   // signatures cover the raw body, and before CORS because no browser calls them.
   app.use('/webhooks', webhookRoutes({ db, config, onOutboxEvents: deps.onOutboxEvents }));
 
-  app.use('/jobs', jobRoutes(config, deps.jobs));
+  app.use('/jobs', jobRoutes(config, deps.jobs, logger));
 
   // Public widget routes: CORS (preflight included) answers only an origin
   // that some live publishable key allows; the request itself is then held

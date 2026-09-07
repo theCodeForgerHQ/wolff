@@ -38,8 +38,15 @@ export const jobPayloads = {
   }),
   'ai.sweep': z.object({}),
   // `after`: resume cursor, the last workspace id a cut-off run reported.
-  'reports.nightly': z.object({ after: id.optional() }),
+  'reports.nightly': z.object({
+    after: id.optional(),
+    // A retry of the workspaces that failed, and which retry it is.
+    only: z.array(id).max(200).optional(),
+    round: z.number().int().min(1).max(5).optional(),
+  }),
   'db.backup': z.object({}),
+  // QStash only: the hourly run of the frequent jobs; see tick.ts.
+  'scheduled.tick': z.object({}),
 } as const;
 
 export type JobType = keyof typeof jobPayloads;
@@ -126,6 +133,12 @@ export interface JobContext {
   /** Public origin of the web app, for links in emails and PDF rendering. */
   appUrl: string;
   requireHttpsWebhooks: boolean;
+  /**
+   * The push runtime (QStash): a failed webhook attempt schedules the next
+   * one itself, with the design's delay, because QStash's own retries are
+   * few and close together. A worker's queue applies those delays itself.
+   */
+  selfScheduledRetries?: boolean;
   now: () => Date;
 }
 
