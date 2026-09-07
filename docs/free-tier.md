@@ -131,8 +131,10 @@ only up to 2000 dimensions.
 
 Gemini (2026-08-20): every model a new key can use is a Gemini 3 thinking
 model; its tool calls need thought signatures that langchain-openai drops,
-and the free quota is 20 requests a day. It stays selectable
-(`LLM_PROVIDER=gemini`) for embeddings and plain chat.
+and the free quota is 20 requests a day. Because the chat agent always
+calls tools, `gemini` is refused at start as `LLM_PROVIDER` and
+`LLM_FALLBACK` (every chat turn failed with a 400 "missing a thought
+signature").
 
 ## Jobs
 

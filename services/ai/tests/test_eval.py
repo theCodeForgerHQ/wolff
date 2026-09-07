@@ -1,7 +1,7 @@
 """`pytest -m eval`: the eval set against a demo-seeded database
 (AI_EVAL_DATABASE_URL, the ai_service login), with the offline model.
 It asserts the design's thresholds; a live provider run is `make`-free:
-LLM_PROVIDER=gemini uv run python -m evals.runner."""
+LLM_PROVIDER=nvidia uv run python -m evals.runner."""
 
 from __future__ import annotations
 

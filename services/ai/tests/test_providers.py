@@ -55,12 +55,17 @@ def test_prices_are_looked_up_by_model() -> None:
     assert isinstance(p.price_in, Decimal)
 
 
-def test_gemini_is_still_available() -> None:
-    p = resolve_provider({"LLM_PROVIDER": "gemini"})
-    assert p.name == "gemini"
-    assert p.base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
-    assert p.api_key_env == "GEMINI_API_KEY"
-    assert p.embed_model == "gemini-embedding-001"
+@pytest.mark.parametrize(
+    "env",
+    [{"LLM_PROVIDER": "gemini"}, {"LLM_PROVIDER": "nvidia", "LLM_FALLBACK": "gemini"}],
+)
+def test_gemini_is_refused_for_chat(env: dict[str, str]) -> None:
+    """The chat agent always calls tools, and Gemini 3 tool calls fail with
+    400 "Function call is missing a thought signature" through the OpenAI
+    client: refuse it at start rather than fail every chat turn."""
+    with pytest.raises(ProviderError, match="thought signature"):
+        resolve_provider(env)
+        resolve_fallback(env)
 
 
 def test_openai_profile() -> None:
