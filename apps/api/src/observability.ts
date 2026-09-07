@@ -1,9 +1,4 @@
 import * as Sentry from '@sentry/node';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import {
   collectDefaultMetrics,
   Gauge,
@@ -13,7 +8,38 @@ import express, { type Express, type RequestHandler } from 'express';
 import type { ApiConfig } from './config';
 import { redactError } from './redact-error';
 
-let otelSdk: NodeSDK | undefined;
+let otelSdk: { shutdown(): Promise<void> } | undefined;
+
+/**
+ * Loaded only when an OTLP endpoint is set: the auto-instrumentations are
+ * about a hundred packages, and importing them cost every cold start of the
+ * serverless API, which has no endpoint.
+ */
+async function startTracing(endpoint: string, version: string): Promise<void> {
+  const [
+    { NodeSDK },
+    { OTLPTraceExporter },
+    { getNodeAutoInstrumentations },
+    resources,
+    conventions,
+  ] = await Promise.all([
+    import('@opentelemetry/sdk-node'),
+    import('@opentelemetry/exporter-trace-otlp-http'),
+    import('@opentelemetry/auto-instrumentations-node'),
+    import('@opentelemetry/resources'),
+    import('@opentelemetry/semantic-conventions'),
+  ]);
+  const sdk = new NodeSDK({
+    resource: resources.resourceFromAttributes({
+      [conventions.ATTR_SERVICE_NAME]: 'wolff-api',
+      [conventions.ATTR_SERVICE_VERSION]: version,
+    }),
+    traceExporter: new OTLPTraceExporter({ url: endpoint }),
+    instrumentations: [getNodeAutoInstrumentations()],
+  });
+  sdk.start();
+  otelSdk = sdk;
+}
 
 /**
  * How long a report may hold the response. On Vercel the function is frozen
@@ -71,18 +97,10 @@ export function initObservability(
   }
 
   if (config.OTEL_EXPORTER_OTLP_ENDPOINT) {
-    otelSdk = new NodeSDK({
-      resource: resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: 'wolff-api',
-        [ATTR_SERVICE_VERSION]: config.GIT_SHA ?? '0.1.0',
-      }),
-      traceExporter: new OTLPTraceExporter({ url: config.OTEL_EXPORTER_OTLP_ENDPOINT }),
-      instrumentations: [getNodeAutoInstrumentations()],
-    });
-    otelSdk.start();
+    void startTracing(config.OTEL_EXPORTER_OTLP_ENDPOINT, config.GIT_SHA ?? '0.1.0').catch(
+      (error: unknown) => console.error('OpenTelemetry failed to start', error)
+    );
   }
-
-  collectDefaultMetrics({ register: prometheusRegister, prefix: 'wolff_' });
 
   new Gauge({
     name: 'wolff_app_info',
@@ -110,6 +128,11 @@ export const metricsHandler: RequestHandler = async (_req, res) => {
  * network (internal port), not for anyone who can reach the API.
  */
 export function createMetricsApp(): Express {
+  // Process metrics are collected only where they are served: the
+  // long-running server. A serverless invocation has no scraper.
+  if (!prometheusRegister.getSingleMetric('wolff_process_cpu_user_seconds_total')) {
+    collectDefaultMetrics({ register: prometheusRegister, prefix: 'wolff_' });
+  }
   const app = express();
   app.disable('x-powered-by');
   app.get('/metrics', metricsHandler);
