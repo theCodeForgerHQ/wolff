@@ -44,6 +44,8 @@ const TRANSITIONS: Record<string, string[]> = {
   declined: ['draft'],
   expired: ['draft'],
 };
+/** Statuses after which a quote's content is the signed contract. */
+const SIGNED_STATUSES = ['accepted', 'converted'] as const;
 const CURRENCY = /^[A-Z]{3}$/;
 
 /** The next quote number ("Q-0001"), from the workspace's sequence. */
@@ -231,6 +233,39 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
 
     // Status check and update in one transaction (no TOCTOU between them).
     const result = await db.$transaction(async (tx) => {
+      // A content edit first claims the row on the "not yet signed" condition:
+      // the row lock makes a concurrent accept/sign wait, and a quote that is
+      // already accepted, converted or signed matches nothing.
+      const editsContent =
+        title !== undefined || notes !== undefined || terms !== undefined || !!lineItems;
+      if (editsContent) {
+        const claimed = await tx.quote.updateMany({
+          where: {
+            id,
+            workspaceId,
+            deletedAt: null,
+            status: { notIn: [...SIGNED_STATUSES] },
+            signedAt: null,
+          },
+          data: { updatedAt: new Date() },
+        });
+        if (claimed.count === 0) {
+          const locked = await tx.quote.findFirst({
+            where: { id, workspaceId, deletedAt: null },
+            select: { status: true },
+          });
+          if (!locked) return { error: 'Quote not found', status: 404 } as const;
+          // Same words as the Next route for the accepted case (parity).
+          const what = locked.status === 'accepted' ? 'an accepted' : 'a signed';
+          return {
+            error: lineItems
+              ? `Cannot modify line items on ${what} quote`
+              : 'Cannot modify a quote that has been accepted or signed',
+            status: 400,
+          } as const;
+        }
+      }
+
       const quote = await tx.quote.findFirst({ where: { id, workspaceId, deletedAt: null } });
       if (!quote) return { error: 'Quote not found', status: 404 } as const;
 
@@ -253,9 +288,6 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       }
 
       if (lineItems) {
-        if (quote.status === 'accepted') {
-          return { error: 'Cannot modify line items on an accepted quote', status: 400 } as const;
-        }
         const { lines, subtotal, taxTotal } = priceLines(lineItems);
         const discountAmount = recomputeDiscount(
           subtotal,
@@ -285,8 +317,9 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
       return { data: updated } as const;
     });
 
-    if ('error' in result && result.error) return legacyError(res, result.error, result.status);
-    if (!('data' in result)) return legacyError(res, 'Unexpected error', 500);
+    if (!('data' in result) || !result.data) {
+      return legacyError(res, result.error ?? 'Unexpected error', result.status ?? 500);
+    }
 
     await db.quoteEvent
       .create({
