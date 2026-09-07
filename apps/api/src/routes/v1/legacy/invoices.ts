@@ -487,6 +487,24 @@ async function updateInvoice(
         throw error;
       }
     }
+    // The status has to agree with the money recorded by payments; PATCH
+    // does not move amountPaid, so it cannot make an unpaid invoice paid.
+    const paid = toNumber(invoice.amountPaid);
+    const total = toNumber(invoice.total);
+    if (status === 'paid' && paid < total) {
+      return legacyError(res, 'Record a payment for the full amount before marking it paid', 400);
+    }
+    if (status === 'partial' && (paid <= 0 || paid >= total)) {
+      return legacyError(res, 'Only an invoice with a part payment recorded is partial', 400);
+    }
+    if (status === 'voided') {
+      const completed = await db.payment.count({
+        where: { invoiceId: id, workspaceId, status: 'completed' },
+      });
+      if (completed > 0) {
+        return legacyError(res, 'Refund the completed payments before voiding this invoice', 400);
+      }
+    }
     data.status = status;
     if ((status === 'paid' || status === 'partial') && !invoice.paidAt) data.paidAt = new Date();
     if (status === 'voided') data.voidedAt = new Date();
