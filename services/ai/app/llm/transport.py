@@ -211,10 +211,10 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         if model not in self._allowed:
             raise LlmUnavailable(f"model {model!r} is not allowed")
         estimated_in = math.ceil(len(body) / 4)
-        reservation = await self._gate.reserve(
-            model, estimated_in, _worst_case(request, parsed, self._default_max_tokens)
-        )
+        worst_out = _worst_case(request, parsed, self._default_max_tokens)
+        reservation = await self._gate.reserve(model, estimated_in, worst_out)
         used: Usage | None = None
+        sent = False
         try:
             now = self._now()
             if await self._daily.increment(f"llm:rpd:{self._provider}:{now.date()}") > self._rpd:
@@ -225,11 +225,19 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
             async with self._slots:
                 await self._requests.take(1)
                 await self._tokens.take(estimated_in)
+                sent = True
                 response = await self._send_with_retries(request)
 
             content = await response.aread()
             if response.status_code < 400:
                 used = _usage(model, content)
+        except (asyncio.CancelledError, httpx.TimeoutException):
+            # Cut off after the provider had the request (a deadline, a
+            # disconnect, a read timeout): it may still bill for it, so the
+            # reserved worst case is charged rather than released.
+            if sent:
+                used = Usage(model=model, tokens_in=estimated_in, tokens_out=worst_out)
+            raise
         finally:
             # Shielded so a cancelled caller cannot leave the reservation held.
             await asyncio.shield(self._gate.settle(reservation, used))

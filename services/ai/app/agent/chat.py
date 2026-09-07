@@ -136,6 +136,8 @@ async def run_chat(
     final = ""
     tool_calls: list[dict[str, Any]] = []
     status, error = "ok", None
+    #: What attempts that failed over to the fallback used before failing.
+    earlier_tokens, earlier_cost = 0, Decimal(0)
 
     try:
         history = await _history(svc, sid)
@@ -193,6 +195,8 @@ async def run_chat(
                             timed_out or is_fallback_error(exc)
                         ):
                             raise
+                        earlier_tokens += usage.tokens_in + usage.tokens_out
+                        earlier_cost += cost(profile, usage)
     except Exception as exc:
         status, error = "error", type(exc).__name__
         raise
@@ -219,6 +223,8 @@ async def run_chat(
                 status,
                 error,
                 started,
+                earlier_tokens,
+                earlier_cost,
             )
 
     for word in re.findall(r"\S+\s*", answer):
@@ -256,8 +262,11 @@ async def _record(
     status: str,
     error: str | None,
     started: float,
+    earlier_tokens: int = 0,
+    earlier_cost: Decimal = Decimal(0),
 ) -> None:
     spent = cost(profile, usage)
+    run_cost = spent + earlier_cost
     async with svc.sessions() as db, db.begin():
         db.add(ChatMessage(session_id=session_id, role="user", content=question))
         if status == "ok":
@@ -287,8 +296,9 @@ async def _record(
                 },
                 status=status,
                 latency_ms=int((time.monotonic() - started) * 1000),
-                tokens=usage.tokens_in + usage.tokens_out,
-                cost_usd=spent if spent else Decimal(0),
+                # A run that fell back also spent its earlier attempts'.
+                tokens=usage.tokens_in + usage.tokens_out + earlier_tokens,
+                cost_usd=run_cost if run_cost else Decimal(0),
                 error=error,
             )
         )

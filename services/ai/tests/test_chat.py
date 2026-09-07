@@ -424,3 +424,71 @@ async def test_a_failing_primary_falls_back_within_the_wall_clock(
         await llm.aclose()
     assert events[-1].event == "done"
     assert primary.chats == 1
+
+
+class Tally(FakeOpenAITransport):
+    """The fake provider, summing the tokens of every chat reply it sends;
+    with ``hang_after`` it hangs on chat calls after that many."""
+
+    def __init__(self, hang_after: int | None = None) -> None:
+        super().__init__()
+        self.hang_after = hang_after
+        self.chats = 0
+        self.tokens = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/chat/completions"):
+            self.chats += 1
+            if self.hang_after is not None and self.chats > self.hang_after:
+                await anyio.sleep_forever()
+            response = await super().handle_async_request(request)
+            usage = json.loads(await response.aread()).get("usage") or {}
+            self.tokens += int(usage.get("prompt_tokens", 0)) + int(
+                usage.get("completion_tokens", 0)
+            )
+            return response
+        return await super().handle_async_request(request)
+
+
+@requires_db
+@pytest.mark.usefixtures("indexed")
+async def test_a_run_that_fell_back_records_the_primarys_usage_too(
+    services: Services, ws_a: Seeded, migrated: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The primary answered one call (a tool call), then hung past its
+    deadline; the fallback answered. The run's tokens are both attempts'."""
+    from app.agent import chat
+    from app.auth import Caller
+
+    monkeypatch.setattr(chat, "PROVIDER_SECONDS", 1.5)
+    fake = resolve_provider({"LLM_PROVIDER": "fake"})
+    primary, backup = Tally(hang_after=1), Tally()
+    llm = build_clients(
+        fake,
+        gate=services.budget,
+        daily=MemoryDailyCounter(),
+        inner=primary,
+        fallback=replace(fake, name="fake-backup", chat_model="fake-backup-chat"),
+        fallback_inner=backup,
+    )
+    who = Caller(
+        issuer="web",
+        workspace_id=ws_a.workspace_id,
+        user_id=ws_a.user_id,
+        scopes=frozenset({"ai:use"}),
+    )
+    message = f"When is payment due according to the contract? {uuid.uuid4()}"
+    try:
+        events = [e async for e in chat.run_chat(replace(services, llm=llm), who, message)]
+    finally:
+        await llm.aclose()
+    assert events[-1].event == "done"
+    assert primary.chats == 2 and primary.tokens > 0 and backup.tokens > 0
+    async with session_factory(migrated)() as s:
+        run = await s.scalar(
+            select(AgentRun).where(
+                AgentRun.kind == "chat", AgentRun.input["message"].astext == message
+            )
+        )
+    assert run is not None
+    assert run.tokens == primary.tokens + backup.tokens
