@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   updateMany: vi.fn(),
   remove: vi.fn(),
   invite: vi.fn(),
+  memberCreate: vi.fn(),
+  user: vi.fn(),
 }));
 
 vi.mock('@wolff/database', () => ({
@@ -21,9 +23,10 @@ vi.mock('@wolff/database', () => ({
       update: mocks.update,
       updateMany: mocks.updateMany,
       delete: mocks.remove,
+      create: mocks.memberCreate,
     },
     workspace: { update: vi.fn(), findUnique: vi.fn().mockResolvedValue({ name: 'W' }) },
-    user: { findUnique: vi.fn().mockResolvedValue(null) },
+    user: { findUnique: mocks.user },
     workspaceInvitation: { findFirst: vi.fn().mockResolvedValue(null), create: mocks.invite },
   },
   Prisma: { JsonNull: null },
@@ -44,7 +47,10 @@ function as(actorRole: string, targetRole: string) {
 }
 
 describe('workspace members: rank', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.user.mockResolvedValue(null);
+  });
 
   it('does not let an admin demote an owner', async () => {
     as('admin', 'owner');
@@ -73,5 +79,20 @@ describe('workspace members: rank', () => {
     as('owner', 'member');
     expect(await inviteMember('new@example.com', 'owner')).toMatchObject({ success: false });
     expect(mocks.invite).not.toHaveBeenCalled();
+  });
+
+  it('invites someone who already has an account instead of adding them', async () => {
+    as('owner', 'member');
+    mocks.user.mockImplementation(async ({ where }: { where: { email?: string } }) =>
+      where.email ? { id: 'existing', email: where.email } : { name: 'Owner' }
+    );
+    mocks.current.mockImplementation(
+      async ({ where }: { where: { workspaceId_userId: { userId: string } } }) =>
+        where.workspaceId_userId.userId === 'existing' ? null : { role: 'owner' }
+    );
+
+    expect(await inviteMember('existing@example.com', 'member')).toMatchObject({ success: true });
+    expect(mocks.invite).toHaveBeenCalled();
+    expect(mocks.memberCreate).not.toHaveBeenCalled();
   });
 });
