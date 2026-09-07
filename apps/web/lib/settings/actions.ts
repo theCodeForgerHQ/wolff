@@ -5,7 +5,7 @@ import { randomBytes, createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
-import { hasRole } from '@/lib/workspace/roles';
+import { hasRole, WORKSPACE_ROLES, type WorkspaceRole } from '@/lib/workspace/roles';
 import { webhookUrlProblem } from '@/lib/webhooks/url-policy';
 import { logger } from '@/lib/logger';
 import type {
@@ -705,8 +705,7 @@ export async function updateMemberRole(
   newRole: WorkspaceMemberRole
 ): Promise<{ success: boolean; error?: string }> {
   // Validate role at runtime (TypeScript types are erased, server actions accept any value)
-  const validRoles = ['viewer', 'member', 'admin', 'owner'] as const;
-  if (!validRoles.includes(newRole as (typeof validRoles)[number])) {
+  if (!WORKSPACE_ROLES.includes(newRole as WorkspaceRole)) {
     return { success: false, error: 'Invalid role' };
   }
 
@@ -740,6 +739,11 @@ export async function updateMemberRole(
 
   if (!targetMember) {
     return { success: false, error: 'Member not found' };
+  }
+
+  // Only an owner may change an owner's role.
+  if (targetMember.role === 'owner' && currentRole !== 'owner') {
+    return { success: false, error: 'Only owners can change an owner' };
   }
 
   // Admins cannot promote to owner
@@ -815,8 +819,7 @@ export async function inviteMember(
   const normalizedEmail = emailResult.data.toLowerCase().trim();
 
   // Validate role at runtime (TypeScript types are erased, server actions accept any value)
-  const validRoles = ['viewer', 'member', 'admin', 'owner'] as const;
-  if (!validRoles.includes(role as (typeof validRoles)[number])) {
+  if (!WORKSPACE_ROLES.includes(role as WorkspaceRole)) {
     return { success: false, error: 'Invalid role' };
   }
 
@@ -828,9 +831,10 @@ export async function inviteMember(
     return { success: false, error: 'Insufficient permissions to invite members' };
   }
 
-  // Prevent privilege escalation: only owners can assign owner role
-  if (role === 'owner' && currentRole !== 'owner') {
-    return { success: false, error: 'Only workspace owners can assign the owner role' };
+  // A workspace has one owner; ownership is transferred from the members
+  // list (updateMemberRole), never granted by an invitation.
+  if (role === 'owner') {
+    return { success: false, error: 'Invite as admin, then transfer ownership' };
   }
 
   // Check if user exists (use normalized email)
@@ -950,6 +954,11 @@ export async function removeMember(
 
   if (!targetMember) {
     return { success: false, error: 'Member not found' };
+  }
+
+  // Only an owner may remove an owner.
+  if (targetMember.role === 'owner' && currentRole !== 'owner') {
+    return { success: false, error: 'Only owners can remove an owner' };
   }
 
   // Cannot remove the only owner
