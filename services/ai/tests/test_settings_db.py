@@ -121,3 +121,27 @@ def test_the_engine_pool_fits_a_serverless_neon_free_tier(
     assert seen["pool_timeout"] <= 30
     assert seen["connect_args"]["timeout"] == 10
     assert seen["connect_args"]["command_timeout"] == 30
+
+
+@pytest.mark.parametrize(
+    ("environment", "redis", "warned"),
+    [
+        ("production", None, True),
+        ("production", "redis://r:6379/0", False),
+        ("development", None, False),
+    ],
+)
+async def test_production_without_redis_warns_at_start(
+    caplog: pytest.LogCaptureFixture, environment: str, redis: str | None, warned: bool
+) -> None:
+    """Without REDIS_URL the rate counters and the token replay cache live in
+    one process's memory, which a serverless cold start resets. The demo
+    runs that way, so it is not refused, but it must not be silent."""
+    from app.services import build_services
+    from tests.conftest import make_settings
+
+    engine = session.create_engine("postgresql://u@h/d")
+    with caplog.at_level("WARNING", logger="app.services"):
+        svc = build_services(make_settings(environment=environment, redis_url=redis), engine=engine)
+    await svc.aclose()
+    assert any("REDIS_URL" in r.getMessage() for r in caplog.records) is warned
