@@ -1,5 +1,7 @@
 import { relayOutboxToJobs } from '../relay';
 import { runTickSteps, tickSteps } from '../tick';
+import { PdfPageError } from '../ports/pdf';
+import { InvalidJobError } from '../run';
 import { WEBHOOK_RETRY_DELAYS_MS } from '../retry-delays';
 import { createHash } from 'node:crypto';
 import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
@@ -215,7 +217,17 @@ const renderPdf: Processor<'pdf.render'> = async (ctx, job) => {
   if (document.pdfUrl === key) return;
   const base = ctx.appUrl.replace(/\/$/, '');
   const path = documentType === 'invoice' ? 'i' : 'q';
-  const pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
+  let pdf: Uint8Array;
+  try {
+    pdf = await ctx.pdf.render(`${base}/${path}/${document.accessToken}`);
+  } catch (error) {
+    // A 4xx page will answer the same way next time: do not retry it (each
+    // try launches Chromium). A 5xx may pass.
+    if (error instanceof PdfPageError && error.status < 500) {
+      throw new InvalidJobError('pdf.render', error.message);
+    }
+    throw error;
+  }
   await ctx.storage.put(key, pdf, 'application/pdf');
 
   if (documentType === 'invoice') {

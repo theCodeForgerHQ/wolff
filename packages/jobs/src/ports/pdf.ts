@@ -28,6 +28,14 @@ function originOf(url: string): string | null {
   }
 }
 
+/** The page to render answered with an error status, not the document. */
+export class PdfPageError extends Error {
+  constructor(readonly status: number) {
+    super(`The page to render answered ${status}`);
+    this.name = 'PdfPageError';
+  }
+}
+
 export function createChromiumPdfRenderer(options: PdfRendererOptions = {}): PdfRenderer {
   const bypass = options.protectionBypass;
   const bypassOrigin = bypass ? originOf(bypass.origin) : null;
@@ -60,7 +68,11 @@ export function createChromiumPdfRenderer(options: PdfRendererOptions = {}): Pdf
             });
           });
         }
-        await page.goto(url, { waitUntil: 'networkidle0', timeout: 30_000 });
+        const response = await page.goto(url, { waitUntil: 'networkidle0', timeout: 30_000 });
+        // Otherwise the error page (a 404, the host's login page) is what
+        // would be stored as the document.
+        const status = response?.status() ?? 0;
+        if (status >= 400) throw new PdfPageError(status);
         return await page.pdf({ format: 'A4', printBackground: true });
       } finally {
         await browser.close();
