@@ -64,6 +64,35 @@ describe('priceGstInvoice', () => {
     expect(priced.lines[0]).toMatchObject({ igstAmount: 1800, cgstAmount: 0 });
   });
 
+  it('refuses to guess the place of supply for a domestic client without a state code', () => {
+    // Falling back to the supplier's own state would make a possibly
+    // inter-state sale intra-state: CGST+SGST instead of IGST.
+    let caught: unknown;
+    try {
+      priceGstInvoice({
+        profile,
+        client: { gstin: null, stateCode: null, countryCode: 'IN' },
+        lines: [line],
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(CoreError);
+    expect((caught as CoreError).code).toBe('validation_error');
+    expect((caught as CoreError).message).toMatch(/place of supply/);
+  });
+
+  it('uses an explicit place of supply when the client has no state code', () => {
+    const priced = priceGstInvoice({
+      profile,
+      client: { gstin: null, stateCode: null, countryCode: 'IN' },
+      placeOfSupply: '29',
+      lines: [line],
+    });
+
+    expect(priced.invoice).toMatchObject({ supplyType: 'inter', placeOfSupply: '29' });
+  });
+
   it('shows but does not charge tax under reverse charge', () => {
     const priced = priceGstInvoice({
       profile,

@@ -94,9 +94,11 @@ export function priceGstInvoice(input: {
 }) {
   const { profile, client } = input;
   const isExport = Boolean(client.countryCode && client.countryCode !== 'IN');
+  // Never the supplier's own state: for a client without a state code that
+  // would turn a possibly inter-state sale (IGST) into CGST+SGST. Without a
+  // place of supply computeGst refuses with validation_error instead.
   const placeOfSupply =
-    input.placeOfSupply ??
-    (isExport ? EXPORT_PLACE_OF_SUPPLY : (client.stateCode ?? profile.stateCode ?? undefined));
+    input.placeOfSupply ?? (isExport ? EXPORT_PLACE_OF_SUPPLY : (client.stateCode ?? undefined));
 
   const lines: GstLineInput[] = input.lines.map((line) => ({
     description: line.name,

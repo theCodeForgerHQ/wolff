@@ -60,7 +60,7 @@ export async function createInvoiceFromQuote(
       discountAmount: Number(quote.discountAmount),
     });
   } catch (error) {
-    if (error instanceof CoreError) return { success: false, error: error.message };
+    if (error instanceof CoreError) return { success: false, error: describeCoreError(error) };
     throw error;
   }
 

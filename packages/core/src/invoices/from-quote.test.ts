@@ -217,6 +217,21 @@ describe.skipIf(!url)('createInvoiceFromQuote (Postgres)', () => {
     );
   });
 
+  it('refuses a GST quote whose client has no state code instead of charging CGST+SGST', async () => {
+    const ws = await workspace(GST_PROFILE);
+    await base.client.update({ where: { id: ws.clientId }, data: { stateCode: null } });
+    const quoteId = await quote(ws);
+
+    const result = await createInvoiceFromQuote(db, ws.workspaceId, quoteId);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/client state code/);
+    expect(await base.invoice.count({ where: { quoteId } })).toBe(0);
+    expect((await base.quote.findUniqueOrThrow({ where: { id: quoteId } })).status).toBe(
+      'accepted'
+    );
+  });
+
   it('refuses a composition supplier', async () => {
     const ws = await workspace({ ...GST_PROFILE, gstRegistrationType: 'composition' });
     const quoteId = await quote(ws);
