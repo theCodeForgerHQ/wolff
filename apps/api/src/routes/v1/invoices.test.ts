@@ -18,10 +18,12 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
   // the shape they need.
   let sessionIntent: string | null = 'pi_test_123';
   let sessionCounter = 0;
+  const sessionRequests: { line_items: { price_data: { unit_amount: number } }[] }[] = [];
   const stripe = {
     checkout: {
       sessions: {
-        create: async () => {
+        create: async (request: (typeof sessionRequests)[number]) => {
+          sessionRequests.push(request);
           const id = `cs_test_${++sessionCounter}`;
           return {
             id,
@@ -174,6 +176,53 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
       stripePaymentIntentId: 'pi_test_123',
     });
     expect(Number(stripePayment.amount)).toBe(1180);
+  });
+
+  describe('in currencies without two decimals', () => {
+    const invoiceIn = async (currency: string, amountDue: number) =>
+      (
+        await base.invoice.create({
+          data: {
+            workspaceId: ws.id,
+            clientId,
+            invoiceNumber: `INV-${currency}-${randomUUID().slice(0, 6)}`,
+            status: 'sent',
+            dueDate: new Date(Date.now() + 7 * 86_400_000),
+            total: amountDue,
+            amountDue,
+            currency,
+          },
+        })
+      ).id;
+
+    it('charges a 5000 JPY invoice 5000 yen through Stripe, not 500000', async () => {
+      const id = await invoiceIn('JPY', 5000);
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'stripe' });
+      expect(res.status).toBe(200);
+      expect(sessionRequests.at(-1)!.line_items[0]!.price_data.unit_amount).toBe(5000);
+    });
+
+    it('charges 12.34 KWD as 12340 fils through Stripe', async () => {
+      const id = await invoiceIn('KWD', 12.34);
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'stripe' });
+      expect(res.status).toBe(200);
+      expect(sessionRequests.at(-1)!.line_items[0]!.price_data.unit_amount).toBe(12340);
+    });
+
+    it('refuses a Razorpay order outside two-decimal currencies', async () => {
+      const id = await invoiceIn('JPY', 5000);
+      const created = orderRequests.length;
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'razorpay' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('validation_error');
+      expect(orderRequests).toHaveLength(created);
+    });
   });
 
   it('rejects payment links for paid invoices', async () => {

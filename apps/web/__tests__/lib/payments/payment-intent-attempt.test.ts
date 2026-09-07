@@ -117,6 +117,41 @@ describe('createInvoicePaymentIntent attempt numbering', () => {
   });
 });
 
+describe('createInvoicePaymentIntent in a zero-decimal currency', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.invoiceFindFirst.mockResolvedValue({ ...invoice, amountDue: 5000, currency: 'JPY' });
+    mocks.getOrCreateCustomer.mockResolvedValue({ id: 'cus_1' });
+    mocks.createPaymentIntent.mockResolvedValue({ id: 'pi_new', client_secret: 'pi_new_secret' });
+    mocks.paymentCount.mockResolvedValue(0);
+  });
+
+  it('charges a 5000 JPY invoice 5000 yen, not 500000', async () => {
+    mocks.paymentFindFirst.mockResolvedValue(null);
+
+    await createInvoicePaymentIntent('inv-1', 'token');
+
+    expect(mocks.createPaymentIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 5000, currency: 'jpy' })
+    );
+  });
+
+  it('reuses an open JPY intent whose amount is the yen due', async () => {
+    mocks.paymentFindFirst.mockResolvedValue({ id: 'pay-1', stripePaymentIntentId: 'pi_old' });
+    mocks.retrieve.mockResolvedValue({
+      id: 'pi_old',
+      status: 'requires_payment_method',
+      amount: 5000,
+      client_secret: 'pi_old_secret',
+    });
+
+    const result = await createInvoicePaymentIntent('inv-1', 'token');
+
+    expect(result).toMatchObject({ success: true, paymentIntentId: 'pi_old' });
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  });
+});
+
 describe('createInvoicePaymentIntent on a draft', () => {
   beforeEach(() => {
     vi.clearAllMocks();

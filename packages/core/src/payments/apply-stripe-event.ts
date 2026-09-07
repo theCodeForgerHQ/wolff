@@ -1,5 +1,6 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
+import { fromMinorUnits, toMinorUnits } from './minor-units';
 
 /**
  * Applies one verified Stripe event to payments and invoices. Every function
@@ -89,11 +90,11 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
         );
       // A refund of a charge that did not come from an invoice payment.
       if (!intentId) return;
-      const cents = object.amount_refunded;
-      if (typeof cents !== 'number' || !Number.isInteger(cents) || cents < 0) {
+      const minor = object.amount_refunded;
+      if (typeof minor !== 'number' || !Number.isInteger(minor) || minor < 0) {
         throw new Error('charge.refunded with an invalid amount_refunded');
       }
-      await applyRefund(tx, intentId, cents);
+      await applyRefund(tx, intentId, minor);
       return;
     }
     case 'account.updated':
@@ -131,7 +132,7 @@ async function sessionMatchesPayment(
     select: { id: true, invoiceId: true, amount: true, currency: true },
   });
   if (!payment) return true;
-  const expected = Math.round(Number(payment.amount) * 100);
+  const expected = toMinorUnits(Number(payment.amount), payment.currency);
   const amountTotal = session.amount_total;
   const currency = str(session.currency)?.toLowerCase();
   if (amountTotal === expected && currency === payment.currency.toLowerCase()) return true;
@@ -259,20 +260,21 @@ export async function applyPaymentFailed(tx: Tx, paymentIntentId: string): Promi
 }
 
 /**
- * `amountRefundedCents` is Stripe's running total for the charge, so the
+ * `amountRefundedMinor` is Stripe's running total for the charge, in the
+ * smallest unit of the payment's currency (whole yen for JPY), so the
  * change applied to the invoice is the difference from what is already
  * recorded. A redelivered or out-of-order event therefore changes nothing.
  */
 export async function applyRefund(
   tx: Tx,
   paymentIntentId: string,
-  amountRefundedCents: number
+  amountRefundedMinor: number
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, paymentIntentId);
   if (!payment || payment.status !== 'completed') return;
 
   const { workspaceId } = payment.invoice;
-  const refundedTotal = amountRefundedCents / 100;
+  const refundedTotal = fromMinorUnits(amountRefundedMinor, payment.currency);
   const delta = refundedTotal - Number(payment.refundAmount ?? 0);
   if (delta <= 0) return;
 

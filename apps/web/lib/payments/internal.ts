@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { PaymentIntentResult } from './types';
 import { domainEvents } from '@/lib/events/emitter';
 import { logger } from '@/lib/logger';
+import { fromMinorUnits, toMinorUnits } from '@wolff/core/payments';
 
 const PAYMENT_ALREADY_RECEIVED =
   'We have already received a payment for this invoice. It will show as paid shortly.';
@@ -97,6 +98,10 @@ export async function createInvoicePaymentIntent(
       return { success: false, error: 'No amount due on this invoice' };
     }
 
+    // Get currency from invoice model (falls back to settings for legacy data)
+    const settings = invoice.settings as Record<string, unknown>;
+    const currency = (invoice.currency || (settings?.currency as string) || 'USD').toLowerCase();
+
     // Check for existing pending payment intent to prevent duplicates
     const existingPayment = await prisma.payment.findFirst({
       where: {
@@ -116,8 +121,7 @@ export async function createInvoicePaymentIntent(
           existingIntent.status === 'requires_payment_method' ||
           existingIntent.status === 'requires_confirmation'
         ) {
-          const expectedAmountCents = Math.round(amountToPay * 100);
-          if (existingIntent.amount === expectedAmountCents) {
+          if (existingIntent.amount === toMinorUnits(amountToPay, currency)) {
             return {
               success: true,
               clientSecret: existingIntent.client_secret ?? undefined,
@@ -154,10 +158,6 @@ export async function createInvoicePaymentIntent(
         });
       }
     }
-
-    // Get currency from invoice model (falls back to settings for legacy data)
-    const settings = invoice.settings as Record<string, unknown>;
-    const currency = (invoice.currency || (settings?.currency as string) || 'USD').toLowerCase();
 
     // Bug #18: Validate currency is supported by Stripe before creating PaymentIntent
     const SUPPORTED_CURRENCIES = [
@@ -203,7 +203,7 @@ export async function createInvoicePaymentIntent(
 
     // Create payment intent (route funds to connected Stripe account)
     const paymentIntent = await createPaymentIntent({
-      amount: Math.round(parseFloat((amountToPay * 100).toPrecision(12))), // Convert to cents (avoid floating-point rounding errors)
+      amount: toMinorUnits(amountToPay, currency),
       currency,
       invoiceId: invoice.id,
       customerId: customer?.id,
@@ -313,7 +313,7 @@ export async function processRefundWebhook(
       return { success: false };
     }
 
-    const refundAmount = amountRefundedCents / 100; // Convert cents to dollars
+    const refundAmount = fromMinorUnits(amountRefundedCents, payment.currency);
     // Bug #15: Use tolerance for floating-point comparison to avoid missing full refunds
     const isFullRefund = refundAmount >= Number(payment.amount) - 0.01;
 

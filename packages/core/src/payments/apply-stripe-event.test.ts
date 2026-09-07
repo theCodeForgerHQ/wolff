@@ -21,7 +21,11 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
   const event = (type: string, object: Record<string, unknown>) => ({ type, data: { object } });
 
   /** An invoice of 100.00 with one pending payment of `amount`. */
-  async function pending(amount = 100, link: { intent?: string; session?: string } = {}) {
+  async function pending(
+    amount = 100,
+    link: { intent?: string; session?: string } = {},
+    currency = 'usd'
+  ) {
     const i = ++n;
     const intent = link.intent ?? (link.session ? undefined : `pi_${run}_${i}`);
     const invoice = await base.invoice.create({
@@ -41,7 +45,7 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
         invoiceId: invoice.id,
         workspaceId,
         amount,
-        currency: 'usd',
+        currency,
         paymentMethod: 'card',
         status: 'pending',
         provider: 'stripe',
@@ -220,6 +224,24 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
       expect((await state(invoiceId)).amountPaid).toBe(0);
     });
 
+    it('matches a zero-decimal (JPY) session in whole yen', async () => {
+      const sessionId = `cs_${run}_${n + 1}`;
+      const { invoiceId } = await pending(100, { session: sessionId }, 'jpy');
+
+      await apply(
+        session(sessionId, {
+          payment_intent: `pi_jpy_${run}`,
+          payment_status: 'paid',
+          currency: 'jpy',
+          amount_total: 100,
+        })
+      );
+
+      const after = await state(invoiceId);
+      expect(after.events).not.toContain('payment_mismatch');
+      expect(after).toMatchObject({ status: 'paid', amountPaid: 100 });
+    });
+
     it('treats a different currency as a mismatch', async () => {
       const sessionId = `cs_${run}_${n + 1}`;
       const { invoiceId } = await pending(100, { session: sessionId });
@@ -272,6 +294,17 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
       expect((await outbox(paymentId)).filter((e) => e.type === 'payment.refunded')).toHaveLength(
         2
       );
+    });
+
+    it('reads a zero-decimal (JPY) refund total in whole yen', async () => {
+      const { invoiceId, intent } = await pending(100, {}, 'jpy');
+      await apply(event('payment_intent.succeeded', { id: intent }));
+
+      await apply(refunded(intent, 40));
+
+      const after = await state(invoiceId);
+      expect(Number(after.payment.refundAmount)).toBe(40);
+      expect(after).toMatchObject({ status: 'partial', amountPaid: 60, amountDue: 40 });
     });
 
     it('ignores a smaller running total arriving out of order', async () => {

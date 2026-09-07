@@ -455,12 +455,12 @@ export async function refundPayment(
       }
     }
 
-    // Amount in cents for Stripe (DB stores dollars); undefined = full refund
-    const refundAmountCents = toRefundMinorUnits(params?.amount);
+    // Minor units of the payment's currency (DB stores major); undefined = full refund
+    const refundAmountMinor = toRefundMinorUnits(params?.amount, payment.currency);
 
     await createRefund({
       paymentIntentId: payment.stripePaymentIntentId,
-      amount: refundAmountCents,
+      amount: refundAmountMinor,
       reason: 'requested_by_customer',
     });
 
