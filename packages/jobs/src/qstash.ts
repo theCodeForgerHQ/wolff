@@ -25,14 +25,43 @@ export const QSTASH_RETRIES = 3;
 /** Retries for scheduled runs; see syncQStashSchedules. */
 export const SCHEDULE_RETRIES = 0;
 
+export class QStashUnreachableError extends Error {
+  constructor(timeoutMs: number) {
+    super(`QStash did not accept a job within ${timeoutMs} ms`);
+    this.name = 'QStashUnreachableError';
+  }
+}
+
 export class QStashDispatcher implements JobDispatcher {
   private readonly apiUrl: string;
 
-  constructor(private readonly options: { client: QStashPublisher; apiUrl: string }) {
+  constructor(
+    private readonly options: {
+      client: QStashPublisher;
+      apiUrl: string;
+      /** The outbox relay publishes while holding row locks: do not wait long. */
+      timeoutMs?: number;
+    }
+  ) {
     this.apiUrl = options.apiUrl.replace(/\/$/, '');
   }
 
   async dispatch(job: Job): Promise<void> {
+    const timeoutMs = this.options.timeoutMs ?? 5_000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new QStashUnreachableError(timeoutMs)), timeoutMs);
+    });
+    // A publish that lands after the timeout is still a job; the event it
+    // came from is retried and deduplicated by its jobId.
+    try {
+      await Promise.race([this.publish(job), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async publish(job: Job): Promise<void> {
     await this.options.client.publishJSON({
       url: `${this.apiUrl}/jobs/run/${job.type}`,
       body: job,
