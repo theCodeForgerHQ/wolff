@@ -33,7 +33,13 @@ export interface RelayedOutboxEvent {
   attempts: number;
 }
 
-const STALE_AFTER_MS = 10 * 60_000;
+/**
+ * When an enqueued event counts as lost and is published again. Longer than
+ * QStash takes to give up on a message (3 retries over about 33 minutes), so
+ * an event still being retried is not published a second time once its
+ * 10-minute deduplication window has closed.
+ */
+const STALE_AFTER_MS = 45 * 60_000;
 const MAX_ERROR_LENGTH = 2_000;
 
 /** Any client or transaction client, guarded or not, that can insert an outbox row. */

@@ -330,10 +330,11 @@ describe.skipIf(!url)('BullMQ runtime (Postgres + Redis container)', () => {
       expect((await relay()).enqueued).toBe(0);
       expect(await event.status()).toBe('sent');
 
-      // Ten minutes later the sweeper puts it back and the relay enqueues it again.
+      // Once QStash would have given up on it (45 minutes), the sweeper puts
+      // it back and the relay enqueues it again.
       await base.outboxEvent.update({
         where: { id: event.outboxId },
-        data: { enqueuedAt: new Date(Date.now() - 11 * 60_000) },
+        data: { enqueuedAt: new Date(Date.now() - 46 * 60_000) },
       });
       // The sweeper's own function, limited to this suite's rows: the
       // outbox.sweep job sweeps every workspace, and other suites share the

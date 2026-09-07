@@ -192,22 +192,26 @@ describe.skipIf(!url)('outbox (Postgres)', () => {
     expect(row!.doneAt).not.toBeNull();
   });
 
-  it('puts events stuck in enqueued for 10 minutes back to pending', async () => {
+  // QStash deduplicates a message id for 10 minutes and retries one message
+  // over about 33 minutes (12 s, 2 min 28 s, 30 min). An event still in those
+  // retries must not be published again under its id once the window closed.
+  it('puts events back to pending only after QStash has stopped retrying them', async () => {
     newType();
     const stuck = await write('stuck');
+    const retrying = await write('retrying');
     const fresh = await write('fresh');
     await relayOutboxBatch(db, async () => {}, { types: [type] });
     const now = new Date();
-    await base.outboxEvent.update({
-      where: { id: stuck.id },
-      data: { enqueuedAt: new Date(now.getTime() - 11 * 60_000) },
-    });
+    const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
+    await base.outboxEvent.update({ where: { id: stuck.id }, data: { enqueuedAt: ago(46) } });
+    await base.outboxEvent.update({ where: { id: retrying.id }, data: { enqueuedAt: ago(20) } });
 
     const requeued = await requeueStaleOutboxEvents(db, { types: [type], now });
 
     expect(requeued).toBe(1);
     const byId = new Map((await rows()).map((r) => [r.id, r.status]));
     expect(byId.get(stuck.id)).toBe('pending');
+    expect(byId.get(retrying.id)).toBe('enqueued');
     expect(byId.get(fresh.id)).toBe('enqueued');
   });
 });
