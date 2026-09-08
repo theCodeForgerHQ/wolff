@@ -1,5 +1,6 @@
 'use server';
 
+import { assertReferencesInWorkspace } from '@/lib/workspace/references';
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma, incrementNumberSequence } from '@wolff/database';
@@ -183,6 +184,12 @@ export async function createQuote(data: {
         return { success: false, error: `Invalid block type: ${block.type}` };
       }
     }
+  }
+
+  try {
+    await assertReferencesInWorkspace(workspace.id, { projectId: data.projectId });
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
   }
 
   // Verify client belongs to workspace
@@ -385,6 +392,14 @@ export async function updateQuote(
 
   if (!existingQuote) {
     return { success: false as const, error: 'Quote not found' };
+  }
+
+  if (data.projectId) {
+    try {
+      await assertReferencesInWorkspace(workspace.id, { projectId: data.projectId });
+    } catch (error) {
+      return { success: false as const, error: (error as Error).message };
+    }
   }
 
   // Bug #11: Prevent modifications to signed/accepted quotes
