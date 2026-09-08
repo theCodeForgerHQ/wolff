@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { getBaseUrl } from '@/lib/utils';
 import { after, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
 
     // Rate limit by IP (shared networks get some room), then by address so one
     // inbox cannot be flooded.
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(request.headers) || 'unknown';
     const limits: [string, number][] = [
       [`resend-verification:ip:${clientIp}`, 10],
       [`resend-verification:${email}`, 3],

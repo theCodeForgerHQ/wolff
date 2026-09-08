@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@wolff/database';
@@ -16,10 +17,7 @@ export async function GET(
 ) {
   try {
     // Rate limit PDF downloads
-    const clientIp =
-      _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      _request.headers.get('x-real-ip') ||
-      'unknown';
+    const clientIp = requestIp(_request.headers) || 'unknown';
     const { checkRateLimit } = await import('@/lib/rate-limit');
     const rl = await checkRateLimit(`pdf-download:${clientIp}`, { limit: 10, windowMs: 60000 });
     if (rl.limited) return new NextResponse('Too many requests', { status: 429 });

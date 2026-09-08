@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { hash } from 'bcryptjs';
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(request.headers) || 'unknown';
     const rateLimitResult = await checkRateLimit(`reset-password:${clientIp}`, {
       limit: 5,
       windowMs: 300000,

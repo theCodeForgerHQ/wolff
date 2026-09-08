@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { getBaseUrl } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     const MIN_RESPONSE_TIME = 500; // ms — ensures consistent timing regardless of user existence
 
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(request.headers) || 'unknown';
     const rateLimitResult = await checkRateLimit(`forgot-password:${clientIp}`, {
       limit: 5,
       windowMs: 300000,

@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -11,10 +12,7 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   // Bug #56/#59: Apply rate limiting
-  const clientIp =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const clientIp = requestIp(request.headers) || 'unknown';
   const rateLimitResult = await checkRateLimit(`clients:${clientIp}`, defaultRateLimitOptions);
   const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
 

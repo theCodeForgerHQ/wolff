@@ -1,5 +1,6 @@
 'use server';
 
+import { requestIp } from '@/lib/request-ip';
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
 import type { InvoiceLineItem } from './types';
@@ -83,10 +84,7 @@ export interface PublicInvoiceData {
 async function getRequestMetadata() {
   const headersList = await headers();
   return {
-    ipAddress:
-      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      headersList.get('x-real-ip') ||
-      'unknown',
+    ipAddress: requestIp(headersList) || 'unknown',
     userAgent: headersList.get('user-agent') || 'unknown',
   };
 }

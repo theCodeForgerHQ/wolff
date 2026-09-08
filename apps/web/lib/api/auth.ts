@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKey } from '@wolff/core/auth/api-keys';
 import { coreDb } from '@/lib/core-db';
@@ -16,7 +17,7 @@ export async function authenticateApiRequest(
   request: NextRequest
 ): Promise<{ context: ApiContext } | { error: NextResponse }> {
   // Rate limit by IP
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const clientIp = requestIp(request.headers) || 'unknown';
   const rateLimitResult = await checkRateLimit(`api:${clientIp}`, defaultRateLimitOptions);
 
   if (rateLimitResult.limited) {
