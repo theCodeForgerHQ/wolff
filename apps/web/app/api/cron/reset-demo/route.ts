@@ -1,3 +1,4 @@
+import { constantTimeEquals } from '@/lib/constant-time';
 import { NextResponse } from 'next/server';
 import { prisma } from '@wolff/database';
 import bcrypt from 'bcryptjs';
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   if (!cronSecret) {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
   }
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!constantTimeEquals(authHeader ?? '', `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
