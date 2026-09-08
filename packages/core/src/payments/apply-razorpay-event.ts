@@ -1,5 +1,6 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
+import { ProviderEventNotReadyError } from './not-ready';
 
 /**
  * Applies one verified Razorpay event to payments and invoices. Every
@@ -176,7 +177,9 @@ async function applyPaymentCaptured(
   if (!payment && input.orderId) {
     payment = await lockPaymentByOrderId(tx, workspaceId, input.orderId);
   }
-  if (!payment) return;
+  if (!payment) {
+    throw new ProviderEventNotReadyError(`no payment for Razorpay payment ${input.paymentId}`);
+  }
 
   if (payment.status === 'completed' || payment.status === 'refunded') return;
 
@@ -227,7 +230,9 @@ interface OrderPaidInput {
 
 async function applyOrderPaid(tx: Tx, workspaceId: string, input: OrderPaidInput): Promise<void> {
   const payment = await lockPaymentByOrderId(tx, workspaceId, input.orderId);
-  if (!payment) return;
+  if (!payment) {
+    throw new ProviderEventNotReadyError(`no payment for Razorpay order ${input.orderId}`);
+  }
 
   if (payment.status === 'completed' || payment.status === 'refunded') return;
 
@@ -321,7 +326,17 @@ async function applyRefund(
   refundAmount: number
 ): Promise<void> {
   const payment = await lockPaymentByPaymentId(tx, workspaceId, paymentId);
-  if (!payment || payment.status !== 'completed') return;
+  // No row has this payment id until its capture is applied: a refund that
+  // overtook the capture is retried, not dropped.
+  if (!payment) {
+    throw new ProviderEventNotReadyError(`no payment for refunded Razorpay payment ${paymentId}`);
+  }
+  if (payment.status === 'refunded') return;
+  if (payment.status !== 'completed') {
+    throw new ProviderEventNotReadyError(
+      `Razorpay refund for payment ${payment.id} before it was credited (${payment.status})`
+    );
+  }
   if (refundAmount <= 0) return;
   // Unlike Stripe's charge.refunded (a running total), each Razorpay
   // refund.processed carries one refund's amount, so refunds add up. A

@@ -248,12 +248,14 @@ describe.skipIf(!url)('provider webhook events (Postgres)', () => {
     expect(await processProviderEvent(db, id)).toBe('processed');
   });
 
-  it('marks an event for an unknown payment as processed, without side effects', async () => {
+  it('keeps an event for an unknown payment received, to retry, without side effects', async () => {
     const { id } = await record(
       stripeEvent('payment_intent.succeeded', { id: `pi_unknown_${run}`, latest_charge: null })
     );
 
-    expect(await processProviderEvent(db, id)).toBe('processed');
+    await expect(processProviderEvent(db, id)).rejects.toThrow(/not ready/);
+    const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ status: 'received', attempts: 1 });
   });
   it('dead-letters an event that keeps failing, and stops re-driving it', async () => {
     // A refund with an impossible amount fails every time it is applied.

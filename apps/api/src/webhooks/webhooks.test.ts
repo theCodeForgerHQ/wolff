@@ -460,7 +460,8 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
         where: { provider: 'razorpay', workspaceId },
       });
       expect(row!.workspaceId).toBe(workspaceId);
-      await processProviderEvent(db, row!.id);
+      // No payment of this workspace has that order: retried, never applied.
+      await expect(processProviderEvent(db, row!.id)).rejects.toThrow(/not ready/);
 
       const after = await base.invoice.findUniqueOrThrow({
         where: { id: invoice.id },

@@ -149,10 +149,12 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
       expect(await state(invoiceId)).toMatchObject({ status: 'paid', amountPaid: 100 });
     });
 
-    it('ignores an intent no payment knows, and refuses one without an id', async () => {
-      await expect(
-        apply(event('payment_intent.succeeded', { id: 'pi_unknown' }))
-      ).resolves.toBeUndefined();
+    it('retries an intent no payment knows yet, and refuses one without an id', async () => {
+      // Marking it processed would lose the payment if its row (or the
+      // session link) only appears a moment later.
+      await expect(apply(event('payment_intent.succeeded', { id: 'pi_unknown' }))).rejects.toThrow(
+        /not ready/
+      );
       await expect(apply(event('payment_intent.succeeded', {}))).rejects.toThrow(/intent id/);
     });
   });
@@ -220,7 +222,9 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
       expect(after).toMatchObject({ status: 'sent', amountPaid: 0 });
       expect(after.events).toContain('payment_mismatch');
       // The intent's own success finds no payment and credits nothing.
-      await apply(event('payment_intent.succeeded', { id: 'pi_wrong_amount' }));
+      await expect(
+        apply(event('payment_intent.succeeded', { id: 'pi_wrong_amount' }))
+      ).rejects.toThrow(/not ready/);
       expect((await state(invoiceId)).amountPaid).toBe(0);
     });
 
@@ -317,12 +321,20 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
       expect((await state(invoiceId)).amountPaid).toBe(50);
     });
 
-    it('does not refund a payment that was never credited', async () => {
+    it('retries a refund that arrives before the payment was credited', async () => {
       const { invoiceId, intent } = await pending();
 
-      await apply(refunded(intent, 10_000));
-
+      await expect(apply(refunded(intent, 10_000))).rejects.toThrow(/not ready/);
       expect((await state(invoiceId)).payment.status).toBe('pending');
+
+      // Once the success has been applied, the retried refund lands.
+      await apply(event('payment_intent.succeeded', { id: intent }));
+      await apply(refunded(intent, 10_000));
+      expect(await state(invoiceId)).toMatchObject({ status: 'sent', amountPaid: 0 });
+    });
+
+    it('retries a refund of a charge no payment knows yet', async () => {
+      await expect(apply(refunded('pi_refund_unknown', 100))).rejects.toThrow(/not ready/);
     });
 
     it.each([[-1], [1.5], ['100'], [undefined]])(

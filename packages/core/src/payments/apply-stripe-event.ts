@@ -1,6 +1,7 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
 import { fromMinorUnits, toMinorUnits } from './minor-units';
+import { ProviderEventNotReadyError } from './not-ready';
 
 /**
  * Applies one verified Stripe event to payments and invoices. Every function
@@ -175,7 +176,10 @@ export async function applyPaymentSucceeded(
   input: { paymentIntentId: string; chargeId?: string; receiptUrl?: string }
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, input.paymentIntentId);
-  if (!payment) return;
+  // The row, or the session link that names this intent, may not exist yet.
+  if (!payment) {
+    throw new ProviderEventNotReadyError(`no payment for Stripe intent ${input.paymentIntentId}`);
+  }
 
   // A credited payment is final: a repeated success must not credit the
   // invoice again. `failed` is not final, because Stripe reuses the
@@ -271,7 +275,19 @@ export async function applyRefund(
   amountRefundedMinor: number
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, paymentIntentId);
-  if (!payment || payment.status !== 'completed') return;
+  if (!payment) {
+    throw new ProviderEventNotReadyError(
+      `no payment for refunded Stripe intent ${paymentIntentId}`
+    );
+  }
+  // Fully refunded already: a redelivery has nothing left to apply.
+  if (payment.status === 'refunded') return;
+  // A refund that overtook its payment's success: retry once it is credited.
+  if (payment.status !== 'completed') {
+    throw new ProviderEventNotReadyError(
+      `Stripe refund for payment ${payment.id} before it was credited (${payment.status})`
+    );
+  }
 
   const { workspaceId } = payment.invoice;
   const refundedTotal = fromMinorUnits(amountRefundedMinor, payment.currency);

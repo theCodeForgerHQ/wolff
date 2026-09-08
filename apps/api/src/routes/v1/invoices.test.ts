@@ -371,8 +371,17 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         const pending = await base.payment.findFirstOrThrow({ where: { invoiceId: invoice.id } });
         expect(pending).toMatchObject({ providerOrderId: sessionId, stripePaymentIntentId: null });
 
-        // The intent's own event can come first; it is not linked yet.
-        await deliver('payment_intent.succeeded', { id: 'pi_late_1' });
+        // The intent's own event can come first; it is not linked yet, so
+        // it stays unprocessed for a retry instead of being dropped.
+        const early = { id: `evt_reconcile_${randomUUID()}`, type: 'payment_intent.succeeded' };
+        const earlyRow = await recordProviderEvent(db, {
+          provider: 'stripe',
+          eventId: early.id,
+          type: early.type,
+          payload: { ...early, data: { object: { id: 'pi_late_1' } } },
+          outbox: false,
+        });
+        await expect(processProviderEvent(db, earlyRow.id)).rejects.toThrow(/not ready/);
         await deliver('checkout.session.completed', {
           id: sessionId,
           object: 'checkout.session',
@@ -389,7 +398,8 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         const payment = await base.payment.findFirstOrThrow({ where: { invoiceId: invoice.id } });
         expect(payment).toMatchObject({ status: 'completed', stripePaymentIntentId: 'pi_late_1' });
 
-        // A redelivery, or the intent event arriving after, credits nothing more.
+        // The retried early event, or a redelivery, credits nothing more.
+        expect(await processProviderEvent(db, earlyRow.id)).toBe('processed');
         await deliver('payment_intent.succeeded', { id: 'pi_late_1' });
         expect(
           Number((await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).amountPaid)
@@ -473,8 +483,11 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
           payment_intent: intentId,
           ...fields,
         });
-        // Nor later through the intent: the session was never linked to it.
-        await deliver('payment_intent.succeeded', { id: intentId });
+        // Nor later through the intent: the session was never linked to it,
+        // so its event finds no payment and waits (then dead-letters).
+        await expect(deliver('payment_intent.succeeded', { id: intentId })).rejects.toThrow(
+          /not ready/
+        );
 
         const after = await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
         expect(after).toMatchObject({ status: 'sent' });
