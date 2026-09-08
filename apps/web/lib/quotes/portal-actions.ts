@@ -1,6 +1,7 @@
 'use server';
 
 import { unexpiredAccessToken } from '@/lib/portal/token';
+import { requestIp } from '@/lib/request-ip';
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
 import type { QuoteBlock } from './types';
@@ -81,10 +82,7 @@ export interface PublicQuoteData {
 async function getRequestMetadata() {
   const headersList = await headers();
   return {
-    ipAddress:
-      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      headersList.get('x-real-ip') ||
-      'unknown',
+    ipAddress: requestIp(headersList) || 'unknown',
     userAgent: headersList.get('user-agent') || 'unknown',
   };
 }
