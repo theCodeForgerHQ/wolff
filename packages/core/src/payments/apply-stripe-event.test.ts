@@ -328,6 +328,23 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
     const refunded = (intent: unknown, cents: unknown) =>
       event('charge.refunded', { payment_intent: intent, amount_refunded: cents });
 
+    it('records the refund of a payment on a voided invoice and keeps it voided', async () => {
+      const { invoiceId, intent } = await pending();
+      await base.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'voided', amountDue: 0 },
+      });
+      await apply(event('payment_intent.succeeded', { id: intent }));
+
+      await apply(refunded(intent, 10_000));
+
+      const after = await state(invoiceId);
+      expect(after).toMatchObject({ status: 'voided', amountPaid: 0, amountDue: 0 });
+      expect(after.payment.status).toBe('refunded');
+      expect(Number(after.payment.refundAmount)).toBe(100);
+      expect(after.events).toContain('payment_refunded');
+    });
+
     it('applies a running refund total as differences, so a redelivery changes nothing', async () => {
       const { invoiceId, paymentId, intent } = await pending();
       await apply(event('payment_intent.succeeded', { id: intent }));

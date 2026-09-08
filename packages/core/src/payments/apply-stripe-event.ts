@@ -313,18 +313,23 @@ export async function applyRefund(
   const invoice = await tx.invoice.findUniqueOrThrow({
     where: { id: payment.invoiceId, workspaceId },
   });
-  const total = Number(invoice.total);
-  const amountPaid = Math.max(0, Number(invoice.amountPaid) - delta);
+  // A voided invoice stays voided, and a payment on it was never credited
+  // (payment_on_closed_invoice), so its refund is recorded on the payment
+  // and in the events but moves nothing on the invoice.
+  if (invoice.status !== 'voided') {
+    const total = Number(invoice.total);
+    const amountPaid = Math.max(0, Number(invoice.amountPaid) - delta);
 
-  await tx.invoice.update({
-    where: { id: payment.invoiceId, workspaceId },
-    data: {
-      amountPaid,
-      amountDue: Math.max(0, total - amountPaid),
-      status: amountPaid <= 0 ? 'sent' : amountPaid < total ? 'partial' : invoice.status,
-      ...(amountPaid <= 0 && { paidAt: null }),
-    },
-  });
+    await tx.invoice.update({
+      where: { id: payment.invoiceId, workspaceId },
+      data: {
+        amountPaid,
+        amountDue: Math.max(0, total - amountPaid),
+        status: amountPaid <= 0 ? 'sent' : amountPaid < total ? 'partial' : invoice.status,
+        ...(amountPaid <= 0 && { paidAt: null }),
+      },
+    });
+  }
 
   await tx.invoiceEvent.create({
     data: {
