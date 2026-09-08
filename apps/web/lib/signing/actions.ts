@@ -1,5 +1,6 @@
 'use server';
 
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { requestIp } from '@/lib/request-ip';
 import { headers } from 'next/headers';
 import { prisma } from '@wolff/database';
@@ -48,6 +49,7 @@ export async function sendSigningOtp(input: {
           accessToken: input.accessToken,
           deletedAt: null,
           status: { in: ['sent', 'viewed'] },
+          ...unexpiredAccessToken(),
         },
         select: {
           id: true,
@@ -165,7 +167,7 @@ export async function verifySigningOtpAction(input: {
 
     if (input.type === 'quote') {
       const quote = await prisma.quote.findFirst({
-        where: { accessToken: input.accessToken, deletedAt: null },
+        where: { accessToken: input.accessToken, deletedAt: null, ...unexpiredAccessToken() },
         select: { id: true },
       });
       if (!quote) return { success: false, error: 'Document not found' };
@@ -206,7 +208,7 @@ export async function checkSigningVerification(input: {
 
     if (input.type === 'quote') {
       const quote = await prisma.quote.findFirst({
-        where: { accessToken: input.accessToken, deletedAt: null },
+        where: { accessToken: input.accessToken, deletedAt: null, ...unexpiredAccessToken() },
         select: { id: true },
       });
       if (!quote) return false;

@@ -1,3 +1,4 @@
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { getInvoicePdfData, getInvoicePdfDataByToken } from '@/lib/pdf/actions';
@@ -32,7 +33,7 @@ export async function GET(
     if (accessToken) {
       // Public access — validate token matches this invoice
       const invoice = await prisma.invoice.findFirst({
-        where: { id: invoiceId, accessToken, deletedAt: null },
+        where: { id: invoiceId, accessToken, deletedAt: null, ...unexpiredAccessToken() },
         select: { id: true },
       });
       if (!invoice) {

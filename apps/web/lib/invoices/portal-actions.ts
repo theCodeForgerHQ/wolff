@@ -1,5 +1,6 @@
 'use server';
 
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { requestIp } from '@/lib/request-ip';
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
@@ -101,6 +102,7 @@ export async function getInvoiceByAccessToken(
       where: {
         accessToken,
         deletedAt: null,
+        ...unexpiredAccessToken(),
       },
       include: {
         client: {
@@ -260,7 +262,7 @@ export async function trackInvoiceView(accessToken: string): Promise<void> {
 
     // HIGH #3-7: Add deletedAt check to prevent tracking views on soft-deleted invoices
     const invoice = await prisma.invoice.findFirst({
-      where: { accessToken, deletedAt: null },
+      where: { accessToken, deletedAt: null, ...unexpiredAccessToken() },
       select: { id: true, status: true, viewedAt: true, workspaceId: true, invoiceNumber: true },
     });
 

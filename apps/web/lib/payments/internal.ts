@@ -5,6 +5,7 @@
  * These functions are called from webhook handlers and API routes only.
  */
 
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { prisma } from '@wolff/database';
 import {
   isStripeEnabled,
@@ -41,7 +42,7 @@ export async function createInvoicePaymentIntent(
     let invoice;
     if (accessToken) {
       invoice = await prisma.invoice.findFirst({
-        where: { id: invoiceId, accessToken, deletedAt: null },
+        where: { id: invoiceId, accessToken, deletedAt: null, ...unexpiredAccessToken() },
         include: {
           client: true,
           workspace: { include: { paymentSettings: true } },
