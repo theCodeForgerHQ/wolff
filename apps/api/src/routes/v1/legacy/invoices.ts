@@ -8,7 +8,7 @@ import {
   createInvoiceFromQuote,
   describeCoreError,
   gstInvoiceColumns,
-  nextInvoiceNumber,
+  allocateInvoiceNumber,
   priceForWorkspace,
   type PricedGstInvoice,
 } from '@wolff/core/invoices';
@@ -193,8 +193,6 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       throw error;
     }
 
-    // Atomic; a GST workspace numbers per financial year.
-    const invoiceNumber = await nextInvoiceNumber(db, workspaceId);
     const { lines, subtotal, taxTotal } = priceLines(items);
     const total = subtotal + taxTotal;
     const amounts = gst
@@ -210,23 +208,27 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
           select: { currency: true },
         });
 
-    const invoice = await db.invoice.create({
-      data: {
-        workspaceId,
-        clientId,
-        projectId: projectId || null,
-        invoiceNumber,
-        title,
-        currency: currency || profile?.currency || 'USD',
-        dueDate: parsedDueDate,
-        ...amounts,
-        notes: notes || null,
-        terms: terms || null,
-        settings: {},
-        lineItems: { create: created },
-      },
-      include: DOCUMENT_INCLUDE,
-    });
+    // Numbered in the transaction that inserts it: a failed insert takes
+    // the number back (GST Rule 46 wants a consecutive series).
+    const invoice = await db.$transaction(async (tx) =>
+      tx.invoice.create({
+        data: {
+          workspaceId,
+          clientId,
+          projectId: projectId || null,
+          invoiceNumber: await allocateInvoiceNumber(tx, workspaceId),
+          title,
+          currency: currency || profile?.currency || 'USD',
+          dueDate: parsedDueDate,
+          ...amounts,
+          notes: notes || null,
+          terms: terms || null,
+          settings: {},
+          lineItems: { create: created },
+        },
+        include: DOCUMENT_INCLUDE,
+      })
+    );
 
     legacyJson(
       res,

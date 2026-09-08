@@ -152,6 +152,32 @@ describe.skipIf(!url)('createInvoiceFromQuote (Postgres)', () => {
     expect(await base.invoice.count({ where: { quoteId } })).toBe(1);
   });
 
+  it('answers a concurrent second conversion with a conflict and burns no number', async () => {
+    const ws = await workspace();
+    const quoteId = await quote(ws);
+
+    const results = await Promise.all([
+      createInvoiceFromQuote(db, ws.workspaceId, quoteId),
+      createInvoiceFromQuote(db, ws.workspaceId, quoteId),
+    ]);
+
+    expect(results.filter((r) => r.success)).toHaveLength(1);
+    expect(results.filter((r) => !r.success)).toEqual([
+      { success: false, error: 'Invoice already exists for this quote' },
+    ]);
+    // The loser's number was rolled back with its insert: the series stays
+    // consecutive (GST Rule 46 wants a consecutive serial).
+    const next = await createInvoiceFromQuote(db, ws.workspaceId, await quote(ws));
+    const numbers = (
+      await base.invoice.findMany({
+        where: { workspaceId: ws.workspaceId },
+        orderBy: { invoiceNumber: 'asc' },
+      })
+    ).map((i) => i.invoiceNumber);
+    expect(next.success).toBe(true);
+    expect(numbers).toEqual(['INV-0001', 'INV-0002']);
+  });
+
   it("refuses another workspace's quote and a deleted one", async () => {
     const a = await workspace();
     const b = await workspace();
