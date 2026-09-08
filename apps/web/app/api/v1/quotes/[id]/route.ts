@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { requestAiIndexing } from '@wolff/core/outbox';
+import { applyDiscount } from '@wolff/core/pricing';
 import { toNumber } from '@/lib/utils';
 
 interface RouteParams {
@@ -176,20 +177,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         };
       });
 
-      // Recalculate with existing discount fields
-      let discountAmount = 0;
-      const discountType = quote.discountType as string | null;
-      const discountValue = quote.discountValue ? toNumber(quote.discountValue) : 0;
-      if (discountType === 'percentage' && discountValue > 0) {
-        discountAmount = Math.round(subtotal * (discountValue / 100) * 100) / 100;
-      } else if (discountType === 'fixed' && discountValue > 0) {
-        discountAmount = Math.min(discountValue, subtotal);
-      }
+      // Recalculate with existing discount fields; the discount comes off
+      // before tax (shared with the dashboard and the API).
+      const priced = applyDiscount(
+        { subtotal, taxTotal },
+        quote.discountType as string | null,
+        quote.discountValue ? toNumber(quote.discountValue) : 0
+      );
 
       updateData.subtotal = subtotal;
-      updateData.taxTotal = taxTotal;
-      updateData.discountAmount = discountAmount;
-      updateData.total = subtotal - discountAmount + taxTotal;
+      updateData.taxTotal = priced.taxTotal;
+      updateData.discountAmount = priced.discountAmount;
+      updateData.total = priced.total;
 
       await tx.quoteLineItem.deleteMany({ where: { quoteId: id } });
       await tx.quoteLineItem.createMany({ data: processed });

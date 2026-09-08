@@ -13,6 +13,7 @@
     "./webhooks": "./src/webhooks/index.ts",
     "./errors": "./src/errors.ts",
     "./pagination": "./src/pagination.ts",
+    "./pricing": "./src/pricing.ts",
     "./invoices": "./src/invoices/index.ts",
     "./quotes": "./src/quotes/index.ts",
     "./email": "./src/email/index.ts",

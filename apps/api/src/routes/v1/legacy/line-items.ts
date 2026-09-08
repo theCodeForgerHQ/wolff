@@ -119,16 +119,3 @@ export function priceLines(items: LineItemInput[]) {
   });
   return { lines, subtotal, taxTotal };
 }
-
-/** The discount kept on a document when its lines are replaced. */
-export function recomputeDiscount(
-  subtotal: number,
-  discountType: string | null,
-  discountValue: number
-): number {
-  if (discountType === 'percentage' && discountValue > 0) {
-    return Math.round(subtotal * (discountValue / 100) * 100) / 100;
-  }
-  if (discountType === 'fixed' && discountValue > 0) return Math.min(discountValue, subtotal);
-  return 0;
-}

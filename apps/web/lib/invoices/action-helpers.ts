@@ -6,6 +6,7 @@ import { randomBytes } from 'crypto';
 import { prisma, withTenantGuard } from '@wolff/database';
 import { assertReadyToIssue, describeCoreError } from '@wolff/core/invoices';
 import { CoreError } from '@wolff/core/errors';
+import { applyDiscount } from '@wolff/core/pricing';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 
 export const gstDb = withTenantGuard(prisma);
@@ -70,30 +71,7 @@ export function calculateTotals(
   subtotal = Math.round(subtotal * 100) / 100;
   taxTotal = Math.round(taxTotal * 100) / 100;
 
-  // Calculate discount amount
-  let discountAmount = 0;
-  if (discount?.type && discount.value != null && discount.value > 0) {
-    if (discount.type === 'percentage') {
-      discountAmount = subtotal * (discount.value / 100);
-    } else if (discount.type === 'fixed') {
-      discountAmount = discount.value;
-    }
-  }
-
-  // Clamp: discount cannot exceed subtotal (prevents negative total before tax)
-  discountAmount = Math.min(discountAmount, subtotal);
-  discountAmount = Math.round(discountAmount * 100) / 100;
-
-  // Tax should apply to the discounted amount, not the full subtotal.
-  // Proportionally reduce tax by the same ratio as the discount.
-  if (subtotal > 0 && discountAmount > 0) {
-    taxTotal = Math.round(taxTotal * ((subtotal - discountAmount) / subtotal) * 100) / 100;
-  }
-
-  return {
-    subtotal,
-    taxTotal,
-    discountAmount,
-    total: Math.round((subtotal - discountAmount + taxTotal) * 100) / 100,
-  };
+  // The discount comes off before tax (shared with the API).
+  const priced = applyDiscount({ subtotal, taxTotal }, discount?.type, discount?.value);
+  return { subtotal, ...priced };
 }

@@ -19,6 +19,7 @@ import { domainEvents } from '@/lib/events/emitter';
 import { toNumber, getBaseUrl, formatCurrency } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
+import { applyDiscount } from '@wolff/core/pricing';
 
 /**
  * Bug #134: Safely parse quote settings from JSON with runtime validation.
@@ -490,19 +491,11 @@ export async function updateQuote(
     return { success: false as const, error: 'Discount amount cannot exceed subtotal' };
   }
 
-  // Apply discount to total
-  let discountAmount = 0;
-  if (discountType === 'percentage') {
-    discountAmount = Math.round(subtotal * (discountValue / 100) * 100) / 100;
-  } else if (discountType === 'fixed') {
-    discountAmount = Math.min(discountValue, subtotal);
-  }
-
-  // Tax applies to the discounted amount, not the full subtotal
-  if (subtotal > 0 && discountAmount > 0) {
-    taxTotal = Math.round(taxTotal * ((subtotal - discountAmount) / subtotal) * 100) / 100;
-  }
-  const total = subtotal - discountAmount + taxTotal;
+  // The discount comes off before tax (shared with the API).
+  const priced = applyDiscount({ subtotal, taxTotal }, discountType, discountValue);
+  const discountAmount = priced.discountAmount;
+  taxTotal = priced.taxTotal;
+  const total = priced.total;
 
   // Update quote
   try {

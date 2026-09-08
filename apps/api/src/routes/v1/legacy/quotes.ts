@@ -4,6 +4,7 @@ import { incrementNumberSequence, type Prisma } from '@wolff/database';
 import type { Db } from '@wolff/core/context';
 import { renderQuoteSent } from '@wolff/core/email';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
+import { applyDiscount } from '@wolff/core/pricing';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
 import type { LegacyRouteContext } from '.';
@@ -29,7 +30,6 @@ import {
   MAX_LINE_ITEMS,
   lineItemProblem,
   priceLines,
-  recomputeDiscount,
   type LineItemInput,
   LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
@@ -289,15 +289,16 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
 
       if (lineItems) {
         const { lines, subtotal, taxTotal } = priceLines(lineItems);
-        const discountAmount = recomputeDiscount(
-          subtotal,
+        // The discount comes off before tax (shared with the dashboard).
+        const priced = applyDiscount(
+          { subtotal, taxTotal },
           quote.discountType,
           quote.discountValue ? toNumber(quote.discountValue) : 0
         );
         data.subtotal = subtotal;
-        data.taxTotal = taxTotal;
-        data.discountAmount = discountAmount;
-        data.total = subtotal - discountAmount + taxTotal;
+        data.taxTotal = priced.taxTotal;
+        data.discountAmount = priced.discountAmount;
+        data.total = priced.total;
 
         await tx.quoteLineItem.deleteMany({ where: { quoteId: id, quote: { workspaceId } } });
         await tx.quoteLineItem.createMany({

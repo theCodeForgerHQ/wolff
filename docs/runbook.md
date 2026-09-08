@@ -102,6 +102,31 @@ run by the script: before a release with a migration, take a Neon branch
 snapshot (section 4.3), then run `migrate:deploy` against `DIRECT_URL`, then
 deploy.
 
+### 2.1 Releasing the 2026-09-04 fixes
+
+The reliability and security fixes of 2026-09-04 (branches
+`fix-security-review` and `fix-reliability`) need, in this order:
+
+1. **Neon snapshot** (section 4.3).
+2. **Prisma migration** `20260904120000_automation_run_unique_subject`
+   (`migrate:deploy` against `DIRECT_URL`). It deletes duplicate automation
+   runs (keeping the oldest of each automation and subject) before adding
+   the unique index.
+3. **Alembic** `0003` in `services/ai` (`uv run alembic upgrade head` with
+   the AI service's direct URL): adds `attempts` to `ai.ingest_state`. The new
+   ai code reads it, so run this before deploying ai.
+4. **Deploy** api, ai, web (`scripts/deploy.sh`).
+5. **Re-sync the QStash schedules** (`schedules:sync`, section 1 step 8).
+   This replaces the eight old schedules with four, all at minute 0
+   (`wolff-tick` hourly, ai-sweep daily, reports nightly, backup weekly) and
+   deletes the retired ones. Until it runs, the old schedules keep firing.
+6. **Check**: the next hour's `wolff-tick` delivery in the QStash console
+   answers 200, and Neon's compute graph shows it suspending between hours.
+
+Self-hosting only: set `TRUSTED_PROXY_HOPS` to the number of reverse proxies
+in front of the web app (default 1), and make the web port reachable only
+through them; rate limits key on the address they report.
+
 ## 3. Roll back
 
 **Automatic.** When a smoke test or a deploy fails, the script runs
@@ -129,10 +154,10 @@ took 5.8 s; `/readyz` was 200 again at 01:09:42Z. Details: docs/phase-6.md (Phas
 
 ## 4. Backups and restore
 
-### 4.1 Nightly backup
+### 4.1 Weekly backup
 
-QStash schedule `wolff-backup` (`0 21 * * *` UTC) calls `db.backup` on the
-api. It exports every table of the `public` and `ai` schemas, data only, in
+QStash schedule `wolff-backup` (`0 21 * * 0` UTC, weekly since 2026-09-04:
+a full export is the heaviest job there is) calls `db.backup` on the api. It exports every table of the `public` and `ai` schemas, data only, in
 one REPEATABLE READ snapshot, except the migration history and the RAG index
 (section 4.2). The rows stream through gzip and AES-256-GCM into
 `backups/db/<UTC date>.ndjson.gz.enc` as a multipart upload; then files older
@@ -290,6 +315,15 @@ After rotating, run section 7's checks.
   own default "high priority issues" workflows also fire, so a test can send
   more than one email. The script prints the owner's email address; redact it
   before sharing logs.
+- **Usage, before the hard limits:** the September 2026 outage was silent
+  for days. Neon's free compute quota ran out on 09-03 (every job failed
+  with `53000`), and the failing invocations then used up Vercel's
+  fair-use CPU allowance: the team was blocked (402 `DEPLOYMENT_DISABLED`)
+  from 09-04, with Vercel's automatic unblock a month later. Check both
+  dashboards weekly (Neon: Usage, compute hours; Vercel: Usage, Fluid
+  Active CPU), and treat a run of Sentry errors with one cause as an outage,
+  not as noise. A job failing because the database is down now logs one
+  warning and answers 503 instead of reporting each failure.
 - **UptimeRobot:** emails on down and up. A false "down" usually means the
   monitor's HEAD request is not answered (405) or the URL is behind Vercel
   Authentication; check with `curl -I <url>`.
