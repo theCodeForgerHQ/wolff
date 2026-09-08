@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -14,6 +15,8 @@ from app.db.session import create_engine, session_factory
 from app.llm.clients import LlmClients, build_clients
 from app.llm.transport import DailyCounter, MemoryDailyCounter, RedisDailyCounter
 from app.settings import Settings
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -55,6 +58,14 @@ def build_services(
         replay, daily = RedisReplayCache(redis), RedisDailyCounter(redis)
     else:
         replay, daily = MemoryReplayCache(), MemoryDailyCounter()
+        if settings.environment == "production":
+            # Not refused: the free demo (Vercel) runs without Redis. But each
+            # instance, and each cold start, has its own counters and cache.
+            log.warning(
+                "REDIS_URL is not set in production: the requests-per-day "
+                "counters and the service-token replay cache are per process "
+                "and reset on every cold start"
+            )
 
     budget = BudgetGate(sessions, settings.provider, settings.daily_budget_usd)
     fallback = settings.fallback

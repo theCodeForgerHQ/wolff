@@ -3,21 +3,27 @@ import bcrypt from 'bcryptjs';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { logger, maskEmail } from '@/lib/logger';
 
-/** Rate limit: 5 login attempts per email per 15 minutes */
-const LOGIN_RATE_LIMIT = { limit: 5, windowMs: 15 * 60 * 1000 };
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
-// Bug #44: Ideally we'd also rate limit by IP to prevent credential stuffing across
-// multiple email addresses. However, the credentials provider authorize() callback
-// does not receive the raw request object, so we can't extract the client IP here.
-// IP-based rate limiting for login should be added at the middleware layer or in a
-// custom signIn handler if next-auth is upgraded to a version that exposes the request.
+/**
+ * Login limits. Per email and address: someone failing to sign in as a person
+ * locks out only themselves, not the person signing in from elsewhere. Per
+ * address: one client cannot try a password against many accounts. Per email
+ * across all addresses, looser: bounds guessing spread over many addresses.
+ */
+const LOGIN_LIMITS = (email: string, ip: string | null) => [
+  { key: `login:${email}:${ip ?? 'unknown'}`, limit: 5, windowMs: FIFTEEN_MINUTES },
+  ...(ip ? [{ key: `login-ip:${ip}`, limit: 30, windowMs: FIFTEEN_MINUTES }] : []),
+  { key: `login:${email}`, limit: 50, windowMs: 60 * 60 * 1000 },
+];
 
-export async function verifyCredentials(email: string, password: string) {
-  // Rate limit by email to prevent brute-force attacks
+export async function verifyCredentials(email: string, password: string, ip: string | null = null) {
   const normalizedEmail = email.toLowerCase().trim();
-  const rateLimitResult = await checkRateLimit(`login:${normalizedEmail}`, LOGIN_RATE_LIMIT);
-  if (rateLimitResult.limited) {
-    throw new Error('Too many login attempts. Please try again in 15 minutes.');
+  for (const { key, limit, windowMs } of LOGIN_LIMITS(normalizedEmail, ip)) {
+    const rateLimitResult = await checkRateLimit(key, { limit, windowMs });
+    if (rateLimitResult.limited) {
+      throw new Error('Too many login attempts. Please try again in 15 minutes.');
+    }
   }
 
   const user = await prisma.user.findUnique({

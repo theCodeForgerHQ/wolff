@@ -74,16 +74,30 @@ def create_engine(url: str) -> AsyncEngine:
     """Engine whose connections see ``ai`` first, then ``public``.
 
     The statement cache is off because the free demo connects through a
-    transaction-mode pooler (Neon), where prepared statements break.
+    transaction-mode pooler (Neon), where prepared statements break. The
+    pool is small and fixed (many serverless instances share Neon free's
+    connection limit), recycled before the pooler drops idle connections,
+    and connecting and each statement are bounded so a stuck database
+    fails the request instead of hanging it.
     """
     target, ssl_argument = asyncpg_target(url)
     connect_args: dict[str, object] = {
         "statement_cache_size": 0,
         "server_settings": {"search_path": "ai,public"},
+        "timeout": 10,
+        "command_timeout": 30,
     }
     if ssl_argument is not None:
         connect_args["ssl"] = ssl_argument
-    return create_async_engine(target, pool_pre_ping=True, connect_args=connect_args)
+    return create_async_engine(
+        target,
+        pool_pre_ping=True,
+        pool_size=3,
+        max_overflow=0,
+        pool_recycle=240,
+        pool_timeout=30,
+        connect_args=connect_args,
+    )
 
 
 def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateRequestOrigin } from '@/lib/csrf';
 import { z } from 'zod';
 import { AssistantUnavailable, callAi } from '@/lib/assistant/proxy';
 
@@ -11,6 +12,11 @@ const bodySchema = z.object({
 
 /** Asks the AI service's quote agent for a draft. */
 export async function POST(request: NextRequest) {
+  // Cookie-authenticated, and the body is read whatever its content type:
+  // refuse cross-site requests, as the other session routes do.
+  if (!validateRequestOrigin(request)) {
+    return NextResponse.json({ success: false, error: 'Invalid request origin' }, { status: 403 });
+  }
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ success: false, error: 'Invalid brief' }, { status: 400 });

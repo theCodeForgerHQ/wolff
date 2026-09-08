@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { prisma } from '@wolff/database';
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
     }
 
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(request.headers) || 'unknown';
     const rateLimitResult = await checkRateLimit(
       `verify-email:${clientIp}`,
       strictRateLimitOptions

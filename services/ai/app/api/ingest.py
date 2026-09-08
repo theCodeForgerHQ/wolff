@@ -4,11 +4,12 @@ with a worker JWT carrying scope ai:index."""
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, delete, exists, literal, or_, select, tuple_, union_all
+from sqlalchemy import and_, delete, exists, func, literal, or_, select, tuple_, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ok, require_service, services
@@ -17,7 +18,10 @@ from app.budget import metered
 from app.db.models import DocumentChunk, IngestState
 from app.db.public_models import Client, ContractInstance, Invoice, Quote
 from app.db.scoped import workspace_filter
-from app.rag.ingest import ingest
+from app.llm.clients import is_fallback_error
+from app.llm.transport import LlmUnavailable
+from app.rag.ingest import ingest, record_failure
+from app.rag.loaders import utc
 from app.services import Services
 
 router = APIRouter()
@@ -28,6 +32,20 @@ worker = require_service(frozenset({"worker"}), "ai:index")
 # ones after SWEEP_SECONDS; "more" tells the caller to call again.
 SWEEP_BATCH = 25
 SWEEP_SECONDS = 40.0
+#: A source that failed this many sweeps in a row is left out until it
+#: changes (its error is in ai.ingest_state).
+MAX_INGEST_ATTEMPTS = 3
+
+
+def _provider_failed(exc: Exception) -> LlmUnavailable | None:
+    """The embedding provider, not the source, failed: answered as 503 (or
+    429 for a spent budget) so the worker retries later, never counted
+    against the source."""
+    if isinstance(exc, LlmUnavailable):
+        return exc
+    if is_fallback_error(exc):
+        return LlmUnavailable(f"embedding provider failed: {type(exc).__name__}")
+    return None
 
 
 class IngestRequest(BaseModel):
@@ -43,14 +61,20 @@ async def ingest_one(
 ) -> dict[str, Any]:
     with metered(caller.workspace_id):
         async with svc.sessions() as session:
-            result = await ingest(
-                session,
-                workspace_id=caller.workspace_id,
-                source_type=body.source_type,
-                source_id=body.source_id,
-                embed=svc.llm.embed,
-                embedding_model=svc.settings.provider.embed_model,
-            )
+            try:
+                result = await ingest(
+                    session,
+                    workspace_id=caller.workspace_id,
+                    source_type=body.source_type,
+                    source_id=body.source_id,
+                    embed=svc.llm.embed,
+                    embedding_model=svc.settings.provider.embed_model,
+                )
+            except Exception as exc:
+                unavailable = _provider_failed(exc)
+                if unavailable is None:
+                    raise
+                raise unavailable from exc
     return ok({"outcome": result.outcome, "chunks": result.chunks})
 
 
@@ -67,7 +91,7 @@ async def sweep(
     sources = _live_sources(ws)
     state = IngestState
     stale = (
-        select(sources.c.kind, sources.c.id)
+        select(sources.c.kind, sources.c.id, sources.c.updated)
         .outerjoin(
             state,
             and_(
@@ -88,8 +112,15 @@ async def sweep(
                     DocumentChunk.source_id == sources.c.id,
                     DocumentChunk.embedding_model != svc.settings.provider.embed_model,
                 ),
-            )
+            ),
+            # Given up on until the source changes again.
+            or_(
+                func.coalesce(state.attempts, 0) < MAX_INGEST_ATTEMPTS,
+                state.source_updated_at < sources.c.updated,
+            ),
         )
+        # A stable order; sources that failed before go last.
+        .order_by(func.coalesce(state.attempts, 0), sources.c.updated, sources.c.id)
         .limit(SWEEP_BATCH + 1)
     )
     outcomes: dict[str, int] = {}
@@ -99,18 +130,35 @@ async def sweep(
         async with svc.sessions() as session:
             removed = await _remove_orphans(session, ws)
             rows = (await session.execute(stale)).all()
-            for kind, source_id in rows[:SWEEP_BATCH]:
+            for kind, source_id, updated in rows[:SWEEP_BATCH]:
                 # Always make progress: the first source runs even past the deadline.
                 if processed and time.monotonic() >= deadline:
                     break
-                result = await ingest(
-                    session,
-                    workspace_id=ws,
-                    source_type=str(kind),
-                    source_id=str(source_id),
-                    embed=svc.llm.embed,
-                    embedding_model=svc.settings.provider.embed_model,
-                )
+                try:
+                    result = await ingest(
+                        session,
+                        workspace_id=ws,
+                        source_type=str(kind),
+                        source_id=str(source_id),
+                        embed=svc.llm.embed,
+                        embedding_model=svc.settings.provider.embed_model,
+                    )
+                except Exception as exc:
+                    await session.rollback()
+                    unavailable = _provider_failed(exc)
+                    if unavailable is not None:
+                        raise unavailable from exc
+                    await record_failure(
+                        session,
+                        ws,
+                        str(kind),
+                        str(source_id),
+                        utc(updated) if isinstance(updated, datetime) else None,
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                    outcomes["error"] = outcomes.get("error", 0) + 1
+                    processed += 1
+                    continue
                 outcomes[result.outcome] = outcomes.get(result.outcome, 0) + 1
                 processed += 1
     more = processed < len(rows)

@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { getInvoicePdfData, getInvoicePdfDataByToken } from '@/lib/pdf/actions';
 import { generateInvoicePdfHtml } from '@/lib/pdf/templates';
@@ -17,7 +18,7 @@ export async function GET(
   try {
     // Rate limit PDF generation (CPU-intensive)
     const { checkRateLimit } = await import('@/lib/rate-limit');
-    const clientIp = _request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(_request.headers) || 'unknown';
     const rl = await checkRateLimit(`pdf:${clientIp}`, { limit: 20, windowMs: 60000 });
     if (rl.limited) {
       return new NextResponse('Too many PDF requests', { status: 429 });

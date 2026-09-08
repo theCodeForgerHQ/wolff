@@ -12,8 +12,12 @@ import { GET as status } from '@/app/api/assistant/status/route';
 import { resetAiHealthCache } from '@/lib/assistant/proxy';
 
 const SECRET = 'w'.repeat(64);
-const req = (path: string, body: unknown) =>
-  new NextRequest(`http://app.test${path}`, { method: 'POST', body: JSON.stringify(body) });
+const req = (path: string, body: unknown, origin = 'http://localhost:3000') =>
+  new NextRequest(`http://app.test${path}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { origin },
+  });
 
 describe('assistant routes', () => {
   const fetchMock = vi.fn();
@@ -89,5 +93,19 @@ describe('assistant routes', () => {
     resetAiHealthCache();
     vi.stubEnv('SVC_JWT_SECRET_WEB', '');
     expect(await (await status()).json()).toEqual({ available: false });
+  });
+
+  // The body is parsed whatever its content type, so a cross-site form post
+  // (text/plain, no preflight) could run a turn, or draft a quote, as the
+  // signed-in user.
+  it('refuses a request from another site before calling the AI service', async () => {
+    for (const [route, path] of [
+      [chat, '/api/assistant/chat'],
+      [drafts, '/api/assistant/drafts'],
+    ] as const) {
+      const res = await route(req(path, { message: 'hi' }, 'https://evil.example'));
+      expect(res.status).toBe(403);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

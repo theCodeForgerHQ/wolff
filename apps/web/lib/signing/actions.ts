@@ -1,5 +1,6 @@
 'use server';
 
+import { requestIp } from '@/lib/request-ip';
 import { headers } from 'next/headers';
 import { prisma } from '@wolff/database';
 import { sendEmail } from '@/lib/services/email';
@@ -9,11 +10,7 @@ import { logger } from '@/lib/logger';
 
 async function getClientIp(): Promise<string> {
   const headersList = await headers();
-  return (
-    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    headersList.get('x-real-ip') ||
-    'unknown'
-  );
+  return requestIp(headersList) || 'unknown';
 }
 
 /**

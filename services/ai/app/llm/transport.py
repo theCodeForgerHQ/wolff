@@ -8,7 +8,8 @@ every request passes the same checks:
   minute, and a requests-per-day counter shared through Redis;
 - bounded concurrency;
 - two retries on 429/5xx/timeouts, honouring ``Retry-After`` (the SDKs'
-  own retries are switched off so they do not multiply);
+  own retries are switched off so they do not multiply), none inside
+  ``single_attempt()`` (interactive chat, which falls back instead);
 - the model allowlist, checked on the request body;
 - a ``UsageGate`` that reserves the request's worst-case cost before it
   waits for a slot (refusing it when the budget cannot cover that) and
@@ -22,7 +23,9 @@ import json
 import math
 import random
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -33,6 +36,19 @@ RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_SECONDS = 30.0
 _DECODED_BODY_HEADERS = frozenset({"content-encoding", "content-length"})
+_single_attempt: ContextVar[bool] = ContextVar("llm_single_attempt", default=False)
+
+
+@contextmanager
+def single_attempt() -> Iterator[None]:
+    """Requests made inside this block get one attempt: a 429/5xx is
+    returned at once instead of being retried after its Retry-After. For
+    interactive calls that have a fallback provider and a deadline."""
+    token = _single_attempt.set(True)
+    try:
+        yield
+    finally:
+        _single_attempt.reset(token)
 
 
 class LlmUnavailable(Exception):
@@ -195,10 +211,10 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         if model not in self._allowed:
             raise LlmUnavailable(f"model {model!r} is not allowed")
         estimated_in = math.ceil(len(body) / 4)
-        reservation = await self._gate.reserve(
-            model, estimated_in, _worst_case(request, parsed, self._default_max_tokens)
-        )
+        worst_out = _worst_case(request, parsed, self._default_max_tokens)
+        reservation = await self._gate.reserve(model, estimated_in, worst_out)
         used: Usage | None = None
+        sent = False
         try:
             now = self._now()
             if await self._daily.increment(f"llm:rpd:{self._provider}:{now.date()}") > self._rpd:
@@ -209,11 +225,19 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
             async with self._slots:
                 await self._requests.take(1)
                 await self._tokens.take(estimated_in)
+                sent = True
                 response = await self._send_with_retries(request)
 
             content = await response.aread()
             if response.status_code < 400:
                 used = _usage(model, content)
+        except (asyncio.CancelledError, httpx.TimeoutException):
+            # Cut off after the provider had the request (a deadline, a
+            # disconnect, a read timeout): it may still bill for it, so the
+            # reserved worst case is charged rather than released.
+            if sent:
+                used = Usage(model=model, tokens_in=estimated_in, tokens_out=worst_out)
+            raise
         finally:
             # Shielded so a cancelled caller cannot leave the reservation held.
             await asyncio.shield(self._gate.settle(reservation, used))
@@ -229,8 +253,9 @@ class RateLimitedTransport(httpx.AsyncBaseTransport):
         )
 
     async def _send_with_retries(self, request: httpx.Request) -> httpx.Response:
-        for attempt in range(MAX_ATTEMPTS):
-            last = attempt == MAX_ATTEMPTS - 1
+        attempts = 1 if _single_attempt.get() else MAX_ATTEMPTS
+        for attempt in range(attempts):
+            last = attempt == attempts - 1
             try:
                 response = await self._inner.handle_async_request(request)
             except (httpx.TimeoutException, httpx.NetworkError):

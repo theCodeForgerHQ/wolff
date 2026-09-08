@@ -1,5 +1,6 @@
 'use server';
 
+import { assertReferencesInWorkspace } from '@/lib/workspace/references';
 import { revalidatePath } from 'next/cache';
 import { prisma, Prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -177,6 +178,11 @@ export async function createRateCard(input: CreateRateCardInput): Promise<{ id: 
     throw new Error('Insufficient permissions: viewers cannot create rate cards');
   }
 
+  await assertReferencesInWorkspace(workspaceId, {
+    categoryId: input.categoryId,
+    taxRateId: input.taxRateId,
+  });
+
   const rateCard = await prisma.rateCard.create({
     data: {
       workspaceId,
@@ -217,6 +223,11 @@ export async function updateRateCard(input: UpdateRateCardInput): Promise<{ id: 
   if (!existing) {
     throw new Error('Rate card not found');
   }
+
+  await assertReferencesInWorkspace(workspaceId, {
+    categoryId: input.categoryId,
+    taxRateId: input.taxRateId,
+  });
 
   const updateData: Prisma.RateCardUpdateInput = {};
 

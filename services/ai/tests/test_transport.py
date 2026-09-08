@@ -219,7 +219,11 @@ async def test_a_retry_reuses_the_one_reservation() -> None:
     assert len(gate.reserved) == 1 and len(gate.used) == 1 and gate.released == 0
 
 
-async def test_a_cancelled_request_still_releases_its_reservation() -> None:
+async def test_a_request_cancelled_after_sending_is_charged_its_worst_case() -> None:
+    """A deadline that cuts off a request the provider already has must not
+    release the reservation: the provider may bill for it, so the budget is
+    charged the reserved worst case. One cancelled while still waiting for a
+    slot was never sent and is released."""
     import asyncio
 
     started = asyncio.Event()
@@ -240,11 +244,20 @@ async def test_a_cancelled_request_still_releases_its_reservation() -> None:
         allowed_models=frozenset({"m"}),
         gate=gate,
         daily=MemoryDailyCounter(),
+        default_max_tokens=700,
     )
-    task = asyncio.create_task(post(t))
+    sent = asyncio.create_task(post(t))
     await started.wait()
-    task.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await task
+    queued = asyncio.create_task(post(t))
+    for _ in range(20):  # let it reserve and queue for the one slot
+        await asyncio.sleep(0)
+    assert len(gate.reserved) == 2
+    for task in (queued, sent):
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
     await asyncio.sleep(0)
-    assert len(gate.reserved) == 1 and gate.released == 1
+    tokens_in, worst_out = gate.reserved[0]
+    assert gate.used == [Usage(model="m", tokens_in=tokens_in, tokens_out=worst_out)]
+    assert worst_out == 700
+    assert gate.released == 1

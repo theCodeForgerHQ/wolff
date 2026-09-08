@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { createInvoicePaymentIntent } from '@/lib/payments/internal';
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
@@ -19,7 +20,7 @@ export async function POST(
     }
 
     // Rate limit: 10 checkout attempts per minute per IP
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const clientIp = requestIp(request.headers) || 'unknown';
     const rateLimitResult = await checkRateLimit(`checkout:${clientIp}`, {
       limit: 10,
       windowMs: 60000,

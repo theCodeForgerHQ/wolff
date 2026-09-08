@@ -1,3 +1,4 @@
+import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@wolff/core/logger';
 import { z } from 'zod';
@@ -17,7 +18,7 @@ const vitalsSchema = z.object({
 export async function POST(request: NextRequest) {
   // Unauthenticated and written to the logs: cap it so it cannot be used to
   // flood them.
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const clientIp = requestIp(request.headers) || 'unknown';
   const limited = await checkRateLimit(`vitals:${clientIp}`, VITALS_LIMIT);
   if (limited.limited) {
     return NextResponse.json(

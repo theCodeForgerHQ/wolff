@@ -3,9 +3,10 @@
 Every provider is reached through the OpenAI SDK interface. ``nvidia`` (NIM,
 build.nvidia.com's free API) is the demo default for chat and embeddings,
 with ``groq`` as an optional chat fallback (``LLM_FALLBACK``; Groq serves no
-embeddings, so it cannot be the primary). ``gemini`` stays available for
-embeddings and plain chat, but its tool calls need Gemini 3 thought
-signatures that the LangChain OpenAI client drops. ``openai`` is the
+embeddings, so it cannot be the primary). ``gemini`` is refused at start
+as LLM_PROVIDER and LLM_FALLBACK: the chat agent always calls tools, and
+Gemini 3 tool calls need thought signatures that the LangChain OpenAI
+client drops (every turn fails with a 400). ``openai`` is the
 production provider. ``github-models`` was retired on 2026-07-30 and fails
 at start. ``fake`` is a deterministic, offline stand-in (app/llm/fake.py)
 for tests, the recorded eval run and local E2E; it is refused in
@@ -146,7 +147,15 @@ def _profile(env: Mapping[str, str], variable: str, name: str) -> ProviderProfil
     if name == "github-models":
         raise ProviderError(
             f"{variable}=github-models: GitHub Models was retired on 2026-07-30; "
-            "use nvidia, gemini or openai"
+            "use nvidia or openai"
+        )
+    if name == "gemini":
+        # LLM_PROVIDER drives chat as well as embeddings, so there is no
+        # embeddings-only way to use it.
+        raise ProviderError(
+            f"{variable}=gemini: Gemini 3 tool calls need a thought signature the "
+            "OpenAI-compatible client does not send, so every chat turn fails; "
+            "use nvidia, groq (fallback) or openai"
         )
     profile = _PROFILES.get(name)
     if profile is None:

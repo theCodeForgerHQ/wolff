@@ -105,3 +105,43 @@ def test_the_engine_passes_no_ssl_argument_without_one(monkeypatch: pytest.Monke
     monkeypatch.setattr(session, "create_async_engine", lambda url, **kw: seen.update(kw))
     session.create_engine("postgresql://u@h/d")
     assert "ssl" not in seen["connect_args"]
+
+
+def test_the_engine_pool_fits_a_serverless_neon_free_tier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Many short-lived instances share Neon free's small connection limit,
+    and its pooler drops idle connections: a small fixed pool, recycled
+    before the pooler's idle timeout, and bounded connect/statement time
+    so a stuck database fails the request instead of hanging it."""
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(session, "create_async_engine", lambda url, **kw: seen.update(kw))
+    session.create_engine("postgresql://u@h/d")
+    assert (seen["pool_size"], seen["max_overflow"], seen["pool_recycle"]) == (3, 0, 240)
+    assert seen["pool_timeout"] <= 30
+    assert seen["connect_args"]["timeout"] == 10
+    assert seen["connect_args"]["command_timeout"] == 30
+
+
+@pytest.mark.parametrize(
+    ("environment", "redis", "warned"),
+    [
+        ("production", None, True),
+        ("production", "redis://r:6379/0", False),
+        ("development", None, False),
+    ],
+)
+async def test_production_without_redis_warns_at_start(
+    caplog: pytest.LogCaptureFixture, environment: str, redis: str | None, warned: bool
+) -> None:
+    """Without REDIS_URL the rate counters and the token replay cache live in
+    one process's memory, which a serverless cold start resets. The demo
+    runs that way, so it is not refused, but it must not be silent."""
+    from app.services import build_services
+    from tests.conftest import make_settings
+
+    engine = session.create_engine("postgresql://u@h/d")
+    with caplog.at_level("WARNING", logger="app.services"):
+        svc = build_services(make_settings(environment=environment, redis_url=redis), engine=engine)
+    await svc.aclose()
+    assert any("REDIS_URL" in r.getMessage() for r in caplog.records) is warned
