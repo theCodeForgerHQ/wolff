@@ -57,6 +57,34 @@ async function redisDel(key: string): Promise<void> {
   }
 }
 
+const ATTEMPTS_PREFIX = 'otp:attempts:';
+
+/**
+ * Claims one attempt with an atomic INCR on its own key, so parallel guesses
+ * cannot all read the same count. Null when Redis is not there to count.
+ */
+async function claimRedisAttempt(key: string): Promise<number | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  try {
+    const attempt = await redis.incr(`${ATTEMPTS_PREFIX}${key}`);
+    if (attempt === 1) await redis.expire(`${ATTEMPTS_PREFIX}${key}`, OTP_EXPIRY_SEC);
+    return attempt;
+  } catch {
+    return null;
+  }
+}
+
+async function resetRedisAttempts(key: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.del(`${ATTEMPTS_PREFIX}${key}`);
+  } catch {
+    // ignore: the counter expires with the code
+  }
+}
+
 // ─── Main OTP functions ─────────────────────────────────────────────
 
 /**
@@ -76,6 +104,7 @@ export async function generateSigningOtp(key: string, email: string): Promise<st
 
   // Try Redis first, fall back to in-memory
   const stored = await redisSet(key, record);
+  if (stored) await resetRedisAttempts(key);
   if (!stored) {
     inMemoryStore.set(key, record);
   }
@@ -109,28 +138,37 @@ export async function verifySigningOtp(
     return { valid: false, error: 'Verification code has expired. Please request a new one.' };
   }
 
-  if (record.attempts >= MAX_ATTEMPTS) {
-    if (fromRedis) await redisDel(key);
-    else inMemoryStore.delete(key);
-    return { valid: false, error: 'Too many failed attempts. Please request a new code.' };
-  }
-
   if (record.email !== email.toLowerCase()) {
     return { valid: false, error: 'Email address does not match.' };
   }
 
-  record.attempts++;
+  // Claim this attempt before comparing. In memory one process does the
+  // counting, so the increment cannot interleave; in Redis it is an INCR.
+  let attempt: number;
+  if (fromRedis) {
+    const claimed = await claimRedisAttempt(key);
+    if (claimed === null) {
+      return { valid: false, error: 'Could not verify the code right now. Please try again.' };
+    }
+    attempt = claimed;
+  } else {
+    attempt = ++record.attempts;
+  }
+  if (attempt > MAX_ATTEMPTS) {
+    if (fromRedis) await redisDel(key);
+    else inMemoryStore.delete(key);
+    return { valid: false, error: 'Too many failed attempts. Please request a new code.' };
+  }
 
   // Constant-time comparison to prevent timing side-channel attacks
   const codeMatch =
     record.code.length === code.length &&
     timingSafeEqual(Buffer.from(record.code), Buffer.from(code));
   if (!codeMatch) {
-    if (fromRedis) await redisSet(key, record);
-    else inMemoryStore.set(key, record);
+    if (!fromRedis) inMemoryStore.set(key, record);
     return {
       valid: false,
-      error: `Invalid code. ${MAX_ATTEMPTS - record.attempts} attempts remaining.`,
+      error: `Invalid code. ${MAX_ATTEMPTS - attempt} attempts remaining.`,
     };
   }
 
