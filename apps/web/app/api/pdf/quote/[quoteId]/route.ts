@@ -1,3 +1,4 @@
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { requestIp } from '@/lib/request-ip';
 import { NextRequest, NextResponse } from 'next/server';
 import { getQuotePdfData, getQuotePdfDataByToken } from '@/lib/pdf/actions';
@@ -32,7 +33,7 @@ export async function GET(
     if (accessToken) {
       // Public access — validate token matches this quote
       const quote = await prisma.quote.findFirst({
-        where: { id: quoteId, accessToken, deletedAt: null },
+        where: { id: quoteId, accessToken, deletedAt: null, ...unexpiredAccessToken() },
         select: { id: true },
       });
       if (!quote) {

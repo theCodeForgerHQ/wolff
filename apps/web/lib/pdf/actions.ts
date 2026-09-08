@@ -1,5 +1,6 @@
 'use server';
 
+import { unexpiredAccessToken } from '@/lib/portal/token';
 import { prisma } from '@wolff/database';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import { toNumber } from '@/lib/utils';
@@ -112,6 +113,7 @@ export async function getQuotePdfDataByToken(accessToken: string): Promise<Quote
     where: {
       accessToken,
       deletedAt: null,
+      ...unexpiredAccessToken(),
     },
     include: {
       client: true,
@@ -309,6 +311,7 @@ export async function getInvoicePdfDataByToken(
     where: {
       accessToken,
       deletedAt: null,
+      ...unexpiredAccessToken(),
     },
     include: {
       client: true,

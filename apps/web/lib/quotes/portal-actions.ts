@@ -1,5 +1,7 @@
 'use server';
 
+import { unexpiredAccessToken } from '@/lib/portal/token';
+import { requestIp } from '@/lib/request-ip';
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
 import type { QuoteBlock } from './types';
@@ -80,10 +82,7 @@ export interface PublicQuoteData {
 async function getRequestMetadata() {
   const headersList = await headers();
   return {
-    ipAddress:
-      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      headersList.get('x-real-ip') ||
-      'unknown',
+    ipAddress: requestIp(headersList) || 'unknown',
     userAgent: headersList.get('user-agent') || 'unknown',
   };
 }
@@ -100,6 +99,7 @@ export async function getQuoteByAccessToken(
       where: {
         accessToken,
         deletedAt: null,
+        ...unexpiredAccessToken(),
       },
       include: {
         client: {
@@ -274,8 +274,8 @@ export async function trackQuoteView(accessToken: string): Promise<void> {
   try {
     const { ipAddress, userAgent } = await getRequestMetadata();
 
-    const quote = await prisma.quote.findUnique({
-      where: { accessToken },
+    const quote = await prisma.quote.findFirst({
+      where: { accessToken, ...unexpiredAccessToken() },
       select: { id: true, status: true, viewedAt: true, workspaceId: true, quoteNumber: true },
     });
 
@@ -359,7 +359,7 @@ export async function acceptQuote(data: {
     {
       const { verifySigningOtp, isSigningVerified } = await import('@/lib/signing/otp');
       const quoteForOtp = await prisma.quote.findFirst({
-        where: { accessToken: data.accessToken, deletedAt: null },
+        where: { accessToken: data.accessToken, deletedAt: null, ...unexpiredAccessToken() },
         select: { id: true, client: { select: { email: true } }, settings: true },
       });
       if (!quoteForOtp) {
@@ -392,7 +392,7 @@ export async function acceptQuote(data: {
     // Bug #68: Only validate signatureData if the quote actually requires signature
     // First fetch quote settings to check requireSignature
     const quoteForSigCheck = await prisma.quote.findFirst({
-      where: { accessToken: data.accessToken, deletedAt: null },
+      where: { accessToken: data.accessToken, deletedAt: null, ...unexpiredAccessToken() },
       select: { settings: true },
     });
     const sigSettings = (quoteForSigCheck?.settings as Record<string, unknown>) ?? {};
@@ -434,7 +434,7 @@ export async function acceptQuote(data: {
     // Find the quote with line items for document hash
     // HIGH #3-7: Add deletedAt check to prevent operating on soft-deleted quotes
     const quote = await prisma.quote.findFirst({
-      where: { accessToken: data.accessToken, deletedAt: null },
+      where: { accessToken: data.accessToken, deletedAt: null, ...unexpiredAccessToken() },
       select: {
         id: true,
         status: true,
@@ -639,7 +639,7 @@ export async function declineQuote(data: {
     // Find the quote
     // MEDIUM #18: Filter out soft-deleted quotes
     const quote = await prisma.quote.findFirst({
-      where: { accessToken: data.accessToken, deletedAt: null },
+      where: { accessToken: data.accessToken, deletedAt: null, ...unexpiredAccessToken() },
       select: {
         id: true,
         status: true,
