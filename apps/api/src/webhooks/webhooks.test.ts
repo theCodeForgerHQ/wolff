@@ -311,7 +311,7 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
 
   afterEach(async () => {
     const events = await base.providerWebhookEvent.findMany({
-      where: { eventId: { startsWith: `evt_${run}` } },
+      where: { provider: 'razorpay', workspaceId },
       select: { id: true },
     });
     await base.outboxEvent.deleteMany({ where: { aggregateId: { in: events.map((e) => e.id) } } });
@@ -332,7 +332,7 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ received: true });
     const rows = await base.providerWebhookEvent.findMany({
-      where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+      where: { provider: 'razorpay', workspaceId },
     });
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -354,10 +354,34 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
     expect(again.status).toBe(200);
     expect(again.body).toEqual({ received: true, duplicate: true });
     const rows = await base.providerWebhookEvent.findMany({
-      where: { provider: 'razorpay', eventId: 'evt_redrive_1' },
+      where: { provider: 'razorpay', workspaceId },
     });
     expect(rows).toHaveLength(1);
     expect(await base.outboxEvent.count({ where: { aggregateId: rows[0]!.id } })).toBe(1);
+  });
+
+  it('treats a replayed signed body with a new event-id header as the same event', async () => {
+    // The header is not signed: anyone holding one signed refund body could
+    // resend it with a fresh X-Razorpay-Event-Id and refund twice.
+    const body = JSON.stringify({
+      event: 'refund.processed',
+      created_at: 1_760_000_000,
+      payload: {
+        refund: { entity: { id: `rfnd_${run}`, payment_id: `pay_${run}`, amount: 5_000 } },
+        payment: { entity: { id: `pay_${run}` } },
+      },
+    });
+
+    const first = await post(body, { eventId: `evt_${run}_a` });
+    const replay = await post(body, { eventId: `evt_${run}_b` });
+
+    expect(first.body).toEqual({ received: true });
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual({ received: true, duplicate: true });
+    const rows = await base.providerWebhookEvent.findMany({
+      where: { provider: 'razorpay', workspaceId },
+    });
+    expect(rows).toHaveLength(1);
   });
 
   it.each([
@@ -383,7 +407,7 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
       error: { code: 'validation_error', message: expect.any(String) },
     });
     const rows = await base.providerWebhookEvent.findMany({
-      where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+      where: { provider: 'razorpay', workspaceId },
     });
     expect(rows).toHaveLength(0);
   });
@@ -433,7 +457,7 @@ describe.skipIf(!TEST_DATABASE_URL)('inbound Razorpay webhooks (Postgres)', () =
       const res = await post(body);
       expect(res.status).toBe(200);
       const [row] = await base.providerWebhookEvent.findMany({
-        where: { provider: 'razorpay', eventId: { startsWith: `evt_${run}` } },
+        where: { provider: 'razorpay', workspaceId },
       });
       expect(row!.workspaceId).toBe(workspaceId);
       await processProviderEvent(db, row!.id);
