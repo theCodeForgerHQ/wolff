@@ -176,7 +176,7 @@ export const authConfig: NextAuthConfig = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials);
 
         if (!parsed.success) {
@@ -185,7 +185,12 @@ export const authConfig: NextAuthConfig = {
 
         // Import dynamically to avoid issues with edge runtime
         const { verifyCredentials } = await import('./credentials');
-        const user = await verifyCredentials(parsed.data.email, parsed.data.password);
+        const { requestIp } = await import('@/lib/request-ip');
+        const user = await verifyCredentials(
+          parsed.data.email,
+          parsed.data.password,
+          request ? requestIp(request.headers) : null
+        );
 
         return user;
       },
