@@ -290,9 +290,11 @@ export async function generateRecurringInvoice(
         });
       }
 
-      // The next occurrence counts from today, so a series that fell behind
-      // produces one invoice, not one per missed period.
-      const next = addInterval(today, interval);
+      // The next occurrence steps from the scheduled date, not from today,
+      // so a late run keeps the billing day; it steps past today, so a
+      // series that fell behind produces one invoice, not one per period.
+      let next = addInterval(toDateString(parent.nextRecurringDate), interval);
+      while (next <= today) next = addInterval(next, interval);
       const ended = endDate !== null && next > endDate;
       await tx.invoice.update({
         where: { id: parent.id, workspaceId },

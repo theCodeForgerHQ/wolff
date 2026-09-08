@@ -123,6 +123,32 @@ describe.skipIf(!url)('scheduled invoice work (Postgres)', () => {
       expect(events.map((e) => e.type)).toEqual(['invoice.created']);
     });
 
+    it('keeps the billing day when the run is late', async () => {
+      // Due on the 1st, generated on the 5th: the next one is still the 1st.
+      const p = await parent();
+
+      await generateRecurringInvoice(ctx, p.id, '2026-10', new Date('2026-10-05T04:30:00Z'));
+
+      const after = await base.invoice.findUniqueOrThrow({ where: { id: p.id } });
+      expect(after.nextRecurringDate).toEqual(day('2026-11-01'));
+    });
+
+    it('catches up a series that fell behind with one invoice, on its billing day', async () => {
+      const p = await parent({ nextRecurringDate: day('2026-08-01') });
+
+      const result = await generateRecurringInvoice(
+        ctx,
+        p.id,
+        '2026-08',
+        new Date('2026-10-05T04:30:00Z')
+      );
+
+      expect(result.outcome).toBe('created');
+      expect(await children(p.id)).toHaveLength(1);
+      const after = await base.invoice.findUniqueOrThrow({ where: { id: p.id } });
+      expect(after.nextRecurringDate).toEqual(day('2026-11-01'));
+    });
+
     it('produces one invoice per parent and period when the job runs twice', async () => {
       const p = await parent();
 
