@@ -1,6 +1,7 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
 import { fromMinorUnits, toMinorUnits } from './minor-units';
+import { creditInvoice } from './credit-invoice';
 import { ProviderEventNotReadyError } from './not-ready';
 
 /**
@@ -36,6 +37,9 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
         paymentIntentId: intentId,
         chargeId: str(charge) ?? str((chargeObject as Record<string, unknown>).id),
         receiptUrl: str((chargeObject as Record<string, unknown>).receipt_url),
+        ...(object.amount_received !== undefined && {
+          received: { amount: object.amount_received, currency: object.currency },
+        }),
       });
       return;
     }
@@ -173,7 +177,13 @@ async function lockPaymentByIntent(tx: Tx, paymentIntentId: string) {
 
 export async function applyPaymentSucceeded(
   tx: Tx,
-  input: { paymentIntentId: string; chargeId?: string; receiptUrl?: string }
+  input: {
+    paymentIntentId: string;
+    chargeId?: string;
+    receiptUrl?: string;
+    /** amount_received and currency of the intent, when the event has them. */
+    received?: { amount: unknown; currency: unknown };
+  }
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, input.paymentIntentId);
   // The row, or the session link that names this intent, may not exist yet.
@@ -188,7 +198,31 @@ export async function applyPaymentSucceeded(
 
   const { workspaceId } = payment.invoice;
   const amount = Number(payment.amount);
-  const total = Number(payment.invoice.total);
+
+  // The intent must have charged what this payment asked for. A mismatch
+  // credits nothing and is recorded on the invoice for review.
+  if (input.received && !receivedMatches(payment, input.received)) {
+    await tx.invoiceEvent.create({
+      data: {
+        invoiceId: payment.invoiceId,
+        eventType: 'payment_mismatch',
+        actorType: 'system',
+        metadata: {
+          paymentId: payment.id,
+          paymentIntentId: input.paymentIntentId,
+          expected: {
+            amount: toMinorUnits(amount, payment.currency),
+            currency: payment.currency.toLowerCase(),
+          },
+          received: {
+            amount: typeof input.received.amount === 'number' ? input.received.amount : null,
+            currency: str(input.received.currency) ?? null,
+          },
+        },
+      },
+    });
+    return;
+  }
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
@@ -201,55 +235,23 @@ export async function applyPaymentSucceeded(
     },
   });
 
-  const credited = await tx.invoice.update({
-    where: { id: payment.invoiceId, workspaceId },
-    data: { amountPaid: { increment: amount } },
-    select: { amountPaid: true },
-  });
-  const amountPaid = Number(credited.amountPaid);
-  const fullyPaid = amountPaid >= total;
-
-  await tx.invoice.update({
-    where: { id: payment.invoiceId, workspaceId },
-    data: {
-      amountDue: Math.max(0, total - amountPaid),
-      status: fullyPaid ? 'paid' : 'partial',
-      ...(!payment.invoice.paidAt && { paidAt: new Date() }),
-    },
-  });
-
-  await tx.invoiceEvent.create({
-    data: {
-      invoiceId: payment.invoiceId,
-      eventType: 'payment_received',
-      actorType: 'system',
-      metadata: { paymentId: payment.id, amount, method: 'stripe' },
-    },
-  });
-
-  await writeOutboxEvent(tx, {
+  await creditInvoice(tx, {
+    invoiceId: payment.invoiceId,
     workspaceId,
-    type: 'payment.received',
-    aggregateType: 'payment',
-    aggregateId: payment.id,
-    payload: { paymentId: payment.id, invoiceId: payment.invoiceId, workspaceId, amount },
+    amount,
+    paymentId: payment.id,
+    method: 'stripe',
   });
-  if (fullyPaid) {
-    await writeOutboxEvent(tx, {
-      workspaceId,
-      type: 'invoice.paid',
-      aggregateType: 'invoice',
-      aggregateId: payment.invoiceId,
-      payload: { invoiceId: payment.invoiceId, workspaceId, amount: amountPaid },
-    });
-  }
-  await writeOutboxEvent(tx, {
-    workspaceId,
-    type: 'email.payment_received',
-    aggregateType: 'payment',
-    aggregateId: payment.id,
-    payload: { paymentId: payment.id },
-  });
+}
+
+function receivedMatches(
+  payment: { amount: unknown; currency: string },
+  received: { amount: unknown; currency: unknown }
+): boolean {
+  return (
+    received.amount === toMinorUnits(Number(payment.amount), payment.currency) &&
+    str(received.currency)?.toLowerCase() === payment.currency.toLowerCase()
+  );
 }
 
 export async function applyPaymentFailed(tx: Tx, paymentIntentId: string): Promise<void> {

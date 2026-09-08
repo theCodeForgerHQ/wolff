@@ -159,6 +159,58 @@ describe.skipIf(!url)('Stripe event application (Postgres)', () => {
     });
   });
 
+  describe('crediting guards', () => {
+    it('does not credit a voided invoice, and records the payment for a refund', async () => {
+      const { invoiceId, intent } = await pending();
+      await base.invoice.update({ where: { id: invoiceId }, data: { status: 'voided' } });
+
+      await apply(event('payment_intent.succeeded', { id: intent }));
+
+      const after = await state(invoiceId);
+      expect(after).toMatchObject({ status: 'voided', amountPaid: 0 });
+      expect(after.payment.status).toBe('completed');
+      expect(after.events).toContain('payment_on_closed_invoice');
+      expect(after.events).not.toContain('payment_received');
+    });
+
+    it('credits no more than is due and records the overpayment', async () => {
+      const { invoiceId, intent } = await pending(100);
+      await base.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'partial', amountPaid: 80, amountDue: 20 },
+      });
+
+      await apply(event('payment_intent.succeeded', { id: intent }));
+
+      const after = await state(invoiceId);
+      expect(after).toMatchObject({ status: 'paid', amountPaid: 100, amountDue: 0 });
+      expect(after.events).toContain('overpayment');
+    });
+
+    it('does not credit an intent whose amount_received differs from the payment', async () => {
+      const { invoiceId, intent } = await pending(100);
+
+      await apply(
+        event('payment_intent.succeeded', { id: intent, amount_received: 100, currency: 'usd' })
+      );
+
+      const after = await state(invoiceId);
+      expect(after).toMatchObject({ status: 'sent', amountPaid: 0 });
+      expect(after.payment.status).toBe('pending');
+      expect(after.events).toContain('payment_mismatch');
+    });
+
+    it('credits an intent whose amount_received matches', async () => {
+      const { invoiceId, intent } = await pending(100);
+
+      await apply(
+        event('payment_intent.succeeded', { id: intent, amount_received: 10_000, currency: 'usd' })
+      );
+
+      expect(await state(invoiceId)).toMatchObject({ status: 'paid', amountPaid: 100 });
+    });
+  });
+
   describe('payment_intent.payment_failed', () => {
     it('does not undo a credit when a decline arrives late', async () => {
       const { invoiceId, intent } = await pending();

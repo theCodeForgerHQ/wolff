@@ -1,5 +1,6 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
+import { creditInvoice } from './credit-invoice';
 import { ProviderEventNotReadyError } from './not-ready';
 
 /**
@@ -198,7 +199,13 @@ async function applyPaymentCaptured(
     },
   });
 
-  await creditInvoice(tx, payment.invoiceId, workspaceId, amount, payment.id, 'razorpay');
+  await creditInvoice(tx, {
+    invoiceId: payment.invoiceId,
+    workspaceId,
+    amount,
+    paymentId: payment.id,
+    method: 'razorpay',
+  });
 }
 
 async function applyPaymentFailed(
@@ -251,71 +258,12 @@ async function applyOrderPaid(tx: Tx, workspaceId: string, input: OrderPaidInput
     },
   });
 
-  await creditInvoice(tx, payment.invoiceId, workspaceId, amount, payment.id, 'razorpay');
-}
-
-async function creditInvoice(
-  tx: Tx,
-  invoiceId: string,
-  workspaceId: string,
-  amount: number,
-  paymentId: string,
-  method: 'razorpay' | 'stripe'
-): Promise<void> {
-  const invoice = await tx.invoice.findUniqueOrThrow({
-    where: { id: invoiceId, workspaceId },
-    select: { total: true, amountPaid: true, paidAt: true },
-  });
-  const total = Number(invoice.total);
-
-  const credited = await tx.invoice.update({
-    where: { id: invoiceId, workspaceId },
-    data: { amountPaid: { increment: amount } },
-    select: { amountPaid: true },
-  });
-  const amountPaid = Number(credited.amountPaid);
-  const fullyPaid = amountPaid >= total;
-
-  await tx.invoice.update({
-    where: { id: invoiceId, workspaceId },
-    data: {
-      amountDue: Math.max(0, total - amountPaid),
-      status: fullyPaid ? 'paid' : 'partial',
-      ...(!invoice.paidAt && { paidAt: new Date() }),
-    },
-  });
-
-  await tx.invoiceEvent.create({
-    data: {
-      invoiceId,
-      eventType: 'payment_received',
-      actorType: 'system',
-      metadata: { paymentId, amount, method },
-    },
-  });
-
-  await writeOutboxEvent(tx, {
+  await creditInvoice(tx, {
+    invoiceId: payment.invoiceId,
     workspaceId,
-    type: 'payment.received',
-    aggregateType: 'payment',
-    aggregateId: paymentId,
-    payload: { paymentId, invoiceId, workspaceId, amount },
-  });
-  if (fullyPaid) {
-    await writeOutboxEvent(tx, {
-      workspaceId,
-      type: 'invoice.paid',
-      aggregateType: 'invoice',
-      aggregateId: invoiceId,
-      payload: { invoiceId, workspaceId, amount: amountPaid },
-    });
-  }
-  await writeOutboxEvent(tx, {
-    workspaceId,
-    type: 'email.payment_received',
-    aggregateType: 'payment',
-    aggregateId: paymentId,
-    payload: { paymentId },
+    amount,
+    paymentId: payment.id,
+    method: 'razorpay',
   });
 }
 

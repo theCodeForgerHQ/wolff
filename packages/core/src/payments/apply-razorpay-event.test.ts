@@ -165,6 +165,38 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     });
   });
 
+  it('does not credit a voided invoice, and records the capture for a refund', async () => {
+    await base.invoice.update({ where: { id: invoiceId }, data: { status: 'voided' } });
+
+    await processProviderEvent(db, (await record(captured('pay_void', 25_000))).id);
+
+    const after = await base.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+      include: { payments: true, events: true },
+    });
+    expect(after.status).toBe('voided');
+    expect(Number(after.amountPaid)).toBe(0);
+    expect(after.payments[0]!.status).toBe('completed');
+    expect(after.events.map((e) => e.eventType)).toContain('payment_on_closed_invoice');
+  });
+
+  it('credits no more than is due and records the overpayment', async () => {
+    await base.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'partial', amountPaid: 100, amountDue: 150 },
+    });
+
+    await processProviderEvent(db, (await record(captured('pay_over', 25_000))).id);
+
+    const after = await base.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+      include: { events: true },
+    });
+    expect(after.status).toBe('paid');
+    expect(Number(after.amountPaid)).toBe(250);
+    expect(after.events.map((e) => e.eventType)).toContain('overpayment');
+  });
+
   it('marks the payment failed on payment.failed', async () => {
     const { id } = await record(failed('pay_3'));
 
