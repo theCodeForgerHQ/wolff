@@ -12,9 +12,8 @@ import {
   createRefund,
 } from '@/lib/services/stripe';
 import { toRefundMinorUnits } from '@/lib/payments/refund-amount';
+import { fromMinorUnits, toMinorUnits } from '@wolff/core/payments';
 import type Stripe from 'stripe';
-
-const MINOR_UNITS_PER_MAJOR = 100;
 
 export class StripeProvider implements PaymentProvider {
   name = 'stripe';
@@ -26,7 +25,7 @@ export class StripeProvider implements PaymentProvider {
   async createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult> {
     const session = await createCheckoutSession({
       invoiceId: params.invoiceId,
-      amount: Math.round(params.amount * MINOR_UNITS_PER_MAJOR),
+      amount: toMinorUnits(params.amount, params.currency),
       currency: params.currency,
       description: params.description,
       customerEmail: params.customerEmail,
@@ -57,7 +56,7 @@ export class StripeProvider implements PaymentProvider {
           eventType: 'payment.succeeded',
           invoiceId: pi.metadata.invoiceId,
           paymentId: pi.id,
-          amount: pi.amount / 100,
+          amount: fromMinorUnits(pi.amount, pi.currency),
         };
       }
       case 'payment_intent.payment_failed': {
@@ -73,10 +72,14 @@ export class StripeProvider implements PaymentProvider {
     }
   }
 
-  async refund(paymentId: string, amount?: number): Promise<RefundResult> {
+  async refund(
+    paymentId: string,
+    amount: number | undefined,
+    currency: string
+  ): Promise<RefundResult> {
     const refund = await createRefund({
       paymentIntentId: paymentId,
-      amount: toRefundMinorUnits(amount),
+      amount: toRefundMinorUnits(amount, currency),
     });
 
     if (!refund) {
@@ -85,7 +88,7 @@ export class StripeProvider implements PaymentProvider {
 
     return {
       refundId: refund.id,
-      amount: refund.amount / 100,
+      amount: fromMinorUnits(refund.amount, refund.currency ?? currency),
       status: refund.status || 'pending',
     };
   }

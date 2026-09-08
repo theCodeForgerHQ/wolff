@@ -43,8 +43,25 @@ describe('refundPayment amount guards', () => {
       invoiceId: 'inv-1',
       amount: 100,
       refundAmount: null,
+      currency: 'usd',
       stripePaymentIntentId: 'pi_abc123',
     });
+  });
+
+  it('sends a JPY partial refund in whole yen', async () => {
+    mocks.paymentFindFirst.mockResolvedValue({
+      id: 'pay-1',
+      invoiceId: 'inv-1',
+      amount: 5000,
+      refundAmount: null,
+      currency: 'jpy',
+      stripePaymentIntentId: 'pi_abc123',
+    });
+
+    const result = await refundPayment('pay-1', { amount: 2000 });
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.createRefund).toHaveBeenCalledWith(expect.objectContaining({ amount: 2000 }));
   });
 
   it.each(INVALID_AMOUNTS)('rejects %s instead of refunding in full', async (amount) => {
@@ -78,19 +95,19 @@ describe('StripeProvider.refund amount guards', () => {
   });
 
   it.each(INVALID_AMOUNTS)('rejects %s instead of refunding in full', async (amount) => {
-    await expect(provider.refund('pi_abc123', amount)).rejects.toThrow(/refund amount/i);
+    await expect(provider.refund('pi_abc123', amount, 'usd')).rejects.toThrow(/refund amount/i);
     expect(mocks.createRefund).not.toHaveBeenCalled();
   });
 
   it('sends a partial refund in cents', async () => {
-    const result = await provider.refund('pi_abc123', 25.5);
+    const result = await provider.refund('pi_abc123', 25.5, 'usd');
 
     expect(mocks.createRefund).toHaveBeenCalledWith({ paymentIntentId: 'pi_abc123', amount: 2550 });
     expect(result).toEqual({ refundId: 're_1', amount: 25.5, status: 'succeeded' });
   });
 
   it('refunds in full only when no amount is given', async () => {
-    await provider.refund('pi_abc123');
+    await provider.refund('pi_abc123', undefined, 'usd');
 
     expect(mocks.createRefund).toHaveBeenCalledWith({
       paymentIntentId: 'pi_abc123',

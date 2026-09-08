@@ -18,10 +18,12 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
   // the shape they need.
   let sessionIntent: string | null = 'pi_test_123';
   let sessionCounter = 0;
+  const sessionRequests: { line_items: { price_data: { unit_amount: number } }[] }[] = [];
   const stripe = {
     checkout: {
       sessions: {
-        create: async () => {
+        create: async (request: (typeof sessionRequests)[number]) => {
+          sessionRequests.push(request);
           const id = `cs_test_${++sessionCounter}`;
           return {
             id,
@@ -176,6 +178,53 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
     expect(Number(stripePayment.amount)).toBe(1180);
   });
 
+  describe('in currencies without two decimals', () => {
+    const invoiceIn = async (currency: string, amountDue: number) =>
+      (
+        await base.invoice.create({
+          data: {
+            workspaceId: ws.id,
+            clientId,
+            invoiceNumber: `INV-${currency}-${randomUUID().slice(0, 6)}`,
+            status: 'sent',
+            dueDate: new Date(Date.now() + 7 * 86_400_000),
+            total: amountDue,
+            amountDue,
+            currency,
+          },
+        })
+      ).id;
+
+    it('charges a 5000 JPY invoice 5000 yen through Stripe, not 500000', async () => {
+      const id = await invoiceIn('JPY', 5000);
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'stripe' });
+      expect(res.status).toBe(200);
+      expect(sessionRequests.at(-1)!.line_items[0]!.price_data.unit_amount).toBe(5000);
+    });
+
+    it('charges 12.34 KWD as 12340 fils through Stripe', async () => {
+      const id = await invoiceIn('KWD', 12.34);
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'stripe' });
+      expect(res.status).toBe(200);
+      expect(sessionRequests.at(-1)!.line_items[0]!.price_data.unit_amount).toBe(12340);
+    });
+
+    it('refuses a Razorpay order outside two-decimal currencies', async () => {
+      const id = await invoiceIn('JPY', 5000);
+      const created = orderRequests.length;
+      const res = await as(ws.key)
+        .post(`/v1/invoices/${id}/payment-links`)
+        .send({ provider: 'razorpay' });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('validation_error');
+      expect(orderRequests).toHaveLength(created);
+    });
+  });
+
   it('rejects payment links for paid invoices', async () => {
     const paid = await base.invoice.create({
       data: {
@@ -322,8 +371,17 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         const pending = await base.payment.findFirstOrThrow({ where: { invoiceId: invoice.id } });
         expect(pending).toMatchObject({ providerOrderId: sessionId, stripePaymentIntentId: null });
 
-        // The intent's own event can come first; it is not linked yet.
-        await deliver('payment_intent.succeeded', { id: 'pi_late_1' });
+        // The intent's own event can come first; it is not linked yet, so
+        // it stays unprocessed for a retry instead of being dropped.
+        const early = { id: `evt_reconcile_${randomUUID()}`, type: 'payment_intent.succeeded' };
+        const earlyRow = await recordProviderEvent(db, {
+          provider: 'stripe',
+          eventId: early.id,
+          type: early.type,
+          payload: { ...early, data: { object: { id: 'pi_late_1' } } },
+          outbox: false,
+        });
+        await expect(processProviderEvent(db, earlyRow.id)).rejects.toThrow(/not ready/);
         await deliver('checkout.session.completed', {
           id: sessionId,
           object: 'checkout.session',
@@ -340,7 +398,8 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
         const payment = await base.payment.findFirstOrThrow({ where: { invoiceId: invoice.id } });
         expect(payment).toMatchObject({ status: 'completed', stripePaymentIntentId: 'pi_late_1' });
 
-        // A redelivery, or the intent event arriving after, credits nothing more.
+        // The retried early event, or a redelivery, credits nothing more.
+        expect(await processProviderEvent(db, earlyRow.id)).toBe('processed');
         await deliver('payment_intent.succeeded', { id: 'pi_late_1' });
         expect(
           Number((await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).amountPaid)
@@ -424,8 +483,11 @@ describe.skipIf(!TEST_DATABASE_URL)('/v1 invoice routes (Postgres)', () => {
           payment_intent: intentId,
           ...fields,
         });
-        // Nor later through the intent: the session was never linked to it.
-        await deliver('payment_intent.succeeded', { id: intentId });
+        // Nor later through the intent: the session was never linked to it,
+        // so its event finds no payment and waits (then dead-letters).
+        await expect(deliver('payment_intent.succeeded', { id: intentId })).rejects.toThrow(
+          /not ready/
+        );
 
         const after = await base.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
         expect(after).toMatchObject({ status: 'sent' });

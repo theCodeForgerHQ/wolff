@@ -1,6 +1,7 @@
 import type { Prisma } from '@wolff/database';
 import { decrypt } from '@wolff/core/encryption';
 import { CoreError } from '@wolff/core/errors';
+import { currencyExponent, toMinorUnits } from '@wolff/core/payments';
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 
@@ -86,12 +87,13 @@ export function resolveProvider(
   );
 }
 
-function toSmallestCurrencyUnit(due: number | bigint | unknown): number {
+/** What is due, in the smallest unit of the currency (whole yen for JPY). */
+function toSmallestCurrencyUnit(due: number | bigint | unknown, currency: string): number {
   const value = typeof due === 'bigint' ? Number(due) : Number(due ?? 0);
   if (!Number.isFinite(value) || value <= 0) {
     throw new CoreError('validation_error', 'Nothing is due on this invoice');
   }
-  return Math.round(value * 100);
+  return toMinorUnits(value, currency);
 }
 
 export async function createStripeCheckout(
@@ -107,7 +109,7 @@ export async function createStripeCheckout(
     );
   }
 
-  const amount = toSmallestCurrencyUnit(invoice.amountDue);
+  const amount = toSmallestCurrencyUnit(invoice.amountDue, invoice.currency);
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create(
@@ -157,6 +159,15 @@ export async function createRazorpayOrder(
     );
   }
 
+  // The Razorpay event handler reads amounts as paise (value / 100), so only
+  // two-decimal currencies can be charged through it.
+  if (currencyExponent(invoice.currency) !== 2) {
+    throw new CoreError(
+      'validation_error',
+      `Razorpay payments are not supported in ${invoice.currency.toUpperCase()}`
+    );
+  }
+
   const keySecret = decrypt(settings.razorpayKeySecretEnc);
   if (
     keySecret === settings.razorpayKeySecretEnc &&
@@ -165,7 +176,7 @@ export async function createRazorpayOrder(
     throw new CoreError('not_configured', 'Cannot decrypt Razorpay secret');
   }
 
-  const amount = toSmallestCurrencyUnit(invoice.amountDue);
+  const amount = toSmallestCurrencyUnit(invoice.amountDue, invoice.currency);
   let order: { id?: string };
   try {
     order = await razorpayFor(settings.razorpayKeyId, keySecret).orders.create({

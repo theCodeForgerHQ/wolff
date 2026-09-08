@@ -30,6 +30,30 @@ export interface WebhookDeps {
 
 const RAW_LIMIT = '1mb';
 
+/**
+ * The idempotency key of a Razorpay event, taken from the signed body: the
+ * event name, the id of the entity it is about (refund, else payment, else
+ * order) and its created_at. The X-Razorpay-Event-Id header is not covered
+ * by the signature, so a replayed body with a fresh header would otherwise
+ * be a new event (a refund.processed applied twice). The header is used
+ * only when the body names no entity.
+ */
+export function razorpayEventKey(payload: unknown, headerEventId: string | undefined) {
+  const body = (payload ?? {}) as {
+    event?: unknown;
+    created_at?: unknown;
+    payload?: Record<string, { entity?: { id?: unknown } } | undefined>;
+  };
+  const entityId = ['refund', 'payment', 'order']
+    .map((kind) => body.payload?.[kind]?.entity?.id)
+    .find((id): id is string => typeof id === 'string' && id.length > 0);
+  if (typeof body.event === 'string' && entityId) {
+    const createdAt = typeof body.created_at === 'number' ? body.created_at : '';
+    return `rzp:${body.event}:${entityId}:${createdAt}`;
+  }
+  return headerEventId || undefined;
+}
+
 // constructEvent only computes an HMAC; the key is never sent anywhere.
 const stripe = new Stripe('sk_unused_signature_verification_only');
 
@@ -91,8 +115,8 @@ export function webhookRoutes(deps: WebhookDeps): Router {
       );
     }
 
-    if (!signature || !eventId) {
-      return sendError(res, 'validation_error', 'Missing Razorpay signature or event id');
+    if (!signature) {
+      return sendError(res, 'validation_error', 'Missing Razorpay signature');
     }
 
     if (!verifyRazorpaySignature(rawBody, signature, secret)) {
@@ -106,12 +130,17 @@ export function webhookRoutes(deps: WebhookDeps): Router {
       return sendError(res, 'validation_error', 'Invalid JSON body');
     }
 
+    const eventKey = razorpayEventKey(payload, eventId);
+    if (!eventKey) {
+      return sendError(res, 'validation_error', 'Missing Razorpay event id');
+    }
+
     const result = await recordProviderEvent(deps.db, {
       provider: 'razorpay',
       // The secret that verified the event is this workspace's, so the event
       // may only ever touch this workspace's payments.
       workspaceId,
-      eventId,
+      eventId: eventKey,
       type: (payload as Record<string, unknown>).event?.toString() ?? 'unknown',
       payload,
       outbox: true,

@@ -129,11 +129,18 @@ export function computeGst(input: ComputeGstInput): GstBreakup {
   const supplyType = determineSupplyType(input);
   const zeroTax = (supplyType === 'export' || supplyType === 'sez') && input.hasLut;
 
-  const lines: GstLineOutput[] = input.lines.map((line) => {
+  const lines: GstLineOutput[] = input.lines.map((line, index) => {
     const quantity = toDecimal(line.quantity);
     const rate = toDecimal(line.rate);
     const discount = round2(toDecimal(line.discount ?? 0));
     const taxableValue = round2(quantity.mul(rate).minus(discount));
+    // A negative line would quietly reduce the tax of the others; a
+    // reduction is a credit note (or a smaller line), never a negative one.
+    if (taxableValue.lt(0)) {
+      throw new CoreError('validation_error', 'A GST line cannot have a negative taxable value', {
+        [`lines.${index}`]: [`"${line.description}" is negative after its discount`],
+      });
+    }
     const gstRate = toDecimal(line.gstRate);
 
     let tax = round2(taxableValue.mul(gstRate).div(100));

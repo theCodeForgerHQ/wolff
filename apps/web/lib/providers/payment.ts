@@ -31,5 +31,6 @@ export interface PaymentProvider {
   isEnabled(): boolean;
   createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult>;
   processWebhook(request: Request): Promise<WebhookResult>;
-  refund(paymentId: string, amount?: number): Promise<RefundResult>;
+  /** `amount` is in major units of `currency`; undefined refunds in full. */
+  refund(paymentId: string, amount: number | undefined, currency: string): Promise<RefundResult>;
 }

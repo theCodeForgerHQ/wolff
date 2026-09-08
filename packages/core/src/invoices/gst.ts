@@ -1,8 +1,8 @@
 import { incrementNumberSequence, type Prisma } from '@wolff/database';
-import type { Db, DbOrTx } from '../context';
+import type { Db, DbOrTx, DbTx } from '../context';
 import { CoreError } from '../errors';
 import { computeGst, type GstLineInput } from '../gst/engine';
-import { nextSerialNumber } from '../gst/numbering';
+import { allocateSerialNumber } from '../gst/numbering';
 import { validateRule46, type Rule46Invoice } from '../gst/rule46';
 
 /**
@@ -94,9 +94,11 @@ export function priceGstInvoice(input: {
 }) {
   const { profile, client } = input;
   const isExport = Boolean(client.countryCode && client.countryCode !== 'IN');
+  // Never the supplier's own state: for a client without a state code that
+  // would turn a possibly inter-state sale (IGST) into CGST+SGST. Without a
+  // place of supply computeGst refuses with validation_error instead.
   const placeOfSupply =
-    input.placeOfSupply ??
-    (isExport ? EXPORT_PLACE_OF_SUPPLY : (client.stateCode ?? profile.stateCode ?? undefined));
+    input.placeOfSupply ?? (isExport ? EXPORT_PLACE_OF_SUPPLY : (client.stateCode ?? undefined));
 
   const lines: GstLineInput[] = input.lines.map((line) => ({
     description: line.name,
@@ -270,7 +272,20 @@ export function nextInvoiceNumber(
   workspaceId: string,
   issueDate: Date = new Date()
 ): Promise<string> {
-  return nextDocumentNumber(db, workspaceId, { type: 'invoice', prefix: 'INV' }, issueDate);
+  return db.$transaction((tx) => allocateInvoiceNumber(tx, workspaceId, issueDate));
+}
+
+/**
+ * `nextInvoiceNumber` inside the transaction that creates the invoice, so a
+ * failed insert takes the number back and the series stays consecutive
+ * (Rule 46(b)).
+ */
+export function allocateInvoiceNumber(
+  tx: DbTx,
+  workspaceId: string,
+  issueDate: Date = new Date()
+): Promise<string> {
+  return allocateDocumentNumber(tx, workspaceId, { type: 'invoice', prefix: 'INV' }, issueDate);
 }
 
 /**
@@ -283,19 +298,21 @@ export function nextCreditNoteNumber(
   workspaceId: string,
   date: Date = new Date()
 ): Promise<string> {
-  return nextDocumentNumber(db, workspaceId, { type: 'credit_note', prefix: 'CN' }, date);
+  return db.$transaction((tx) =>
+    allocateDocumentNumber(tx, workspaceId, { type: 'credit_note', prefix: 'CN' }, date)
+  );
 }
 
-async function nextDocumentNumber(
-  db: Db,
+async function allocateDocumentNumber(
+  tx: DbTx,
   workspaceId: string,
   document: { type: string; prefix: string },
   date: Date
 ): Promise<string> {
-  const profile = await loadGstProfile(db, workspaceId);
+  const profile = await loadGstProfile(tx, workspaceId);
   if (isGstWorkspace(profile)) {
     try {
-      const { serialNumber } = await nextSerialNumber(db, {
+      const { serialNumber } = await allocateSerialNumber(tx, {
         workspaceId,
         type: document.type,
         prefix: document.prefix,
@@ -310,14 +327,12 @@ async function nextDocumentNumber(
     }
   }
 
-  const sequence = await db.$transaction((tx) =>
-    incrementNumberSequence(
-      tx as unknown as Parameters<typeof incrementNumberSequence>[0],
-      workspaceId,
-      document.type,
-      null,
-      { prefix: document.prefix, currentValue: 1, padding: 4 }
-    )
+  const sequence = await incrementNumberSequence(
+    tx as unknown as Parameters<typeof incrementNumberSequence>[0],
+    workspaceId,
+    document.type,
+    null,
+    { prefix: document.prefix, currentValue: 1, padding: 4 }
   );
   const parts = [
     (sequence.prefix || document.prefix).replace(/-$/, ''),

@@ -10,6 +10,26 @@ function d(value: number | string): Decimal {
 }
 
 describe('GST engine', () => {
+  it.each([
+    ['a discount larger than the line', { quantity: 1, rate: 100, discount: 150 }],
+    ['a negative rate', { quantity: 1, rate: -100 }],
+    ['a negative quantity', { quantity: -2, rate: 100 }],
+  ])('refuses a line with a negative taxable value (%s)', (_name, values) => {
+    // A negative line silently cuts the tax of the others; a reduction
+    // after issue is a credit note, not a negative line.
+    const compute = () =>
+      computeGst({
+        supplierStateCode: '33',
+        placeOfSupply: '33',
+        lines: [
+          { description: 'Work', itemType: 'services', quantity: 1, rate: 1000, gstRate: 18 },
+          { description: 'Minus', itemType: 'services', gstRate: 18, ...values },
+        ],
+      });
+    expect(compute).toThrow(CoreError);
+    expect(compute).toThrow(/negative/);
+  });
+
   it.each(golden.cases)('$name', (c) => {
     const result = computeGst({
       supplierStateCode: c.supplierStateCode ?? undefined,

@@ -165,6 +165,38 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     });
   });
 
+  it('does not credit a voided invoice, and records the capture for a refund', async () => {
+    await base.invoice.update({ where: { id: invoiceId }, data: { status: 'voided' } });
+
+    await processProviderEvent(db, (await record(captured('pay_void', 25_000))).id);
+
+    const after = await base.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+      include: { payments: true, events: true },
+    });
+    expect(after.status).toBe('voided');
+    expect(Number(after.amountPaid)).toBe(0);
+    expect(after.payments[0]!.status).toBe('completed');
+    expect(after.events.map((e) => e.eventType)).toContain('payment_on_closed_invoice');
+  });
+
+  it('credits no more than is due and records the overpayment', async () => {
+    await base.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'partial', amountPaid: 100, amountDue: 150 },
+    });
+
+    await processProviderEvent(db, (await record(captured('pay_over', 25_000))).id);
+
+    const after = await base.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+      include: { events: true },
+    });
+    expect(after.status).toBe('paid');
+    expect(Number(after.amountPaid)).toBe(250);
+    expect(after.events.map((e) => e.eventType)).toContain('overpayment');
+  });
+
   it('marks the payment failed on payment.failed', async () => {
     const { id } = await record(failed('pay_3'));
 
@@ -235,7 +267,7 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     expect(Number((await invoice()).amountPaid)).toBe(50);
   });
 
-  it('marks an event for an unknown order as processed without side effects', async () => {
+  it('keeps an event for an unknown order unprocessed, to retry, without side effects', async () => {
     const { id } = await record(
       razorpayEvent('order.paid', {
         order: { id: `order_unknown_${run}` },
@@ -243,8 +275,19 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
       })
     );
 
-    expect(await processProviderEvent(db, id)).toBe('processed');
+    await expect(processProviderEvent(db, id)).rejects.toThrow(/not ready/);
+    const row = await base.providerWebhookEvent.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ status: 'received', attempts: 1 });
     expect((await invoice()).status).toBe('sent');
+  });
+
+  it('retries a refund that arrives before its capture, then applies it', async () => {
+    const early = await record(refundProcessed('pay_early', 25_000));
+    await expect(processProviderEvent(db, early.id)).rejects.toThrow(/not ready/);
+
+    await processProviderEvent(db, (await record(captured('pay_early', 25_000))).id);
+    expect(await processProviderEvent(db, early.id)).toBe('processed');
+    expect(Number((await invoice()).amountPaid)).toBe(0);
   });
   it('ignores an event that names an order of another workspace', async () => {
     // Another tenant signs an event with its own secret and quotes this
@@ -252,8 +295,8 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     const forged = await record(captured('pay_forged', 25_000), otherWorkspaceId);
     const forgedPaid = await record(orderPaid('pay_forged_2', 25_000), otherWorkspaceId);
 
-    expect(await processProviderEvent(db, forged.id)).toBe('processed');
-    expect(await processProviderEvent(db, forgedPaid.id)).toBe('processed');
+    await expect(processProviderEvent(db, forged.id)).rejects.toThrow(/not ready/);
+    await expect(processProviderEvent(db, forgedPaid.id)).rejects.toThrow(/not ready/);
 
     const untouched = await invoice();
     expect(untouched.status).toBe('sent');

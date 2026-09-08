@@ -8,7 +8,7 @@ import {
   createInvoiceFromQuote,
   describeCoreError,
   gstInvoiceColumns,
-  nextInvoiceNumber,
+  allocateInvoiceNumber,
   priceForWorkspace,
   type PricedGstInvoice,
 } from '@wolff/core/invoices';
@@ -193,8 +193,6 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
       throw error;
     }
 
-    // Atomic; a GST workspace numbers per financial year.
-    const invoiceNumber = await nextInvoiceNumber(db, workspaceId);
     const { lines, subtotal, taxTotal } = priceLines(items);
     const total = subtotal + taxTotal;
     const amounts = gst
@@ -210,23 +208,27 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
           select: { currency: true },
         });
 
-    const invoice = await db.invoice.create({
-      data: {
-        workspaceId,
-        clientId,
-        projectId: projectId || null,
-        invoiceNumber,
-        title,
-        currency: currency || profile?.currency || 'USD',
-        dueDate: parsedDueDate,
-        ...amounts,
-        notes: notes || null,
-        terms: terms || null,
-        settings: {},
-        lineItems: { create: created },
-      },
-      include: DOCUMENT_INCLUDE,
-    });
+    // Numbered in the transaction that inserts it: a failed insert takes
+    // the number back (GST Rule 46 wants a consecutive series).
+    const invoice = await db.$transaction(async (tx) =>
+      tx.invoice.create({
+        data: {
+          workspaceId,
+          clientId,
+          projectId: projectId || null,
+          invoiceNumber: await allocateInvoiceNumber(tx, workspaceId),
+          title,
+          currency: currency || profile?.currency || 'USD',
+          dueDate: parsedDueDate,
+          ...amounts,
+          notes: notes || null,
+          terms: terms || null,
+          settings: {},
+          lineItems: { create: created },
+        },
+        include: DOCUMENT_INCLUDE,
+      })
+    );
 
     legacyJson(
       res,
@@ -485,6 +487,24 @@ async function updateInvoice(
       } catch (error) {
         if (error instanceof CoreError) return legacyError(res, describeCoreError(error), 422);
         throw error;
+      }
+    }
+    // The status has to agree with the money recorded by payments; PATCH
+    // does not move amountPaid, so it cannot make an unpaid invoice paid.
+    const paid = toNumber(invoice.amountPaid);
+    const total = toNumber(invoice.total);
+    if (status === 'paid' && paid < total) {
+      return legacyError(res, 'Record a payment for the full amount before marking it paid', 400);
+    }
+    if (status === 'partial' && (paid <= 0 || paid >= total)) {
+      return legacyError(res, 'Only an invoice with a part payment recorded is partial', 400);
+    }
+    if (status === 'voided') {
+      const completed = await db.payment.count({
+        where: { invoiceId: id, workspaceId, status: 'completed' },
+      });
+      if (completed > 0) {
+        return legacyError(res, 'Refund the completed payments before voiding this invoice', 400);
       }
     }
     data.status = status;

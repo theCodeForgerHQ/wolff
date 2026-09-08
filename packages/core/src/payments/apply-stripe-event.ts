@@ -1,5 +1,8 @@
 import type { Prisma } from '@wolff/database';
 import { writeOutboxEvent } from '../outbox';
+import { fromMinorUnits, toMinorUnits } from './minor-units';
+import { creditInvoice } from './credit-invoice';
+import { ProviderEventNotReadyError } from './not-ready';
 
 /**
  * Applies one verified Stripe event to payments and invoices. Every function
@@ -34,6 +37,9 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
         paymentIntentId: intentId,
         chargeId: str(charge) ?? str((chargeObject as Record<string, unknown>).id),
         receiptUrl: str((chargeObject as Record<string, unknown>).receipt_url),
+        ...(object.amount_received !== undefined && {
+          received: { amount: object.amount_received, currency: object.currency },
+        }),
       });
       return;
     }
@@ -89,11 +95,11 @@ export async function applyStripeEvent(tx: Tx, payload: unknown): Promise<void> 
         );
       // A refund of a charge that did not come from an invoice payment.
       if (!intentId) return;
-      const cents = object.amount_refunded;
-      if (typeof cents !== 'number' || !Number.isInteger(cents) || cents < 0) {
+      const minor = object.amount_refunded;
+      if (typeof minor !== 'number' || !Number.isInteger(minor) || minor < 0) {
         throw new Error('charge.refunded with an invalid amount_refunded');
       }
-      await applyRefund(tx, intentId, cents);
+      await applyRefund(tx, intentId, minor);
       return;
     }
     case 'account.updated':
@@ -131,7 +137,7 @@ async function sessionMatchesPayment(
     select: { id: true, invoiceId: true, amount: true, currency: true },
   });
   if (!payment) return true;
-  const expected = Math.round(Number(payment.amount) * 100);
+  const expected = toMinorUnits(Number(payment.amount), payment.currency);
   const amountTotal = session.amount_total;
   const currency = str(session.currency)?.toLowerCase();
   if (amountTotal === expected && currency === payment.currency.toLowerCase()) return true;
@@ -171,10 +177,19 @@ async function lockPaymentByIntent(tx: Tx, paymentIntentId: string) {
 
 export async function applyPaymentSucceeded(
   tx: Tx,
-  input: { paymentIntentId: string; chargeId?: string; receiptUrl?: string }
+  input: {
+    paymentIntentId: string;
+    chargeId?: string;
+    receiptUrl?: string;
+    /** amount_received and currency of the intent, when the event has them. */
+    received?: { amount: unknown; currency: unknown };
+  }
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, input.paymentIntentId);
-  if (!payment) return;
+  // The row, or the session link that names this intent, may not exist yet.
+  if (!payment) {
+    throw new ProviderEventNotReadyError(`no payment for Stripe intent ${input.paymentIntentId}`);
+  }
 
   // A credited payment is final: a repeated success must not credit the
   // invoice again. `failed` is not final, because Stripe reuses the
@@ -183,7 +198,31 @@ export async function applyPaymentSucceeded(
 
   const { workspaceId } = payment.invoice;
   const amount = Number(payment.amount);
-  const total = Number(payment.invoice.total);
+
+  // The intent must have charged what this payment asked for. A mismatch
+  // credits nothing and is recorded on the invoice for review.
+  if (input.received && !receivedMatches(payment, input.received)) {
+    await tx.invoiceEvent.create({
+      data: {
+        invoiceId: payment.invoiceId,
+        eventType: 'payment_mismatch',
+        actorType: 'system',
+        metadata: {
+          paymentId: payment.id,
+          paymentIntentId: input.paymentIntentId,
+          expected: {
+            amount: toMinorUnits(amount, payment.currency),
+            currency: payment.currency.toLowerCase(),
+          },
+          received: {
+            amount: typeof input.received.amount === 'number' ? input.received.amount : null,
+            currency: str(input.received.currency) ?? null,
+          },
+        },
+      },
+    });
+    return;
+  }
 
   await tx.payment.update({
     where: { id: payment.id, workspaceId },
@@ -196,55 +235,23 @@ export async function applyPaymentSucceeded(
     },
   });
 
-  const credited = await tx.invoice.update({
-    where: { id: payment.invoiceId, workspaceId },
-    data: { amountPaid: { increment: amount } },
-    select: { amountPaid: true },
-  });
-  const amountPaid = Number(credited.amountPaid);
-  const fullyPaid = amountPaid >= total;
-
-  await tx.invoice.update({
-    where: { id: payment.invoiceId, workspaceId },
-    data: {
-      amountDue: Math.max(0, total - amountPaid),
-      status: fullyPaid ? 'paid' : 'partial',
-      ...(!payment.invoice.paidAt && { paidAt: new Date() }),
-    },
-  });
-
-  await tx.invoiceEvent.create({
-    data: {
-      invoiceId: payment.invoiceId,
-      eventType: 'payment_received',
-      actorType: 'system',
-      metadata: { paymentId: payment.id, amount, method: 'stripe' },
-    },
-  });
-
-  await writeOutboxEvent(tx, {
+  await creditInvoice(tx, {
+    invoiceId: payment.invoiceId,
     workspaceId,
-    type: 'payment.received',
-    aggregateType: 'payment',
-    aggregateId: payment.id,
-    payload: { paymentId: payment.id, invoiceId: payment.invoiceId, workspaceId, amount },
+    amount,
+    paymentId: payment.id,
+    method: 'stripe',
   });
-  if (fullyPaid) {
-    await writeOutboxEvent(tx, {
-      workspaceId,
-      type: 'invoice.paid',
-      aggregateType: 'invoice',
-      aggregateId: payment.invoiceId,
-      payload: { invoiceId: payment.invoiceId, workspaceId, amount: amountPaid },
-    });
-  }
-  await writeOutboxEvent(tx, {
-    workspaceId,
-    type: 'email.payment_received',
-    aggregateType: 'payment',
-    aggregateId: payment.id,
-    payload: { paymentId: payment.id },
-  });
+}
+
+function receivedMatches(
+  payment: { amount: unknown; currency: string },
+  received: { amount: unknown; currency: unknown }
+): boolean {
+  return (
+    received.amount === toMinorUnits(Number(payment.amount), payment.currency) &&
+    str(received.currency)?.toLowerCase() === payment.currency.toLowerCase()
+  );
 }
 
 export async function applyPaymentFailed(tx: Tx, paymentIntentId: string): Promise<void> {
@@ -259,20 +266,33 @@ export async function applyPaymentFailed(tx: Tx, paymentIntentId: string): Promi
 }
 
 /**
- * `amountRefundedCents` is Stripe's running total for the charge, so the
+ * `amountRefundedMinor` is Stripe's running total for the charge, in the
+ * smallest unit of the payment's currency (whole yen for JPY), so the
  * change applied to the invoice is the difference from what is already
  * recorded. A redelivered or out-of-order event therefore changes nothing.
  */
 export async function applyRefund(
   tx: Tx,
   paymentIntentId: string,
-  amountRefundedCents: number
+  amountRefundedMinor: number
 ): Promise<void> {
   const payment = await lockPaymentByIntent(tx, paymentIntentId);
-  if (!payment || payment.status !== 'completed') return;
+  if (!payment) {
+    throw new ProviderEventNotReadyError(
+      `no payment for refunded Stripe intent ${paymentIntentId}`
+    );
+  }
+  // Fully refunded already: a redelivery has nothing left to apply.
+  if (payment.status === 'refunded') return;
+  // A refund that overtook its payment's success: retry once it is credited.
+  if (payment.status !== 'completed') {
+    throw new ProviderEventNotReadyError(
+      `Stripe refund for payment ${payment.id} before it was credited (${payment.status})`
+    );
+  }
 
   const { workspaceId } = payment.invoice;
-  const refundedTotal = amountRefundedCents / 100;
+  const refundedTotal = fromMinorUnits(amountRefundedMinor, payment.currency);
   const delta = refundedTotal - Number(payment.refundAmount ?? 0);
   if (delta <= 0) return;
 

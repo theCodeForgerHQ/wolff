@@ -1,13 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import type { Prisma } from '@wolff/database';
-import type { Db } from '../context';
+import type { Db, DbTx } from '../context';
 import { CoreError } from '../errors';
 import { requestPdfRender } from '../outbox';
 import {
+  allocateInvoiceNumber,
   assertReadyToIssue,
   gstInvoiceColumns,
   gstLinesFrom,
-  nextInvoiceNumber,
   priceForWorkspace,
 } from './gst';
 
@@ -46,11 +46,7 @@ export async function createInvoiceFromQuote(
     include: { lineItems: { orderBy: { sortOrder: 'asc' } }, client: true },
   });
   if (!quote) return { success: false, error: 'Quote not found' };
-
-  const existingInvoice = await db.invoice.findFirst({
-    where: { quoteId: quote.id, workspaceId },
-  });
-  if (existingInvoice) return { success: false, error: 'Invoice already exists for this quote' };
+  const source = quote;
 
   let gst: Awaited<ReturnType<typeof priceForWorkspace>>;
   try {
@@ -60,15 +56,37 @@ export async function createInvoiceFromQuote(
       discountAmount: Number(quote.discountAmount),
     });
   } catch (error) {
-    if (error instanceof CoreError) return { success: false, error: error.message };
+    if (error instanceof CoreError) return { success: false, error: describeCoreError(error) };
     throw error;
   }
 
-  const invoiceNumber = await nextInvoiceNumber(db, workspaceId);
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + (options.dueDays ?? 30));
 
-  const invoice = await db.$transaction(async (tx) => {
+  // The check, the number and the insert share one transaction: a refused
+  // or failed insert takes its number back, and a concurrent conversion of
+  // the same quote loses on the quoteId unique key instead of a 500.
+  const invoice = await db
+    .$transaction(async (tx) => {
+      const existingInvoice = await tx.invoice.findFirst({
+        where: { quoteId: quote.id, workspaceId },
+        select: { id: true },
+      });
+      if (existingInvoice) return null;
+      const invoiceNumber = await allocateInvoiceNumber(tx, workspaceId);
+      return createFromQuote(tx, invoiceNumber);
+    })
+    .catch((error: unknown) => {
+      if (isQuoteUniqueViolation(error)) return null;
+      throw error;
+    });
+  if (!invoice) return { success: false, error: 'Invoice already exists for this quote' };
+
+  const issued = gst ? await issueIfReady(db, workspaceId, invoice.id) : true;
+  return { success: true, issued, invoice };
+
+  async function createFromQuote(tx: DbTx, invoiceNumber: string) {
+    const quote = source;
     const created = await tx.invoice.create({
       data: {
         workspaceId,
@@ -140,10 +158,16 @@ export async function createInvoiceFromQuote(
       await requestPdfRender(tx, { workspaceId, documentType: 'invoice', documentId: created.id });
     }
     return created;
-  });
+  }
+}
 
-  const issued = gst ? await issueIfReady(db, workspaceId, invoice.id) : true;
-  return { success: true, issued, invoice };
+/** True for the unique violation of invoices.quote_id (one invoice per quote). */
+function isQuoteUniqueViolation(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const known = error as { code?: string; meta?: unknown; message?: string };
+  if (known.code !== 'P2002') return false;
+  const where = `${JSON.stringify(known.meta ?? {})} ${known.message ?? ''}`;
+  return where.includes('quote_id') || where.includes('quoteId');
 }
 
 /** Moves a GST draft to 'sent' if Rule 46 passes; records why if not. */
