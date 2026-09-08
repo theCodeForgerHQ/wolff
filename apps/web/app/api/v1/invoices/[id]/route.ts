@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@wolff/database';
 import { authenticateApiRequest, apiSuccess, apiError } from '@/lib/api/auth';
 import { requestAiIndexing } from '@wolff/core/outbox';
+import { applyDiscount } from '@wolff/core/pricing';
 import { withTenantGuard } from '@wolff/database';
 import {
   assertReadyToIssue,
@@ -259,23 +260,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       };
     });
 
-    // Recalculate with existing discount fields
-    let discountAmount = 0;
-    const discountType = invoice.discountType as string | null;
-    const discountValue = invoice.discountValue ? toNumber(invoice.discountValue) : 0;
-    if (discountType === 'percentage' && discountValue > 0) {
-      discountAmount = Math.round(subtotal * (discountValue / 100) * 100) / 100;
-    } else if (discountType === 'fixed' && discountValue > 0) {
-      discountAmount = Math.min(discountValue, subtotal);
-    }
+    // Recalculate with existing discount fields; the discount comes off
+    // before tax (shared with the dashboard and the API).
+    const priced = applyDiscount(
+      { subtotal, taxTotal },
+      invoice.discountType as string | null,
+      invoice.discountValue ? toNumber(invoice.discountValue) : 0
+    );
 
-    const total = gst ? gst.invoice.total : subtotal - discountAmount + taxTotal;
+    const total = gst ? gst.invoice.total : priced.total;
     if (gst) {
       Object.assign(updateData, gstInvoiceColumns(gst));
     } else {
       updateData.subtotal = subtotal;
-      updateData.taxTotal = taxTotal;
-      updateData.discountAmount = discountAmount;
+      updateData.taxTotal = priced.taxTotal;
+      updateData.discountAmount = priced.discountAmount;
       updateData.total = total;
     }
     const processed = gst ? gst.lines.map((line) => ({ ...line, invoiceId: id })) : generic;

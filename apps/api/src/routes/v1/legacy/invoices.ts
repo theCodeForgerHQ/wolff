@@ -13,6 +13,7 @@ import {
   type PricedGstInvoice,
 } from '@wolff/core/invoices';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
+import { applyDiscount } from '@wolff/core/pricing';
 import '../../../context';
 import { requireScopes } from '../../../middleware/auth';
 import type { LegacyRouteContext } from '.';
@@ -38,7 +39,6 @@ import {
   MAX_LINE_ITEMS,
   lineItemProblem,
   priceLines,
-  recomputeDiscount,
   type LineItemInput,
   LINE_ITEMS_NOT_A_LIST,
 } from './line-items';
@@ -546,16 +546,22 @@ async function updateInvoice(
     }
 
     const { lines, subtotal, taxTotal } = priceLines(lineItems);
-    const discountAmount = recomputeDiscount(
-      subtotal,
+    // The discount comes off before tax (shared with the dashboard).
+    const priced = applyDiscount(
+      { subtotal, taxTotal },
       invoice.discountType,
       invoice.discountValue ? toNumber(invoice.discountValue) : 0
     );
-    const total = gst ? gst.invoice.total : subtotal - discountAmount + taxTotal;
+    const total = gst ? gst.invoice.total : priced.total;
     if (gst) {
       Object.assign(data, gstInvoiceColumns(gst));
     } else {
-      Object.assign(data, { subtotal, taxTotal, discountAmount, total });
+      Object.assign(data, {
+        subtotal,
+        taxTotal: priced.taxTotal,
+        discountAmount: priced.discountAmount,
+        total,
+      });
     }
     const replacement = gst
       ? gst.lines.map((line) => ({ ...line, invoiceId: id }))
