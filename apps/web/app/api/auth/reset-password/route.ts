@@ -85,22 +85,28 @@ export async function POST(request: NextRequest) {
     // Hash the new password
     const passwordHash = await hash(password, 12);
 
-    // Bug #83: Update password, mark token used, AND invalidate existing sessions
-    await prisma.$transaction([
-      prisma.user.update({
+    // Bug #83: Update password, mark token used, AND invalidate existing
+    // sessions. The token is claimed with a conditional update first, so of
+    // two requests sent at once with the same token only one changes the
+    // password; the checks above only read it.
+    const claimed = await prisma.$transaction(async (tx) => {
+      const claim = await tx.passwordResetToken.updateMany({
+        where: { id: resetToken.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+      if (claim.count !== 1) return false;
+      await tx.user.update({
         where: { id: resetToken.userId },
         data: { passwordHash, passwordChangedAt: new Date() },
-      }),
-      prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { usedAt: new Date() },
-      }),
+      });
       // Invalidate all existing sessions so stolen JWTs from before the reset
       // won't work if the app ever switches to DB sessions
-      prisma.session.deleteMany({
-        where: { userId: resetToken.userId },
-      }),
-    ]);
+      await tx.session.deleteMany({ where: { userId: resetToken.userId } });
+      return true;
+    });
+    if (!claimed) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
+    }
 
     return NextResponse.json({
       success: true,
