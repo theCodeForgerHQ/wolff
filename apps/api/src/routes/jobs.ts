@@ -67,6 +67,11 @@ export function jobRoutes(
     if (!deps || !verified) {
       return sendError(res, 'unauthorized', 'A valid job signature is required');
     }
+    // Answered done, so QStash neither retries nor dead-letters it.
+    if (config.JOBS_PAUSED) {
+      logger.warn({ type }, 'Job skipped: JOBS_PAUSED is set');
+      return sendData(res, { status: 'paused' });
+    }
 
     let job: Job;
     try {

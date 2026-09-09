@@ -31,6 +31,15 @@ const schema = z.object({
 
   REDIS_URL: optional,
   JOB_DISPATCHER: z.enum(['bullmq', 'qstash']).default('bullmq'),
+  /**
+   * Stops all background work: every pushed job is answered done without
+   * running (no database, no provider calls). For an emergency such as a
+   * usage limit coming close; set it in the host's env and redeploy.
+   */
+  JOBS_PAUSED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   QSTASH_TOKEN: optional,
   QSTASH_CURRENT_SIGNING_KEY: optional,
   QSTASH_NEXT_SIGNING_KEY: optional,

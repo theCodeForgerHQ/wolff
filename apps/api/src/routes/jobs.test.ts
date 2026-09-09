@@ -28,12 +28,13 @@ async function signature(url: string, body: string, key = CURRENT): Promise<stri
 function setup(
   run: (ctx: JobContext, job: Job) => Promise<void>,
   onExhausted?: (ctx: JobContext, job: Job, error: unknown) => Promise<void>,
-  report: (error: unknown) => void = () => {}
+  report: (error: unknown) => void = () => {},
+  overrides: Record<string, unknown> = {}
 ) {
   const app = createApp({
     report,
     db: {} as Db,
-    config: testConfig({ PUBLIC_API_URL: API }),
+    config: testConfig({ PUBLIC_API_URL: API, ...overrides }),
     jobs: {
       verify: createQStashVerifier({ currentSigningKey: CURRENT, nextSigningKey: NEXT }),
       context: { marker: 'ctx' } as unknown as JobContext,
@@ -217,5 +218,23 @@ describe('POST /jobs/run/:type', () => {
 
     expect(res.status).toBe(503);
     expect(exhausted).toHaveBeenCalled();
+  });
+
+  // A switch to stop all background work at once (Vercel env, no redeploy
+  // of code needed): every delivery is answered done without running.
+  it('answers every job done without running it while jobs are paused', async () => {
+    const run = vi.fn();
+    const { post } = setup(run, undefined, undefined, { JOBS_PAUSED: 'true' });
+
+    const res = await post('email.send', job);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: 'paused' });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('still refuses an unsigned request while paused', async () => {
+    const { post } = setup(vi.fn(), undefined, undefined, { JOBS_PAUSED: 'true' });
+    expect((await post('email.send', job, { sign: false })).status).toBe(401);
   });
 });
