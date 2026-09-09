@@ -5,7 +5,7 @@ import { requestIp } from '@/lib/request-ip';
 import { prisma } from '@wolff/database';
 import { headers } from 'next/headers';
 import type { QuoteBlock } from './types';
-import { toNumber } from '@/lib/utils';
+import { formatCurrency, toNumber } from '@/lib/utils';
 import { notifyWorkspaceMembers } from '@/lib/notifications/internal';
 import { createInvoiceFromQuoteInternal } from '@/lib/invoices/internal';
 import { computeQuoteDocumentHash, verifyDocumentHash } from '@/lib/signing/document-hash';
@@ -441,6 +441,8 @@ export async function acceptQuote(data: {
         expirationDate: true,
         settings: true,
         workspaceId: true,
+        updatedAt: true,
+        currency: true,
         subtotal: true,
         total: true,
         terms: true,
@@ -493,12 +495,17 @@ export async function acceptQuote(data: {
     });
 
     // Atomic conditional update — prevents double-accept race condition
-    // Only updates if status is still 'sent' or 'viewed' (not already accepted)
+    // Only updates if status is still 'sent' or 'viewed' (not already accepted),
+    // and only if the quote is the one hashed above: an owner edit committed
+    // since the read moves updatedAt, and signing then would put the client's
+    // signature on content they never saw.
     const acceptResult = await prisma.quote.updateMany({
       where: {
+        id: quote.id,
         accessToken: data.accessToken,
         status: { in: ['sent', 'viewed'] },
         deletedAt: null,
+        updatedAt: quote.updatedAt,
       },
       data: {
         status: 'accepted',
@@ -518,6 +525,17 @@ export async function acceptQuote(data: {
     });
 
     if (acceptResult.count === 0) {
+      const current = await prisma.quote.findFirst({
+        where: { id: quote.id, deletedAt: null },
+        select: { status: true },
+      });
+      if (current && ['sent', 'viewed'].includes(current.status)) {
+        return {
+          success: false,
+          error:
+            'This quote was updated while you were reviewing it. Please reload and review it again.',
+        };
+      }
       return {
         success: false,
         error: 'This quote has already been accepted or is no longer available',
@@ -578,7 +596,14 @@ export async function acceptQuote(data: {
     if (depositRequired && autoInvoice) {
       const depositType = (quoteSettings.depositType as 'percentage' | 'fixed') ?? 'percentage';
       const depositValue = (quoteSettings.depositValue as number) ?? 50;
-      const total = toNumber(quote.total);
+      // The deposit is a share of the invoice it is paid against, which a
+      // GST workspace prices afresh, so not necessarily the quote's total.
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: autoInvoice.id },
+        select: { total: true, currency: true },
+      });
+      const total = toNumber(invoice?.total ?? quote.total);
+      const currency = invoice?.currency ?? quote.currency;
       const depositAmount =
         depositType === 'percentage'
           ? Math.round(total * (depositValue / 100) * 100) / 100
@@ -589,7 +614,7 @@ export async function acceptQuote(data: {
           data: {
             invoiceId: autoInvoice.id,
             type: 'deposit',
-            description: `Deposit (${depositType === 'percentage' ? `${depositValue}%` : `$${depositValue}`})`,
+            description: `Deposit (${depositType === 'percentage' ? `${depositValue}%` : formatCurrency(depositAmount, currency)})`,
             amount: depositAmount,
             percentage: depositType === 'percentage' ? depositValue : null,
             dueDate: new Date(),
