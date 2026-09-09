@@ -95,6 +95,7 @@ export async function createInvoiceFromQuote(
         quoteId: quote.id,
         invoiceNumber,
         title: quote.title || 'Invoice',
+        currency: quote.currency,
         accessToken: randomBytes(32).toString('hex'),
         // Ready for the client to pay. A GST invoice waits in draft for the
         // Rule 46 check below.

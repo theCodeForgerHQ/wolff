@@ -152,6 +152,16 @@ describe.skipIf(!url)('createInvoiceFromQuote (Postgres)', () => {
     expect(await base.invoice.count({ where: { quoteId } })).toBe(1);
   });
 
+  it("bills the invoice in the quote's currency", async () => {
+    const ws = await workspace();
+    const quoteId = await quote(ws, [{}], { currency: 'INR' });
+
+    const result = await createInvoiceFromQuote(db, ws.workspaceId, quoteId);
+
+    expect(result.success).toBe(true);
+    expect((await load(result.invoice!.id)).currency).toBe('INR');
+  });
+
   it('answers a concurrent second conversion with a conflict and burns no number', async () => {
     const ws = await workspace();
     const quoteId = await quote(ws);
