@@ -65,6 +65,14 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  // @sparticuz/chromium loads its compressed browser from bin/ at runtime,
+  // which file tracing can't see. Without this every PDF download on Vercel
+  // fails with "input directory .../@sparticuz/chromium/bin does not exist".
+  outputFileTracingIncludes: {
+    '/api/download/**': [
+      '../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**',
+    ],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
