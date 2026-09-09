@@ -441,6 +441,7 @@ export async function acceptQuote(data: {
         expirationDate: true,
         settings: true,
         workspaceId: true,
+        updatedAt: true,
         subtotal: true,
         total: true,
         terms: true,
@@ -493,12 +494,17 @@ export async function acceptQuote(data: {
     });
 
     // Atomic conditional update — prevents double-accept race condition
-    // Only updates if status is still 'sent' or 'viewed' (not already accepted)
+    // Only updates if status is still 'sent' or 'viewed' (not already accepted),
+    // and only if the quote is the one hashed above: an owner edit committed
+    // since the read moves updatedAt, and signing then would put the client's
+    // signature on content they never saw.
     const acceptResult = await prisma.quote.updateMany({
       where: {
+        id: quote.id,
         accessToken: data.accessToken,
         status: { in: ['sent', 'viewed'] },
         deletedAt: null,
+        updatedAt: quote.updatedAt,
       },
       data: {
         status: 'accepted',
@@ -518,6 +524,17 @@ export async function acceptQuote(data: {
     });
 
     if (acceptResult.count === 0) {
+      const current = await prisma.quote.findFirst({
+        where: { id: quote.id, deletedAt: null },
+        select: { status: true },
+      });
+      if (current && ['sent', 'viewed'].includes(current.status)) {
+        return {
+          success: false,
+          error:
+            'This quote was updated while you were reviewing it. Please reload and review it again.',
+        };
+      }
       return {
         success: false,
         error: 'This quote has already been accepted or is no longer available',
