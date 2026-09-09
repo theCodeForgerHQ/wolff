@@ -141,4 +141,25 @@ describe.skipIf(!url)('acceptQuote and a concurrent owner edit (Postgres)', () =
     expect(after.status).not.toBe('sent');
     expect(after.signedAt).not.toBeNull();
   });
+
+  it("describes a fixed deposit in the invoice's currency", async () => {
+    const quote = await makeQuote(
+      {
+        autoConvertToInvoice: true,
+        depositRequired: true,
+        depositType: 'fixed',
+        depositValue: 250,
+      },
+      'INR'
+    );
+
+    const result = await accept(quote.accessToken);
+
+    expect(result).toMatchObject({ success: true, depositRequired: true, depositAmount: 250 });
+    const schedule = await prisma.paymentSchedule.findFirstOrThrow({
+      where: { invoice: { quoteId: quote.id } },
+    });
+    expect(schedule.description).not.toContain('$');
+    expect(schedule.description).toContain('₹');
+  });
 });
