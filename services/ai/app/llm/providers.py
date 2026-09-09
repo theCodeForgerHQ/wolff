@@ -77,7 +77,8 @@ _PROFILES: dict[str, ProviderProfile] = {
         name="nvidia",
         base_url="https://integrate.api.nvidia.com/v1",
         api_key_env="NVIDIA_API_KEY",
-        chat_model="nvidia/nemotron-3-super-120b-a12b",
+        # 3-super-120b stopped being served to free accounts in Sep 2026.
+        chat_model="nvidia/nemotron-3.5-super-vl-120b-a12b",
         embed_model="nvidia/nemotron-3-embed-1b",
         rpm=40,
         rpd=5_000,
