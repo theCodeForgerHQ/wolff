@@ -32,8 +32,23 @@ import { logger } from '@wolff/core/logger';
  * One processor per job type. Each is idempotent: it may run again after a
  * crash, a retry or a duplicate delivery, and the second run changes nothing.
  */
+/**
+ * One bounded relay pass right after a job that writes outbox events, so a
+ * payment receipt or a webhook delivery goes out now rather than at the next
+ * hourly sweep. Never throws: the job's own work is committed, and anything
+ * this misses is still relayed by the sweep.
+ */
+async function relayFollowUps(ctx: JobContext): Promise<void> {
+  try {
+    await relayOutboxToJobs(ctx.db, { dispatch: ctx.dispatch }, { limit: 20, now: ctx.now() });
+  } catch {
+    // Left pending for the sweep.
+  }
+}
+
 const reconcilePayment: Processor<'payments.reconcile'> = async (ctx, { eventRowId }) => {
   await processProviderEvent(ctx.db, eventRowId);
+  await relayFollowUps(ctx);
 };
 
 const fanOutWebhooks: Processor<'webhooks.fanout'> = async (ctx, { outboxEventId }) => {
@@ -47,6 +62,7 @@ const fanOutWebhooks: Processor<'webhooks.fanout'> = async (ctx, { outboxEventId
     payload: event.payload,
     createdAt: event.createdAt,
   });
+  await relayFollowUps(ctx);
 };
 
 const deliver: Processor<'webhooks.deliver'> = async (ctx, job) => {
