@@ -5,6 +5,9 @@ import { requestAiIndexing } from '@wolff/core/outbox';
 import { applyDiscount } from '@wolff/core/pricing';
 import { toNumber } from '@/lib/utils';
 
+/** Statuses after which a quote's content is the signed contract. */
+const SIGNED_STATUSES = ['accepted', 'converted'] as const;
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
@@ -119,6 +122,39 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   // Bug #37: Wrap status check + update in a single transaction to prevent TOCTOU race
   const result = await prisma.$transaction(async (tx) => {
+    // A content edit first claims the row on the "not yet signed" condition:
+    // the row lock makes a concurrent accept/sign wait, and a quote that is
+    // already accepted, converted or signed matches nothing. Auto-convert
+    // moves a signed quote to 'converted', so 'accepted' alone is not enough.
+    const editsContent =
+      title !== undefined || notes !== undefined || terms !== undefined || !!lineItems;
+    if (editsContent) {
+      const claimed = await tx.quote.updateMany({
+        where: {
+          id,
+          workspaceId,
+          deletedAt: null,
+          status: { notIn: [...SIGNED_STATUSES] },
+          signedAt: null,
+        },
+        data: { updatedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        const locked = await tx.quote.findFirst({
+          where: { id, workspaceId, deletedAt: null },
+          select: { status: true },
+        });
+        if (!locked) return { error: 'Quote not found', status: 404 } as const;
+        const what = locked.status === 'accepted' ? 'an accepted' : 'a signed';
+        return {
+          error: lineItems
+            ? `Cannot modify line items on ${what} quote`
+            : 'Cannot modify a quote that has been accepted or signed',
+          status: 400,
+        } as const;
+      }
+    }
+
     const quote = await tx.quote.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
@@ -152,11 +188,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // If line items provided, recalculate totals
     if (lineItems) {
-      // Block financial changes on accepted quotes (checked atomically inside transaction)
-      if (quote.status === 'accepted') {
-        return { error: 'Cannot modify line items on an accepted quote', status: 400 } as const;
-      }
-
       let subtotal = 0;
       let taxTotal = 0;
       const processed = lineItems.map((item, i) => {
@@ -207,7 +238,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   });
 
   if ('error' in result && result.error) return apiError(result.error, result.status ?? 400);
-  if (!('data' in result)) return apiError('Unexpected error', 500);
+  if (!('data' in result) || !result.data) return apiError('Unexpected error', 500);
 
   // Bug #187: Create audit event for v1 API updates
   await prisma.quoteEvent
