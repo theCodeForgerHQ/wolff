@@ -464,7 +464,7 @@ export async function refundPayment(
       reason: 'requested_by_customer',
     });
 
-    // The actual DB update happens via the charge.refunded webhook (processRefundWebhook)
+    // The actual DB update happens via the charge.refunded webhook (apply-stripe-event in @wolff/core)
     // but we can revalidate proactively
     revalidatePath('/invoices');
     revalidatePath(`/invoices/${payment.invoiceId}`);
