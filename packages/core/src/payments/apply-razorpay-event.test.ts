@@ -180,6 +180,22 @@ describe.skipIf(!url)('Razorpay event application (Postgres)', () => {
     expect(after.events.map((e) => e.eventType)).toContain('payment_on_closed_invoice');
   });
 
+  it('records the refund of a capture on a voided invoice and keeps it voided', async () => {
+    await base.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'voided', amountDue: 0 },
+    });
+    await processProviderEvent(db, (await record(captured('pay_void_refund', 25_000))).id);
+
+    await processProviderEvent(db, (await record(refundProcessed('pay_void_refund', 25_000))).id);
+
+    const after = await invoice();
+    expect(after.status).toBe('voided');
+    expect(Number(after.amountPaid)).toBe(0);
+    expect(Number(after.amountDue)).toBe(0);
+    expect(after.payments[0]).toMatchObject({ status: 'refunded' });
+  });
+
   it('credits no more than is due and records the overpayment', async () => {
     await base.invoice.update({
       where: { id: invoiceId },
