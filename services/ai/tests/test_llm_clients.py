@@ -296,3 +296,29 @@ async def test_an_exceeded_budget_never_falls_back() -> None:
         await llm.run_chat(lambda model: model.ainvoke([HumanMessage("hi")]))
     await llm.aclose()
     assert log == []
+
+
+def _status_error(code: int) -> BaseException:
+    import openai
+
+    request = httpx.Request("POST", "https://llm.example.test/v1/chat/completions")
+    return openai.APIStatusError(
+        "failed", response=httpx.Response(code, request=request), body=None
+    )
+
+
+@pytest.mark.parametrize("code", [401, 403, 404, 410, 429, 500, 503])
+def test_the_provider_failing_falls_back(code: int) -> None:
+    """A model the account can no longer use (404 "not found for account",
+    410 end of life) or a key it no longer accepts is the provider failing,
+    not the request: the fallback must answer instead."""
+    from app.llm.clients import is_fallback_error
+
+    assert is_fallback_error(_status_error(code))
+
+
+@pytest.mark.parametrize("code", [400, 413, 422])
+def test_a_bad_request_does_not_fall_back(code: int) -> None:
+    from app.llm.clients import is_fallback_error
+
+    assert not is_fallback_error(_status_error(code))

@@ -39,16 +39,22 @@ def fit_dimensions(vector: Sequence[float], dimensions: int = EMBEDDING_DIMENSIO
     return [v / norm for v in cut] + [0.0] * (dimensions - len(cut))
 
 
+#: Statuses that mean the provider can't serve this account any more.
+PROVIDER_GONE = frozenset({401, 403, 404, 410})
+
+
 def is_fallback_error(exc: BaseException) -> bool:
     """The provider, not the request, failed: rate limited or out of daily
-    requests, a 5xx, or unreachable. A spent budget is not one of them: the
-    budget is per workspace, shared by every provider."""
+    requests, a 5xx, unreachable, or no longer serving us (a key it rejects,
+    401/403; a model "not found for account", 404; a retired model, 410).
+    A spent budget is not one of them: the budget is per workspace, shared by
+    every provider."""
     if isinstance(exc, BudgetExceeded):
         return False
     if isinstance(exc, LlmUnavailable | APIConnectionError):
         return True
     if isinstance(exc, APIStatusError):
-        return exc.status_code == 429 or exc.status_code >= 500
+        return exc.status_code in PROVIDER_GONE or exc.status_code == 429 or exc.status_code >= 500
     return isinstance(exc, httpx.TimeoutException | httpx.NetworkError)
 
 
