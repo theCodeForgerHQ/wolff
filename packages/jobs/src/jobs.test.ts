@@ -294,6 +294,55 @@ describe.skipIf(!url)('job processors (Postgres)', () => {
     ]);
   });
 
+  it('sends the receipt and the webhook as soon as the payment is processed, without a sweep', async () => {
+    const created = await invoice();
+    const intent = `pi_${run}_${n}`;
+    await base.payment.create({
+      data: {
+        workspaceId,
+        invoiceId: created.id,
+        amount: 250,
+        currency: 'usd',
+        paymentMethod: 'card',
+        stripePaymentIntentId: intent,
+      },
+    });
+    await createWebhookEndpoint(
+      { db, workspaceId },
+      { url: 'https://hooks.example.com/fast', events: ['invoice.paid'] },
+      { requireHttps: true }
+    );
+    const recorded = await recordProviderEvent(db, {
+      provider: 'stripe',
+      eventId: `evt_${run}_${n}`,
+      type: 'payment_intent.succeeded',
+      payload: {
+        type: 'payment_intent.succeeded',
+        data: { object: { id: intent, latest_charge: null } },
+      },
+      outbox: false,
+    });
+    emails.length = 0;
+    posts.length = 0;
+    // The rows this writes are stamped with the real time; production's
+    // clock is real too, so relay with it rather than the suite's fixed NOW.
+    ctx.now = () => new Date();
+
+    // Only the reconcile job, as the webhook route pushes it; nothing else
+    // relays. The receipt used to wait for the hourly sweep.
+    await dispatcher.dispatch({
+      type: 'payments.reconcile',
+      payload: { eventRowId: recorded.id },
+      jobId: `reconcile:${recorded.id}`,
+    });
+    await dispatcher.drain();
+
+    expect(emails.map((e) => e.subject)).toEqual([
+      `Payment received for invoice ${created.invoiceNumber}`,
+    ]);
+    expect(posts.map((p) => p.url)).toEqual(['https://hooks.example.com/fast']);
+  });
+
   it('generates one invoice per parent and period when the recurring job runs twice', async () => {
     const parent = await invoice({
       isRecurring: true,
