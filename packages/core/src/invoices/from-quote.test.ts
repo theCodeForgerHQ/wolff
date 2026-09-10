@@ -109,6 +109,30 @@ describe.skipIf(!url)('createInvoiceFromQuote (Postgres)', () => {
     await base.$disconnect();
   });
 
+  it("gives the invoice the workspace's invoice terms, not the quote's", async () => {
+    const withDefaults = await workspace();
+    await base.workspace.update({
+      where: { id: withDefaults.workspaceId },
+      data: { settings: { invoiceDefaults: { defaultTerms: 'Payment due within 30 days.' } } },
+    });
+    const bare = await workspace();
+    const quoteTerms = { terms: 'This quote is valid for 30 days.' };
+
+    const a = await createInvoiceFromQuote(
+      db,
+      withDefaults.workspaceId,
+      await quote(withDefaults, [{}], quoteTerms)
+    );
+    const b = await createInvoiceFromQuote(
+      db,
+      bare.workspaceId,
+      await quote(bare, [{}], quoteTerms)
+    );
+
+    expect((await load(a.invoice!.id)).terms).toBe('Payment due within 30 days.');
+    expect((await load(b.invoice!.id)).terms).toBeNull();
+  });
+
   it('issues the invoice of a non-GST quote with its totals and lines, once', async () => {
     const ws = await workspace();
     const quoteId = await quote(ws, [{}, {}]);

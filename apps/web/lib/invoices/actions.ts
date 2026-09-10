@@ -13,6 +13,7 @@ import {
   type GstInvoiceLineInput,
   type PricedGstInvoice,
   type StoredGstLine,
+  defaultInvoiceTerms,
 } from '@wolff/core/invoices';
 import { CoreError } from '@wolff/core/errors';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
@@ -331,6 +332,11 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
     return { success: false, error: 'Quote not found' };
   }
 
+  const workspaceSettings = await prisma.workspace.findUnique({
+    where: { id: workspace.id },
+    select: { settings: true },
+  });
+
   // Only accepted or sent quotes can be converted to invoices
   const convertibleStatuses = ['accepted', 'sent', 'viewed'];
   if (!convertibleStatuses.includes(quote.status)) {
@@ -457,7 +463,7 @@ export async function createInvoiceFromQuote(quoteId: string, options?: { dueDay
                 amountDue: lineItemSubtotal - discountAmount + toNumber(quote.taxTotal),
               }),
           notes: quote.notes,
-          terms: quote.terms,
+          terms: defaultInvoiceTerms(workspaceSettings?.settings),
           settings: {} as unknown as Prisma.InputJsonValue,
           lineItems: {
             create: gst

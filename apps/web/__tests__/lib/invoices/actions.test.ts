@@ -63,6 +63,8 @@ vi.mock('@wolff/core/invoices', () => ({
   assertGstSupported: vi.fn(),
   assertReadyToIssue: vi.fn().mockResolvedValue(undefined),
   priceGstInvoice: vi.fn(),
+  defaultInvoiceTerms: (settings: { invoiceDefaults?: { defaultTerms?: string } } | null) =>
+    settings?.invoiceDefaults?.defaultTerms || null,
 }));
 vi.mock('@wolff/database', () => ({
   withTenantGuard: (client: unknown) => client,
