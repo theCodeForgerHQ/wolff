@@ -20,6 +20,7 @@ import { toNumber, getBaseUrl, formatCurrency } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import { applyDiscount } from '@wolff/core/pricing';
+import { senderDetails } from '@/lib/email/sender';
 
 /**
  * Bug #134: Safely parse quote settings from JSON with runtime validation.
@@ -1047,14 +1048,7 @@ export async function sendQuote(quoteId: string, emailOptions?: SendEmailOptions
       type: 'quote_sent',
       to: emailRecipients,
       variables: {
-        businessName: workspace.name,
-        businessEmail:
-          (
-            await prisma.businessProfile.findUnique({
-              where: { workspaceId: workspace.id },
-              select: { email: true },
-            })
-          )?.email || '',
+        ...(await senderDetails(workspace)),
         clientName: quote.client.name,
         clientEmail: quote.client.email,
         quoteName: quote.title || `Quote ${quote.quoteNumber}`,

@@ -28,6 +28,7 @@ import { checkRateLimit, strictRateLimitOptions } from '@/lib/rate-limit';
 import { computeContractDocumentHash, verifyDocumentHash } from '@/lib/signing/document-hash';
 import { logger } from '@/lib/logger';
 import { requestAiIndexing } from '@wolff/core/outbox';
+import { senderName } from '@wolff/core/email';
 
 // HTML escape for safe email template interpolation
 function escapeHtml(str: string): string {
@@ -663,7 +664,7 @@ export async function sendContractInstance(
     // Get business email from profile
     const businessProfile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
-      select: { email: true },
+      select: { email: true, businessName: true },
     });
 
     try {
@@ -671,7 +672,7 @@ export async function sendContractInstance(
         type: 'contract_sent',
         to: emailRecipients,
         variables: {
-          businessName: workspace.name,
+          businessName: senderName({ name: workspace.name, businessProfile }),
           businessEmail: businessProfile?.email || undefined,
           clientName: instance.client?.name || 'Client',
           clientEmail: instance.client.email,

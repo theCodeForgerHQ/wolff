@@ -4,7 +4,7 @@ import { PdfPageError } from '../ports/pdf';
 import { InvalidJobError } from '../run';
 import { WEBHOOK_RETRY_DELAYS_MS } from '../retry-delays';
 import { createHash } from 'node:crypto';
-import { formatMoney, renderPaymentReceived } from '@wolff/core/email';
+import { formatMoney, renderPaymentReceived, senderName } from '@wolff/core/email';
 import {
   findDueRecurringInvoices,
   generateRecurringInvoice,
@@ -158,7 +158,7 @@ const sendPaymentReceipt: Processor<'email.payment_received'> = async (ctx, job)
   const rendered = renderPaymentReceived({
     clientName: invoice.client.name,
     invoiceNumber: invoice.invoiceNumber,
-    businessName: invoice.workspace.businessProfile?.businessName || invoice.workspace.name,
+    businessName: senderName(invoice.workspace),
     amount: formatMoney(Number(payment.amount), invoice.currency),
     receiptUrl: payment.stripeReceiptUrl,
   });

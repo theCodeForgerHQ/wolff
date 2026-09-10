@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma, type Prisma } from '@wolff/database';
 import { requestPdfRender } from '@wolff/core/outbox';
+import { senderDetails } from '@/lib/email/sender';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 import type { InvoiceStatus } from './types';
 import { sendTemplatedEmail } from '@/lib/email/actions';
@@ -194,14 +195,7 @@ export async function sendInvoice(invoiceId: string, emailOptions?: SendEmailOpt
       type: 'invoice_sent',
       to: emailRecipients,
       variables: {
-        businessName: workspace.name,
-        businessEmail:
-          (
-            await prisma.businessProfile.findUnique({
-              where: { workspaceId: workspace.id },
-              select: { email: true },
-            })
-          )?.email || '',
+        ...(await senderDetails(workspace)),
         clientName: invoice.client.name,
         clientEmail: invoice.client.email,
         invoiceNumber: invoice.invoiceNumber,

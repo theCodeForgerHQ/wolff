@@ -21,6 +21,7 @@ import type { PaymentIntentResult } from './types';
 import { domainEvents } from '@/lib/events/emitter';
 import { logger } from '@/lib/logger';
 import { fromMinorUnits, toMinorUnits } from '@wolff/core/payments';
+import { senderName } from '@wolff/core/email';
 
 const PAYMENT_ALREADY_RECEIVED =
   'We have already received a payment for this invoice. It will show as paid shortly.';
@@ -312,7 +313,9 @@ export async function processPaymentWebhook(
         invoice: {
           include: {
             client: { select: { name: true, email: true } },
-            workspace: { select: { name: true } },
+            workspace: {
+              select: { name: true, businessProfile: { select: { businessName: true } } },
+            },
           },
         },
       },
@@ -402,7 +405,7 @@ export async function processPaymentWebhook(
         to: payment.invoice.client.email,
         clientName: payment.invoice.client.name,
         invoiceNumber: payment.invoice.invoiceNumber,
-        businessName: payment.invoice.workspace.name,
+        businessName: senderName(payment.invoice.workspace),
         amount: formatCurrency(paymentAmount, payment.invoice.currency),
         receiptUrl: receiptUrl || undefined,
         rateLimitKey: `workspace:${payment.invoice.workspaceId}`,
