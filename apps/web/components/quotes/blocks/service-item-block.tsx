@@ -3,6 +3,8 @@
 import { useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import type { ServiceItemBlock } from '@/lib/quotes/types';
+
+type ServiceItemContent = ServiceItemBlock['content'];
 import { useQuoteBuilderStore } from '@/lib/stores/quote-builder-store';
 import { Input } from '@/components/ui/input';
 
@@ -36,7 +38,7 @@ export function ServiceItemBlockContent({ block }: ServiceItemBlockContentProps)
   // Bug #74: Debounce updateBlock calls to avoid excessive store updates
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const handleChange = useCallback(
-    (field: keyof typeof block.content, value: string | number | null) => {
+    (field: keyof ServiceItemContent, value: string | number | null) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         updateBlock(block.id, { [field]: value });

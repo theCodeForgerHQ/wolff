@@ -42,7 +42,6 @@ function mount(target: HTMLElement, options: EmbedOptions): { unmount: () => voi
   const appUrl = (options.appUrl ?? 'http://localhost:3000').trim();
 
   if (!publishableKey) {
-    // eslint-disable-next-line no-console
     console.error('[WolffWidget] publishableKey is required');
     return null;
   }
@@ -93,7 +92,6 @@ export function init(options: EmbedOptions = {}): void {
   const targets = findTargets(mode);
 
   if (targets.length === 0) {
-    // eslint-disable-next-line no-console
     console.warn(`[WolffWidget] no target elements found for mode "${mode}"`);
     return;
   }

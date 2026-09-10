@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   DndContext,
@@ -182,9 +183,9 @@ export default function EditQuoteBuilderPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">{error}</p>
-          <a href="/quotes" className="text-primary hover:underline">
+          <Link href="/quotes" className="text-primary hover:underline">
             Back to Quotes
-          </a>
+          </Link>
         </div>
       </div>
     );

@@ -49,6 +49,8 @@ export default function DashboardError({
         </CardContent>
         <CardFooter className="flex justify-center gap-2">
           <Button variant="outline" asChild>
+            {/* A full reload, so the page that crashed starts clean. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/">
               <Home className="mr-2 h-4 w-4" />
               Go Home
