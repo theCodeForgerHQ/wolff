@@ -1,5 +1,13 @@
 # Quote-to-cash for agencies and freelancers
 
+![Next.js](https://img.shields.io/badge/web-Next.js_16_·_React_19-15212e)
+![Express](https://img.shields.io/badge/api-Express_5_·_OpenAPI_3-3b6ea5)
+![FastAPI](https://img.shields.io/badge/ai-FastAPI_·_Python_3.12-2f8f4e)
+![Postgres](https://img.shields.io/badge/data-Postgres_17_·_pgvector-336791)
+![Tests](https://img.shields.io/badge/tests-2,800%2B_passing-2e7d32)
+![Cost](https://img.shields.io/badge/hosting-%240_free_tiers-607d8b)
+![Licence](https://img.shields.io/badge/licence-AGPL--3.0-c0562f)
+
 Lead → deal → quote → e-signature → GST invoice → payment (Stripe or Razorpay) →
 reports, with an AI assistant that answers questions over your own documents,
 drafts quotes, and can be driven from any MCP client.
@@ -14,9 +22,45 @@ comes with its caveats.
 **Who it is for:** small agencies and freelancers, in India and elsewhere, who
 quote, invoice and get paid, and want to own their data.
 
-- [Architecture](#architecture) · [Features](#features) · [Tech stack](#tech-stack)
-- [How it's built](#how-its-built) · [Measured](#measured) · [Quick start](#quick-start)
-- [Tests and CI](#tests-and-ci) · [Known limitations](#known-limitations) · [Credits and licence](#credits-and-licence)
+**Live:**
+
+| What                            | Where                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------- |
+| Dashboard and client portal     | https://wolff-web.vercel.app (demo access on request; the deployment is protected) |
+| REST API reference (Scalar)     | https://wolff-api.vercel.app/docs                                                  |
+| REST API reference (Swagger UI) | https://wolff-api.vercel.app/swagger                                               |
+| OpenAPI 3 document              | https://wolff-api.vercel.app/openapi.json                                          |
+| API health                      | https://wolff-api.vercel.app/healthz and `/readyz`                                 |
+
+![Dashboard](docs/images/screenshots/dashboard.png)
+
+## Contents
+
+1. [Screenshots](#screenshots)
+2. [Architecture](#architecture)
+3. [A payment, end to end](#a-payment-end-to-end)
+4. [Features](#features)
+5. [Tech stack](#tech-stack)
+6. [Project structure](#project-structure)
+7. [API reference](#api-reference)
+8. [How it's built](#how-its-built)
+9. [Measured](#measured)
+10. [Quick start](#quick-start)
+11. [Tests and CI](#tests-and-ci)
+12. [Deployment](#deployment)
+13. [Security](#security)
+14. [Known limitations](#known-limitations)
+15. [Credits and licence](#credits-and-licence)
+
+## Screenshots
+
+| Quotes                                        | Invoices                                          |
+| --------------------------------------------- | ------------------------------------------------- |
+| ![Quotes](docs/images/screenshots/quotes.png) | ![Invoices](docs/images/screenshots/invoices.png) |
+
+| API reference (Swagger UI)                             | Quote builder                                   |
+| ------------------------------------------------------ | ----------------------------------------------- |
+| ![Swagger UI](docs/images/screenshots/api-swagger.png) | ![Quote builder](docs/images/quote-builder.png) |
 
 ## Architecture
 
@@ -74,6 +118,36 @@ Why it is split this way:
 - **The hosted demo costs $0 and cannot be billed**: card-free free tiers only
   ([ADR 0001](docs/adr/0001-free-stack-instead-of-aws.md)).
 
+## A payment, end to end
+
+What happens between a client clicking Pay and the receipt landing in their inbox.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor C as Client
+  participant P as Portal (web)
+  participant S as Stripe / Razorpay
+  participant A as API
+  participant DB as Postgres
+  participant Q as QStash
+  participant E as Email (Resend)
+  C->>P: Opens the invoice link, clicks Pay
+  P->>S: Creates a checkout session
+  C->>S: Pays
+  S->>A: Signed webhook (raw body checked)
+  A->>DB: Stores the provider event once (idempotent)
+  A->>DB: Outbox row: reconcile payment
+  A->>Q: Relays the job
+  Q->>A: Signed POST /jobs/run/reconcile-payment
+  A->>DB: Records the payment, marks the invoice paid, adds outbox rows
+  A->>Q: Relays the receipt and webhook jobs right away
+  Q->>A: send-email, deliver-webhook
+  A->>E: Receipt to the client
+  A-->>C: Signed outbound webhook to the agency's endpoint
+  Note over A,DB: An hourly sweep re-relays anything a crash left behind
+```
+
 ## Features
 
 | Area                | What is there                                                                                                                                                                                                                       |
@@ -103,6 +177,48 @@ Why it is split this way:
 | Ops          | Vercel, Neon, Supabase Storage, Upstash, Redis Cloud, Sentry, UptimeRobot     |
 
 TypeScript is pinned at 5.9.3, Node at 24 (`.nvmrc`), pnpm at 9.15.0.
+
+## Project structure
+
+```text
+.
+├── apps
+│   ├── web          Next.js 16: dashboard, client portal, auth, server actions
+│   ├── api          Express 5: /v1 REST, webhooks in and out, OpenAPI, /jobs/run/:type
+│   └── widget       embeddable quote request widget
+├── packages
+│   ├── core         domain logic shared by web, api and jobs (quotes, invoices, GST, CRM, automations)
+│   ├── database     Prisma 7 schema, migrations and seeds (owns the public schema)
+│   ├── jobs         job processors: outbox relay, email, PDFs, payments, webhooks, backups, AI indexing
+│   ├── contracts    Zod schemas shared by the API and its OpenAPI document
+│   └── types, ui, utils
+├── services
+│   └── ai           FastAPI: RAG over pgvector, quote agent, MCP server, evals (Alembic owns the ai schema)
+├── infra            database bootstrap SQL and roles
+├── scripts          deploy.sh (git archive, deploy, smoke test, automatic rollback)
+├── docs             phase write-ups, ADRs 0001-0008, runbook, free-tier notes
+└── tests            manual regression test cases
+```
+
+## API reference
+
+The public API is described by one OpenAPI 3 document, generated from the
+same Zod schemas the routes validate with, so the docs cannot drift from the
+code.
+
+- **Swagger UI:** [`/swagger`](https://wolff-api.vercel.app/swagger), try
+  requests straight from the browser with an API key.
+- **Scalar:** [`/docs`](https://wolff-api.vercel.app/docs), the same document
+  with code samples.
+- **Raw document:** [`/openapi.json`](https://wolff-api.vercel.app/openapi.json),
+  for client generators and Postman.
+
+Every `/v1` route takes a workspace API key (`Authorization: Bearer ...`) with
+scopes, honours `Idempotency-Key` on writes, and returns errors in one envelope.
+Covered: clients, quotes, invoices, payment links, leads, pipelines, deals,
+reports (revenue, ageing, GST summary, pipeline), and webhook endpoints with
+delivery history and retries. Locally the API runs on port 4000 with the same
+three pages.
 
 ## How it's built
 
@@ -293,18 +409,19 @@ unpacked). About 3.5 minutes in all, on a fast connection.
 
 | Suite                                               | Tests                           | Line coverage                                                                         |
 | --------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `apps/web` (Vitest)                                 | 1,264                           | 15.4% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
-| `apps/api` (Vitest, Postgres, Testcontainers)       | 465                             | 90.5%                                                                                 |
-| `packages/core`                                     | 360                             | 93.4%                                                                                 |
-| `packages/jobs` (real Redis and S3 containers)      | 117 + 1 skipped                 | 92.8%                                                                                 |
-| `packages/database`                                 | 42                              | 88.9%                                                                                 |
+| `apps/web` (Vitest)                                 | 1,381                           | 15.4% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
+| `apps/api` (Vitest, Postgres, Testcontainers)       | 499                             | 90.5%                                                                                 |
+| `packages/core`                                     | 406                             | 93.4%                                                                                 |
+| `packages/jobs` (real Redis and S3 containers)      | 142                             | 92.8%                                                                                 |
+| `packages/database`                                 | 62                              | 88.9%                                                                                 |
 | `packages/contracts`                                | 18                              | 13.9% (its schemas are exercised by the api tests, which do not count here)           |
 | `apps/widget`                                       | 12                              | 86.3%                                                                                 |
-| `services/ai` (pytest)                              | 234 + 1 skipped                 | 94% statements                                                                        |
+| `services/ai` (pytest)                              | 255                             | 94% statements                                                                        |
 | E2E (Playwright: flows, product, widget, assistant) | 51                              | Chromium, Firefox and WebKit                                                          |
 | Visual regression                                   | 10 pages × 3 widths (30 images) | darwin and linux baselines                                                            |
 
-Coverage counts every source file, not just the ones a test imports. There are
+Test counts are from the current release. Coverage was last measured at the
+previous release and counts every source file, not just the ones a test imports. There are
 no coverage badges yet: badge services need the public repository and a CI run.
 Commands:
 
@@ -327,6 +444,45 @@ CI is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (lint,
 type-check, unit, migrations, AI, Schemathesis, build, E2E and visual). It has
 not run on GitHub yet, because the repository has not been published; every
 job was reproduced locally.
+
+## Deployment
+
+Three Vercel projects (web, api, ai) on the Hobby plan, Neon Postgres, QStash
+for jobs and schedules, Supabase Storage for PDFs and backups. Nothing has a
+card on file, so nothing can be billed.
+
+```bash
+scripts/deploy.sh HEAD api        # or web, ai, or several
+```
+
+The script deploys from a clean `git archive` of the commit (never the working
+tree), runs smoke tests against the new deployment, and only then moves the
+production alias. If a smoke test fails it rolls back on its own; a
+deliberately broken deploy was caught and reverted in 5.8 s. Environment
+variables live in Vercel and in a secrets manager; none are in the
+repository. Step-by-step operations, including restoring a backup, are in
+[docs/runbook.md](docs/runbook.md).
+
+## Security
+
+- **Auth:** Auth.js sessions for the dashboard; scoped, hashed API keys for
+  `/v1`; one-time codes before a client signs a quote; signed service JWTs
+  between web, api and ai.
+- **Tenancy:** every query is scoped to a workspace; the AI service reads
+  through a read-only Postgres role and is tested for cross-workspace leaks
+  (0 found).
+- **Inbound webhooks:** Stripe and Razorpay signatures are checked over the raw
+  body, and each event is processed once.
+- **Outbound webhooks:** signed with a per-endpoint secret and retried with
+  backoff.
+- **Abuse:** rate limits on Redis with an in-memory fallback, a failed-auth
+  limiter, a 1 s cap on waiting for Redis.
+- **Headers:** a per-request nonce CSP on the web app, a strict CSP on the API
+  (the two docs pages get a CDN exception), HSTS, `nosniff`, frame denial, and
+  `no-referrer` on portal links.
+- **Secrets:** none in git; errors are redacted before they are logged.
+
+Report a vulnerability as described in [SECURITY.md](SECURITY.md).
 
 ## Known limitations
 
