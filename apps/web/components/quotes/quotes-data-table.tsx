@@ -154,7 +154,9 @@ export function QuotesDataTable({ data: initialData }: QuotesDataTableProps) {
     const url = `${window.location.origin}/quotes/${quote.id}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied — share the portal link from the quote detail page');
+      toast.success(
+        'Link copied. To share it with your client, use the portal link on the quote page.'
+      );
     } catch {
       toast.error('Failed to copy link');
     }

@@ -26,11 +26,11 @@ export function DemoBanner({ className }: DemoBannerProps) {
         <div className="flex items-center justify-between gap-4 py-2 text-sm">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span className="font-medium">Demo Mode</span>
+            <span className="font-medium">Demo Mode.</span>
             <span className="hidden sm:inline">
-              &mdash; Data resets daily. Create an account to keep your work.
+              Data resets daily. Create an account to keep your work.
             </span>
-            <span className="sm:hidden">&mdash; Data resets daily</span>
+            <span className="sm:hidden">Data resets daily.</span>
           </div>
 
           <div className="flex items-center gap-2">

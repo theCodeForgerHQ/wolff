@@ -762,7 +762,7 @@ export async function signContract(
         select: { email: true },
       });
       if (!client?.email) {
-        throw new Error('Could not verify identity — client email not found');
+        throw new Error('Could not verify identity: client email not found');
       }
       const otpResult = await verifySigningOtp(otpKey, input.otpCode, client.email);
       if (!otpResult.valid) {

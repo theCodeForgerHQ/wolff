@@ -60,7 +60,7 @@ export function IntegrationsManager({ initialData }: IntegrationsManagerProps) {
           <CardTitle>Automation Tools</CardTitle>
           <CardDescription>
             Connect Wolff to thousands of apps using these automation platforms. All of them work
-            through webhooks — configure a webhook first, then use the webhook URL as a trigger in
+            through webhooks. Configure a webhook first, then use the webhook URL as a trigger in
             your automation tool.
           </CardDescription>
         </CardHeader>

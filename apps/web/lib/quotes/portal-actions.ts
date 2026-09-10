@@ -371,7 +371,7 @@ export async function acceptQuote(data: {
 
       if (data.otpCode) {
         if (!quoteForOtp.client?.email) {
-          return { success: false, error: 'Could not verify identity — client email not found' };
+          return { success: false, error: 'Could not verify identity: client email not found' };
         }
         const otpResult = await verifySigningOtp(otpKey, data.otpCode, quoteForOtp.client.email);
         if (!otpResult.valid) {
