@@ -31,6 +31,7 @@ from pydantic import ValidationError
 
 from app.agent import queries
 from app.agent.api_client import ApiError, ApiUnavailable
+from app.agent.errors import DraftError
 from app.agent.schemas import QuoteDraft
 from app.auth import Caller
 from app.budget import cost, metered
@@ -44,12 +45,6 @@ from app.services import Services
 MAX_TOOL_ITERATIONS = 8
 WALL_CLOCK_SECONDS = 60
 DEFAULT_GST_RATE = 18.0
-
-
-class DraftError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
 
 
 @dataclass

@@ -6,10 +6,9 @@ import math
 import os
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import httpx2 as httpx
-from langchain_openai import ChatOpenAI
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI
 from pydantic import SecretStr
 
@@ -17,6 +16,9 @@ from app.budget import BudgetExceeded
 from app.llm.fake import FakeOpenAITransport
 from app.llm.providers import ProviderProfile
 from app.llm.transport import DailyCounter, LlmUnavailable, RateLimitedTransport, UsageGate
+
+if TYPE_CHECKING:
+    from langchain_openai import ChatOpenAI
 
 T = TypeVar("T")
 
@@ -100,6 +102,10 @@ class LlmClients:
 
     def chat_model(self, *, max_tokens: int | None = None, **kwargs: Any) -> ChatOpenAI:
         """A LangChain chat model on the shared transport, SDK retries off."""
+        # Imported here: LangChain costs about a second of CPU on a cold start,
+        # and health checks and search never build a chat model.
+        from langchain_openai import ChatOpenAI
+
         return ChatOpenAI(
             model=self.profile.chat_model,
             base_url=self.profile.base_url,

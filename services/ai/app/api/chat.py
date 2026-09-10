@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.agent.chat import run_chat
 from app.api.deps import require_service, services
 from app.auth import Caller
 from app.budget import BudgetExceeded
@@ -42,6 +41,10 @@ async def chat_stream(
     caller: Annotated[Caller, Depends(web_user)],
     svc: Annotated[Services, Depends(services)],
 ) -> StreamingResponse:
+    # Imported here: LangChain costs about a second of CPU on every cold
+    # start, and most invocations (health checks, search) never need it.
+    from app.agent.chat import run_chat
+
     async def events() -> AsyncIterator[str]:
         try:
             async for item in run_chat(svc, caller, body.message, body.session_id):
