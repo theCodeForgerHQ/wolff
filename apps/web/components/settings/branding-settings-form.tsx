@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -141,8 +141,10 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
       country: businessData?.address?.country || '',
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control: form.control });
 
-  const accentColor = form.watch('accentColor');
+  const accentColor = watched.accentColor;
 
   // Low #47: Revoke old blob URL before creating new one to prevent memory leak
   const handleLogoUpload = (type: 'light' | 'dark') => {
@@ -238,6 +240,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
               >
                 {lightLogo ? (
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo preview; next/image would need every storage host allow-listed and spends the image quota */}
                     <img
                       src={lightLogo}
                       alt="Light logo"
@@ -271,6 +274,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
               >
                 {darkLogo ? (
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo preview; next/image would need every storage host allow-listed and spends the image quota */}
                     <img
                       src={darkLogo}
                       alt="Dark logo"
@@ -417,7 +421,7 @@ export function BrandingSettingsForm({ initialData, businessData }: BrandingSett
             <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
               <Select
-                value={form.watch('country') || ''}
+                value={watched.country || ''}
                 onValueChange={(value) => form.setValue('country', value)}
               >
                 <SelectTrigger>

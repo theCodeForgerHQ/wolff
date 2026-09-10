@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -40,12 +40,14 @@ export function RegisterForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<z.input<typeof registerSchema>, unknown, RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control });
 
   async function onSubmit(data: RegisterFormData) {
     setIsLoading(true);
@@ -153,7 +155,7 @@ export function RegisterForm() {
             <Checkbox
               id="termsAccepted"
               disabled={isLoading}
-              checked={watch('termsAccepted')}
+              checked={watched.termsAccepted}
               onCheckedChange={(checked) => {
                 if (checked === true) {
                   setValue('termsAccepted', true, { shouldValidate: true });

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
@@ -68,7 +68,7 @@ export function CreateContractForm({
   const {
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CreateContractFormData>({
     resolver: zodResolver(createContractSchema),
@@ -78,9 +78,11 @@ export function CreateContractForm({
       quoteId: preselectedQuoteId || '',
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control });
 
-  const selectedContractId = watch('contractId');
-  const selectedClientId = watch('clientId');
+  const selectedContractId = watched.contractId;
+  const selectedClientId = watched.clientId;
 
   const handleTemplateChange = (templateId: string) => {
     const template = templates.find((t) => t.id === templateId);
@@ -176,7 +178,7 @@ export function CreateContractForm({
           <div className="space-y-2">
             <Label htmlFor="quote">Related Quote (Optional)</Label>
             <Select
-              value={watch('quoteId') || 'none'}
+              value={watched.quoteId || 'none'}
               onValueChange={(value) => setValue('quoteId', value === 'none' ? '' : value)}
             >
               <SelectTrigger id="quote">

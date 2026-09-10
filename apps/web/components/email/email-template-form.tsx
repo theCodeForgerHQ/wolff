@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Eye } from 'lucide-react';
@@ -56,7 +56,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<EmailTemplateFormData>({
@@ -70,10 +70,17 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
       isDefault: template?.isDefault ?? false,
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control });
 
-  const selectedType = watch('type') as EmailTemplateType;
-  const body = watch('body');
-  const subject = watch('subject');
+  const selectedType = watched.type as EmailTemplateType;
+  const body = watched.body ?? '';
+  const subject = watched.subject ?? '';
+  // Sample dates for the preview, fixed once (Date.now is impure in render).
+  const [sampleDates] = useState(() => ({
+    validUntil: new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-US'),
+    dueDate: new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US'),
+  }));
 
   const loadDefaultTemplate = () => {
     const defaultTemplate = DEFAULT_TEMPLATES[selectedType];
@@ -118,17 +125,11 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
     .replace(/{{quoteNumber}}/g, 'QT-0001')
     .replace(/{{quoteUrl}}/g, '#')
     .replace(/{{quoteTotal}}/g, '$5,000.00')
-    .replace(
-      /{{quoteValidUntil}}/g,
-      new Date(Date.now() + 30 * 86400000).toLocaleDateString('en-US')
-    )
+    .replace(/{{quoteValidUntil}}/g, sampleDates.validUntil)
     .replace(/{{invoiceNumber}}/g, 'INV-0001')
     .replace(/{{invoiceUrl}}/g, '#')
     .replace(/{{invoiceTotal}}/g, '$5,000.00')
-    .replace(
-      /{{invoiceDueDate}}/g,
-      new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US')
-    )
+    .replace(/{{invoiceDueDate}}/g, sampleDates.dueDate)
     .replace(/{{amountPaid}}/g, '$5,000.00')
     .replace(/{{amountDue}}/g, '$5,000.00')
     .replace(/{{daysOverdue}}/g, '7')
@@ -266,7 +267,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
             <div className="flex items-center gap-2">
               <Switch
                 id="isActive"
-                checked={watch('isActive')}
+                checked={watched.isActive}
                 onCheckedChange={(checked) => setValue('isActive', checked)}
               />
               <Label htmlFor="isActive">Active</Label>
@@ -274,7 +275,7 @@ export function EmailTemplateForm({ template }: EmailTemplateFormProps) {
             <div className="flex items-center gap-2">
               <Switch
                 id="isDefault"
-                checked={watch('isDefault')}
+                checked={watched.isDefault}
                 onCheckedChange={(checked) => setValue('isDefault', checked)}
               />
               <Label htmlFor="isDefault">Default for this type</Label>
