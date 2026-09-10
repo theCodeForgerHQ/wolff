@@ -67,6 +67,29 @@ describe('/openapi.json and /docs', () => {
     expect(res.text).toContain('/openapi.json');
   });
 
+  it('lets the docs page load its script from the CDN', async () => {
+    const res = await request(app).get('/docs');
+    const csp = res.headers['content-security-policy'] ?? '';
+
+    expect(csp).toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net/);
+  });
+
+  it('serves Swagger UI over the same document without authentication', async () => {
+    const res = await request(app).get('/swagger');
+    const csp = res.headers['content-security-policy'] ?? '';
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('swagger-ui');
+    expect(res.text).toContain('/openapi.json');
+    expect(csp).toMatch(/script-src [^;]*https:\/\/cdn\.jsdelivr\.net/);
+  });
+
+  it('keeps the strict CSP on the API itself', async () => {
+    const res = await request(app).get('/healthz');
+
+    expect(res.headers['content-security-policy']).toMatch(/script-src 'self';/);
+  });
+
   it('does not serve Prometheus metrics on the public port', async () => {
     const res = await request(app).get('/metrics');
 
