@@ -88,4 +88,21 @@ describe('sendEmail in demo mode', () => {
     expect(text).not.toMatch(/Invoice|Asha|Pay/);
     expect(text).toContain('"redirected":true');
   });
+
+  it('keeps every link in the plain-text version, next to its label', async () => {
+    await sendEmail({
+      to: 'client@acme.test',
+      subject: 'Quote Q-1',
+      html: `<p>Hi Asha,</p>
+        <a href="https://app.test/q/tok123" style="color: white">
+          View Quote
+        </a>
+        <p>Or <a href="https://app.test/help">get help</a>.</p>`,
+    });
+
+    const text = String(sent[0]!.text);
+    expect(text).toContain('View Quote: https://app.test/q/tok123');
+    expect(text).toContain('get help: https://app.test/help');
+    expect(text).not.toContain('<');
+  });
 });
