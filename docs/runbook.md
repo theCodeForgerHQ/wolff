@@ -25,7 +25,7 @@ Load secrets into a shell with `set -a; source secrets.env; set +a` and never
 | Queue store             | Redis Cloud 30 MB                                                                   | only for `worker:drain`                                                              |
 | Rate limits             | Upstash Redis                                                                       | web only                                                                             |
 | Errors                  | Sentry org `ajayaditya` (EU, `de.sentry.io`), projects `wolff-web/api/ai`           | alert workflows from `scripts/sentry-alerts.py`                                      |
-| Uptime                  | UptimeRobot, 3 HTTP monitors, 5 min, email                                          | api `/readyz`, ai `/healthz`, web `/login`                                           |
+| Uptime                  | UptimeRobot, 3 HTTP monitors, 12 h, email                                           | api `/readyz`, ai `/healthz`, web `/login`                                           |
 
 Vercel team id `team_l9AdIJOw3H9DJEt9eMVOJBL8`, scope
 `ajayaditya-codes-projects`; project ids: web
@@ -71,9 +71,10 @@ schedules and monitors. Every step uses a free plan that needs no card.
 9. **Webhooks:** Stripe endpoints to `https://wolff-api.vercel.app/webhooks/stripe`
    and `/webhooks/stripe/connect`; Razorpay to `/webhooks/razorpay/<workspace id>`.
 10. **UptimeRobot:** HTTP(s) monitors on api `/readyz`, ai `/healthz`, web
-    `/login`, 5-minute interval, email alert contact. The free monitor checks
-    with HEAD; every monitored route must answer HEAD (ai answered 405 until
-    `7646fcc`, which UptimeRobot reported as down).
+    `/login`, 12-hour interval (5 minutes cost most of the free Active
+    CPU), email alert contact. The free monitor checks with HEAD; every
+    monitored route must answer HEAD (ai answered 405 until `7646fcc`, which
+    UptimeRobot reported as down).
 11. **Check:** section 7's list, then trigger one backup (section 4.1).
 
 ## 2. Deploy
@@ -364,7 +365,7 @@ no failed deliveries; Sentry has no new unresolved issues.
 | Redis Cloud       | 30 MB                                                                                                                    | drains only                                                                       |
 | Upstash Redis     | free daily command cap                                                                                                   | web rate limits only                                                              |
 | Sentry Developer  | one user, event quota                                                                                                    | alerts email the single owner login                                               |
-| UptimeRobot Free  | 5-minute interval, HEAD checks                                                                                           | alert can lag an outage by up to 5 min                                            |
+| UptimeRobot Free  | checks every 12 h (5 min woke the functions 288 times a day: about 3 h of the 4 h monthly Active CPU)                    | an outage can go unnoticed for up to 12 h                                         |
 | NVIDIA NIM / Groq | ~40 RPM / 30 RPM, 1,000 RPD, 8,000 TPM                                                                                   | see docs/free-tier.md                                                             |
 
 Full list with sources: docs/free-tier.md.
