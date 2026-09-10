@@ -138,6 +138,14 @@ export async function sendEmail(
       options.text ||
       htmlContent
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        // Keep each link: a plain-text reader can't click a stripped button.
+        .replace(
+          /<a\b[^>]*\bhref="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi,
+          (_m, href: string, label: string) => {
+            const text = label.replace(/<[^>]+>/g, '').trim();
+            return text && text !== href ? `${text}: ${href}` : href;
+          }
+        )
         .replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')

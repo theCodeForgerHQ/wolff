@@ -10,7 +10,7 @@ def test_nvidia_nim_is_the_default() -> None:
     assert p.name == "nvidia"
     assert p.base_url == "https://integrate.api.nvidia.com/v1"
     assert p.api_key_env == "NVIDIA_API_KEY"
-    assert p.chat_model == "nvidia/nemotron-3-super-120b-a12b"
+    assert p.chat_model == "nvidia/nemotron-3.5-super-vl-120b-a12b"
     assert p.embed_model == "nvidia/nemotron-3-embed-1b"
     # The model only serves 2048 dimensions and is asymmetric (query/passage).
     assert (p.embed_dimensions, p.embed_input_type) == (2048, True)

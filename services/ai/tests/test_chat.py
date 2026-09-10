@@ -163,7 +163,7 @@ async def test_turns_are_stored_and_a_foreign_session_is_not_reused(
             )
         )
     assert roles == ["user", "assistant", "user", "assistant"]
-    assert runs and runs[0].prompt_version and runs[0].prompt_version.startswith("chat-v1+")
+    assert runs and runs[0].prompt_version and runs[0].prompt_version.startswith("chat-v2+")
     assert any(r.tokens > 0 for r in runs)
 
 
