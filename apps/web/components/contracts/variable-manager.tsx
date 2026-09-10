@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,11 +33,12 @@ export function VariableManager({ variables, onChange }: VariableManagerProps) {
 
   // Stable IDs for React keys — survives key/label edits without remounting
   const [stableIds] = useState<Map<number, string>>(() => new Map());
+  const idPrefix = useId();
   let nextId = 0;
 
   const getStableId = (index: number): string => {
     if (!stableIds.has(index)) {
-      stableIds.set(index, `var_${Date.now()}_${nextId++}`);
+      stableIds.set(index, `var_${idPrefix}_${nextId++}`);
     }
     return stableIds.get(index)!;
   };

@@ -104,7 +104,7 @@ export function getLeadColumns(options: LeadColumnsOptions = {}): ColumnDef<Lead
     {
       accessorKey: 'company',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Company" />,
-      cell: ({ row }) => row.original.company ?? '—',
+      cell: ({ row }) => row.original.company ?? '-',
     },
     {
       accessorKey: 'source',
@@ -132,7 +132,7 @@ export function getLeadColumns(options: LeadColumnsOptions = {}): ColumnDef<Lead
     {
       accessorKey: 'score',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Score" />,
-      cell: ({ row }) => row.original.score ?? '—',
+      cell: ({ row }) => row.original.score ?? '-',
     },
     {
       accessorKey: 'createdAt',

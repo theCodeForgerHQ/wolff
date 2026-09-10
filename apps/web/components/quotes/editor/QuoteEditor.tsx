@@ -316,7 +316,7 @@ export function QuoteEditor() {
                       Accept & Pay Deposit
                     </Button>
                     <p className="text-muted-foreground text-center text-xs">
-                      Preview only — clients will see this button in the portal
+                      Preview only. Clients see this button in the portal.
                     </p>
                   </div>
                 )}

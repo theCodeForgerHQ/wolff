@@ -286,7 +286,7 @@ export function NewInvoiceForm({
   // Form State
   const [invoiceNumber, setInvoiceNumber] = useState(nextInvoiceNumber);
   const [dueDate, setDueDate] = useState<Date | undefined>(
-    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
   );
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);

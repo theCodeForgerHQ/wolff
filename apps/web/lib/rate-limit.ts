@@ -1,6 +1,7 @@
 /**
  * Distributed rate limiter using Upstash Redis.
- * Falls back to in-memory when Redis is not configured (local dev).
+ * Falls back to in-memory when Redis is not configured (local dev), and
+ * per instance while Redis is failing or slow.
  */
 import { logger } from '@/lib/logger';
 
@@ -117,7 +118,7 @@ export async function checkRateLimit(
       return checkInMemory(key, options);
     }
 
-    const result = await upstash.limit(key);
+    const result = await withTimeout(upstash.limit(key), REDIS_TIMEOUT_MS);
     return {
       limited: !result.success,
       limit: result.limit,
@@ -125,9 +126,28 @@ export async function checkRateLimit(
       reset: result.reset,
     };
   } catch (err) {
-    logger.error({ err }, '[rate-limit] Redis error, falling back to in-memory');
+    // An outage would otherwise log (and report) once per request.
+    const now = Date.now();
+    if (now - lastOutageLog >= OUTAGE_LOG_INTERVAL_MS) {
+      lastOutageLog = now;
+      logger.error({ err }, '[rate-limit] Redis error, falling back to in-memory');
+    }
+    // Each instance keeps limiting on its own until Redis is back.
     return checkInMemory(key, options);
   }
+}
+
+/** A slow Redis must not hold up every login and API call behind it. */
+const REDIS_TIMEOUT_MS = 1_000;
+const OUTAGE_LOG_INTERVAL_MS = 60_000;
+let lastOutageLog = -Infinity;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Redis did not answer in ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /**

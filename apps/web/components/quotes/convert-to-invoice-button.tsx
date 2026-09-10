@@ -67,7 +67,8 @@ export function ConvertToInvoiceButton({
   const [sendImmediately, setSendImmediately] = useState(false);
   const [paymentTermDays, setPaymentTermDays] = useState('30');
 
-  const dueDate = new Date(Date.now() + parseInt(paymentTermDays) * 24 * 60 * 60 * 1000);
+  const [openedAt] = useState(() => Date.now());
+  const dueDate = new Date(openedAt + parseInt(paymentTermDays) * 24 * 60 * 60 * 1000);
 
   const handleConvert = async () => {
     setIsConverting(true);

@@ -73,7 +73,7 @@ export default async function BillingSettingsPage() {
                     {/* Low #51: Fixed label — nextBillingDate is not the start date */}
                     {billing?.nextBillingDate
                       ? `Next billing on ${new Date(billing.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                      : 'Free tier — no billing'}
+                      : 'Free tier, no billing'}
                   </p>
                 </div>
               </div>

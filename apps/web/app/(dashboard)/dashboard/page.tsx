@@ -111,7 +111,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{getGreeting()}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {formatToday()} &mdash; Here&apos;s how your business is doing.
+          {formatToday()}. Here&apos;s how your business is doing.
         </p>
       </div>
 

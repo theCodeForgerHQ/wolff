@@ -161,7 +161,7 @@ export function InvoicesDataTable({
   // Copy Link
   const handleCopyLink = useCallback(async (invoice: InvoiceListItem) => {
     if (!invoice.accessToken) {
-      toast.error('No portal link available — send the invoice first');
+      toast.error('No portal link yet. Send the invoice first.');
       return;
     }
     const url = `${window.location.origin}/i/${invoice.accessToken}`;

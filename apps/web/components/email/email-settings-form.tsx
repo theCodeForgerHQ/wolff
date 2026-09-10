@@ -130,7 +130,7 @@ export function EmailSettingsForm() {
                 <p className="text-sm font-medium">Current sending email</p>
                 <p className="text-muted-foreground text-sm">
                   {clientEmail ||
-                    'No email configured — emails will be sent from the default system address.'}
+                    'No email configured, so emails are sent from the default system address.'}
                 </p>
               </div>
             </div>

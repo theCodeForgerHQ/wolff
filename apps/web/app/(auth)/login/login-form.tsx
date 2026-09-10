@@ -58,6 +58,7 @@ export function LoginForm() {
       }
 
       // Full page reload to ensure server picks up the new auth cookie
+      // eslint-disable-next-line react-hooks/immutability -- deliberate hard navigation
       window.location.href = callbackUrl;
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -95,6 +96,7 @@ export function LoginForm() {
       }
 
       // Full page reload to ensure server picks up the new auth cookie
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate hard navigation
       window.location.href = '/dashboard';
     } catch {
       toast.error('Something went wrong. Please try again.');

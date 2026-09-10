@@ -30,6 +30,8 @@ export default function GlobalError({
         {error.digest && <p className="text-muted-foreground text-xs">Error ID: {error.digest}</p>}
         <div className="flex justify-center gap-2 pt-2">
           <Button variant="outline" asChild>
+            {/* A full reload, so the page that crashed starts clean. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/">Go Home</a>
           </Button>
           <Button onClick={reset}>

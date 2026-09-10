@@ -553,9 +553,7 @@ export default function NewContractForm({
                             {selectedTemplate.variables.slice(0, 4).map((v) => (
                               <div key={v.key} className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">{v.label}</span>
-                                <span className="font-medium">
-                                  {variableValues[v.key] || '\u2014'}
-                                </span>
+                                <span className="font-medium">{variableValues[v.key] || '-'}</span>
                               </div>
                             ))}
                           </div>
