@@ -1,3 +1,4 @@
+import { defaultInvoiceTerms } from './terms';
 import { randomBytes } from 'node:crypto';
 import type { Prisma } from '@wolff/database';
 import type { Db, DbTx } from '../context';
@@ -62,6 +63,11 @@ export async function createInvoiceFromQuote(
 
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + (options.dueDays ?? 30));
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { settings: true },
+  });
+  const terms = defaultInvoiceTerms(workspace?.settings);
 
   // The check, the number and the insert share one transaction: a refused
   // or failed insert takes its number back, and a concurrent conversion of
@@ -115,7 +121,7 @@ export async function createInvoiceFromQuote(
               amountDue: quote.total,
             }),
         notes: quote.notes,
-        terms: quote.terms,
+        terms,
         settings: {} as Prisma.InputJsonValue,
         lineItems: {
           create: gst
