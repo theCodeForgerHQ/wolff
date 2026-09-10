@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.agent.quote_agent import DraftError, draft_quote
+from app.agent.errors import DraftError
 from app.api.deps import error, ok, require_service, services
 from app.auth import Caller
 from app.services import Services
@@ -28,6 +28,10 @@ async def create_draft(
     caller: Annotated[Caller, Depends(web_user)],
     svc: Annotated[Services, Depends(services)],
 ) -> dict[str, Any] | JSONResponse:
+    # Imported here: LangChain costs about a second of CPU on every cold
+    # start, and most invocations (health checks, search) never need it.
+    from app.agent.quote_agent import draft_quote
+
     try:
         result = await draft_quote(svc, caller, body.brief, body.deal_id)
     except DraftError as exc:

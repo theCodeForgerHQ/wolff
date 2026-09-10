@@ -24,7 +24,7 @@ from mcp.server.mcpserver.exceptions import ResourceError, ToolError
 
 from app.agent import queries
 from app.agent.api_client import ApiError, ApiUnavailable
-from app.agent.quote_agent import DraftError, draft_quote
+from app.agent.errors import DraftError
 from app.auth import AuthError, Caller, InsufficientScope
 from app.budget import metered
 from app.db.models import AgentRun
@@ -260,6 +260,8 @@ def build_mcp_server(svc: Services, *, fixed_caller: Caller | None = None) -> MC
         """Draft a quote from a brief ("Draft a quote for <client>: ..."). Creates a draft."""
 
         async def work(c: Caller) -> dict[str, Any]:
+            from app.agent.quote_agent import draft_quote  # LangChain, only when drafting
+
             draft = await draft_quote(svc, c, brief, deal_id)
             return {
                 "quote_id": draft.quote_id,
