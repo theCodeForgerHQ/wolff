@@ -24,13 +24,13 @@ quote, invoice and get paid, and want to own their data.
 
 **Live:**
 
-| What                            | Where                                                                              |
-| ------------------------------- | ---------------------------------------------------------------------------------- |
-| Dashboard and client portal     | https://wolff-web.vercel.app (demo access on request; the deployment is protected) |
-| REST API reference (Scalar)     | https://wolff-api.vercel.app/docs                                                  |
-| REST API reference (Swagger UI) | https://wolff-api.vercel.app/swagger                                               |
-| OpenAPI 3 document              | https://wolff-api.vercel.app/openapi.json                                          |
-| API health                      | https://wolff-api.vercel.app/healthz and `/readyz`                                 |
+| What                            | Where                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| Dashboard and client portal     | https://wolff-web.vercel.app, click **Try Demo** (no sign-up; the data resets daily) |
+| REST API reference (Scalar)     | https://wolff-api.vercel.app/docs                                                    |
+| REST API reference (Swagger UI) | https://wolff-api.vercel.app/swagger                                                 |
+| OpenAPI 3 document              | https://wolff-api.vercel.app/openapi.json                                            |
+| API health                      | https://wolff-api.vercel.app/healthz and `/readyz`                                   |
 
 ![Dashboard](docs/images/screenshots/dashboard.png)
 
@@ -385,59 +385,52 @@ figure is a re-score of the same stored answers after the scorer was fixed to
 compare values instead of tokens. The offline model's scores test the pipeline
 around the model, not a model: its schema-valid 1.0 is true by construction.
 
-### Web vitals (field data from the live demo)
+### Web vitals (live demo, 2026-09-10)
 
-**Source: scripted browsing, not users.** The demo is behind Vercel
-authentication and has no real users. A Playwright script (Chromium, desktop
-1440 px and an emulated Pixel 7, signed in as the demo user, 8 dashboard
-pages × 4 rounds, one click and one Tab per page) browsed the deployment of
-2026-08-30 from one machine in India; the app's own `/api/vitals` endpoint
-logged the beacons on Vercel, summarised at p75 with
-`apps/web/lib/observability/web-vitals.ts`. Small samples: one fast machine
-on one network.
+**Source: scripted browsing, not users.** A Playwright script (Chromium,
+desktop 1440 px and an emulated Pixel 7 without CPU throttling, signed in as
+the demo user) opened 8 dashboard pages (dashboard, quotes, invoices,
+clients, leads, deals, automations, settings) 3 times each, with one click
+and one Tab per page, from one machine in India against the us-east-1
+deployment. Values were read in the page with `PerformanceObserver` and
+summarised at p75. Small samples: one fast machine on one network.
 
-| Metric | p75    | Rating | Samples |
-| ------ | ------ | ------ | ------- |
-| LCP    | 856 ms | good   | 27      |
-| INP    | 8 ms   | good   | 16      |
-| CLS    | 0.001  | good   | 21      |
-| FCP    | 856 ms | good   | 27      |
-| FID    | 4 ms   | good   | 21      |
+| Metric | Desktop p75 | Mobile p75 | Rating | Samples |
+| ------ | ----------- | ---------- | ------ | ------- |
+| LCP    | 772 ms      | 600 ms     | good   | 24 + 24 |
+| INP    | 16 ms       | 16 ms      | good   | 24 + 24 |
+| CLS    | 0.001       | 0          | good   | 24 + 24 |
+| FCP    | 772 ms      | 600 ms     | good   | 24 + 24 |
 
-- **LCP equals FCP** because, on most loads, the largest element is painted in
-  the first contentful paint (server-rendered pages without a hero image): in
-  the raw beacons, 24 of the 29 LCP values exactly equal an FCP value (23 of
-  29 in the earlier run below). The two p75s coincide; they are not one
-  metric reported twice.
-- **TTFB is left out:** most samples (about 40 ms) are below the network round
-  trip to the us-east-1 servers, so it does not measure the server here (why
-  was not investigated).
-- Counts differ per metric because a beacon is lost when the script navigates
-  away before it is sent.
-- A run on the previous deployment the same morning (196 samples) gave LCP
-  1,556 ms, INP 48 ms, CLS 0.001 at p75 ([phase-7](docs/phase-7.md)); the
-  difference was not analysed.
+- **LCP equals FCP** because the pages are server-rendered without a hero
+  image: the largest element is painted in the first contentful paint.
+- **INP of 16 ms** is the observer's floor: no interaction took longer.
+- **Mobile is faster than desktop here** only because the emulated phone has
+  a smaller viewport and the same laptop CPU; Lighthouse below throttles the
+  CPU and gives the realistic mobile picture.
+- The earlier release measured LCP 856 ms and INP 8 ms the same way, through
+  the app's own `/api/vitals` beacons ([phase-7](docs/phase-7.md)).
 
-### Lighthouse (live demo, Lighthouse 12, this release)
+### Lighthouse (live demo, Lighthouse 12, 2026-09-10)
 
 | Page       | Form factor | Performance | Accessibility | Best practices | LCP   | TBT    | CLS   |
 | ---------- | ----------- | ----------- | ------------- | -------------- | ----- | ------ | ----- |
-| /login     | mobile      | 81          | 100           | 96             | 3.9 s | 282 ms | 0     |
-| /dashboard | mobile      | 69          | 95            | 96             | 4.3 s | 484 ms | 0.001 |
-| /invoices  | mobile      | 75          | 96            | 96             | 4.5 s | 286 ms | 0.001 |
-| /deals     | mobile      | 72          | 95            | 96             | 5.3 s | 276 ms | 0.001 |
-| /login     | desktop     | 98          | 100           | 96             | 1.1 s | 21 ms  | 0     |
-| /dashboard | desktop     | 88          | 96            | 96             | 1.2 s | 36 ms  | 0.001 |
-| /invoices  | desktop     | 94          | 96            | 96             | 1.4 s | 20 ms  | 0.001 |
-| /deals     | desktop     | 96          | 96            | 96             | 1.0 s | 14 ms  | 0.001 |
+| /login     | mobile      | 72          | 100           | 96             | 5.1 s | 160 ms | 0     |
+| /dashboard | mobile      | 66          | 95            | 100            | 6.2 s | 230 ms | 0     |
+| /invoices  | mobile      | 64          | 96            | 100            | 5.9 s | 350 ms | 0     |
+| /deals     | mobile      | 67          | 95            | 100            | 5.5 s | 300 ms | 0.001 |
+| /login     | desktop     | 96          | 100           | 96             | 1.2 s | 10 ms  | 0     |
+| /dashboard | desktop     | 90          | 96            | 100            | 1.5 s | 0 ms   | 0.001 |
+| /invoices  | desktop     | 94          | 96            | 100            | 1.4 s | 10 ms  | 0.001 |
+| /deals     | desktop     | 96          | 96            | 100            | 1.2 s | 0 ms   | 0.001 |
 
-One run per page from an M1 laptop on a home connection; Lighthouse scores
-move by several points between runs (an earlier run, made while E2E suites
-were using the same CPU, scored mobile 43-53 and is not used). Lighthouse's
-mobile profile (4× CPU slowdown, slow 4G) puts LCP at 3.9-5.3 s: the
-dashboard's JavaScript is the main open front-end performance problem. The
-accessibility points lost are the header's "Beta" badge contrast. SEO is not
-shown: the demo is deliberately not indexable.
+One run per page from an M1 laptop on a home connection, with nothing else
+running; Lighthouse scores move by several points between runs. Lighthouse's
+mobile profile (4× CPU slowdown, slow 4G) puts LCP at 5.1-6.2 s, up from
+3.9-5.3 s in the previous release's single run: the dashboard's JavaScript is
+the main open front-end performance problem. The accessibility points lost
+are the header's "Beta" badge contrast. SEO is not shown: the demo is
+deliberately not indexable.
 
 ### Operations drills (live demo)
 
@@ -520,26 +513,26 @@ unpacked). About 3.5 minutes in all, on a fast connection.
 
 | Suite                                               | Tests                           | Line coverage                                                                         |
 | --------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `apps/web` (Vitest)                                 | 1,381                           | 15.4% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
+| `apps/web` (Vitest)                                 | 1,381 + 7 skipped               | 19.8% (every file under app, components, lib, hooks; the UI is mostly covered by E2E) |
 | `apps/api` (Vitest, Postgres, Testcontainers)       | 499                             | 90.5%                                                                                 |
 | `packages/core`                                     | 406                             | 93.4%                                                                                 |
-| `packages/jobs` (real Redis and S3 containers)      | 142                             | 92.8%                                                                                 |
-| `packages/database`                                 | 62                              | 88.9%                                                                                 |
+| `packages/jobs` (real Redis and S3 containers)      | 142 + 4 skipped                 | 92.5%                                                                                 |
+| `packages/database`                                 | 62                              | 89.4%                                                                                 |
 | `packages/contracts`                                | 18                              | 13.9% (its schemas are exercised by the api tests, which do not count here)           |
 | `apps/widget`                                       | 12                              | 86.3%                                                                                 |
-| `services/ai` (pytest)                              | 255                             | 94% statements                                                                        |
+| `services/ai` (pytest)                              | 256 + 1 skipped                 | 94% statements                                                                        |
 | E2E (Playwright: flows, product, widget, assistant) | 51                              | Chromium, Firefox and WebKit                                                          |
 | Visual regression                                   | 10 pages × 3 widths (30 images) | darwin and linux baselines                                                            |
 
-Test counts are from the current release. Coverage was last measured at the
-previous release and counts every source file, not just the ones a test imports. There are
+Counts and coverage measured 2026-09-10. Coverage counts every source file,
+not just the ones a test imports. There are
 no coverage badges yet: badge services need the public repository and a CI run.
 Commands:
 
 ```bash
 TEST_DATABASE_URL=postgresql://wolff:wolff_dev_only@localhost:5432/wolff_test \
 STRIPE_MOCK_URL=http://localhost:12111 pnpm test       # unit and integration
-pnpm test:coverage -- --concurrency=1                   # same, with coverage
+pnpm exec turbo run test:coverage --concurrency=1       # same, with coverage
 (cd services/ai && uv run pytest --cov=app)             # AI service
 E2E_BROWSER=firefox pnpm --filter @wolff/web exec playwright test -c playwright.flows.config.ts
 ```
@@ -597,7 +590,7 @@ Report a vulnerability as described in [SECURITY.md](SECURITY.md).
 
 ## Known limitations
 
-- **Mobile performance.** Lighthouse mobile LCP is 3.9-5.3 s; the dashboard
+- **Mobile performance.** Lighthouse mobile LCP is 5.1-6.2 s; the dashboard
   ships too much JavaScript for a slow phone.
 - **AI latency.** Free LLM endpoints are slow; quote drafts can exceed the
   60 s limit, and the Groq fallback has about 10 s of headroom.
