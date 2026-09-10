@@ -39,6 +39,7 @@ quote, invoice and get paid, and want to own their data.
 1. [Screenshots](#screenshots)
 2. [Architecture](#architecture)
 3. [A payment, end to end](#a-payment-end-to-end)
+   - [Data model](#data-model) · [Document lifecycle](#document-lifecycle) · [Background jobs](#background-jobs) · [AI assistant](#ai-assistant)
 4. [Features](#features)
 5. [Tech stack](#tech-stack)
 6. [Project structure](#project-structure)
@@ -147,6 +148,116 @@ sequenceDiagram
   A-->>C: Signed outbound webhook to the agency's endpoint
   Note over A,DB: An hourly sweep re-relays anything a crash left behind
 ```
+
+## Data model
+
+The core tables, out of 55. Every row belongs to one workspace, and every
+query is scoped to it.
+
+```mermaid
+erDiagram
+  WORKSPACE ||--o{ CLIENT : has
+  WORKSPACE ||--o{ LEAD : has
+  WORKSPACE ||--o{ PIPELINE : has
+  WORKSPACE ||--o{ API_KEY : issues
+  WORKSPACE ||--o{ WEBHOOK_ENDPOINT : registers
+  WORKSPACE ||--o{ OUTBOX_EVENT : queues
+  PIPELINE ||--o{ STAGE : orders
+  STAGE ||--o{ DEAL : holds
+  LEAD |o--o| DEAL : "converts to"
+  DEAL |o--o| QUOTE : "priced by"
+  CLIENT ||--o{ QUOTE : receives
+  CLIENT ||--o{ INVOICE : receives
+  CLIENT ||--o{ CONTRACT : signs
+  QUOTE ||--|{ QUOTE_LINE_ITEM : lists
+  QUOTE |o--o| INVOICE : "converts to (one)"
+  INVOICE ||--|{ INVOICE_LINE_ITEM : lists
+  INVOICE ||--o{ PAYMENT : "paid by"
+```
+
+## Document lifecycle
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  state Quote {
+    [*] --> draft
+    draft --> sent: send email
+    sent --> viewed: client opens the link
+    viewed --> accepted: e-signature with a one-time code
+    viewed --> declined
+    sent --> expired: past its expiry date
+    viewed --> expired
+    accepted --> converted: invoice created
+  }
+  state Invoice {
+    [*] --> i_draft
+    i_draft --> i_sent: issued (GST invoices only after the Rule 46 check)
+    i_sent --> i_viewed
+    i_viewed --> partial: part payment
+    i_sent --> overdue: nightly job
+    i_viewed --> overdue
+    partial --> paid
+    i_viewed --> paid
+    overdue --> paid
+    i_sent --> voided
+  }
+  converted --> i_draft
+```
+
+`i_` marks the invoice's states where the names repeat.
+
+## Background jobs
+
+Nothing slow or external runs inside a request. The request writes an outbox
+row in the same transaction as its change, so a job is never lost and never
+sent for a change that rolled back.
+
+```mermaid
+flowchart LR
+  R[Request or webhook] -->|same transaction| T[(Change + outbox row)]
+  T --> RL[Relay]
+  RL -->|on Vercel| QS[QStash]
+  RL -->|locally| BQ[BullMQ on Redis]
+  QS -->|signed POST /jobs/run/:type| P[Job processor]
+  BQ --> P
+  P -->|success| D[outbox: done]
+  P -->|error| RT{Attempts left?}
+  RT -->|yes, exponential backoff| P
+  RT -->|no| F[outbox: failed, error reported]
+  P -->|follow-up rows, relayed at once| RL
+  CR[Schedules: hourly tick, nightly reports,<br/>daily AI sweep, weekly backup] --> QS
+  SW[Hourly sweep] -->|re-relays rows a crash left pending| RL
+```
+
+Jobs: PDF rendering, emails, payment reconciliation, outbound webhooks,
+recurring invoices, overdue marking, reminders, automations, AI indexing and
+encrypted backups.
+
+## AI assistant
+
+```mermaid
+flowchart TB
+  U[Question in the dashboard] --> W[web: chat proxy, service JWT]
+  W --> G{Daily budget gate<br/>per workspace}
+  G -->|over budget| X[Polite refusal]
+  G --> A[Tool-calling agent]
+  A -->|numbers| SQL[SQL tools, read-only role:<br/>overdue invoices, ageing, top debtors,<br/>GST summary, leads, deals]
+  A -->|wording, terms, history| S[search_documents]
+  S --> V[(pgvector halfvec, HNSW<br/>workspace filter inside the SQL)]
+  V -->|20 nearest| RR[Re-rank: cosine + full-text + recency]
+  RR -->|best 6, similarity >= 0.15| A
+  A --> L[NVIDIA NIM, Groq fallback<br/>when a provider fails or is gone]
+  L --> ANS[Plain-text answer streamed back,<br/>with sources]
+  subgraph Indexing
+    J[ai.index job] --> LD[Load document] --> SP[Split 800/100] --> H{Changed?}
+    H -->|no| SK[Skip]
+    H -->|yes| EM[Embed] --> V
+  end
+```
+
+The same agent drafts quotes from a short brief, and an MCP server exposes
+these tools to any MCP client, using scoped API keys.
 
 ## Features
 
