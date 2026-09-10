@@ -71,6 +71,30 @@ const JSON_LIMIT = '1mb';
  * long-running server (`server.ts`), the Vercel function (`index.ts`) and the
  * tests.
  */
+const DOCS_CDN = 'https://cdn.jsdelivr.net';
+const SWAGGER_UI = `${DOCS_CDN}/npm/swagger-ui-dist@5.17.14`;
+const DOCS_CSP = {
+  ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+  'script-src': ["'self'", "'unsafe-inline'", DOCS_CDN],
+  'style-src': ["'self'", "'unsafe-inline'", 'https:'],
+  'connect-src': ["'self'", DOCS_CDN],
+};
+const SWAGGER_HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wolff API (Swagger UI)</title>
+<link rel="stylesheet" href="${SWAGGER_UI}/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="${SWAGGER_UI}/swagger-ui-bundle.js"></script>
+<script>
+window.ui = SwaggerUIBundle({ url: '/openapi.json', dom_id: '#swagger-ui', deepLinking: true });
+</script>
+</body>
+</html>`;
+
 export function createApp(deps: AppDeps): Express {
   const { db, config } = deps;
   const logger = deps.logger ?? defaultLogger;
@@ -99,6 +123,13 @@ export function createApp(deps: AppDeps): Express {
   // Public API documentation. No authentication required.
   app.get('/openapi.json', (_req, res) => {
     res.json(generateOpenAPIDocument({ serverUrl: config.PUBLIC_API_URL }));
+  });
+  // The docs pages load their UI from jsDelivr with an inline bootstrap
+  // script, which the API's strict CSP blocks (the page rendered blank).
+  // Only these two pages get the looser policy; they show no user data.
+  app.use(['/docs', '/swagger'], helmet({ contentSecurityPolicy: { directives: DOCS_CSP } }));
+  app.get('/swagger', (_req, res) => {
+    res.type('html').send(SWAGGER_HTML);
   });
   app.use(
     '/docs',
