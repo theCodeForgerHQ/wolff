@@ -262,7 +262,8 @@ export function SendEmailDialog({
     try {
       const emailOptions = {
         recipients: recipients.map((r) => r.email),
-        subject: subject || undefined,
+        // What the dialog shows is what goes out, typed or not.
+        subject: effectiveSubject,
         message: message || undefined,
       };
 
@@ -495,13 +496,7 @@ export function SendEmailDialog({
             <div className="p-4 lg:p-6">
               {/* Subject preview */}
               <div className="bg-muted/50 border-border/40 mb-4 rounded-lg border px-4 py-3">
-                <p className="text-muted-foreground text-sm">
-                  {subject ? (
-                    subject
-                  ) : (
-                    <span className="italic">Your subject preview will appear here...</span>
-                  )}
-                </p>
+                <p className="text-muted-foreground text-sm">{effectiveSubject}</p>
               </div>
 
               {/* Email card */}
