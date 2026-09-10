@@ -31,6 +31,8 @@ export const authConfig: NextAuthConfig = {
         '/i/', // Invoice portal
         '/c/', // Contract portal
         '/invite/',
+        '/terms', // Linked from the sign-up form
+        '/privacy',
       ];
       const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
