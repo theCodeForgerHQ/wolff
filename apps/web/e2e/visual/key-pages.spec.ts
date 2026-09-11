@@ -18,9 +18,7 @@ const volatile = (page: Page): Locator[] => [
   page.locator('time, .recharts-wrapper, [data-sonner-toaster]'),
   page.getByText(/^Good (morning|afternoon|evening)/),
   // The sticky demo banner lands at a different offset in full-page captures on narrow viewports.
-  page
-    .getByText('Demo Mode', { exact: true })
-    .locator('xpath=ancestor::div[contains(@class, "container")]/..'),
+  page.getByRole('complementary', { name: 'Demo mode' }),
   // Unread count: every portal visit in the run adds a notification.
   page.getByRole('button', { name: 'Notifications' }).locator('span'),
   page.getByText(/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, /),

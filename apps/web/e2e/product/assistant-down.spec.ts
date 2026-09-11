@@ -23,7 +23,11 @@ test.describe('with the AI service down', () => {
     await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
 
-    const chat = await request.post('/api/assistant/chat', { data: { message: 'hi' } });
+    const chat = await request.post('/api/assistant/chat', {
+      data: { message: 'hi' },
+      // The route refuses cross-site requests; a browser sends its own origin.
+      headers: { origin: new URL(page.url()).origin },
+    });
     expect(chat.status()).toBe(502);
   });
 });

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import Stripe from 'stripe';
-import { prisma } from '@wolff/database';
+import { demoId, prisma } from '@wolff/database';
 import { E2E_ENV } from '../../playwright.flows.config';
 import { STRIPE_JS_STUB } from './stripe-js-stub';
 
@@ -34,15 +34,17 @@ async function resetFixtures() {
        SELECT (jsonb_populate_record(NULL::quotes, to_jsonb(q) || jsonb_build_object(
          'id', $1::text, 'quote_number', 'Q-E2E1', 'access_token', gen_random_uuid()::text,
          'converted_to_invoice_id', NULL))).*
-       FROM quotes q WHERE q.id = 'demo-quote-4'`,
-    QUOTE_ID
+       FROM quotes q WHERE q.id = $2`,
+    QUOTE_ID,
+    demoId('quote-4')
   );
   await prisma.$executeRawUnsafe(
     `INSERT INTO quote_line_items
        SELECT (jsonb_populate_record(NULL::quote_line_items, to_jsonb(li)
          || jsonb_build_object('id', gen_random_uuid()::text, 'quote_id', $1::text))).*
-       FROM quote_line_items li WHERE li.quote_id = 'demo-quote-4'`,
-    QUOTE_ID
+       FROM quote_line_items li WHERE li.quote_id = $2`,
+    QUOTE_ID,
+    demoId('quote-4')
   );
 
   // Stripe Connect as if onboarding had finished (the account id is stripe-mock's concern).

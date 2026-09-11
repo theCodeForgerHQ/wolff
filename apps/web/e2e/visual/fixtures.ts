@@ -1,12 +1,10 @@
-import { prisma } from '@wolff/database';
+import { demoId, prisma } from '@wolff/database';
 
 /**
  * UUID copies of seeded demo documents for the visual suite.
  *
- * The demo seed uses readable ids (`demo-quote-2`), but the dashboard detail
- * routes only accept UUIDs, so seeded documents can't be opened there. Until
- * the deterministic demo seed lands (Phase 3), the suite clones one quote
- * and one invoice under fixed ids, tokens and dates. Each run deletes and
+ * The suite clones one seeded quote and one seeded invoice (found by
+ * demoId) under fixed ids, tokens and dates. Each run deletes and
  * recreates the clones, so portal visits from earlier runs leave no trace,
  * and the copy goes through jsonb, so it keeps working when the schema gains
  * columns.
@@ -120,7 +118,7 @@ export async function ensureVisualFixtures() {
       table: 'quotes',
       itemsTable: 'quote_line_items',
       fk: 'quote_id',
-      sourceId: 'demo-quote-2',
+      sourceId: demoId('quote-2'),
       id,
       token: tokenFor(id),
       overrides: { ...QUOTE_DATES, quote_number: quoteNumber },
@@ -131,7 +129,7 @@ export async function ensureVisualFixtures() {
       table: 'invoices',
       itemsTable: 'invoice_line_items',
       fk: 'invoice_id',
-      sourceId: 'demo-invoice-2',
+      sourceId: demoId('invoice-2'),
       id,
       token: tokenFor(id),
       overrides: { ...INVOICE_DATES, invoice_number: invoiceNumber, quote_id: null },
