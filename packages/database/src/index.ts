@@ -3,3 +3,4 @@ export * from './tenant-guard';
 export * from './number-sequence';
 export * from './generated/prisma/client';
 export * from './unavailable';
+export * from './demo-id';

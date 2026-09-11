@@ -1,6 +1,6 @@
 import { constantTimeEquals } from '@/lib/constant-time';
 import { NextResponse } from 'next/server';
-import { prisma } from '@wolff/database';
+import { demoId, prisma } from '@wolff/database';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { DEMO_CONFIG } from '@/lib/demo/constants';
@@ -156,43 +156,78 @@ export async function GET(request: Request) {
     // Clean up hardcoded-ID records that may exist in other workspaces (from initial seed)
     // These collide with seedDemoData() which reuses the same IDs
     const hardcodedIds = {
-      contracts: ['demo-contract-1', 'demo-contract-2', 'demo-contract-3'],
+      contracts: [demoId('contract-1'), demoId('contract-2'), demoId('contract-3')],
       contractInstances: [
-        'demo-contract-instance-1',
-        'demo-contract-instance-2',
-        'demo-contract-instance-3',
+        demoId('contract-instance-1'),
+        demoId('contract-instance-2'),
+        demoId('contract-instance-3'),
       ],
       clients: [
-        'demo-client-1',
-        'demo-client-2',
-        'demo-client-3',
-        'demo-client-4',
-        'demo-client-5',
-        'demo-client-6',
+        demoId('client-1'),
+        demoId('client-2'),
+        demoId('client-3'),
+        demoId('client-4'),
+        demoId('client-5'),
+        demoId('client-6'),
       ],
       projects: [
-        'demo-project-1',
-        'demo-project-2',
-        'demo-project-3',
-        'demo-project-4',
-        'demo-project-5',
+        demoId('project-1'),
+        demoId('project-2'),
+        demoId('project-3'),
+        demoId('project-4'),
+        demoId('project-5'),
       ],
     };
-    const hardcodedEmailIds = [
+    // The readable ids the demo used before it switched to UUIDs; rows left
+    // with them anywhere are removed too.
+    const legacyIds = [
+      'demo-client-1',
+      'demo-client-2',
+      'demo-client-3',
+      'demo-client-4',
+      'demo-client-5',
+      'demo-client-6',
+      'demo-contract-1',
+      'demo-contract-2',
+      'demo-contract-3',
+      'demo-contract-instance-1',
+      'demo-contract-instance-2',
+      'demo-contract-instance-3',
       'demo-email-template-1',
       'demo-email-template-2',
       'demo-email-template-3',
       'demo-email-template-4',
       'demo-email-template-5',
       'demo-email-template-6',
+      'demo-project-1',
+      'demo-project-2',
+      'demo-project-3',
+      'demo-project-4',
+      'demo-project-5',
     ];
-    await prisma.emailTemplate.deleteMany({ where: { id: { in: hardcodedEmailIds } } });
-    await prisma.contractInstance.deleteMany({
-      where: { id: { in: hardcodedIds.contractInstances } },
+    const hardcodedEmailIds = [
+      demoId('email-template-1'),
+      demoId('email-template-2'),
+      demoId('email-template-3'),
+      demoId('email-template-4'),
+      demoId('email-template-5'),
+      demoId('email-template-6'),
+    ];
+    await prisma.emailTemplate.deleteMany({
+      where: { id: { in: [...hardcodedEmailIds, ...legacyIds] } },
     });
-    await prisma.contract.deleteMany({ where: { id: { in: hardcodedIds.contracts } } });
-    await prisma.project.deleteMany({ where: { id: { in: hardcodedIds.projects } } });
-    await prisma.client.deleteMany({ where: { id: { in: hardcodedIds.clients } } });
+    await prisma.contractInstance.deleteMany({
+      where: { id: { in: [...hardcodedIds.contractInstances, ...legacyIds] } },
+    });
+    await prisma.contract.deleteMany({
+      where: { id: { in: [...hardcodedIds.contracts, ...legacyIds] } },
+    });
+    await prisma.project.deleteMany({
+      where: { id: { in: [...hardcodedIds.projects, ...legacyIds] } },
+    });
+    await prisma.client.deleteMany({
+      where: { id: { in: [...hardcodedIds.clients, ...legacyIds] } },
+    });
 
     // Delete notifications (prevents stale/leaked notification data)
     await prisma.notification.deleteMany({
@@ -359,7 +394,7 @@ async function seedDemoData(workspaceId: string) {
   // Create demo clients
   const clients = [
     {
-      id: `demo-client-1`,
+      id: demoId('client-1'),
       workspaceId,
       name: 'TechStart Inc.',
       email: 'projects@techstart.demo',
@@ -368,7 +403,7 @@ async function seedDemoData(workspaceId: string) {
       notes: 'Great startup client - always pays on time',
     },
     {
-      id: `demo-client-2`,
+      id: demoId('client-2'),
       workspaceId,
       name: 'Global Retail Co.',
       email: 'procurement@globalretail.demo',
@@ -377,7 +412,7 @@ async function seedDemoData(workspaceId: string) {
       notes: 'Large enterprise client, requires detailed proposals',
     },
     {
-      id: `demo-client-3`,
+      id: demoId('client-3'),
       workspaceId,
       name: 'Sarah Johnson',
       email: 'sarah.j@email.demo',
@@ -386,14 +421,14 @@ async function seedDemoData(workspaceId: string) {
       notes: 'Freelance consultant, repeat customer',
     },
     {
-      id: `demo-client-4`,
+      id: demoId('client-4'),
       workspaceId,
       name: 'Marcus Chen',
       email: 'marcus@chenventures.demo',
       company: 'Chen Ventures',
     },
     {
-      id: `demo-client-5`,
+      id: demoId('client-5'),
       workspaceId,
       name: 'Creative Agency LLC',
       email: 'hello@creativeagency.demo',
@@ -401,7 +436,7 @@ async function seedDemoData(workspaceId: string) {
       phone: '+1 (555) 567-8901',
     },
     {
-      id: `demo-client-6`,
+      id: demoId('client-6'),
       workspaceId,
       name: 'Globex Corporation',
       email: 'info@globex.com',
@@ -415,44 +450,44 @@ async function seedDemoData(workspaceId: string) {
   // Create demo projects
   const projects = [
     {
-      id: 'demo-project-1',
+      id: demoId('project-1'),
       workspaceId,
-      clientId: 'demo-client-1',
+      clientId: demoId('client-1'),
       name: 'Website Redesign 2024',
       description:
         'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
       isActive: true,
     },
     {
-      id: 'demo-project-2',
+      id: demoId('project-2'),
       workspaceId,
-      clientId: 'demo-client-2',
+      clientId: demoId('client-2'),
       name: 'E-commerce Platform',
       description:
         'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
       isActive: true,
     },
     {
-      id: 'demo-project-3',
+      id: demoId('project-3'),
       workspaceId,
-      clientId: 'demo-client-3',
+      clientId: demoId('client-3'),
       name: 'Brand Identity Package',
       description:
         'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
       isActive: true,
     },
     {
-      id: 'demo-project-4',
+      id: demoId('project-4'),
       workspaceId,
-      clientId: 'demo-client-4',
+      clientId: demoId('client-4'),
       name: 'Mobile App MVP',
       description: 'Design and development of a mobile app MVP for Chen Ventures startup.',
       isActive: true,
     },
     {
-      id: 'demo-project-5',
+      id: demoId('project-5'),
       workspaceId,
-      clientId: 'demo-client-5',
+      clientId: demoId('client-5'),
       name: 'Annual Retainer 2023',
       description: 'Ongoing design and development support for Creative Agency LLC.',
       isActive: false,
@@ -556,8 +591,8 @@ async function seedDemoData(workspaceId: string) {
   // Quote 1: Draft
   await createQuoteWithLineItems(workspaceId, {
     quoteNumber: 'Q-0001',
-    clientId: 'demo-client-1',
-    projectId: 'demo-project-1',
+    clientId: demoId('client-1'),
+    projectId: demoId('project-1'),
     title: 'Website Redesign Proposal',
     status: 'draft',
     issueDate: now,
@@ -572,8 +607,8 @@ async function seedDemoData(workspaceId: string) {
   // Quote 2: Sent
   await createQuoteWithLineItems(workspaceId, {
     quoteNumber: 'Q-0002',
-    clientId: 'demo-client-2',
-    projectId: 'demo-project-2',
+    clientId: demoId('client-2'),
+    projectId: demoId('project-2'),
     title: 'E-commerce Platform Design',
     status: 'sent',
     issueDate: sevenDaysAgo,
@@ -589,8 +624,8 @@ async function seedDemoData(workspaceId: string) {
   // Quote 3: Viewed
   await createQuoteWithLineItems(workspaceId, {
     quoteNumber: 'Q-0003',
-    clientId: 'demo-client-3',
-    projectId: 'demo-project-3',
+    clientId: demoId('client-3'),
+    projectId: demoId('project-3'),
     title: 'Brand Identity Package',
     status: 'viewed',
     issueDate: sevenDaysAgo,
@@ -607,8 +642,8 @@ async function seedDemoData(workspaceId: string) {
   // Quote 4: Accepted
   await createQuoteWithLineItems(workspaceId, {
     quoteNumber: 'Q-0004',
-    clientId: 'demo-client-4',
-    projectId: 'demo-project-4',
+    clientId: demoId('client-4'),
+    projectId: demoId('project-4'),
     title: 'Mobile App UI Design',
     status: 'accepted',
     issueDate: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
@@ -626,8 +661,8 @@ async function seedDemoData(workspaceId: string) {
   // Quote 5: Declined
   await createQuoteWithLineItems(workspaceId, {
     quoteNumber: 'Q-0005',
-    clientId: 'demo-client-5',
-    projectId: 'demo-project-5',
+    clientId: demoId('client-5'),
+    projectId: demoId('project-5'),
     title: 'Annual Retainer Package',
     status: 'declined',
     issueDate: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000),
@@ -642,8 +677,8 @@ async function seedDemoData(workspaceId: string) {
   // Invoice 1: Paid
   await createInvoiceWithLineItems(workspaceId, {
     invoiceNumber: 'INV-0001',
-    clientId: 'demo-client-1',
-    projectId: 'demo-project-1',
+    clientId: demoId('client-1'),
+    projectId: demoId('project-1'),
     title: 'Previous Project - Final Payment',
     status: 'paid',
     issueDate: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
@@ -656,8 +691,8 @@ async function seedDemoData(workspaceId: string) {
   // Invoice 2: Sent (awaiting payment)
   await createInvoiceWithLineItems(workspaceId, {
     invoiceNumber: 'INV-0002',
-    clientId: 'demo-client-3',
-    projectId: 'demo-project-3',
+    clientId: demoId('client-3'),
+    projectId: demoId('project-3'),
     title: 'Consulting Services - January',
     status: 'sent',
     issueDate: sevenDaysAgo,
@@ -672,8 +707,8 @@ async function seedDemoData(workspaceId: string) {
   // Invoice 3: Overdue (stored as 'sent' with past dueDate; overdue is computed at runtime)
   await createInvoiceWithLineItems(workspaceId, {
     invoiceNumber: 'INV-0003',
-    clientId: 'demo-client-2',
-    projectId: 'demo-project-2',
+    clientId: demoId('client-2'),
+    projectId: demoId('project-2'),
     title: 'Phase 1 Design Delivery',
     status: 'sent',
     issueDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
@@ -686,8 +721,8 @@ async function seedDemoData(workspaceId: string) {
   // Invoice 4: Draft
   await createInvoiceWithLineItems(workspaceId, {
     invoiceNumber: 'INV-0004',
-    clientId: 'demo-client-4',
-    projectId: 'demo-project-4',
+    clientId: demoId('client-4'),
+    projectId: demoId('project-4'),
     title: 'Mobile App Design - Milestone 1',
     status: 'draft',
     issueDate: now,
@@ -864,7 +899,7 @@ Email: {{client_email}}</p>
     data: {
       workspaceId,
       contractId: serviceAgreement.id,
-      clientId: 'demo-client-1',
+      clientId: demoId('client-1'),
       status: 'signed',
       content: serviceAgreement.content
         .replace(
@@ -895,7 +930,7 @@ Email: {{client_email}}</p>
     data: {
       workspaceId,
       contractId: ndaTemplate.id,
-      clientId: 'demo-client-2',
+      clientId: demoId('client-2'),
       status: 'sent',
       content: ndaTemplate.content
         .replace('{{effective_date}}', new Date().toLocaleDateString())
@@ -911,7 +946,7 @@ Email: {{client_email}}</p>
     data: {
       workspaceId,
       contractId: projectContract.id,
-      clientId: 'demo-client-4',
+      clientId: demoId('client-4'),
       status: 'draft',
       content: projectContract.content
         .replace('{{project_name}}', 'Mobile App UI Design')
