@@ -1,6 +1,6 @@
 """stdio MCP server for desktop clients.
 
-    <SLUG>_API_KEY=qc_sk_... AI_DATABASE_URL=... uv run python -m app.mcp.stdio
+    <SLUG>_API_KEY=wolff_sk_... AI_DATABASE_URL=... uv run python -m app.mcp.stdio
 
 The key is verified once at start like an HTTP bearer; the process then
 acts only in that key's workspace.
