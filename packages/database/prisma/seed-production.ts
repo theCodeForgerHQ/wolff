@@ -13,6 +13,7 @@
 
 import './env';
 import { createPrisma } from '../src/client';
+import { demoId } from '../src/demo-id';
 import bcrypt from 'bcryptjs';
 import { upsertNumberSequence } from './seed-helpers';
 
@@ -137,34 +138,34 @@ async function seedProductionDemo() {
   // Create demo clients
   const demoClients = [
     {
-      id: 'demo-client-1',
+      id: demoId('client-1'),
       name: 'TechStart Inc.',
       email: 'projects@techstart.demo',
       company: 'TechStart Inc.',
       phone: '+1 (555) 234-5678',
     },
     {
-      id: 'demo-client-2',
+      id: demoId('client-2'),
       name: 'Global Retail Co.',
       email: 'procurement@globalretail.demo',
       company: 'Global Retail Co.',
       phone: '+1 (555) 345-6789',
     },
     {
-      id: 'demo-client-3',
+      id: demoId('client-3'),
       name: 'Sarah Johnson',
       email: 'sarah.j@email.demo',
       company: 'Johnson Consulting',
       phone: '+1 (555) 456-7890',
     },
     {
-      id: 'demo-client-4',
+      id: demoId('client-4'),
       name: 'Marcus Chen',
       email: 'marcus@chenventures.demo',
       company: 'Chen Ventures',
     },
     {
-      id: 'demo-client-5',
+      id: demoId('client-5'),
       name: 'Creative Agency LLC',
       email: 'hello@creativeagency.demo',
       company: 'Creative Agency LLC',
@@ -206,11 +207,23 @@ async function seedProductionDemo() {
 
   // Create demo rate cards
   const demoRateCards = [
-    { id: 'demo-rate-1', name: 'UI/UX Design', rate: 150, unit: 'hour', pricingType: 'hourly' },
-    { id: 'demo-rate-2', name: 'Brand Identity', rate: 125, unit: 'hour', pricingType: 'hourly' },
-    { id: 'demo-rate-3', name: 'Web Development', rate: 175, unit: 'hour', pricingType: 'hourly' },
+    { id: demoId('rate-1'), name: 'UI/UX Design', rate: 150, unit: 'hour', pricingType: 'hourly' },
     {
-      id: 'demo-rate-4',
+      id: demoId('rate-2'),
+      name: 'Brand Identity',
+      rate: 125,
+      unit: 'hour',
+      pricingType: 'hourly',
+    },
+    {
+      id: demoId('rate-3'),
+      name: 'Web Development',
+      rate: 175,
+      unit: 'hour',
+      pricingType: 'hourly',
+    },
+    {
+      id: demoId('rate-4'),
       name: 'Logo Design Package',
       rate: 2500,
       unit: 'project',
@@ -242,18 +255,18 @@ async function seedProductionDemo() {
 
   const demoQuotes = [
     {
-      id: 'demo-quote-1',
+      id: demoId('quote-1'),
       quoteNumber: 'Q-0001',
-      clientId: 'demo-client-1',
+      clientId: demoId('client-1'),
       title: 'Website Redesign Proposal',
       status: 'draft',
       subtotal: 17200,
       total: 17200,
     },
     {
-      id: 'demo-quote-2',
+      id: demoId('quote-2'),
       quoteNumber: 'Q-0002',
-      clientId: 'demo-client-2',
+      clientId: demoId('client-2'),
       title: 'E-commerce Platform Design',
       status: 'sent',
       sentAt: sevenDaysAgo,
@@ -261,9 +274,9 @@ async function seedProductionDemo() {
       total: 35400,
     },
     {
-      id: 'demo-quote-3',
+      id: demoId('quote-3'),
       quoteNumber: 'Q-0003',
-      clientId: 'demo-client-3',
+      clientId: demoId('client-3'),
       title: 'Brand Identity Package',
       status: 'viewed',
       sentAt: sevenDaysAgo,
@@ -272,9 +285,9 @@ async function seedProductionDemo() {
       total: 7000,
     },
     {
-      id: 'demo-quote-4',
+      id: demoId('quote-4'),
       quoteNumber: 'Q-0004',
-      clientId: 'demo-client-4',
+      clientId: demoId('client-4'),
       title: 'Mobile App UI Design',
       status: 'accepted',
       sentAt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
@@ -284,9 +297,9 @@ async function seedProductionDemo() {
       total: 12000,
     },
     {
-      id: 'demo-quote-5',
+      id: demoId('quote-5'),
       quoteNumber: 'Q-0005',
-      clientId: 'demo-client-5',
+      clientId: demoId('client-5'),
       title: 'Annual Retainer Package',
       status: 'declined',
       sentAt: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000),
@@ -344,9 +357,9 @@ async function seedProductionDemo() {
   // Create demo invoices
   const demoInvoices = [
     {
-      id: 'demo-invoice-1',
+      id: demoId('invoice-1'),
       invoiceNumber: 'INV-0001',
-      clientId: 'demo-client-1',
+      clientId: demoId('client-1'),
       title: 'Previous Project - Final Payment',
       status: 'paid',
       dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
@@ -357,9 +370,9 @@ async function seedProductionDemo() {
       amountDue: 0,
     },
     {
-      id: 'demo-invoice-2',
+      id: demoId('invoice-2'),
       invoiceNumber: 'INV-0002',
-      clientId: 'demo-client-3',
+      clientId: demoId('client-3'),
       title: 'Consulting Services - January',
       status: 'sent',
       sentAt: sevenDaysAgo,
@@ -370,9 +383,9 @@ async function seedProductionDemo() {
       amountDue: 1800,
     },
     {
-      id: 'demo-invoice-3',
+      id: demoId('invoice-3'),
       invoiceNumber: 'INV-0003',
-      clientId: 'demo-client-2',
+      clientId: demoId('client-2'),
       title: 'Phase 1 Design Delivery',
       status: 'overdue',
       sentAt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
@@ -384,9 +397,9 @@ async function seedProductionDemo() {
       amountDue: 8500,
     },
     {
-      id: 'demo-invoice-4',
+      id: demoId('invoice-4'),
       invoiceNumber: 'INV-0004',
-      clientId: 'demo-client-4',
+      clientId: demoId('client-4'),
       title: 'Mobile App Design - Milestone 1',
       status: 'draft',
       dueDate: thirtyDaysFromNow,
@@ -445,39 +458,39 @@ async function seedProductionDemo() {
   // Create demo projects
   const demoProjects = [
     {
-      id: 'demo-project-1',
-      clientId: 'demo-client-1',
+      id: demoId('project-1'),
+      clientId: demoId('client-1'),
       name: 'Website Redesign 2024',
       description:
         'Complete overhaul of the company website including new branding, UX improvements, and mobile responsiveness.',
       isActive: true,
     },
     {
-      id: 'demo-project-2',
-      clientId: 'demo-client-2',
+      id: demoId('project-2'),
+      clientId: demoId('client-2'),
       name: 'E-commerce Platform',
       description:
         'Building a new e-commerce platform with inventory management, payment processing, and customer portal.',
       isActive: true,
     },
     {
-      id: 'demo-project-3',
-      clientId: 'demo-client-3',
+      id: demoId('project-3'),
+      clientId: demoId('client-3'),
       name: 'Brand Identity Package',
       description:
         'Logo design, brand guidelines, and marketing collateral for Johnson Consulting.',
       isActive: true,
     },
     {
-      id: 'demo-project-4',
-      clientId: 'demo-client-4',
+      id: demoId('project-4'),
+      clientId: demoId('client-4'),
       name: 'Mobile App MVP',
       description: 'Design and development of a mobile app MVP for Chen Ventures startup.',
       isActive: true,
     },
     {
-      id: 'demo-project-5',
-      clientId: 'demo-client-5',
+      id: demoId('project-5'),
+      clientId: demoId('client-5'),
       name: 'Annual Retainer 2023',
       description: 'Ongoing design and development support for Creative Agency LLC.',
       isActive: false,
@@ -502,11 +515,11 @@ async function seedProductionDemo() {
 
   // Link quotes to projects
   const quoteProjectLinks = [
-    { quoteId: 'demo-quote-1', projectId: 'demo-project-1' },
-    { quoteId: 'demo-quote-2', projectId: 'demo-project-2' },
-    { quoteId: 'demo-quote-3', projectId: 'demo-project-3' },
-    { quoteId: 'demo-quote-4', projectId: 'demo-project-4' },
-    { quoteId: 'demo-quote-5', projectId: 'demo-project-5' },
+    { quoteId: demoId('quote-1'), projectId: demoId('project-1') },
+    { quoteId: demoId('quote-2'), projectId: demoId('project-2') },
+    { quoteId: demoId('quote-3'), projectId: demoId('project-3') },
+    { quoteId: demoId('quote-4'), projectId: demoId('project-4') },
+    { quoteId: demoId('quote-5'), projectId: demoId('project-5') },
   ];
 
   for (const link of quoteProjectLinks) {
@@ -519,10 +532,10 @@ async function seedProductionDemo() {
 
   // Link invoices to projects
   const invoiceProjectLinks = [
-    { invoiceId: 'demo-invoice-1', projectId: 'demo-project-1' },
-    { invoiceId: 'demo-invoice-2', projectId: 'demo-project-3' },
-    { invoiceId: 'demo-invoice-3', projectId: 'demo-project-2' },
-    { invoiceId: 'demo-invoice-4', projectId: 'demo-project-4' },
+    { invoiceId: demoId('invoice-1'), projectId: demoId('project-1') },
+    { invoiceId: demoId('invoice-2'), projectId: demoId('project-3') },
+    { invoiceId: demoId('invoice-3'), projectId: demoId('project-2') },
+    { invoiceId: demoId('invoice-4'), projectId: demoId('project-4') },
   ];
 
   for (const link of invoiceProjectLinks) {
