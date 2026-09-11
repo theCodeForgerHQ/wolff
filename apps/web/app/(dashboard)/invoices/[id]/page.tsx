@@ -25,16 +25,15 @@ import { RecordPaymentButton } from '@/components/invoices/record-payment-button
 import { CreditNoteDialog } from '@/components/invoices/credit-note-dialog';
 import { CreditNotesList } from '@/components/invoices/credit-notes-list';
 import { RecurringSettingsButton } from '@/components/invoices/recurring-settings-button';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface InvoiceDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function generateMetadata({ params }: InvoiceDetailPageProps) {
   const { id } = await params;
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     return { title: 'Invoice Not Found' };
   }
   try {
@@ -99,7 +98,7 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
 export default async function InvoiceDetailPage({ params }: InvoiceDetailPageProps) {
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
 

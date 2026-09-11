@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { getQuote } from '@/lib/quotes/actions';
 import EditQuoteForm from './edit-quote-form';
+import { isRecordId } from '@/lib/validations/record-id';
 
 export const metadata = {
   title: 'Edit Quote',
@@ -10,12 +11,10 @@ interface EditQuotePageProps {
   params: Promise<{ id: string }>;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export default async function EditQuotePage({ params }: EditQuotePageProps) {
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
 

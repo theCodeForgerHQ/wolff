@@ -3,6 +3,7 @@ import { getInvoice } from '@/lib/invoices/queries';
 import { getClientsForSelect } from '@/lib/clients/actions';
 import { getTaxRates, getBusinessProfile } from '@/lib/settings/actions';
 import { EditInvoiceForm } from './edit-invoice-form';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface InvoiceEditPageProps {
   params: Promise<{ id: string }>;
@@ -18,12 +19,10 @@ export async function generateMetadata({ params }: InvoiceEditPageProps) {
   }
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export default async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
 
