@@ -31,6 +31,24 @@ export function SignaturePad({ onChange, className }: SignaturePadProps) {
     ctx.lineJoin = 'round';
   }, []);
 
+  const emitSignature = useCallback(() => {
+    if (signatureType === 'typed') {
+      if (typedSignature.trim()) {
+        // Encode typed signature as a data string the backend can store
+        onChange(`typed:${typedSignature.trim()}`);
+      } else {
+        onChange(null);
+      }
+    } else {
+      const canvas = canvasRef.current;
+      if (canvas && hasDrawn) {
+        onChange(canvas.toDataURL('image/png'));
+      } else {
+        onChange(null);
+      }
+    }
+  }, [signatureType, typedSignature, hasDrawn, onChange]);
+
   const getCoordinates = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
@@ -91,24 +109,6 @@ export function SignaturePad({ onChange, className }: SignaturePadProps) {
     setHasDrawn(false);
     onChange(null);
   };
-
-  const emitSignature = useCallback(() => {
-    if (signatureType === 'typed') {
-      if (typedSignature.trim()) {
-        // Encode typed signature as a data string the backend can store
-        onChange(`typed:${typedSignature.trim()}`);
-      } else {
-        onChange(null);
-      }
-    } else {
-      const canvas = canvasRef.current;
-      if (canvas && hasDrawn) {
-        onChange(canvas.toDataURL('image/png'));
-      } else {
-        onChange(null);
-      }
-    }
-  }, [signatureType, typedSignature, hasDrawn, onChange]);
 
   useEffect(() => {
     emitSignature();

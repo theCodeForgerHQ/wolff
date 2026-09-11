@@ -217,6 +217,7 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
   >([]);
 
   const [businessName, setBusinessName] = useState('Your Business');
+  const [quoteNumber, setQuoteNumber] = useState('QT-0001');
 
   useEffect(() => {
     let isMounted = true;
@@ -241,7 +242,6 @@ export default function NewQuoteForm({ defaultCurrency = 'USD' }: NewQuoteFormPr
   }, []);
 
   // Form State
-  const [quoteNumber, setQuoteNumber] = useState('QT-0001');
   const [issueDate, setIssueDate] = useState<Date | undefined>(new Date());
   const [expirationDays, setExpirationDays] = useState('30');
   const [selectedClientId, setSelectedClientId] = useState<string>('');

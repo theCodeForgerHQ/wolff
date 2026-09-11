@@ -37,6 +37,9 @@ export function FileUpload({
   React.useEffect(() => {
     if (value instanceof File) {
       const url = URL.createObjectURL(value);
+      // An object URL is a browser resource that must be revoked in the
+      // cleanup below, so it is created and stored in an effect on purpose.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     } else if (typeof value === 'string') {

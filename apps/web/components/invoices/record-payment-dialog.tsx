@@ -85,8 +85,13 @@ export function RecordPaymentDialog({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset the form each time the dialog opens, during render rather than
+  // in an effect, so it never shows the old values for a frame.
+  const [wasOpen, setWasOpen] = useState(open);
+  const [lastAmountDue, setLastAmountDue] = useState(amountDue);
+  if (open !== wasOpen || amountDue !== lastAmountDue) {
+    setWasOpen(open);
+    setLastAmountDue(amountDue);
     if (open) {
       setAmount(amountDue.toString());
       setPaymentDate(new Date());
@@ -95,7 +100,7 @@ export function RecordPaymentDialog({
       setNotes('');
       setError(null);
     }
-  }, [open, amountDue]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -348,6 +348,9 @@ export function NewInvoiceForm({
       const quoteData = JSON.parse(stored);
 
       if (quoteData.quoteId === fromQuoteId) {
+        // The converted quote is handed over in localStorage, which does not
+        // exist while the server renders, so it can only be read after mount.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFromQuoteNumber(quoteData.quoteNumber || fromQuoteId);
 
         // Pre-fill client

@@ -92,10 +92,9 @@ export default function NewContractForm({
 
   // Fetch template content when template changes
   useEffect(() => {
-    if (!selectedTemplateId) {
-      setContractContent('');
-      return;
-    }
+    // With no template the content is shown as empty (see below), so there
+    // is nothing to reset here.
+    if (!selectedTemplateId) return;
     getContractTemplateById(selectedTemplateId).then((detail) => {
       if (detail) {
         setContractContent(detail.content);
@@ -111,7 +110,7 @@ export default function NewContractForm({
 
   // Replace variable placeholders in content for preview
   const previewContent = useMemo(() => {
-    let content = contractContent;
+    let content = selectedTemplateId ? contractContent : '';
     if (selectedTemplate) {
       for (const v of selectedTemplate.variables) {
         const value = variableValues[v.key] || `[${v.label}]`;
@@ -119,7 +118,7 @@ export default function NewContractForm({
       }
     }
     return content;
-  }, [contractContent, selectedTemplate, variableValues]);
+  }, [contractContent, selectedTemplate, selectedTemplateId, variableValues]);
 
   const businessName = 'Your Business';
 

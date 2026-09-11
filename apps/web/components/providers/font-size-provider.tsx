@@ -91,6 +91,10 @@ export function FontSizeProvider({ children }: { children: React.ReactNode }) {
     // 1. Apply localStorage instantly
     const storedFont = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
     if (isValidFontSize(storedFont)) {
+      // localStorage does not exist while the server renders, so the saved
+      // choice can only be read after mount; an initialiser would cause a
+      // hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFontSizeState(storedFont);
       applyFontSize(storedFont);
     }

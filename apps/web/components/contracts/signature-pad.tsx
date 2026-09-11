@@ -36,6 +36,33 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
     ctx.lineJoin = 'round';
   }, []);
 
+  const updateSignature = useCallback(() => {
+    if (signatureType === 'typed') {
+      if (typedSignature && name) {
+        onSignatureChange({
+          type: 'typed',
+          value: typedSignature,
+          name,
+          date: new Date().toISOString(),
+        });
+      } else {
+        onSignatureChange(null);
+      }
+    } else {
+      const canvas = canvasRef.current;
+      if (canvas && hasDrawn && name) {
+        onSignatureChange({
+          type: 'drawn',
+          value: canvas.toDataURL('image/png'),
+          name,
+          date: new Date().toISOString(),
+        });
+      } else {
+        onSignatureChange(null);
+      }
+    }
+  }, [signatureType, typedSignature, name, hasDrawn, onSignatureChange]);
+
   const getCoordinates = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
@@ -107,33 +134,6 @@ export function SignaturePad({ onSignatureChange, signerName = '' }: SignaturePa
     setHasDrawn(false);
     onSignatureChange(null);
   };
-
-  const updateSignature = useCallback(() => {
-    if (signatureType === 'typed') {
-      if (typedSignature && name) {
-        onSignatureChange({
-          type: 'typed',
-          value: typedSignature,
-          name,
-          date: new Date().toISOString(),
-        });
-      } else {
-        onSignatureChange(null);
-      }
-    } else {
-      const canvas = canvasRef.current;
-      if (canvas && hasDrawn && name) {
-        onSignatureChange({
-          type: 'drawn',
-          value: canvas.toDataURL('image/png'),
-          name,
-          date: new Date().toISOString(),
-        });
-      } else {
-        onSignatureChange(null);
-      }
-    }
-  }, [signatureType, typedSignature, name, hasDrawn, onSignatureChange]);
 
   useEffect(() => {
     updateSignature();

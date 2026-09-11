@@ -43,10 +43,13 @@ export function ColorPicker({
   const [color, setColor] = React.useState(value);
   const [open, setOpen] = React.useState(false);
 
-  // Bug #113: Sync internal state when parent updates value prop
-  React.useEffect(() => {
+  // Bug #113: Sync internal state when parent updates value prop (during
+  // render, so the old colour never shows for a frame).
+  const [syncedValue, setSyncedValue] = React.useState(value);
+  if (value !== syncedValue) {
+    setSyncedValue(value);
     setColor(value);
-  }, [value]);
+  }
 
   const handleColorChange = (newColor: string) => {
     setColor(newColor);

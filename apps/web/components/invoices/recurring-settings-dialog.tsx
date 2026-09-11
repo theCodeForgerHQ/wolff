@@ -81,43 +81,38 @@ export function RecurringSettingsDialog({
   const [noEndDate, setNoEndDate] = useState(true);
   const [autoSend, setAutoSend] = useState(false);
 
-  // Load settings from server when dialog opens
-  useEffect(() => {
-    if (!open) return;
+  const applySettings = (settings: {
+    enabled: boolean;
+    frequency: string;
+    startDate: string | Date;
+    endDate?: string | Date | null;
+    noEndDate: boolean;
+    autoSend: boolean;
+  }) => {
+    setEnabled(settings.enabled);
+    setFrequency(settings.frequency);
+    setStartDate(new Date(settings.startDate));
+    setEndDate(settings.endDate ? new Date(settings.endDate) : undefined);
+    setNoEndDate(settings.noEndDate);
+    setAutoSend(settings.autoSend);
+  };
 
-    // If initial settings are passed from server component, use them
-    if (initialSettings) {
-      setEnabled(initialSettings.enabled);
-      setFrequency(initialSettings.frequency);
-      setStartDate(new Date(initialSettings.startDate));
-      setEndDate(initialSettings.endDate ? new Date(initialSettings.endDate) : undefined);
-      setNoEndDate(initialSettings.noEndDate);
-      setAutoSend(initialSettings.autoSend);
-      return;
+  // When the dialog opens: settings passed in from the server component are
+  // applied during render; otherwise the form shows loading until the fetch
+  // below answers.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      if (initialSettings) applySettings(initialSettings);
+      else setIsLoading(true);
     }
+  }
 
-    // Otherwise, fetch from server
-    setIsLoading(true);
+  useEffect(() => {
+    if (!open || initialSettings) return;
     getRecurringSettings(invoiceId)
-      .then((settings) => {
-        if (settings) {
-          setEnabled(settings.enabled);
-          setFrequency(settings.frequency);
-          setStartDate(new Date(settings.startDate));
-          setEndDate(settings.endDate ? new Date(settings.endDate) : undefined);
-          setNoEndDate(settings.noEndDate);
-          setAutoSend(settings.autoSend);
-        } else {
-          // Reset to defaults
-          const defaults = getDefaults();
-          setEnabled(defaults.enabled);
-          setFrequency(defaults.frequency);
-          setStartDate(new Date(defaults.startDate));
-          setEndDate(undefined);
-          setNoEndDate(defaults.noEndDate);
-          setAutoSend(defaults.autoSend);
-        }
-      })
+      .then((settings) => applySettings(settings ?? getDefaults()))
       .catch(() => {
         toast.error('Failed to load recurring settings');
       })

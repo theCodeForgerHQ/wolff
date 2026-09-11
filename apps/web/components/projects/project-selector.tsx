@@ -30,15 +30,18 @@ export function ProjectSelector({
   disabled = false,
   placeholder = 'Select project (optional)',
 }: ProjectSelectorProps) {
-  const [projects, setProjects] = React.useState<ProjectListItem[]>([]);
+  // Each list remembers the client it was loaded for, so a stale list never
+  // shows under another client and nothing has to be cleared in an effect.
+  const [loaded, setLoaded] = React.useState<{ clientId: string; items: ProjectListItem[] }>({
+    clientId: '',
+    items: [],
+  });
+  const projects = loaded.clientId === clientId ? loaded.items : [];
   const [isLoading, setIsLoading] = React.useState(false);
 
   // Low #25: Cancel stale requests on rapid clientId changes
   React.useEffect(() => {
-    if (!clientId) {
-      setProjects([]);
-      return;
-    }
+    if (!clientId) return;
 
     let cancelled = false;
 
@@ -47,10 +50,10 @@ export function ProjectSelector({
       setIsLoading(true);
       try {
         const data = await getClientProjects(clientId);
-        if (!cancelled) setProjects(data);
+        if (!cancelled) setLoaded({ clientId, items: data });
       } catch {
         if (!cancelled) {
-          setProjects([]);
+          setLoaded({ clientId, items: [] });
           toast.error('Failed to load projects');
         }
       } finally {

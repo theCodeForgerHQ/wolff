@@ -52,7 +52,10 @@ export function DataTableToolbar<TData>({
   const debouncedSearchRef = React.useRef<NodeJS.Timeout | null>(null);
   // Low #84: Use ref for table to avoid unstable dependency in useCallback
   const tableRef = React.useRef(table);
-  tableRef.current = table;
+  // Updated after render: writing a ref during render is not allowed.
+  React.useLayoutEffect(() => {
+    tableRef.current = table;
+  });
 
   // Debounced search (300ms as per spec)
   const handleSearchChange = React.useCallback(

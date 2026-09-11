@@ -32,7 +32,7 @@ interface PaymentSettingsFormProps {
 export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isCheckingStatus, startCheckingStatus] = useTransition();
 
   const [settings, setSettings] = useState({
     passProcessingFees: initialData?.passProcessingFees ?? false,
@@ -51,17 +51,6 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
     onboardingComplete: initialData?.stripeOnboardingComplete ?? false,
     status: initialData?.stripeAccountStatus,
   });
-
-  // Auto-check status when returning from Stripe onboarding
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success') === 'true' || params.get('refresh') === 'true') {
-      handleCheckStatus();
-      // Clean up URL params
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Low #64: Added toast feedback on save
   const handleSave = () => {
@@ -98,9 +87,10 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
     });
   };
 
-  const handleCheckStatus = async () => {
-    setIsCheckingStatus(true);
-    try {
+  // A transition, not a loading flag: it can start from the effect below
+  // without a synchronous setState there.
+  const handleCheckStatus = () => {
+    startCheckingStatus(async () => {
       const status = await checkStripeAccountStatus();
       setStripeStatus({
         connected: status.connected,
@@ -108,10 +98,19 @@ export function PaymentSettingsForm({ initialData, stripeEnabled }: PaymentSetti
         status: status.status,
       });
       router.refresh();
-    } finally {
-      setIsCheckingStatus(false);
-    }
+    });
   };
+
+  // Auto-check status when returning from Stripe onboarding
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true' || params.get('refresh') === 'true') {
+      handleCheckStatus();
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-6">

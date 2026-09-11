@@ -155,13 +155,16 @@ export function useQuoteForm() {
     }
   }, [clientId]);
 
-  // Sync form state with document
-  useEffect(() => {
+  // Sync form state with the document whenever a new one arrives (during
+  // render, so the old title never shows for a frame).
+  const [syncedDocument, setSyncedDocument] = useState<typeof document | null>(null);
+  if (document !== syncedDocument) {
+    setSyncedDocument(document);
     if (document) {
       setTitle(document.title);
       setProjectId(document.projectId);
     }
-  }, [document]);
+  }
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
