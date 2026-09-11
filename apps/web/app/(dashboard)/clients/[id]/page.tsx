@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { ClientDetail } from '@/components/clients';
 import { getClientById, getClientActivity } from '@/lib/clients/actions';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface ClientDetailPageProps {
   params: Promise<{
@@ -12,7 +13,7 @@ interface ClientDetailPageProps {
 export async function generateMetadata({ params }: ClientDetailPageProps) {
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     return { title: 'Client Not Found' };
   }
 
@@ -28,12 +29,10 @@ export async function generateMetadata({ params }: ClientDetailPageProps) {
   }
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
 

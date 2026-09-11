@@ -9,16 +9,15 @@ import { ContractEditor } from '@/components/contracts/contract-editor';
 import { ContractDetailActions } from '@/components/contracts/contract-detail-actions';
 import { getContractInstanceById } from '@/lib/contracts/actions';
 import { formatDate } from '@/lib/utils';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     return { title: 'Contract Not Found' };
   }
   try {

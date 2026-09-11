@@ -8,6 +8,7 @@ import {
   getProjectContracts,
 } from '@/lib/projects/actions';
 import { getWorkspaceCurrency } from '@/lib/settings/actions';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>;
@@ -32,7 +33,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
 
   // Bug #189: Validate UUID format before querying database
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
 

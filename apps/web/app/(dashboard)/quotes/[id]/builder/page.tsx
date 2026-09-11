@@ -28,6 +28,7 @@ import { BlocksPanel } from '@/components/quotes/builder/blocks-panel';
 import { DocumentCanvas } from '@/components/quotes/builder/document-canvas';
 import { PropertiesPanel } from '@/components/quotes/builder/properties-panel';
 import { BuilderToolbar } from '@/components/quotes/builder/builder-toolbar';
+import { isRecordId } from '@/lib/validations/record-id';
 
 export default function EditQuoteBuilderPage() {
   const params = useParams();
@@ -78,8 +79,7 @@ export default function EditQuoteBuilderPage() {
       try {
         setIsLoading(true);
 
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(quoteId)) {
+        if (!isRecordId(quoteId)) {
           setError('Quote not found');
           setIsLoading(false);
           return;

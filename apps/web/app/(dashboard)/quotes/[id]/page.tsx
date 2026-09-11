@@ -23,16 +23,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConvertToInvoiceButton } from '@/components/quotes/convert-to-invoice-button';
 import { SendQuoteButton, DuplicateQuoteButton } from '@/components/quotes/quote-detail-actions';
+import { isRecordId } from '@/lib/validations/record-id';
 
 interface QuoteDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function generateMetadata({ params }: QuoteDetailPageProps) {
   const { id } = await params;
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     return { title: 'Quote Not Found' };
   }
   try {
@@ -58,7 +57,7 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 
 export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) {
   const { id } = await params;
-  if (!UUID_REGEX.test(id)) {
+  if (!isRecordId(id)) {
     notFound();
   }
   const quote = await getQuote(id);

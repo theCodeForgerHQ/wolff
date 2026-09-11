@@ -11,8 +11,8 @@ export default function TermsPage() {
 
       <div className="mt-8 space-y-6 leading-7">
         <p>
-          This is a demo of Wolff, a quote-to-cash app built on the open-source Wolff project. It is
-          here so you can try it out, not to run a real business on.
+          This is a demo of Wolff, an open-source quote-to-cash app. It is here so you can try it
+          out, not to run a real business on.
         </p>
         <section>
           <h2 className="text-xl font-semibold">Using the demo</h2>
