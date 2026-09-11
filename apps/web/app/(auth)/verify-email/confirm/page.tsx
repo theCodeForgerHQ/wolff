@@ -9,15 +9,14 @@ import { Button } from '@/components/ui/button';
 function ConfirmEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('');
+  const [checked, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [checkedMessage, setMessage] = useState('');
+  // A missing token is known while rendering; only a real token is checked.
+  const status = token ? checked : 'error';
+  const message = token ? checkedMessage : 'No verification token provided';
 
   useEffect(() => {
-    if (!token) {
-      setStatus('error');
-      setMessage('No verification token provided');
-      return;
-    }
+    if (!token) return;
 
     fetch('/api/auth/verify-email', {
       method: 'POST',

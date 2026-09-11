@@ -283,7 +283,8 @@ export function EditInvoiceForm({
 
   // Form State — pre-filled from invoice
   const [invoiceNumber] = useState(invoice.invoiceNumber);
-  const [dueDate, setDueDate] = useState<Date | undefined>(
+  // Lazy initialiser: Date.now runs once, not on every render.
+  const [dueDate, setDueDate] = useState<Date | undefined>(() =>
     invoice.dueDate
       ? new Date(invoice.dueDate + 'T00:00:00')
       : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { incrementNumberSequence, type Prisma } from '@wolff/database';
 import type { Db } from '@wolff/core/context';
-import { renderQuoteSent } from '@wolff/core/email';
+import { renderQuoteSent, senderName } from '@wolff/core/email';
 import { requestAiIndexing, requestPdfRender } from '@wolff/core/outbox';
 import { applyDiscount } from '@wolff/core/pricing';
 import '../../../context';
@@ -447,7 +447,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
 
     const workspace = await db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { name: true },
+      select: { name: true, businessProfile: { select: { businessName: true } } },
     });
     const quoteUrl = `${deps.appUrl}/q/${quote.accessToken}`;
     const result = await sendEmail({
@@ -457,7 +457,7 @@ export function quoteRoutes(db: Db, deps: LegacyRouteContext): Router {
         clientName: quote.client!.name,
         quoteName: quote.title || quote.quoteNumber,
         quoteUrl,
-        businessName: workspace?.name || 'Wolff',
+        businessName: workspace ? senderName(workspace) : 'Wolff',
         validUntil: quote.expirationDate,
         message: message || undefined,
       }),

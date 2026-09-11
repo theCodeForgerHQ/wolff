@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,8 @@ export function ProjectForm({
       ...defaultValues,
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control: form.control });
 
   const handleSubmit = form.handleSubmit(async (data) => {
     await onSubmit(data);
@@ -72,7 +74,7 @@ export function ProjectForm({
           <div className="space-y-2">
             <Label htmlFor="clientId">Client *</Label>
             <Select
-              value={form.watch('clientId')}
+              value={watched.clientId}
               onValueChange={(value) => form.setValue('clientId', value, { shouldValidate: true })}
             >
               <SelectTrigger id="clientId">

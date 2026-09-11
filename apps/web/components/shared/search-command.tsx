@@ -38,15 +38,15 @@ interface SearchCommandProps {
 export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
   const router = useRouter();
   const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<SearchResult[]>([]);
+  const [found, setResults] = React.useState<SearchResult[]>([]);
+  const tooShort = !query || query.trim().length < 2;
+  // A query too short to search shows nothing; no effect has to clear it.
+  const results = tooShort ? [] : found;
   const [isSearching, setIsSearching] = React.useState(false);
 
   // Low #22: Debounced search with stale result prevention
   React.useEffect(() => {
-    if (!query || query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
+    if (tooShort) return;
 
     let cancelled = false;
 
@@ -74,15 +74,17 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, tooShort]);
 
-  // Reset state when dialog closes
-  React.useEffect(() => {
+  // Clear the search when the dialog closes (during render, not an effect).
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) {
       setQuery('');
       setResults([]);
     }
-  }, [open]);
+  }
 
   const runCommand = React.useCallback(
     (command: () => void) => {

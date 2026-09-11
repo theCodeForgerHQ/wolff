@@ -104,6 +104,7 @@ export function LogoUpload({ value, onChange, className }: LogoUploadProps) {
         <div className="bg-muted/50 relative rounded-lg border p-4">
           <div className="flex items-center gap-4">
             <div className="bg-card relative h-16 w-16 overflow-hidden rounded-lg border">
+              {/* eslint-disable-next-line @next/next/no-img-element -- an uploaded logo preview; next/image would need every storage host allow-listed and spends the image quota */}
               <img src={value} alt="Logo" className="h-full w-full object-contain" />
             </div>
             <div className="flex-1">

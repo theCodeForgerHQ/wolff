@@ -29,26 +29,27 @@ export function OnboardingPaymentStep({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [stripeConnected, setStripeConnected] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [verifying, startVerifying] = useTransition();
   const searchParams = useSearchParams();
 
   // Bug #10: Verify Stripe account status after returning from Stripe onboarding
   useEffect(() => {
     const stripeParam = searchParams.get('stripe');
     if (stripeParam === 'success') {
-      setVerifying(true);
-      checkStripeAccountStatus()
-        .then((status) => {
+      // A transition rather than a loading flag, so nothing is set
+      // synchronously inside the effect.
+      startVerifying(async () => {
+        try {
+          const status = await checkStripeAccountStatus();
           if (status.chargesEnabled && status.payoutsEnabled) {
             setStripeConnected(true);
           } else if (status.connected) {
             setError('Stripe setup is incomplete. Please complete all required steps in Stripe.');
           }
-        })
-        .catch(() => {
+        } catch {
           setError('Failed to verify Stripe connection');
-        })
-        .finally(() => setVerifying(false));
+        }
+      });
     }
   }, [searchParams]);
 

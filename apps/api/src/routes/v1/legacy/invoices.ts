@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 import type { Prisma } from '@wolff/database';
 import type { Db } from '@wolff/core/context';
-import { formatMoney, renderInvoiceSent } from '@wolff/core/email';
+import { formatMoney, renderInvoiceSent, senderName } from '@wolff/core/email';
 import { CoreError } from '@wolff/core/errors';
 import {
   assertReadyToIssue,
@@ -354,7 +354,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
 
     const workspace = await db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { name: true },
+      select: { name: true, businessProfile: { select: { businessName: true } } },
     });
     const invoiceUrl = `${deps.appUrl}/i/${invoice.accessToken}`;
     const result = await sendEmail({
@@ -364,7 +364,7 @@ export function legacyInvoiceRoutes(db: Db, deps: LegacyRouteContext): Router {
         clientName: invoice.client!.name,
         invoiceNumber: invoice.invoiceNumber,
         invoiceUrl,
-        businessName: workspace?.name || 'Wolff',
+        businessName: workspace ? senderName(workspace) : 'Wolff',
         amount: formatMoney(toNumber(invoice.total), invoice.currency),
         dueDate: invoice.dueDate,
         message: message || undefined,

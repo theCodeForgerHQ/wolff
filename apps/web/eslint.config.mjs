@@ -16,17 +16,18 @@ export default defineConfig([
       'react/no-unescaped-entities': 'off',
       '@next/next/no-html-link-for-pages': 'warn',
       'prefer-const': 'warn',
-      // New in eslint-plugin-react-hooks 7 (pulled in by eslint-config-next 16):
-      // React Compiler rules that flag 35 existing call sites. They are real
-      // findings but not regressions from the upgrade, so they warn for now and
-      // are tracked in docs/phase-1.md rather than rewritten inside it.
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/refs': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/error-boundaries': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
+      // React Compiler rules (eslint-plugin-react-hooks 7). Every finding was
+      // fixed or carries a disable comment with its reason, so a new one fails
+      // the lint instead of piling up as a warning.
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/refs': 'error',
+      'react-hooks/purity': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/error-boundaries': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
+      'react-hooks/incompatible-library': 'error',
+      '@next/next/no-img-element': 'error',
     },
   },
-  globalIgnores(['.next/**', 'node_modules/**', 'dist/**', 'e2e/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', 'node_modules/**', 'dist/**', 'e2e/**', 'coverage/**', 'next-env.d.ts']),
 ]);

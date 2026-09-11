@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Db } from '../context';
 import { formatMoney, renderInvoiceReminder } from '../email/templates';
+import { senderName } from '../email/sender-name';
 import { writeOutboxEvent } from '../outbox';
 import { addDays, businessDate, daysBetween, fromDateString, toDateString } from './dates';
 
@@ -96,7 +97,7 @@ export async function scanInvoiceReminders(
       clientName: invoice.client.name,
       invoiceNumber: invoice.invoiceNumber,
       invoiceUrl: `${options.appUrl.replace(/\/$/, '')}/i/${invoice.accessToken}`,
-      businessName: invoice.workspace.businessProfile?.businessName || invoice.workspace.name,
+      businessName: senderName(invoice.workspace),
       amount: formatMoney(Number(invoice.amountDue), invoice.currency),
       dueDate,
       daysOverdue: Math.max(0, -untilDue),

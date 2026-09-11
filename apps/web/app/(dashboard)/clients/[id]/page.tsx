@@ -37,19 +37,23 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
     notFound();
   }
 
+  // Only the data is fetched inside the try: JSX built there would not be
+  // covered by it anyway, since React renders it after this function returns.
+  let data: Awaited<ReturnType<typeof loadClient>>;
   try {
-    const [client, activities, currency] = await Promise.all([
-      getClientById(id),
-      getClientActivity(id),
-      getWorkspaceCurrency(),
-    ]);
-
-    return (
-      <div className="container py-6">
-        <ClientDetail client={client} activities={activities} currency={currency} />
-      </div>
-    );
+    data = await loadClient(id);
   } catch {
     notFound();
   }
+  const [client, activities, currency] = data;
+
+  return (
+    <div className="container py-6">
+      <ClientDetail client={client} activities={activities} currency={currency} />
+    </div>
+  );
+}
+
+function loadClient(id: string) {
+  return Promise.all([getClientById(id), getClientActivity(id), getWorkspaceCurrency()]);
 }

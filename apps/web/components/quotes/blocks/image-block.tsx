@@ -19,9 +19,12 @@ export function ImageBlockContent({ block }: ImageBlockContentProps) {
   const [urlInput, setUrlInput] = useState(block.content.src);
 
   // Bug #52: Sync urlInput when block.content.src changes from outside
-  useEffect(() => {
+  // (during render, so the old URL never shows for a frame).
+  const [syncedSrc, setSyncedSrc] = useState(block.content.src);
+  if (block.content.src !== syncedSrc) {
+    setSyncedSrc(block.content.src);
     setUrlInput(block.content.src);
-  }, [block.content.src]);
+  }
 
   const alignmentClass = {
     left: 'justify-start',

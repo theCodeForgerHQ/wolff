@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -60,13 +60,15 @@ export function ClientForm({
       ...defaultValues,
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control: form.control });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'contacts',
   });
 
-  const clientType = form.watch('type');
+  const clientType = watched.type;
 
   // Bug #202: Wrap in try/catch so server errors show feedback
   const handleSubmit = form.handleSubmit(async (data) => {
@@ -313,7 +315,7 @@ export function ClientForm({
                     {/* Bug #203: Only one contact can be primary — uncheck others */}
                     <Checkbox
                       id={`contacts.${index}.isPrimary`}
-                      checked={form.watch(`contacts.${index}.isPrimary`)}
+                      checked={watched.contacts?.[index]?.isPrimary}
                       onCheckedChange={(checked) => {
                         if (checked === true) {
                           // Uncheck all other contacts

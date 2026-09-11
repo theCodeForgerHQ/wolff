@@ -55,7 +55,8 @@ export function FinancialHealthSection({
       ? Math.min(100, (revenueThisMonth / (revenueThisMonth + outstandingAmount)) * 100)
       : 100;
 
-  const agingBuckets = useMemo(() => {
+  // Cheap arithmetic: no useMemo (the React Compiler memoizes it anyway).
+  const agingBuckets = (() => {
     const total = paymentAging.totalOutstanding || 1;
     return [
       { amount: paymentAging.current, percentage: (paymentAging.current / total) * 100 },
@@ -66,7 +67,7 @@ export function FinancialHealthSection({
         percentage: ((paymentAging.days61to90 + paymentAging.days90plus) / total) * 100,
       },
     ];
-  }, [paymentAging]);
+  })();
 
   const healthStatus = useMemo(() => {
     if (outstandingAmount === 0)

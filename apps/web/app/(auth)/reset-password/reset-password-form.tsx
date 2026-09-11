@@ -31,9 +31,8 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 export function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Store token in ref so it survives URL clearing
-  const tokenRef = React.useRef(searchParams.get('token'));
-  const token = tokenRef.current;
+  // Kept in state (read once) so it survives the URL being cleared below.
+  const [token] = React.useState(() => searchParams.get('token'));
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);

@@ -334,6 +334,7 @@ export default async function QuoteDetailPage({ params }: QuoteDetailPageProps) 
                 <div className="rounded-lg border bg-green-50 p-4 dark:bg-green-950">
                   {quote.signatureData.data.startsWith('data:image/') ||
                   quote.signatureData.data.startsWith('https://') ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- a signature is a data: URL, which next/image cannot optimise
                     <img
                       src={quote.signatureData.data}
                       alt="Client signature"

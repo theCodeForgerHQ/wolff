@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,8 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
       address: initialData?.address || {},
     },
   });
+  // useWatch, not watch(): watch() defeats the React Compiler.
+  const watched = useWatch({ control: form.control });
 
   const handleSubmit = async (data: BusinessProfileFormValues) => {
     setIsSaving(true);
@@ -189,7 +191,7 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select
-                value={form.watch('currency')}
+                value={watched.currency}
                 onValueChange={(value) => form.setValue('currency', value)}
               >
                 <SelectTrigger>
@@ -208,7 +210,7 @@ export function BusinessProfileForm({ initialData }: BusinessProfileFormProps) {
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Select
-                value={form.watch('timezone')}
+                value={watched.timezone}
                 onValueChange={(value) => form.setValue('timezone', value)}
               >
                 <SelectTrigger>

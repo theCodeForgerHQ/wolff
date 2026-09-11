@@ -36,27 +36,35 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound();
   }
 
+  // Only the data is fetched inside the try: JSX built there would not be
+  // covered by it anyway, since React renders it after this function returns.
+  let data: Awaited<ReturnType<typeof loadProject>>;
   try {
-    const [project, stats, activity, notes, contracts, currency] = await Promise.all([
-      getProject(id),
-      getProjectStats(id),
-      getProjectActivity(id),
-      getProjectNotes(id),
-      getProjectContracts(id),
-      getWorkspaceCurrency(),
-    ]);
-
-    return (
-      <ProjectDetail
-        project={project}
-        stats={stats}
-        activity={activity}
-        notes={notes}
-        contracts={contracts}
-        currency={currency}
-      />
-    );
+    data = await loadProject(id);
   } catch {
     notFound();
   }
+  const [project, stats, activity, notes, contracts, currency] = data;
+
+  return (
+    <ProjectDetail
+      project={project}
+      stats={stats}
+      activity={activity}
+      notes={notes}
+      contracts={contracts}
+      currency={currency}
+    />
+  );
+}
+
+function loadProject(id: string) {
+  return Promise.all([
+    getProject(id),
+    getProjectStats(id),
+    getProjectActivity(id),
+    getProjectNotes(id),
+    getProjectContracts(id),
+    getWorkspaceCurrency(),
+  ]);
 }
