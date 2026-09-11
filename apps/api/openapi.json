@@ -3,7 +3,7 @@
   "info": {
     "title": "Wolff API",
     "version": "0.1.0",
-    "description": "Quote-to-cash API for agencies and freelancers. Public routes require a workspace API key passed in the Authorization header as `Bearer qc_sk_...`."
+    "description": "Quote-to-cash API for agencies and freelancers. Public routes require a workspace API key passed in the Authorization header as `Bearer wolff_sk_...`."
   },
   "servers": [
     {

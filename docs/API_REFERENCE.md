@@ -11,21 +11,21 @@
 All API requests require a **Bearer token** in the `Authorization` header.
 
 ```
-Authorization: Bearer qc_sk_your_api_key_here
+Authorization: Bearer wolff_sk_your_api_key_here
 ```
 
 You can generate API keys from **Settings > API** in your Wolff dashboard.
 
 ### Key Format
 
-API keys follow the format `qc_sk_` followed by a 64-character hex string. Keys are hashed before storage — Wolff never stores your raw key. Save it securely when generated.
+API keys follow the format `wolff_sk_` followed by a 64-character hex string. Keys issued before the rename start with `qc_sk_` and still work. Keys are hashed before storage — Wolff never stores your raw key. Save it securely when generated.
 
 ### Authentication Errors
 
 | Status | Message                                 | Description                        |
 | ------ | --------------------------------------- | ---------------------------------- |
 | `401`  | Missing or invalid Authorization header | No `Bearer` token provided         |
-| `401`  | Invalid API key format                  | Key doesn't start with `qc_sk_`    |
+| `401`  | Invalid API key format                  | Key doesn't start with `wolff_sk_` |
 | `401`  | Invalid or revoked API key              | Key not found or has been revoked  |
 | `401`  | API key has expired                     | Key has passed its expiration date |
 | `429`  | Too many requests                       | Rate limit exceeded                |
@@ -947,7 +947,7 @@ Go to **Settings > API** in your Wolff dashboard and create a new API key. Copy 
 
 ```bash
 curl -X GET https://wolff.app/api/v1/clients \
-  -H "Authorization: Bearer qc_sk_your_api_key"
+  -H "Authorization: Bearer wolff_sk_your_api_key"
 ```
 
 You should see a paginated list of your clients.
@@ -956,7 +956,7 @@ You should see a paginated list of your clients.
 
 ```bash
 curl -X POST https://wolff.app/api/v1/quotes \
-  -H "Authorization: Bearer qc_sk_your_api_key" \
+  -H "Authorization: Bearer wolff_sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Website Redesign",
@@ -978,7 +978,7 @@ Replace `clientId` with an actual client ID from step 2.
 
 ```bash
 curl -X POST https://wolff.app/api/v1/quotes/{quoteId}/send \
-  -H "Authorization: Bearer qc_sk_your_api_key" \
+  -H "Authorization: Bearer wolff_sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Please review the attached quote."
@@ -993,7 +993,7 @@ Once the client accepts the quote, convert it to an invoice:
 
 ```bash
 curl -X POST https://wolff.app/api/v1/invoices/from-quote/{quoteId} \
-  -H "Authorization: Bearer qc_sk_your_api_key" \
+  -H "Authorization: Bearer wolff_sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{ "dueDays": 14 }'
 ```

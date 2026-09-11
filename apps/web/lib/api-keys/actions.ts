@@ -1,14 +1,8 @@
 'use server';
 
-import { randomBytes } from 'crypto';
 import { prisma } from '@wolff/database';
 import { LEGACY_KEY_SCOPES, PUBLISHABLE_SCOPES } from '@wolff/contracts';
-import {
-  LEGACY_SECRET_PREFIX,
-  generateApiKey as generatePublishable,
-  hashApiKey,
-  normaliseAllowedOrigins,
-} from '@wolff/core/auth/api-keys';
+import { generateApiKey as mintKey, normaliseAllowedOrigins } from '@wolff/core/auth/api-keys';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserWorkspace } from '@/lib/workspace/get-current-workspace';
 
@@ -49,7 +43,7 @@ export async function generateApiKey(data: {
   if (data.kind === 'publishable') {
     const origins = normaliseAllowedOrigins(data.allowedOrigins ?? []);
     if (!origins.ok) return { success: false, error: origins.error };
-    const generated = generatePublishable('publishable');
+    const generated = mintKey('publishable');
     await prisma.apiKey.create({
       data: {
         workspaceId,
@@ -66,19 +60,15 @@ export async function generateApiKey(data: {
     return { success: true, key: generated.raw };
   }
 
-  // Generate a secure random key with prefix
-  const rawBytes = randomBytes(32);
-  // Keys keep the original prefix until the product rename.
-  const rawKey = `${LEGACY_SECRET_PREFIX}${rawBytes.toString('hex')}`;
-  const keyHash = hashApiKey(rawKey);
-  const keyPrefix = rawKey.slice(0, 10);
+  // New secret keys use the product prefix; older qc_sk_ keys still work.
+  const generatedSecret = mintKey('secret');
 
   await prisma.apiKey.create({
     data: {
       workspaceId,
       name: data.name.trim(),
-      keyHash,
-      keyPrefix,
+      keyHash: generatedSecret.keyHash,
+      keyPrefix: generatedSecret.keyPrefix,
       // No scope picker yet: a new key can do what keys could always do.
       scopes: [...LEGACY_KEY_SCOPES],
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
@@ -86,7 +76,7 @@ export async function generateApiKey(data: {
   });
 
   revalidatePath('/settings/api');
-  return { success: true, key: rawKey };
+  return { success: true, key: generatedSecret.raw };
 }
 
 /**

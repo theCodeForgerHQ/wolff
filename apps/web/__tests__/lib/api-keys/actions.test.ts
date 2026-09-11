@@ -51,10 +51,10 @@ describe('generateApiKey', () => {
     expect(mockPrisma.apiKey.create).not.toHaveBeenCalled();
   });
 
-  it('keeps secret keys as they were: all legacy scopes, no origins', async () => {
+  it('gives secret keys the wolff_sk_ prefix, all legacy scopes, no origins', async () => {
     const result = await generateApiKey({ name: 'Zapier' });
 
-    expect(result.key).toMatch(/^qc_sk_/);
+    expect(result.key).toMatch(/^wolff_sk_/);
     const data = mockPrisma.apiKey.create.mock.calls[0]![0].data;
     expect(data.kind ?? 'secret').toBe('secret');
     expect(data.allowedOrigins ?? []).toEqual([]);
