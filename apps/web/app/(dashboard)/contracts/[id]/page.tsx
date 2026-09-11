@@ -175,6 +175,7 @@ export default async function ContractDetailPage({ params }: PageProps) {
                       {instance.signatureData.type === 'drawn' &&
                       (instance.signatureData.value.startsWith('data:image/') ||
                         instance.signatureData.value.startsWith('https://')) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a signature is a data: URL, which next/image cannot optimise
                         <img
                           src={instance.signatureData.value}
                           alt="Client Signature"
@@ -210,6 +211,7 @@ export default async function ContractDetailPage({ params }: PageProps) {
                       {instance.countersignatureData.type === 'drawn' &&
                       (instance.countersignatureData.value.startsWith('data:image/') ||
                         instance.countersignatureData.value.startsWith('https://')) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- a signature is a data: URL, which next/image cannot optimise
                         <img
                           src={instance.countersignatureData.value}
                           alt="Business Signature"

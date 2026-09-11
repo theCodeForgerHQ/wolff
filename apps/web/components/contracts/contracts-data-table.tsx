@@ -332,6 +332,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                             {contract.signatureData ? (
                               <>
                                 {contract.signatureData.type === 'drawn' ? (
+                                  // eslint-disable-next-line @next/next/no-img-element -- a signature is a data: URL, which next/image cannot optimise
                                   <img
                                     src={contract.signatureData.value}
                                     alt="Client Signature"
@@ -365,6 +366,7 @@ export function ContractsDataTable({ data: initialData }: ContractsDataTableProp
                             {contract.countersignatureData ? (
                               <>
                                 {contract.countersignatureData.type === 'drawn' ? (
+                                  // eslint-disable-next-line @next/next/no-img-element -- a signature is a data: URL, which next/image cannot optimise
                                   <img
                                     src={contract.countersignatureData.value}
                                     alt="Business Signature"
