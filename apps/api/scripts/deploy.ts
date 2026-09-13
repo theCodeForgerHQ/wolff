@@ -79,8 +79,8 @@ const all: ReleaseTarget[] = [
   {
     name: 'ai',
     projectId: env('VERCEL_PROJECT_AI'),
-    // Deployed from services/ai alone; see docs/free-tier.md.
-    dir: join(archive, 'services/ai'),
+    // The project's root directory is services/ai, as for Git deploys.
+    dir: archive,
     productionUrl: 'https://wolff-ai.vercel.app',
     smoke: [
       { path: '/healthz', status: 200, contains: '"service":"ai"' },

@@ -27,10 +27,11 @@ Load secrets into a shell with `set -a; source secrets.env; set +a` and never
 | Errors                  | Sentry org `ajayaditya` (EU, `de.sentry.io`), projects `wolff-web/api/ai`           | alert workflows from `scripts/sentry-alerts.py`                                      |
 | Uptime                  | UptimeRobot, 3 HTTP monitors, 12 h, email                                           | api `/readyz`, ai `/healthz`, web `/login`                                           |
 
-Vercel team id `team_l9AdIJOw3H9DJEt9eMVOJBL8`, scope
-`ajayaditya-codes-projects`; project ids: web
-`prj_LxlAp8yvPjqqnwQ2383so0Kondn4`, api `prj_7WXTAZVnggX00vg6rHSVwZ8hSxET`, ai
-`prj_WvGsU7Ft4waFLdHCr09Eze3xnmHL`.
+Vercel projects `wolff-web`, `wolff-api` and `wolff-ai` (root directories
+`apps/web`, `apps/api`, `services/ai`) are linked to `theCodeForgerHQ/wolff`:
+every push to `main` deploys all three. The team id, scope and project ids are
+in Infisical (`wolff`, `prod`): `VERCEL_TEAM_ID`, `VERCEL_SCOPE`,
+`VERCEL_PROJECT_{WEB,API,AI}`. Each project's env lives under `/vercel/<name>`.
 
 ## 1. Set up from zero
 
@@ -80,12 +81,9 @@ schedules and monitors. Every step uses a free plan that needs no card.
 ## 2. Deploy
 
 ```bash
-set -a; source ../secrets.env; set +a   # adjust to where your file is
-export VERCEL_TEAM_ID=team_l9AdIJOw3H9DJEt9eMVOJBL8 VERCEL_SCOPE=ajayaditya-codes-projects \
-  VERCEL_PROJECT_API=prj_7WXTAZVnggX00vg6rHSVwZ8hSxET \
-  VERCEL_PROJECT_AI=prj_WvGsU7Ft4waFLdHCr09Eze3xnmHL \
-  VERCEL_PROJECT_WEB=prj_LxlAp8yvPjqqnwQ2383so0Kondn4
-scripts/deploy.sh            # HEAD, all three: api, then ai, then web
+# Pushing to main deploys through the Git integration. For a manual,
+# smoke-tested release with automatic rollback:
+infisical run --projectId <wolff project id> --env prod -- scripts/deploy.sh            # HEAD, all three: api, then ai, then web
 scripts/deploy.sh HEAD api   # one project
 scripts/deploy.sh v1.2 api   # a ref, one project
 ```
@@ -138,7 +136,7 @@ checks and reports `"recovered": true|false`. Exit code 1.
 **Manual:**
 
 ```bash
-vercel rollback <previous deployment URL> --yes --scope ajayaditya-codes-projects  # with VERCEL_ORG_ID/VERCEL_PROJECT_ID set
+vercel rollback <previous deployment URL> --yes --scope "$VERCEL_SCOPE"  # with VERCEL_ORG_ID/VERCEL_PROJECT_ID set
 ```
 
 Find the URL with `vercel ls wolff-api --scope ...` or in the dashboard.
