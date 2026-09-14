@@ -105,6 +105,14 @@ export async function GET(request: Request) {
     // Delete all existing demo data (in correct order to respect foreign keys)
     logger.info('[Demo Reset] Deleting existing demo data...');
 
+    // Payments and credit notes restrict invoice deletion, so they go first.
+    await prisma.payment.deleteMany({
+      where: { invoice: { workspaceId: demoWorkspace.id } },
+    });
+    await prisma.creditNote.deleteMany({
+      where: { invoice: { workspaceId: demoWorkspace.id } },
+    });
+
     // Delete invoice events, line items, and invoices
     await prisma.invoiceEvent.deleteMany({
       where: { invoice: { workspaceId: demoWorkspace.id } },
