@@ -7,6 +7,8 @@
 ![Tests](https://img.shields.io/badge/tests-2,800%2B_passing-2e7d32)
 ![Cost](https://img.shields.io/badge/hosting-%240_free_tiers-607d8b)
 ![Licence](https://img.shields.io/badge/licence-AGPL--3.0-c0562f)
+[![Live demo](https://img.shields.io/badge/live_demo-wolff--web.vercel.app-0ea5e9)](https://wolff-web.vercel.app)
+[![Release](https://img.shields.io/github/v/release/theCodeForgerHQ/wolff?color=455a64)](https://github.com/theCodeForgerHQ/wolff/releases)
 
 Lead → deal → quote → e-signature → GST invoice → payment (Stripe or Razorpay) →
 reports, with an AI assistant that answers questions over your own documents,
@@ -32,7 +34,12 @@ quote, invoice and get paid, and want to own their data.
 | OpenAPI 3 document              | https://wolff-api.vercel.app/openapi.json                                            |
 | API health                      | https://wolff-api.vercel.app/healthz and `/readyz`                                   |
 
-![Dashboard](docs/images/screenshots/dashboard.png)
+To sign in by hand instead of **Try Demo**: `demo@wolff.demo` / `DemoPassword123!`.
+
+![A quote, the client's view of it, the invoice and its payment page, then the AI assistant](docs/images/wolff-demo.gif)
+
+The full two-minute walkthrough, captioned and without sound:
+[docs/images/wolff-demo.mp4](docs/images/wolff-demo.mp4).
 
 ## Contents
 
@@ -55,13 +62,17 @@ quote, invoice and get paid, and want to own their data.
 
 ## Screenshots
 
+| Dashboard                                           | Quote                                       |
+| --------------------------------------------------- | ------------------------------------------- |
+| ![Dashboard](docs/images/screenshots/dashboard.png) | ![Quote](docs/images/screenshots/quote.png) |
+
 | Quotes                                        | Invoices                                          |
 | --------------------------------------------- | ------------------------------------------------- |
 | ![Quotes](docs/images/screenshots/quotes.png) | ![Invoices](docs/images/screenshots/invoices.png) |
 
-| API reference (Swagger UI)                             | Quote builder                                   |
-| ------------------------------------------------------ | ----------------------------------------------- |
-| ![Swagger UI](docs/images/screenshots/api-swagger.png) | ![Quote builder](docs/images/quote-builder.png) |
+| API reference (Swagger UI)                             |
+| ------------------------------------------------------ |
+| ![Swagger UI](docs/images/screenshots/api-swagger.png) |
 
 ## Architecture
 
