@@ -744,9 +744,10 @@ async function seedDemoData(workspaceId: string) {
     data: { currentValue: 5 },
   });
 
+  // INV-0001 to INV-0004 are seeded above; the next invoice is INV-0005.
   await prisma.numberSequence.updateMany({
     where: { workspaceId, type: 'invoice' },
-    data: { currentValue: 0 },
+    data: { currentValue: 4 },
   });
 
   // Create contract templates
