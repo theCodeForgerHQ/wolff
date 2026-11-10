@@ -80,6 +80,15 @@ importers:
       '@opentelemetry/sdk-trace-base':
         specifier: 2.11.0
         version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@scalar/express-api-reference':
+        specifier: 0.10.25
+        version: 0.10.25
+      '@sentry/node':
+        specifier: 11.1.0
+        version: 11.1.0(@babel/core@7.29.7)(rollup@4.63.5)
+      '@upstash/qstash':
+        specifier: 2.12.0
+        version: 2.12.0
       '@wolff/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -92,15 +101,6 @@ importers:
       '@wolff/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
-      '@scalar/express-api-reference':
-        specifier: 0.10.25
-        version: 0.10.25
-      '@sentry/node':
-        specifier: 11.1.0
-        version: 11.1.0(@babel/core@7.29.7)(rollup@4.63.5)
-      '@upstash/qstash':
-        specifier: 2.12.0
-        version: 2.12.0
       bullmq:
         specifier: 6.3.10
         version: 6.3.10(ioredis@6.0.0)(pg@8.23.0)
@@ -189,24 +189,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.21.0)(react-hook-form@7.89.0(@types/react@19.3.0)(react@19.3.0))(valibot@1.4.2(typescript@5.9.3))(zod@4.6.7)
-      '@wolff/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@wolff/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@wolff/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@wolff/types':
-        specifier: workspace:*
-        version: link:../../packages/types
-      '@wolff/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@wolff/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
       '@radix-ui/react-accordion':
         specifier: ^1.2.0
         version: 1.2.20(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -348,6 +330,24 @@ importers:
       '@upstash/redis':
         specifier: ^1.37.0
         version: 1.39.0
+      '@wolff/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@wolff/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@wolff/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@wolff/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@wolff/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@wolff/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -424,8 +424,8 @@ importers:
         specifier: 1.1.0-alpha.2
         version: 1.1.0-alpha.2(@types/react@19.3.0)(prop-types@15.8.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       recharts:
-        specifier: ^2.15.0
-        version: 2.15.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^3.10.1
+        version: 3.10.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react-is@18.3.1)(react@19.3.0)(redux@5.0.1)
       redux-undo:
         specifier: ^1.1.0
         version: 1.1.0
@@ -631,15 +631,15 @@ importers:
 
   packages/database:
     dependencies:
-      '@wolff/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@prisma/adapter-pg':
         specifier: 7.10.0
         version: 7.10.0
       '@prisma/client':
         specifier: 7.10.0
         version: 7.10.0(prisma@7.10.0(@types/node@24.19.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@wolff/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -674,6 +674,12 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1143.0
         version: 3.1143.0
+      '@sparticuz/chromium':
+        specifier: 153.0.0
+        version: 153.0.0
+      '@upstash/qstash':
+        specifier: 2.12.0
+        version: 2.12.0
       '@wolff/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -683,12 +689,6 @@ importers:
       '@wolff/database':
         specifier: workspace:*
         version: link:../database
-      '@sparticuz/chromium':
-        specifier: 153.0.0
-        version: 153.0.0
-      '@upstash/qstash':
-        specifier: 2.12.0
-        version: 2.12.0
       bullmq:
         specifier: 6.3.10
         version: 6.3.10(ioredis@6.0.0)(pg@8.23.0)
@@ -971,6 +971,10 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
+
+  '@babel/runtime@7.29.13':
+    resolution: {integrity: sha512-v+oN26xP4YIlQsbQ/CbTH1WG5m/l/DjKKZNy/Kp3f/AFvbgt7Em/D0FeMM3O2hX0YzeN2M16W8lOpyhIkfCBcQ==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -2292,6 +2296,7 @@ packages:
   '@opentelemetry/propagator-jaeger@2.11.0':
     resolution: {integrity: sha512-RUOqgoIqXOPQTOhpBrs07Y8sBlxVoLY5Fka6ueZ0prW+k6fWQsba/nHDY4gm+gmfuwtRqbX5Y9YKhDvktjbIqQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Package no longer supported. See https://github.com/open-telemetry/opentelemetry-js/pull/7077
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -2356,12 +2361,14 @@ packages:
   '@opentelemetry/sdk-trace-base@2.11.0':
     resolution: {integrity: sha512-H19x/TX/LZdqiYOjM7fqtSxwlplC5pgelavqbQdHbhdq0q/AI/TGkM2dfGuuynTXmJPeF2HoZVoPDu+TGoW78A==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
   '@opentelemetry/sdk-trace-node@2.11.0':
     resolution: {integrity: sha512-CuvCMJmZxswhNLlM2LfuLOW3h3fZujA4hsG4B+Sz4dX2zvaXO8Ng74cnDHWD64gLszTlhiG3c0iNUjj4g+0/sA==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -3815,6 +3822,9 @@ packages:
   '@smithy/core@3.35.0':
     resolution: {integrity: sha512-zRMhfkByhT2snNdr1si24vJitU6Cr9ix2MikUfWmkAgp4jrNP0GcKSP5YvwQ+TlI8AZXER5QOGJn3JsVtSD9/A==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -5354,24 +5364,32 @@ packages:
     resolution: {integrity: sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==}
     engines: {node: '>=12'}
 
+  d3-array@3.2.5:
+    resolution: {integrity: sha512-Th8qGXoBalmWsstpkuhmBuTsBQIFqYOJtjlBvNVvBfJ8E3uYusBUwUR8HU20U0qKKQkgCvKyR1YjiozWadk5QA==}
+    engines: {node: '>=12'}
+
   d3-color@3.1.0:
     resolution: {integrity: sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==}
+    engines: {node: '>=12'}
+
+  d3-color@3.1.1:
+    resolution: {integrity: sha512-lfab8x0Bj0UO7SNsY8dZSbNIA6ipbkE3X0NG9nqjCu6CfCHZseuDnOSJY7hidKrjpP++i1M2qT+FlAdPKYRilA==}
     engines: {node: '>=12'}
 
   d3-delaunay@6.0.2:
     resolution: {integrity: sha512-IMLNldruDQScrcfT+MWnazhHbDJhcRJyOEBAJfwQnHle1RPh6WDuLvxNArUju2VSMSUuKlY5BGHRJ2cYyoFLQQ==}
     engines: {node: '>=12'}
 
-  d3-ease@3.0.1:
-    resolution: {integrity: sha512-wR/XK3D3XcLIZwpbvQwQ5fK+8Ykds1ip7A2Txe0yxncXSdq1L9skcG7blcedkOX+ZcgxGAmLX1FrRGbADwzi0w==}
+  d3-ease@3.0.2:
+    resolution: {integrity: sha512-B5znKqRmKROAN4oHWQ50W/qisVjA9GXh2WMsVKdFVp4DxWmcrOsweqgUOUVsv5th96kwaZlokU6SlV4J3gak1w==}
     engines: {node: '>=12'}
 
   d3-format@3.1.0:
     resolution: {integrity: sha512-YyUI6AEuY/Wpt8KWLgZHsIU86atmikuoOmCfommt0LYHiQSPjvX2AcFc38PX0CBpr2RCyZhjex+NS/LPOv6YqA==}
     engines: {node: '>=12'}
 
-  d3-format@3.1.2:
-    resolution: {integrity: sha512-AJDdYOdnyRDV5b6ArilzCPPwc1ejkHcoyFarqlPqT7zRYjhavcT3uSrqcMvsgh2CgoPbK3RCwyHaVyxYcP2Arg==}
+  d3-format@3.1.3:
+    resolution: {integrity: sha512-+F+/49swqmGuQJmSKnVMIDH/QkEFV5li9QRj0xm/KhyAUBv099O5PrvpQFxBp24PYph17Mnvt9mjKQV0ii0nMA==}
     engines: {node: '>=12'}
 
   d3-geo@3.1.0:
@@ -5382,28 +5400,52 @@ packages:
     resolution: {integrity: sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==}
     engines: {node: '>=12'}
 
+  d3-interpolate@3.0.2:
+    resolution: {integrity: sha512-IRzGU62DtxhvsnSTWMQIdnoZ6gA+BCWwBon1EJI6SjoN595799b6z/QRBzXfFhE8iupUPp3042yBNo0STPqnzQ==}
+    engines: {node: '>=12'}
+
   d3-path@3.1.0:
     resolution: {integrity: sha512-p3KP5HCf/bvjBSSKuXid6Zqijx7wIfNW+J/maPs+iwR35at5JCbLUT0LzF1cnjbCHWhqzQTIN2Jpe8pRebIEFQ==}
+    engines: {node: '>=12'}
+
+  d3-path@3.1.1:
+    resolution: {integrity: sha512-jsbgV8zIT38ReB9O7X7gcLndTQRONSqNNd+oGIaTBdUug4r5jFmp0N6RY9R5GWbdUDucn0qoTGyfjapT4tDhcg==}
     engines: {node: '>=12'}
 
   d3-scale@4.0.2:
     resolution: {integrity: sha512-GZW464g1SH7ag3Y7hXjf8RoUuAFIqklOAq3MRl4OaWabTFJY9PN/E1YklhXLh+OQ3fM9yS2nOkCoS+WLZ6kvxQ==}
     engines: {node: '>=12'}
 
+  d3-scale@4.0.3:
+    resolution: {integrity: sha512-66cWobCNzcMvlfoaDHCxuIv9TBUWG1BLOWdv9kHHFuCr1JdqAWPvTmsaEYDD5NRMyWZ5+7u0GqiCDfMXMqh3hg==}
+    engines: {node: '>=12'}
+
   d3-shape@3.2.0:
     resolution: {integrity: sha512-SaLBuwGm3MOViRq2ABk3eLoxwZELpH6zhl3FbAoJ7Vm1gofKx6El1Ib5z23NUEhF9AsGl7y+dzLe5Cw2AArGTA==}
+    engines: {node: '>=12'}
+
+  d3-shape@3.2.1:
+    resolution: {integrity: sha512-dm2o+lbKdzg9tY7GEag/dB9hcbodLfwkE/DkvqbELJXaMz0yKzWWhZqhbI7CKubukA7HnRyz0avdtvi7EPxPvw==}
     engines: {node: '>=12'}
 
   d3-time-format@4.1.0:
     resolution: {integrity: sha512-dJxPBlzC7NugB2PDLwo9Q8JiTR3M3e4/XANkreKSUxF8vvXKqm1Yfq4Q5dl8budlunRVlUUaDUgFt7eA8D6NLg==}
     engines: {node: '>=12'}
 
+  d3-time-format@4.1.1:
+    resolution: {integrity: sha512-22XaqjyCjpqgda20erhsOjGmC3vvYwTNYniKAd45W5UWLDF43moeOuV9qYpRqobIlsnK0UhnKZjUUJm3VgORUA==}
+    engines: {node: '>=12'}
+
   d3-time@3.1.0:
     resolution: {integrity: sha512-VqKjzBLejbSMT4IgbmVgDjpkYrNWUYJnbCGo874u7MMKIWsILRX+OpX/gTk8MqjpT1A/c6HY2dCA77ZN0lkQ2Q==}
     engines: {node: '>=12'}
 
-  d3-timer@3.0.1:
-    resolution: {integrity: sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==}
+  d3-time@3.1.1:
+    resolution: {integrity: sha512-Ze7rjrhMzdeulh0/hjcfFj7XLAHOfowtEMfsoG6DU866HPynQNW7Wfen6hzXcqKTv8XzxvF6Hzr5XD6bMHr2ug==}
+    engines: {node: '>=12'}
+
+  d3-timer@3.0.2:
+    resolution: {integrity: sha512-1Il1aliroVSErrv5aulRBxAY+7+DnaoLIWGd1C6SsBTWDeobWiP/V69vwb8vT6abR1kKwaNe1196pmaQ1fK90A==}
     engines: {node: '>=12'}
 
   damerau-levenshtein@1.0.8:
@@ -5555,9 +5597,6 @@ packages:
   dom-accessibility-api@0.6.3:
     resolution: {integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==}
 
-  dom-helpers@5.2.1:
-    resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
-
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
 
@@ -5705,6 +5744,9 @@ packages:
   es-to-primitive@1.3.4:
     resolution: {integrity: sha512-yPDz7wqpg1/mmHLmS3tcfTfbw5f1eryXvyghYBffGdERwe+mV7ZcWzTR8LR17Kvqt3qfPurjlonmnq3MKXIOXw==}
     engines: {node: '>= 0.4'}
+
+  es-toolkit@1.53.2:
+    resolution: {integrity: sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g==}
 
   es6-promise@3.3.1:
     resolution: {integrity: sha512-SOp9Phqvqn7jtEUxPWdWfWoLmyt2VaJ6MpvP9Comy1MceMXqE6bxvaTu4iaxpYYPzhny28Lc+M87/c2cPK6lDg==}
@@ -5875,9 +5917,6 @@ packages:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
     engines: {node: '>=6'}
 
-  eventemitter3@4.0.7:
-    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
-
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
@@ -5926,10 +5965,6 @@ packages:
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
-
-  fast-equals@5.4.3:
-    resolution: {integrity: sha512-8unmvA0qrfpFWBYUate9BTGtQdKHWBYt+KdAIkag7Vvxe7wz8Q2nJg7fLMC0bJqe0bjP31kca7Ckaawrs4Istg==}
-    engines: {node: '>=6.0.0'}
 
   fast-fifo@1.3.2:
     resolution: {integrity: sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ==}
@@ -7811,12 +7846,6 @@ packages:
       '@types/react':
         optional: true
 
-  react-smooth@4.0.4:
-    resolution: {integrity: sha512-gnGKTpYwqL0Iii09gHobNolvX4Kiq4PKx6eWBCYYix+8cdw+cGo3do906l1NBPKkSWx1DghC1dlWG9L2uGd61Q==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   react-style-singleton@2.2.3:
     resolution: {integrity: sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==}
     engines: {node: '>=10'}
@@ -7826,12 +7855,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  react-transition-group@4.4.5:
-    resolution: {integrity: sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g==}
-    peerDependencies:
-      react: '>=16.6.0'
-      react-dom: '>=16.6.0'
 
   react@19.3.0:
     resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
@@ -7866,16 +7889,13 @@ packages:
   real-require@1.0.0:
     resolution: {integrity: sha512-P4nbQYQfePJxRSmY+v/KINxVucm4NF3p3s7pJveMTtom52FR4YGltUQLB8idDXwDDWW+eYrWDFbuzUnjoWHF7g==}
 
-  recharts-scale@0.4.5:
-    resolution: {integrity: sha512-kivNFO+0OcUNu7jQquLXAxz1FIwZj8nrj+YkOKc5694NbjCvcT6aSZiIzNzd2Kul4o4rTto8QVR9lMNtxD4G1w==}
-
-  recharts@2.15.4:
-    resolution: {integrity: sha512-UT/q6fwS3c1dHbXv2uFgYJ9BMFHu3fwnd7AYZaEQhXuYQ4hgsxLvsUXzGdKeZrW5xopzDCvuA2N41WJ88I7zIw==}
-    engines: {node: '>=14'}
-    deprecated: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+  recharts@3.10.1:
+    resolution: {integrity: sha512-QXFrvt6IVcw7eeZCoyXTwkIJAX3Dv1nyVhMicXJ47GsGDDpcN8z6o644DibE9XjpBTThtsomLKnTV6lc+cVFUA==}
+    engines: {node: '>=18'}
     peerDependencies:
-      react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-is: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
@@ -7921,6 +7941,9 @@ packages:
   require-in-the-middle@8.0.1:
     resolution: {integrity: sha512-QT7FVMXfWOYFbeRBF6nu+I6tr2Tf3u0q8RIEjNob/heKY/nh7drD/k7eeMFmSQgnTtCzLDcCu/XEnpW2wk4xCQ==}
     engines: {node: '>=9.3.0 || >=8.10.0 <9.0.0'}
+
+  reselect@5.2.0:
+    resolution: {integrity: sha512-AgZ3UOZm3YndfrJ4OYjgrT7bmCm/1iqkjvEfH/oYjzh6PD2qw4QuT3jjnXIrpdt4MTpMXclMT3lXbmRY+XRakw==}
 
   reselect@5.3.0:
     resolution: {integrity: sha512-XGoLeRAVzUTcJ1qkxPQhDJyIZ5d6zzZD9nT7AEZOaaU9UbWclhycElmhO+VD5bFeLuzhPBaOV2oXC8uG35ZSpg==}
@@ -8654,8 +8677,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc
 
-  victory-vendor@36.9.2:
-    resolution: {integrity: sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==}
+  victory-vendor@37.4.1:
+    resolution: {integrity: sha512-geV4p2GVfVM9lgm9ZRS3pvsbAPS+BUGhM9W9nPzPHTKi+/+KjNrFXdgP6KkG+XspNZuvcXmchcrtklfuQ4gniw==}
 
   vite-prerender-plugin@0.5.14:
     resolution: {integrity: sha512-X2w9AS1OhwEUec9HSryGAmEnEQJGhW6eFoiCVJv8BfOTVpM8SOjk75cEw/IC28APDHZudeIRbP8Sp7wfABq+Aw==}
@@ -9247,6 +9270,8 @@ snapshots:
       '@babel/types': 7.29.8
     transitivePeerDependencies:
       - supports-color
+
+  '@babel/runtime@7.29.13': {}
 
   '@babel/runtime@7.29.7': {}
 
@@ -12168,7 +12193,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.29.13
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -13535,49 +13560,81 @@ snapshots:
     dependencies:
       internmap: 2.0.3
 
+  d3-array@3.2.5:
+    dependencies:
+      internmap: 2.0.3
+
   d3-color@3.1.0: {}
+
+  d3-color@3.1.1: {}
 
   d3-delaunay@6.0.2:
     dependencies:
       delaunator: 5.1.0
 
-  d3-ease@3.0.1: {}
+  d3-ease@3.0.2: {}
 
   d3-format@3.1.0: {}
 
-  d3-format@3.1.2: {}
+  d3-format@3.1.3: {}
 
   d3-geo@3.1.0:
     dependencies:
-      d3-array: 3.2.4
+      d3-array: 3.2.5
 
   d3-interpolate@3.0.1:
     dependencies:
-      d3-color: 3.1.0
+      d3-color: 3.1.1
+
+  d3-interpolate@3.0.2:
+    dependencies:
+      d3-color: 3.1.1
 
   d3-path@3.1.0: {}
 
+  d3-path@3.1.1: {}
+
   d3-scale@4.0.2:
     dependencies:
-      d3-array: 3.2.4
-      d3-format: 3.1.2
-      d3-interpolate: 3.0.1
-      d3-time: 3.1.0
-      d3-time-format: 4.1.0
+      d3-array: 3.2.5
+      d3-format: 3.1.3
+      d3-interpolate: 3.0.2
+      d3-time: 3.1.1
+      d3-time-format: 4.1.1
+
+  d3-scale@4.0.3:
+    dependencies:
+      d3-array: 3.2.5
+      d3-format: 3.1.3
+      d3-interpolate: 3.0.2
+      d3-time: 3.1.1
+      d3-time-format: 4.1.1
 
   d3-shape@3.2.0:
     dependencies:
       d3-path: 3.1.0
 
+  d3-shape@3.2.1:
+    dependencies:
+      d3-path: 3.1.1
+
   d3-time-format@4.1.0:
     dependencies:
-      d3-time: 3.1.0
+      d3-time: 3.1.1
+
+  d3-time-format@4.1.1:
+    dependencies:
+      d3-time: 3.1.1
 
   d3-time@3.1.0:
     dependencies:
-      d3-array: 3.2.4
+      d3-array: 3.2.5
 
-  d3-timer@3.0.1: {}
+  d3-time@3.1.1:
+    dependencies:
+      d3-array: 3.2.5
+
+  d3-timer@3.0.2: {}
 
   damerau-levenshtein@1.0.8: {}
 
@@ -13733,11 +13790,6 @@ snapshots:
   dom-accessibility-api@0.5.16: {}
 
   dom-accessibility-api@0.6.3: {}
-
-  dom-helpers@5.2.1:
-    dependencies:
-      '@babel/runtime': 7.29.7
-      csstype: 3.2.3
 
   dom-serializer@2.0.0:
     dependencies:
@@ -13961,6 +14013,8 @@ snapshots:
       is-callable: 1.2.7
       is-date-object: 1.1.0
       is-symbol: 1.1.1
+
+  es-toolkit@1.53.2: {}
 
   es6-promise@3.3.1: {}
 
@@ -14253,8 +14307,6 @@ snapshots:
 
   event-target-shim@5.0.1: {}
 
-  eventemitter3@4.0.7: {}
-
   eventemitter3@5.0.4: {}
 
   events-universal@1.0.1:
@@ -14341,8 +14393,6 @@ snapshots:
   fast-decode-uri-component@1.0.1: {}
 
   fast-deep-equal@3.1.3: {}
-
-  fast-equals@5.4.3: {}
 
   fast-fifo@1.3.2: {}
 
@@ -16266,14 +16316,6 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react-smooth@4.0.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
-    dependencies:
-      fast-equals: 5.4.3
-      prop-types: 15.8.1
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
-      react-transition-group: 4.4.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-
   react-style-singleton@2.2.3(@types/react@19.3.0)(react@19.3.0):
     dependencies:
       get-nonce: 1.0.1
@@ -16281,15 +16323,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
-
-  react-transition-group@4.4.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
-    dependencies:
-      '@babel/runtime': 7.29.7
-      dom-helpers: 5.2.1
-      loose-envify: 1.4.0
-      prop-types: 15.8.1
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
 
   react@19.3.0: {}
 
@@ -16329,22 +16362,25 @@ snapshots:
 
   real-require@1.0.0: {}
 
-  recharts-scale@0.4.5:
+  recharts@3.10.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react-is@18.3.1)(react@19.3.0)(redux@5.0.1):
     dependencies:
-      decimal.js-light: 2.5.1
-
-  recharts@2.15.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
-    dependencies:
+      '@reduxjs/toolkit': 2.13.0(react-redux@9.3.0(@types/react@19.3.0)(react@19.3.0)(redux@5.0.1))(react@19.3.0)
       clsx: 2.1.1
-      eventemitter3: 4.0.7
-      lodash: 4.18.1
+      decimal.js-light: 2.5.1
+      es-toolkit: 1.53.2
+      eventemitter3: 5.0.4
+      immer: 11.1.18
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       react-is: 18.3.1
-      react-smooth: 4.0.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      recharts-scale: 0.4.5
+      react-redux: 9.3.0(@types/react@19.3.0)(react@19.3.0)(redux@5.0.1)
+      reselect: 5.2.0
       tiny-invariant: 1.3.3
-      victory-vendor: 36.9.2
+      use-sync-external-store: 1.7.0(react@19.3.0)
+      victory-vendor: 37.4.1
+    transitivePeerDependencies:
+      - '@types/react'
+      - redux
 
   redent@3.0.0:
     dependencies:
@@ -16395,6 +16431,8 @@ snapshots:
       module-details-from-path: 1.0.4
     transitivePeerDependencies:
       - supports-color
+
+  reselect@5.2.0: {}
 
   reselect@5.3.0: {}
 
@@ -17333,7 +17371,7 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  victory-vendor@36.9.2:
+  victory-vendor@37.4.1:
     dependencies:
       '@types/d3-array': 3.2.2
       '@types/d3-ease': 3.0.2
@@ -17342,13 +17380,13 @@ snapshots:
       '@types/d3-shape': 3.2.0
       '@types/d3-time': 3.0.4
       '@types/d3-timer': 3.0.2
-      d3-array: 3.2.4
-      d3-ease: 3.0.1
-      d3-interpolate: 3.0.1
-      d3-scale: 4.0.2
-      d3-shape: 3.2.0
-      d3-time: 3.1.0
-      d3-timer: 3.0.1
+      d3-array: 3.2.5
+      d3-ease: 3.0.2
+      d3-interpolate: 3.0.2
+      d3-scale: 4.0.3
+      d3-shape: 3.2.1
+      d3-time: 3.1.1
+      d3-timer: 3.0.2
 
   vite-prerender-plugin@0.5.14(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
