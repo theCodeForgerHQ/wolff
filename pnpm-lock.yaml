@@ -80,6 +80,15 @@ importers:
       '@opentelemetry/sdk-trace-base':
         specifier: 2.11.0
         version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@scalar/express-api-reference':
+        specifier: 0.10.25
+        version: 0.10.25
+      '@sentry/node':
+        specifier: 11.1.0
+        version: 11.1.0(@babel/core@7.29.7)(rollup@4.63.5)
+      '@upstash/qstash':
+        specifier: 2.12.0
+        version: 2.12.0
       '@wolff/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -92,15 +101,6 @@ importers:
       '@wolff/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
-      '@scalar/express-api-reference':
-        specifier: 0.10.25
-        version: 0.10.25
-      '@sentry/node':
-        specifier: 11.1.0
-        version: 11.1.0(@babel/core@7.29.7)(rollup@4.63.5)
-      '@upstash/qstash':
-        specifier: 2.12.0
-        version: 2.12.0
       bullmq:
         specifier: 6.3.10
         version: 6.3.10(ioredis@6.0.0)(pg@8.23.0)
@@ -189,24 +189,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.21.0)(react-hook-form@7.89.0(@types/react@19.3.0)(react@19.3.0))(valibot@1.4.2(typescript@5.9.3))(zod@4.6.7)
-      '@wolff/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      '@wolff/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@wolff/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@wolff/types':
-        specifier: workspace:*
-        version: link:../../packages/types
-      '@wolff/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@wolff/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
       '@radix-ui/react-accordion':
         specifier: ^1.2.0
         version: 1.2.20(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -348,9 +330,27 @@ importers:
       '@upstash/redis':
         specifier: ^1.37.0
         version: 1.39.0
+      '@wolff/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@wolff/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@wolff/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@wolff/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@wolff/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@wolff/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       bcryptjs:
-        specifier: ^2.4.3
-        version: 2.4.3
+        specifier: ^3.0.3
+        version: 3.0.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -473,8 +473,8 @@ importers:
         specifier: ^16.1.0
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/bcryptjs':
-        specifier: ^2.4.6
-        version: 2.4.6
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.0
@@ -631,18 +631,18 @@ importers:
 
   packages/database:
     dependencies:
-      '@wolff/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       '@prisma/adapter-pg':
         specifier: 7.10.0
         version: 7.10.0
       '@prisma/client':
         specifier: 7.10.0
         version: 7.10.0(prisma@7.10.0(@types/node@24.19.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@wolff/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       bcryptjs:
-        specifier: ^2.4.3
-        version: 2.4.3
+        specifier: ^3.0.3
+        version: 3.0.3
       dotenv:
         specifier: ^18.0.4
         version: 18.0.4
@@ -651,8 +651,8 @@ importers:
         specifier: 9.7.0
         version: 9.7.0
       '@types/bcryptjs':
-        specifier: ^2.4.6
-        version: 2.4.6
+        specifier: ^3.0.0
+        version: 3.0.0
       '@vitest/coverage-v8':
         specifier: 5.0.2
         version: 5.0.2(vitest@5.0.2)
@@ -674,6 +674,12 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1143.0
         version: 3.1143.0
+      '@sparticuz/chromium':
+        specifier: 153.0.0
+        version: 153.0.0
+      '@upstash/qstash':
+        specifier: 2.12.0
+        version: 2.12.0
       '@wolff/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -683,12 +689,6 @@ importers:
       '@wolff/database':
         specifier: workspace:*
         version: link:../database
-      '@sparticuz/chromium':
-        specifier: 153.0.0
-        version: 153.0.0
-      '@upstash/qstash':
-        specifier: 2.12.0
-        version: 2.12.0
       bullmq:
         specifier: 6.3.10
         version: 6.3.10(ioredis@6.0.0)(pg@8.23.0)
@@ -971,6 +971,10 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
+
+  '@babel/runtime@7.29.13':
+    resolution: {integrity: sha512-v+oN26xP4YIlQsbQ/CbTH1WG5m/l/DjKKZNy/Kp3f/AFvbgt7Em/D0FeMM3O2hX0YzeN2M16W8lOpyhIkfCBcQ==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -2292,6 +2296,7 @@ packages:
   '@opentelemetry/propagator-jaeger@2.11.0':
     resolution: {integrity: sha512-RUOqgoIqXOPQTOhpBrs07Y8sBlxVoLY5Fka6ueZ0prW+k6fWQsba/nHDY4gm+gmfuwtRqbX5Y9YKhDvktjbIqQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Package no longer supported. See https://github.com/open-telemetry/opentelemetry-js/pull/7077
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -2356,12 +2361,14 @@ packages:
   '@opentelemetry/sdk-trace-base@2.11.0':
     resolution: {integrity: sha512-H19x/TX/LZdqiYOjM7fqtSxwlplC5pgelavqbQdHbhdq0q/AI/TGkM2dfGuuynTXmJPeF2HoZVoPDu+TGoW78A==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
   '@opentelemetry/sdk-trace-node@2.11.0':
     resolution: {integrity: sha512-CuvCMJmZxswhNLlM2LfuLOW3h3fZujA4hsG4B+Sz4dX2zvaXO8Ng74cnDHWD64gLszTlhiG3c0iNUjj4g+0/sA==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -3815,6 +3822,9 @@ packages:
   '@smithy/core@3.35.0':
     resolution: {integrity: sha512-zRMhfkByhT2snNdr1si24vJitU6Cr9ix2MikUfWmkAgp4jrNP0GcKSP5YvwQ+TlI8AZXER5QOGJn3JsVtSD9/A==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -4304,8 +4314,9 @@ packages:
   '@types/aws-lambda@8.10.164':
     resolution: {integrity: sha512-XOnrazWcOd6yWPnR7DxqCBPPYciDjHq+NN8LPwwqBCJNXLyPJgKo47fZpJ113+oyAn9Zti0Cf6H4k6yPcE3WFg==}
 
-  '@types/bcryptjs@2.4.6':
-    resolution: {integrity: sha512-9xlo6R2qDs5uixm0bcIqCeMCE6HiQsIyel9KQySStiyqNl2tnj2mP3DX1Nf56MD6KMenNNlBBsy3LJ7gUEQPXQ==}
+  '@types/bcryptjs@3.0.0':
+    resolution: {integrity: sha512-WRZOuCuaz8UcZZE4R5HXTco2goQSI2XxjGY3hbM/xDvwmqFWd4ivooImsMx65OKM6CtNKbnZ5YL+YwAwK7c1dg==}
+    deprecated: This is a stub types definition. bcryptjs provides its own type definitions, so you do not need this installed.
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -5022,8 +5033,9 @@ packages:
   bcrypt-pbkdf@1.0.2:
     resolution: {integrity: sha512-qeFIXtP4MSoi6NLqO12WfqARWWuCKi2Rn/9hJLEmtB5yTNr9DqFWkJRCf2qShWzPeAMRnOgCrq0sg/KLv5ES9w==}
 
-  bcryptjs@2.4.3:
-    resolution: {integrity: sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ==}
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
 
   better-result@2.10.0:
     resolution: {integrity: sha512-oQhh0y1qo2/ZKdAAEvHZAqKKiHOFU5k/bW96fE2ScgQOVkJRiHwB+nOS1SgFsYqRlxMDWvefXi9Q3px7QvgNDw==}
@@ -9248,6 +9260,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@babel/runtime@7.29.13': {}
+
   '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.29.7':
@@ -12168,7 +12182,7 @@ snapshots:
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.29.13
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -12422,7 +12436,9 @@ snapshots:
 
   '@types/aws-lambda@8.10.164': {}
 
-  '@types/bcryptjs@2.4.6': {}
+  '@types/bcryptjs@3.0.0':
+    dependencies:
+      bcryptjs: 3.0.3
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -13200,7 +13216,7 @@ snapshots:
     dependencies:
       tweetnacl: 0.14.5
 
-  bcryptjs@2.4.3: {}
+  bcryptjs@3.0.3: {}
 
   better-result@2.10.0: {}
 

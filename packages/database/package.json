@@ -33,12 +33,12 @@
     "@wolff/contracts": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.4"
   },
   "devDependencies": {
     "@faker-js/faker": "9.7.0",
-    "@types/bcryptjs": "^2.4.6",
+    "@types/bcryptjs": "^3.0.0",
     "@vitest/coverage-v8": "5.0.2",
     "prisma": "7.10.0",
     "tsx": "^4.19.0",
