@@ -350,7 +350,7 @@ jobs:
           DATABASE_URL: ${{ env.VISUAL_DATABASE_URL }}
       - name: Upload traces and screenshot diffs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-artifacts
           path: apps/web/test-results
