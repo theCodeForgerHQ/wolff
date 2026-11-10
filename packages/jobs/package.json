@@ -18,23 +18,23 @@
     "test:coverage": "vitest run --coverage --coverage.include='src/**' --coverage.exclude='**/*.test.*' --coverage.exclude='**/generated/**' --coverage.exclude='**/testing/**' --coverage.reporter=text-summary --coverage.reporter=json-summary"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1143.0",
+    "@aws-sdk/client-s3": "^3.1164.0",
     "@wolff/contracts": "workspace:*",
     "@wolff/core": "workspace:*",
     "@wolff/database": "workspace:*",
     "@sparticuz/chromium": "153.0.0",
-    "@upstash/qstash": "2.12.0",
-    "bullmq": "6.3.10",
+    "@upstash/qstash": "2.12.1",
+    "bullmq": "6.7.1",
     "ioredis": "6.0.0",
-    "jose": "6.2.12",
+    "jose": "6.2.15",
     "puppeteer-core": "25.12.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "5.0.2",
-    "testcontainers": "12.2.0",
+    "@vitest/coverage-v8": "5.1.0",
+    "testcontainers": "12.2.1",
     "typescript": "5.9.3",
-    "vitest": "5.0.2"
+    "vitest": "5.1.0"
   }
 }
