@@ -32,13 +32,13 @@
     "@wolff/contracts": "workspace:*",
     "@wolff/database": "workspace:*",
     "decimal.js": "^10.6.0",
-    "pino": "^10.3.1"
+    "pino": "^10.4.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "5.0.2",
+    "@vitest/coverage-v8": "5.1.0",
     "fast-check": "^3.23.2",
     "typescript": "5.9.3",
-    "vitest": "5.0.2"
+    "vitest": "5.1.0"
   }
 }
