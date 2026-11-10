@@ -121,7 +121,7 @@ jobs:
         run: pnpm db:migrate:check
       - name: Create the AI service's roles
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: '0.11.5'
       - name: Alembic migrations for the ai schema, then `alembic check` (empty diff)
@@ -168,7 +168,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: '0.11.5'
       - run: pnpm install --frozen-lockfile
@@ -227,7 +227,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: '0.11.5'
       - run: pnpm install --frozen-lockfile
@@ -319,7 +319,7 @@ jobs:
             DATABASE_URL="$url" pnpm db:seed
           done
           psql "$ASSISTANT_DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/db/bootstrap.sql
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: '0.11.5'
       - run: uv sync --frozen
